@@ -98,11 +98,17 @@ main {
     width: 100%;
     max-width: 600px;
     margin-top: 0.5rem;
+    padding-top: 3rem;
 }
 
 h2 {
     margin: 0;
     padding: 0.5rem 0;
+    text-align: center;
+}
+
+p {
+    padding-left: 3rem;
 }
 
 footer {

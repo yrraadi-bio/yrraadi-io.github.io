@@ -11,7 +11,7 @@ spiralLines.forEach((line) => {
         const xOffset = direction * 5; // Move 10 pixels to the left or right
 
         // Start bobbing the element smoothly
-        line.style.transition = 'transform 0.4s ease-in-out';
+        line.style.transition = 'transform 0.2s ease-in-out';
         line.style.transform = `translateX(${xOffset}px)`;
 
         // After the movement ends, bring the element back to its original position
