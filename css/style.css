@@ -46,7 +46,7 @@ nav ul li a {
 }
 
 nav ul li a:hover {
-    color: #E94560; /* Accent color on hover */
+    color: rgb(156, 154, 154); /* Accent color on hover */
 }
 
 /* Responsive adjustments */
