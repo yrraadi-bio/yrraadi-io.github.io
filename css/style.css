@@ -1,0 +1,114 @@
+body {
+    background-color: #0f3460;
+    color: #dcdcdc; /* Changed to a softer light gray */
+    font-family: Arial, sans-serif;
+    line-height: 1.4;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* Header Styles */
+header {
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+h1 {
+    margin: 0;
+    font-size: 2.5rem;
+    font-weight: bold;
+    letter-spacing: 2px;
+    color: #dcdcdc; /* Changed to a softer light gray */
+}
+
+nav ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+}
+
+nav ul li {
+    margin-left: 1.5rem;
+}
+
+nav ul li a {
+    color: #dcdcdc; /* Changed to a softer light gray */
+    text-decoration: none;
+    font-size: 1rem;
+    text-transform: lowercase;
+    transition: color 0.3s ease;
+}
+
+nav ul li a:hover {
+    color: #E94560; /* Accent color on hover */
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+    header {
+        flex-direction: column;
+        padding: 1rem;
+    }
+
+    nav {
+        margin-top: 1rem;
+    }
+
+    nav ul li {
+        margin: 0 0.75rem;
+    }
+}
+
+main {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem;
+}
+
+.spiral-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 300px;
+    font-family: monospace;
+    font-size: 13px;
+    line-height: 1;
+    height: 400px;
+    margin: 0.5rem 0;
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+}
+
+.spiral-line {
+    white-space: pre;
+    color: rgb(156, 154, 154);
+}
+
+#about {
+    width: 100%;
+    max-width: 600px;
+    margin-top: 0.5rem;
+}
+
+h2 {
+    margin: 0;
+    padding: 0.5rem 0;
+}
+
+footer {
+    background-color: #092d57;
+    color: #dcdcdc; /* Changed to a softer light gray */
+    text-align: center;
+    padding: 0.5rem;
+    margin-top: 0.5rem;
+}
