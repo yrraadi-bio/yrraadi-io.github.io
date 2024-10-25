@@ -1,7 +1,7 @@
 body {
     background-color: #0f3460;
     color: #dcdcdc; /* Changed to a softer light gray */
-    font-family: Arial, sans-serif;
+    font-family: Georgia Pro Cond, serif; /* Changed from Open Sans to Georgia Pro Cond */
     line-height: 1.4;
     margin: 0;
     padding: 0;
@@ -105,6 +105,7 @@ h2 {
     margin: 0;
     padding: 0.5rem 0;
     text-align: center;
+    font-weight: bold;
 }
 
 p {
