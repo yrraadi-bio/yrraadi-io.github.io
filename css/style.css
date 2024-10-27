@@ -21,7 +21,7 @@ header {
 }
 
 img {
-    height: 200px; /* Set the height */
+    height: 150px; /* Set the height */
     width: auto; /* Keep the aspect ratio */
     overflow: hidden; /* Clip anything beyond the set boundaries */
     display: block; /* Ensure there is no bottom margin (common with inline elements) */
