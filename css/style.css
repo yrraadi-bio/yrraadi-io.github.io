@@ -81,6 +81,10 @@ nav ul li a:hover {
         font-size: 1.3rem; /* Increase font size */
     }
 
+    nav ul {
+        padding: 0 1rem;
+    }
+
     img {
         height: 75px; /* Increase size for better visibility */
         width: auto;
@@ -111,7 +115,7 @@ main {
     line-height: 1;
     height: 200px;
     margin: 0.5rem 0;
-    padding: 1rem;
+    /* padding: 1rem; */
     overflow: visible;
     cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='6' cy='18' r='3'/%3E%3Ccircle cx='18' cy='18' r='3'/%3E%3Cpath d='M6 18L15 0'/%3E%3Cpath d='M18 18L9 0'/%3E%3C/svg%3E") 12 12, auto;
 }
@@ -129,36 +133,37 @@ main {
 @media (max-width: 800px) {
     .spiral-line {
         margin: 0 1px;
-        font-size: calc(0.6vw + 5px);
+        /* font-size: calc(0.7vw + 6px); */
     }
     
     .spiral-container {
         height: 180px;
-        padding: 0.75rem;
+        /* padding: 0.75rem; */
     }
 }
 
 @media (max-width: 600px) {
     .spiral-line {
         margin: 0 1px;
-        font-size: calc(0.8vw + 6px); /* Increased size for better visibility */
+        /* font-size: calc(0.7vw + 6px); */
     }
 
     .spiral-container {
         height: 180px; /* Increase height to accommodate larger font */
-        padding: 1rem; /* Slightly more padding */
+        /* padding: 1rem; */
+        overflow: visible;
     }
 }
 
 @media (max-width: 400px) {
     .spiral-line {
         margin: 0;
-        font-size: calc(0.7vw + 5px); /* Increased slightly for very small screens */
+        /* font-size: calc(0.7vw + 6px); */
     }
 
     .spiral-container {
         height: 160px; /* Slightly larger container */
-        padding: 0.75rem;
+        /* padding: 0.5rem; */
     }
 }
 
@@ -170,6 +175,10 @@ main {
     padding-top: 3rem;
     font-size: large;
     font-family: 'Georgia Pro Cond', Georgia, serif;
+}
+
+#ascii-art {
+    padding: 1rem;
 }
 
 h2 {
