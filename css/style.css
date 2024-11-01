@@ -64,7 +64,9 @@ nav ul li a:hover {
 @media (max-width: 600px) {
     header {
         flex-direction: column;
-        padding: 1rem;
+        align-items: center; /* Center logo and navigation */
+        padding: 2rem; /* Increase padding for better spacing */
+        padding-bottom: 3rem;
     }
 
     nav {
@@ -72,7 +74,18 @@ nav ul li a:hover {
     }
 
     nav ul li {
-        margin: 0 0.75rem;
+        margin: 0 1rem;
+    }
+
+    nav ul li a {
+        font-size: 1.3rem; /* Increase font size */
+    }
+
+    img {
+        height: 75px; /* Increase size for better visibility */
+        width: auto;
+        overflow: visible;
+        object-fit: contain;
     }
 }
 
@@ -99,7 +112,7 @@ main {
     height: 200px;
     margin: 0.5rem 0;
     padding: 1rem;
-    overflow: hidden;
+    overflow: visible;
     cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='6' cy='18' r='3'/%3E%3Ccircle cx='18' cy='18' r='3'/%3E%3Cpath d='M6 18L15 0'/%3E%3Cpath d='M18 18L9 0'/%3E%3C/svg%3E") 12 12, auto;
 }
 
@@ -128,26 +141,27 @@ main {
 @media (max-width: 600px) {
     .spiral-line {
         margin: 0 1px;
-        font-size: calc(0.5vw + 4px);
+        font-size: calc(0.8vw + 6px); /* Increased size for better visibility */
     }
-    
+
     .spiral-container {
-        height: 150px;
-        padding: 0.5rem;
+        height: 180px; /* Increase height to accommodate larger font */
+        padding: 1rem; /* Slightly more padding */
     }
 }
 
 @media (max-width: 400px) {
     .spiral-line {
         margin: 0;
-        font-size: calc(0.4vw + 3.5px);
+        font-size: calc(0.7vw + 5px); /* Increased slightly for very small screens */
     }
-    
+
     .spiral-container {
-        height: 120px;
-        padding: 0.25rem;
+        height: 160px; /* Slightly larger container */
+        padding: 0.75rem;
     }
 }
+
 
 #about {
     width: 100%;
