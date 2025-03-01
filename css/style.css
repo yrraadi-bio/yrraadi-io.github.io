@@ -160,13 +160,13 @@ main {
 /* New spacing between ASCII art and title */
 #ascii-art {
     padding: 1rem;
-    margin-bottom: 2rem; /* Added spacing below ASCII art */
+    margin-bottom: 1rem; /* Added spacing below ASCII art */
 }
 
 #about {
     width: 100%;
     max-width: 800px;
-    margin-top: 2rem; /* Increased spacing above the title */
+    margin-top: 1rem; /* Increased spacing above the title */
     padding-top: 3rem;
     font-size: large;
     font-family: 'Georgia Pro Cond', Georgia, serif;
