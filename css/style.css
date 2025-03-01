@@ -200,9 +200,5 @@ p {
 }
 
 footer {
-    background-color: #092d57;
-    color: #dcdcdc;
-    text-align: center;
-    padding: 0.5rem;
-    margin-top: 0.5rem;
+    display: none;
 }
