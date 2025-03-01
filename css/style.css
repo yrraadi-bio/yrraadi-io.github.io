@@ -166,7 +166,7 @@ main {
 #about {
     width: 100%;
     max-width: 800px;
-    margin-top: 1rem; /* Increased spacing above the title */
+    margin-top: 0.7rem; /* Increased spacing above the title */
     padding-top: 3rem;
     font-size: large;
     font-family: 'Georgia Pro Cond', Georgia, serif;
