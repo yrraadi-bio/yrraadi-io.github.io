@@ -128,12 +128,10 @@ main {
 @media (max-width: 800px) {
     .spiral-line {
         margin: 0 1px;
-        /* font-size: calc(0.7vw + 6px); */
     }
     
     .spiral-container {
         height: 180px;
-        /* padding: 0.75rem; */
     }
 }
 
@@ -145,7 +143,6 @@ main {
 
     .spiral-container {
         height: 180px; /* Increase height to accommodate larger font */
-        /* padding: 1rem; */
         overflow: visible;
     }
 }
@@ -153,19 +150,23 @@ main {
 @media (max-width: 400px) {
     .spiral-line {
         margin: 0;
-        /* font-size: calc(0.7vw + 6px); */
     }
 
     .spiral-container {
         height: 160px; /* Slightly larger container */
-        /* padding: 0.5rem; */
     }
+}
+
+/* New spacing between ASCII art and title */
+#ascii-art {
+    padding: 1rem;
+    margin-bottom: 2rem; /* Added spacing below ASCII art */
 }
 
 #about {
     width: 100%;
     max-width: 800px;
-    margin-top: 0.5rem;
+    margin-top: 2rem; /* Increased spacing above the title */
     padding-top: 3rem;
     font-size: large;
     font-family: 'Georgia Pro Cond', Georgia, serif;
@@ -174,12 +175,8 @@ main {
 @media (max-width: 600px) {
     #about {
         padding-top: 0.5rem;
-        margin-top: 0rem;
+        margin-top: 1rem; /* Adjusted for mobile */
     }
-}
-
-#ascii-art {
-    padding: 1rem;
 }
 
 h2 {
