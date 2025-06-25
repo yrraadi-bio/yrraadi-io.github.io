@@ -1,7 +1,7 @@
 body {
     font-size: 14px;
     background-color: #0f3460;
-    color: #dcdcdc;
+    color: rgba(220, 220, 220, 0.85);
     font-family: Georgia Pro Cond, serif;
     line-height: 1.4;
     margin: 0;
@@ -15,18 +15,19 @@ body {
 header {
     padding: 1rem 0.5rem;
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
     max-height: 70px;
     overflow: visible;
 }
 
 img {
-    height: 100px;
+    height: 120px;
     width: auto;
     overflow: hidden;
     display: block;
     cursor: pointer;
+    margin: 0 auto 2rem auto;
 }
 
 h1 {
@@ -64,10 +65,8 @@ nav ul li a:hover {
 /* Responsive header adjustments */
 @media (max-width: 600px) {
     header {
-        flex-direction: column;
-        align-items: center;
         padding: 1rem;
-        padding-bottom: 4rem;
+        padding-bottom: 2rem;
     }
 
     nav ul li {
@@ -83,10 +82,8 @@ nav ul li a:hover {
     }
 
     img {
-        height: 150px; /* Increase size for better visibility */
-        width: auto;
-        overflow: visible;
-        object-fit: contain;
+        height: 140px;
+        margin-bottom: 2rem;
     }
 }
 
@@ -95,9 +92,11 @@ main {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     padding: 2rem;
     width: 100%;
     box-sizing: border-box;
+    transform: translateY(-5vh);
 }
 
 /* Updated Spiral Container Styles */
@@ -167,29 +166,74 @@ main {
 #about {
     width: 100%;
     max-width: 800px;
-    margin-top: 0.4rem; /* Increased spacing above the title */
-    padding-top: 3rem;
+    margin-top: 0;
+    padding-top: 0;
     font-size: large;
     font-family: 'Georgia Pro Cond', Georgia, serif;
+    text-align: center;
+}
+
+#about img {
+    height: 120px;
+    width: auto;
+    display: block;
+    margin: 0 auto 0.1rem auto;
+    cursor: pointer;
 }
 
 @media (max-width: 600px) {
+    #about img {
+        height: 140px;
+        margin-bottom: 0.1rem;
+    }
+
     #about {
-        padding-top: 0.5rem;
-        margin-top: 1rem; /* Adjusted for mobile */
+        padding-top: 0;
+        margin-top: 0;
     }
 }
 
 h2 {
-    margin: 0;
-    padding: 0.5rem 0;
+    margin: 0 auto;
+    padding: 0.5rem 3rem 1.5rem 3rem;
     text-align: center;
     font-weight: normal;
     font-family: Georgia Pro Cond, serif;
+    color: #dcdcdc;
+    max-width: 700px;
+    box-sizing: border-box;
+}
+
+.title {
+    text-align: left;
+}
+
+.location {
+    text-align: center;
+    font-size: 0.8em;
+    opacity: 0.8;
+    padding: 0 3rem;
+    max-width: 700px;
+    margin: 3rem auto 0 auto;
+    box-sizing: border-box;
+}
+
+@media (max-width: 600px) {
+    h2 {
+        padding: 0.5rem 1rem 1.5rem 1rem;
+    }
+    
+    .location {
+        padding: 0 1rem;
+    }
 }
 
 p {
-    padding-left: 3rem;
+    padding: 0 3rem;
+    text-align: left;
+    line-height: 1.6;
+    max-width: 700px;
+    margin: 0 auto;
 }
 
 @media (max-width: 600px) {
