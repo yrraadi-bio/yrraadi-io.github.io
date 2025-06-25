@@ -1,5 +1,17 @@
+/* CSS Reset for consistent cross-browser behavior */
+* {
+    box-sizing: border-box;
+}
+
+html {
+    font-size: 16px !important;
+    -webkit-text-size-adjust: 100% !important;
+    -ms-text-size-adjust: 100% !important;
+    text-size-adjust: 100% !important;
+}
+
 body {
-    font-size: 14px;
+    font-size: 14px !important;
     background-color: #0f3460;
     color: rgba(220, 220, 220, 0.85);
     font-family: Georgia Pro Cond, serif;
@@ -32,7 +44,7 @@ img {
 
 h1 {
     margin: 0;
-    font-size: 2.5rem;
+    font-size: 28px !important;
     font-weight: bold;
     letter-spacing: 2px;
     color: #dcdcdc;
@@ -47,7 +59,7 @@ nav ul {
 
 nav ul li {
     margin-left: 1.5rem;
-    font-size: 1.2rem;
+    font-size: 16px !important;
     font-weight: 500;
 }
 
@@ -74,7 +86,7 @@ nav ul li a:hover {
     }
 
     nav ul li a {
-        font-size: 1.5rem; /* Increase font size */
+        font-size: 18px !important;
     }
 
     nav ul {
@@ -84,6 +96,11 @@ nav ul li a:hover {
     img {
         height: 140px;
         margin-bottom: 2rem;
+    }
+
+    h2 {
+        padding: 0.5rem 1rem 1.5rem 1rem;
+        font-size: 22px !important;
     }
 }
 
@@ -121,7 +138,7 @@ main {
     writing-mode: vertical-lr;
     transform: rotate(360deg);
     margin: 0 2px;
-    font-size: calc(0.7vw + 6px);
+    font-size: 10px !important;
 }
 
 /* Progressive breakpoints for spiral */
@@ -138,11 +155,11 @@ main {
 @media (max-width: 600px) {
     .spiral-line {
         margin: 0 1px;
-        font-size: calc(0.8vw + 6px);
+        font-size: 11px !important;
     }
 
     .spiral-container {
-        height: 180px; /* Increase height to accommodate larger font */
+        height: 180px;
         overflow: visible;
     }
 }
@@ -153,43 +170,44 @@ main {
     }
 
     .spiral-container {
-        height: 160px; /* Slightly larger container */
+        height: 160px;
     }
 }
 
 /* New spacing between ASCII art and title */
 #ascii-art {
     padding: 1rem;
-    margin-bottom: 1rem; /* Added spacing below ASCII art */
+    margin-bottom: 1rem;
 }
 
 #about {
     width: 100%;
-    max-width: 800px;
+    max-width: 720px;
     margin-top: 0;
     padding-top: 0;
-    font-size: large;
+    font-size: 16px !important;
     font-family: 'Georgia Pro Cond', Georgia, serif;
     text-align: center;
 }
 
 #about img {
-    height: 120px;
+    height: 100px;
     width: auto;
     display: block;
-    margin: 0 auto 0.1rem auto;
+    margin: 0 auto 0.05rem auto;
     cursor: pointer;
 }
 
 @media (max-width: 600px) {
     #about img {
-        height: 140px;
-        margin-bottom: 0.1rem;
+        height: 120px;
+        margin-bottom: 0.05rem;
     }
 
     #about {
         padding-top: 0;
         margin-top: 0;
+        font-size: 15px !important;
     }
 }
 
@@ -200,8 +218,9 @@ h2 {
     font-weight: normal;
     font-family: Georgia Pro Cond, serif;
     color: #dcdcdc;
-    max-width: 700px;
+    max-width: 720px;
     box-sizing: border-box;
+    font-size: 24px !important;
 }
 
 .title {
@@ -210,21 +229,18 @@ h2 {
 
 .location {
     text-align: center;
-    font-size: 0.8em;
+    font-size: 12px !important;
     opacity: 0.8;
     padding: 0 3rem;
-    max-width: 700px;
+    max-width: 720px;
     margin: 3rem auto 0 auto;
     box-sizing: border-box;
 }
 
 @media (max-width: 600px) {
-    h2 {
-        padding: 0.5rem 1rem 1.5rem 1rem;
-    }
-    
     .location {
         padding: 0 1rem;
+        font-size: 11px !important;
     }
 }
 
@@ -232,14 +248,16 @@ p {
     padding: 0 3rem;
     text-align: left;
     line-height: 1.6;
-    max-width: 700px;
+    max-width: 720px;
     margin: 0 auto;
+    font-size: 16px !important;
 }
 
 @media (max-width: 600px) {
     p {
         padding-left: 1rem;
         padding-right: 1rem;
+        font-size: 15px !important;
     }
 }
 
