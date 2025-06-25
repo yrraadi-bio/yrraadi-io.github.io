@@ -194,14 +194,14 @@ main {
     height: 100px;
     width: auto;
     display: block;
-    margin: 0 auto 0.05rem auto;
+    margin: 0 auto 0.025rem auto;
     cursor: pointer;
 }
 
 @media (max-width: 600px) {
     #about img {
         height: 120px;
-        margin-bottom: 0.05rem;
+        margin-bottom: 0.025rem;
     }
 
     #about {
