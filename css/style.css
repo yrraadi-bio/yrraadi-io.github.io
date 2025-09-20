@@ -213,7 +213,7 @@ main {
 
 h2 {
     margin: 0 auto;
-    padding: 0.5rem 3rem 1.5rem 3rem;
+    padding: 0.5rem 3rem 0.5rem 3rem;
     text-align: center;
     font-weight: normal;
     font-family: Georgia Pro Cond, serif;
@@ -233,7 +233,7 @@ h2 {
     opacity: 0.8;
     padding: 0 3rem;
     max-width: 720px;
-    margin: 3rem auto 0 auto;
+    margin: 0.5rem auto 0 auto;
     box-sizing: border-box;
 }
 
@@ -241,6 +241,43 @@ h2 {
     .location {
         padding: 0 1rem;
         font-size: 11px !important;
+    }
+}
+
+.social-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    margin-top: 2rem;
+}
+
+.social-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(220, 220, 220, 0.85);
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.social-btn:hover {
+    color: #dcdcdc;
+    transform: translateY(-2px);
+}
+
+.social-btn svg {
+    width: 20px;
+    height: 20px;
+}
+
+@media (max-width: 600px) {
+    .social-buttons {
+        margin-top: 1.5rem;
+    }
+    
+    .social-btn svg {
+        width: 18px;
+        height: 18px;
     }
 }
 
