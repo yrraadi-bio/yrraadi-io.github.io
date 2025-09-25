@@ -608,15 +608,26 @@ footer {
     }
     
     .hero-title {
-        font-size: clamp(2.5rem, 10vw, 4rem);
+        font-size: clamp(3rem, 12vw, 5rem);
     }
     
-    footer {
-        padding: 2rem;
+    .hero-subtitle {
+        font-size: 1rem;
+        margin: 1rem auto;
     }
     
     .social-links {
         gap: 1.5rem;
+        margin-top: 2.5rem;
+    }
+    
+    .social-link svg {
+        width: 18px;
+        height: 18px;
+    }
+    
+    footer {
+        padding: 2rem;
     }
 }
 
@@ -647,12 +658,22 @@ footer {
     }
     
     .hero-title {
-        font-size: clamp(2rem, 8vw, 3rem);
+        font-size: clamp(2.5rem, 10vw, 4rem);
+    }
+    
+    .hero-subtitle {
+        font-size: 0.9rem;
+        margin: 1rem auto;
     }
     
     .social-links {
         gap: 1rem;
         margin-top: 2rem;
+    }
+    
+    .social-link svg {
+        width: 16px;
+        height: 16px;
     }
 }
 
