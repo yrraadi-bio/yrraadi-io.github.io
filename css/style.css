@@ -12,7 +12,7 @@ html {
 
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: #0A0A0A;
+    background: #0f3462;
     color: #E5E5E5;
     line-height: 1.6;
     overflow: hidden;
@@ -137,7 +137,7 @@ nav {
 }
 
 .nav-link {
-    color: #A0A0A0;
+    color: #d7d0d0;
     text-decoration: none;
     font-size: 0.9rem;
     font-weight: 400;
@@ -148,7 +148,7 @@ nav {
 
 .nav-link:hover,
 .nav-link.active {
-    color: #E5E5E5;
+    color: #d7d0d0;
 }
 
 .nav-link::after {
@@ -220,7 +220,7 @@ main {
     justify-content: center;
     gap: 0.5rem;
     margin-bottom: 3rem;
-    color: #808080;
+    color: #d7d0d0;
     font-size: 0.9rem;
     letter-spacing: 1px;
 }
@@ -253,7 +253,7 @@ main {
 
 .mystery-text p {
     font-size: 1.1rem;
-    color: #B0B0B0;
+    color: #d7d0d0;
     font-weight: 300;
     letter-spacing: 0.3px;
 }
@@ -568,7 +568,7 @@ footer {
 }
 
 .social-link {
-    color: #808080;
+    color: #d7d0d0;
     transition: all 0.3s ease;
     padding: 0.5rem;
 }
@@ -579,7 +579,7 @@ footer {
 }
 
 .copyright {
-    color: #606060;
+    color: #d7d0d0;
     font-size: 0.8rem;
     letter-spacing: 0.5px;
 }
