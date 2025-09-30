@@ -1047,6 +1047,8 @@ footer {
 .visual-dial .axis { stroke: #d7dfea; stroke-width: 1; }
 .visual-dial .tick { stroke: #e5ebf3; stroke-width: 1; }
 .visual-dial .cursor-line { stroke: #0F3460; stroke-opacity: 0.35; stroke-dasharray: 4 4; }
+.visual-dial .threshold-line { stroke: #9BA7B8; stroke-dasharray: 6 4; opacity: 0.9; }
+.visual-dial .threshold-label { fill: #6B7C93; font-size: 12px; }
 .visual-dial .marker { fill: #fff; stroke-width: 2; }
 .visual-dial .marker-a { stroke: #0F3460; }
 .visual-dial .marker-b { stroke: #2B6BAA; }

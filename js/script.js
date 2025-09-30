@@ -370,10 +370,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Dial visual demo: single knob controlling activity across multiple gains
+    // Dial visual demo(s): initialize all .visual-dial instances
     if (document.body.classList.contains('blog-page')) {
-        const dialEl = document.querySelector('.visual-dial');
-        if (dialEl) {
+        const dialEls = document.querySelectorAll('.visual-dial');
+        dialEls.forEach((dialEl) => {
             const slider = dialEl.querySelector('.dial-slider');
             const valueEl = dialEl.querySelector('.dial-value-num');
             const svg = dialEl.querySelector('.dial-chart');
@@ -418,11 +418,32 @@ document.addEventListener('DOMContentLoaded', () => {
             const xToSvg = x => padL + x * (W - padL - padR);
             const yToSvg = y => H - padB - y * (H - padT - padB);
 
-            // Monotonic convex (quadratic-like) shapes with different saturation levels
-            // y_i(x) ≈ amp[i] * x^{pow[i]}, giving convex curves that do NOT converge to the same max
-            const amps = [0.70, 0.90, 1.00, 0.80];     // saturation levels for A,B,C,D
-            const pows = [2.2, 2.0, 1.8, 2.4];         // convex exponents (>1)
-            const shapes = amps.map((A, i) => (x) => Math.max(0, Math.min(1, A * Math.pow(x, pows[i]))));
+            // Choose curve shapes based on whether this is an inverted-U dial
+            let shapes;
+            const isPeak = dialEl.classList.contains('visual-peak');
+            if (isPeak) {
+                // Normalized Beta-like inverted-U (smooth arcs, start at 0,0, fall to 0 at 1)
+                const betaParams = [
+                    { a: 1.0, b: 1.8, A: 0.88 },
+                    { a: 1.3, b: 1.3, A: 0.86 },
+                    { a: 1.6, b: 1.1, A: 0.92 },
+                    { a: 2.0, b: 0.9, A: 0.84 },
+                ];
+                shapes = betaParams.map(p => {
+                    const c = Math.pow(p.a, p.a) * Math.pow(p.b, p.b) / Math.pow(p.a + p.b, p.a + p.b);
+                    return (x) => {
+                        const xx = Math.max(0, Math.min(1, x));
+                        const base = Math.pow(xx, p.a) * Math.pow(1 - xx, p.b);
+                        const y = (p.A * base) / c;
+                        return Math.max(0, y);
+                    };
+                });
+            } else {
+                // Monotonic convex (quadratic-like) shapes with different saturation levels
+                const amps = [0.70, 0.90, 1.00, 0.80];
+                const pows = [2.2, 2.0, 1.8, 2.4];
+                shapes = amps.map((A, i) => (x) => Math.max(0, Math.min(1, A * Math.pow(x, pows[i]))));
+            }
             const colors = ['a','b','c','d'];
 
             function drawAxes() {
@@ -502,6 +523,26 @@ document.addEventListener('DOMContentLoaded', () => {
                     svg.appendChild(c);
                     return c;
                 });
+
+                // Optional activation threshold for inverted-U only
+                let thrLine = null, thrText = null;
+                if (isPeak) {
+                    const threshold = 0.2;
+                    thrLine = document.createElementNS(ns, 'line');
+                    thrLine.setAttribute('x1', padL);
+                    thrLine.setAttribute('x2', W - padR);
+                    thrLine.setAttribute('y1', yToSvg(threshold));
+                    thrLine.setAttribute('y2', yToSvg(threshold));
+                    thrLine.setAttribute('class', 'threshold-line');
+                    svg.appendChild(thrLine);
+                    thrText = document.createElementNS(ns, 'text');
+                    thrText.textContent = 'Activation';
+                    thrText.setAttribute('class', 'threshold-label');
+                    thrText.setAttribute('x', W - padR - 4);
+                    thrText.setAttribute('y', yToSvg(threshold) - 6);
+                    thrText.setAttribute('text-anchor', 'end');
+                    svg.appendChild(thrText);
+                }
 
                 let initialHandleAtTop = false;
 
@@ -648,7 +689,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             createChart();
-        }
+        });
     }
 
     // Removed Table of Contents generation (will add later)

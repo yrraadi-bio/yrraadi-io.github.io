@@ -239,17 +239,40 @@
                     <p>Several TFs exhibit a non-monotonic relationship: intermediate occupancy maximizes activation,
                         while too many strong sites reduce activity or flip to repression. A single dial can therefore
                         push one cell state above an activation threshold while pushing another below it.</p>
-                    <p><em>[visual: dial that traces an inverted-U response; two cell-state traces cross a horizontal
-                            "activation" threshold at different dial positions]</em></p>
+
+                    <div class="blog-visual visual-dial visual-peak" aria-label="Inverted-U dial demo">
+                        <div class="visual-header">Explore inverted‑U responses and an activation threshold</div>
+                        <div class="visual-body">
+                            <div>
+                                <div class="group-label">Motif strength</div>
+                                <div class="dial-control">
+                                    <div class="dial-knob" role="slider" aria-label="Motif strength" aria-valuemin="0" aria-valuemax="100" aria-valuenow="25" tabindex="0">
+                                        <div class="dial-handle"></div>
+                                    </div>
+                                    <input type="range" min="0" max="100" value="25" step="1" class="dial-slider" aria-hidden="true">
+                                    <div class="dial-value"><span class="dial-value-num">25</span>%</div>
+                                </div>
+                            </div>
+                            <div class="chart-area">
+                                <svg class="dial-chart" viewBox="0 0 420 240" preserveAspectRatio="xMidYMid meet" aria-label="Inverted-U activity curves"></svg>
+                                <div class="chart-legend">
+                                    <span class="legend-item legend-a">Cell State A</span>
+                                    <span class="legend-item legend-b">Cell State B</span>
+                                    <span class="legend-item legend-c">Cell State C</span>
+                                    <span class="legend-item legend-d">Cell State D</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="visual-footer">Horizontal line shows Activation.</div>
+                    </div>
 
                     <h2>Pairwise-TF motif circuits</h2>
 
                     <p>These are more complex control circuits that can arise the combinations of TF motif pairs on
                         regulatory sequences.</p>
 
-                    <h4 class="blog-subheading">Pair control</h4>
-                    <p>Pairs can interact non-additively: some combinations activate only when both TFs fall in a
-                        permissive window; others display negative synergy, where two activators together repress</p>
+                    <h4 class="blog-subheading">XOR-like behavior</h4>
+                    <p>Some motif pairs show XOR-like behavior: each factor alone can activate in a given cell state, but when both are present together the enhancer is repressed.</p>
                     <p><em>[visual: when certain pairs of TFs are clicked a specific cell-type is activated.]</em></p>
 
                     <h4 class="blog-subheading">Slider</h4>
