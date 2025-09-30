@@ -18,8 +18,8 @@ html:has(.blog-page) {
 
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: #0f3462;
-    color: #E5E5E5;
+    background: #ffffff;
+    color: #0f3462;
     line-height: 1.6;
     overflow: hidden;
     height: 100vh;
@@ -78,50 +78,50 @@ body.blog-page footer .copyright {
     position: absolute;
     width: 5px;
     height: 5px;
-    background: radial-gradient(circle, rgba(200, 220, 255, 1), rgba(150, 200, 255, 0.3));
+    background: radial-gradient(circle, rgba(15, 52, 98, 1), rgba(15, 52, 98, 0.3));
     border-radius: 50%;
     pointer-events: none;
     z-index: 2;
     opacity: 0.8;
-    box-shadow: 0 0 18px rgba(150, 200, 255, 0.8);
+    box-shadow: 0 0 18px rgba(15, 52, 98, 0.8);
     animation: fireflyGlow 3s ease-in-out infinite;
 }
 
 .firefly.light-blue {
-    background: radial-gradient(circle, rgb(84, 137, 194), rgba(120, 180, 255, 0.4));
-    box-shadow: 0 0 22px rgba(89, 149, 213, 0.9);
+    background: radial-gradient(circle, rgba(15, 52, 98, 0.9), rgba(15, 52, 98, 0.4));
+    box-shadow: 0 0 22px rgba(15, 52, 98, 0.9);
 }
 
 .firefly.medium-blue {
-    background: radial-gradient(circle, rgba(100, 150, 255, 1), rgba(74, 158, 255, 0.4));
-    box-shadow: 0 0 22px rgba(74, 158, 255, 0.9);
+    background: radial-gradient(circle, rgba(15, 52, 98, 1), rgba(15, 52, 98, 0.4));
+    box-shadow: 0 0 22px rgba(15, 52, 98, 0.9);
 }
 
 .firefly.dark-blue {
-    background: radial-gradient(circle, rgba(60, 120, 200, 1), rgba(40, 100, 180, 0.4));
-    box-shadow: 0 0 22px rgba(60, 120, 200, 0.9);
+    background: radial-gradient(circle, rgba(15, 52, 98, 1), rgba(15, 52, 98, 0.4));
+    box-shadow: 0 0 22px rgba(15, 52, 98, 0.9);
 }
 
 .firefly.bright {
     transform: scale(1.5);
-    box-shadow: 0 0 25px rgb(105, 147, 192);
+    box-shadow: 0 0 25px rgba(15, 52, 98, 1);
 }
 
 .firefly.bright.light-blue {
-    box-shadow: 0 0 25px rgb(55, 100, 147);
+    box-shadow: 0 0 25px rgba(15, 52, 98, 0.9);
 }
 
 .firefly.bright.medium-blue {
-    box-shadow: 0 0 25px rgba(74, 158, 255, 1);
+    box-shadow: 0 0 25px rgba(15, 52, 98, 1);
 }
 
 .firefly.bright.dark-blue {
-    box-shadow: 0 0 25px rgba(60, 120, 200, 1);
+    box-shadow: 0 0 25px rgba(15, 52, 98, 1);
 }
 
 .firefly.dim {
     opacity: 0.2;
-    box-shadow: 0 0 4px rgba(150, 200, 255, 0.3);
+    box-shadow: 0 0 4px rgba(15, 52, 98, 0.3);
     transform: scale(0.7);
 }
 
@@ -129,12 +129,12 @@ body.blog-page footer .copyright {
     0%, 100% {
         opacity: 0.3;
         transform: scale(0.8);
-        box-shadow: 0 0 6px rgba(150, 200, 255, 0.4);
+        box-shadow: 0 0 6px rgba(15, 52, 98, 0.4);
     }
     50% {
         opacity: 1;
         transform: scale(1.2);
-        box-shadow: 0 0 16px rgba(150, 200, 255, 0.9);
+        box-shadow: 0 0 16px rgba(15, 52, 98, 0.9);
     }
 }
 
@@ -178,7 +178,7 @@ nav {
 }
 
 .nav-link {
-    color: #d7d0d0;
+    color: #0f3462;
     text-decoration: none;
     font-size: 0.9rem;
     font-weight: 400;
@@ -189,7 +189,7 @@ nav {
 
 .nav-link:hover,
 .nav-link.active {
-    color: #d7d0d0;
+    color: #4A9EFF;
 }
 
 .nav-link::after {
@@ -239,10 +239,7 @@ main {
 
 .title-line {
     display: block;
-    background: linear-gradient(135deg, #E5E5E5 0%, #A0A0A0 100%);
-    background-clip: text;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: #0f3462;
     animation: titleGlow 4s ease-in-out infinite alternate;
 }
 
@@ -261,7 +258,7 @@ main {
     justify-content: center;
     gap: 0.5rem;
     margin-bottom: 3rem;
-    color: #d7d0d0;
+    color: #0f3462;
     font-size: 0.9rem;
     letter-spacing: 1px;
 }
@@ -294,7 +291,7 @@ main {
 
 .mystery-text p {
     font-size: 1.1rem;
-    color: #d7d0d0;
+    color: #0f3462;
     font-weight: 300;
     letter-spacing: 0.3px;
 }
@@ -599,7 +596,7 @@ footer {
 }
 
 .social-link {
-    color: #d7d0d0;
+    color: #0f3462;
     transition: all 0.3s ease;
     padding: 0.5rem;
 }
@@ -610,7 +607,7 @@ footer {
 }
 
 .copyright {
-    color: #d7d0d0;
+    color: #0f3462;
     font-size: 0.8rem;
     letter-spacing: 0.5px;
 }
