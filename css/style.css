@@ -709,6 +709,32 @@ footer {
     }
 }
 
+/* Mobile optimizations without affecting desktop */
+@media (max-width: 600px) {
+    /* General blog visual padding */
+    .blog-visual { padding: 0.75rem; }
+
+    /* Dial visuals */
+    .visual-dial .dial-control { gap: 0.75rem; justify-content: center; flex-direction: column; align-items: center; }
+    .visual-dial .dial-knob { width: 96px; height: 96px; }
+    .visual-dial .dial-handle { width: 14px; height: 14px; margin: -7px; }
+    .visual-dial .dial-value { text-align: center; }
+    .visual-dial .group-label { text-align: center; width: 100%; margin-left: 0; }
+    .visual-dial .dial-chart { height: 180px; }
+    .visual-dial .chart-legend { font-size: 0.8rem; gap: 0.5rem 0.75rem; }
+    .visual-dial .threshold-label { font-size: 11px; }
+
+    /* Switch layout tightness */
+    .visual-switch .cell-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .visual-switch .tf-chips { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+    /* XOR layout stacks vertically */
+    .visual-xor .visual-body { grid-template-columns: 1fr; align-items: stretch; }
+    .visual-xor .xor-gate-col { justify-content: flex-start; margin: 0.5rem 0; }
+    .visual-xor .xor-schematic { width: 100%; max-width: 240px; height: auto; }
+    .visual-xor .xor-gate { width: 96px; height: 56px; font-size: 0.9rem; }
+}
+
 /* Side ToC layout removed */
 
 /* Anchor offset so headings don't hide under viewport edges */
@@ -928,6 +954,7 @@ footer {
     stroke: #0F3460;
     stroke-opacity: 0.45;
     stroke-width: 2;
+    vector-effect: non-scaling-stroke;
 }
 
 /* Visual Dial (activity curves) */
@@ -963,6 +990,12 @@ footer {
     box-shadow: 0 2px 8px rgba(15, 52, 96, 0.08);
     cursor: pointer;
     flex-shrink: 0;
+    /* Improve touch responsiveness */
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
 }
 
 .visual-dial .dial-knob:focus-visible {

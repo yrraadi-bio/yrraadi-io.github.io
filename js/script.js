@@ -250,25 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const svg = ensureWires();
                 // clear previous wires
                 while (svg.firstChild) svg.removeChild(svg.firstChild);
-                // add arrowhead marker definition
                 const ns = 'http://www.w3.org/2000/svg';
-                const defs = document.createElementNS(ns, 'defs');
-                const marker = document.createElementNS(ns, 'marker');
-                marker.setAttribute('id', 'wireArrow');
-                marker.setAttribute('viewBox', '0 0 14 14');
-                marker.setAttribute('refX', '12');
-                marker.setAttribute('refY', '7');
-                marker.setAttribute('markerWidth', '14');
-                marker.setAttribute('markerHeight', '14');
-                marker.setAttribute('markerUnits', 'userSpaceOnUse');
-                marker.setAttribute('orient', 'auto');
-                const mpath = document.createElementNS(ns, 'path');
-                mpath.setAttribute('d', 'M 0 0 L 14 7 L 0 14 z');
-                mpath.setAttribute('fill', '#0F3460');
-                mpath.setAttribute('opacity', '0.8');
-                marker.appendChild(mpath);
-                defs.appendChild(marker);
-                svg.appendChild(defs);
                 const bodyRect = visualBody.getBoundingClientRect();
                 const fromRect = fromEl.getBoundingClientRect();
                 const x1 = fromRect.left + fromRect.width / 2 - bodyRect.left;
@@ -288,9 +270,28 @@ document.addEventListener('DOMContentLoaded', () => {
                     const d = `M ${x1},${y1} C ${cx1},${cy1} ${cx2},${cy2} ${x2},${y2}`;
                     path.setAttribute('d', d);
                     path.setAttribute('class', 'wire-path');
-                    path.setAttribute('marker-end', 'url(#wireArrow)');
-                    path.setAttribute('stroke-linecap', 'round');
+                    path.setAttribute('stroke-linecap', 'butt');
                     svg.appendChild(path);
+                    // manual arrowhead computed using path tangent at end (mobile-safe)
+                    let head = null;
+                    try {
+                        const len = path.getTotalLength();
+                        const eps = Math.max(8, Math.min(16, len * 0.1));
+                        const p0 = path.getPointAtLength(Math.max(0, len - eps));
+                        const p1 = path.getPointAtLength(len);
+                        const ang = Math.atan2(p1.y - p0.y, p1.x - p0.x);
+                        const L = 12, W = 6;
+                        const bx = p1.x - L * Math.cos(ang);
+                        const by = p1.y - L * Math.sin(ang);
+                        const nx = -Math.sin(ang), ny = Math.cos(ang);
+                        const xL = bx + W * nx, yL = by + W * ny;
+                        const xR = bx - W * nx, yR = by - W * ny;
+                        head = document.createElementNS(ns, 'polygon');
+                        head.setAttribute('points', `${p1.x},${p1.y} ${xL},${yL} ${xR},${yR}`);
+                        head.setAttribute('fill', '#0F3460');
+                        head.setAttribute('fill-opacity', '0.8');
+                        svg.appendChild(head);
+                    } catch (_) { /* fallback draws no head */ }
                     // animate draw and fade
                     try {
                         const len = path.getTotalLength();
@@ -305,7 +306,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         // hold briefly, then fade and remove
                         setTimeout(() => {
                             path.style.opacity = '0';
-                            setTimeout(() => { if (path.parentNode) path.parentNode.removeChild(path); }, 900);
+                            if (head) {
+                                head.style.transition = 'opacity 800ms ease';
+                                head.style.opacity = '0';
+                            }
+                            setTimeout(() => {
+                                if (path.parentNode) path.parentNode.removeChild(path);
+                                if (head && head.parentNode) head.parentNode.removeChild(head);
+                            }, 900);
                         }, 1600);
                     } catch (_) {
                         // if getTotalLength not supported, just fade
@@ -313,7 +321,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         path.style.opacity = '1';
                         setTimeout(() => {
                             path.style.opacity = '0';
-                            setTimeout(() => { if (path.parentNode) path.parentNode.removeChild(path); }, 900);
+                            if (head) {
+                                head.style.transition = 'opacity 900ms ease';
+                                head.style.opacity = '0';
+                            }
+                            setTimeout(() => {
+                                if (path.parentNode) path.parentNode.removeChild(path);
+                                if (head && head.parentNode) head.parentNode.removeChild(head);
+                            }, 900);
                         }, 1200);
                     }
                 });
@@ -636,10 +651,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 let currentVal = parseFloat(slider.value);
                 function startDrag(e) {
                     dragging = true;
-                    try { knob.setPointerCapture(e.pointerId); } catch(_) {}
-                    document.addEventListener('pointermove', onDrag);
-                    document.addEventListener('pointerup', endDrag);
                     e.preventDefault();
+                    try { knob.setPointerCapture(e.pointerId); } catch(_) {}
+                    window.addEventListener('pointermove', onDrag, { passive: false });
+                    window.addEventListener('pointerup', endDrag, { passive: true });
+                    knob.addEventListener('pointercancel', endDrag, { passive: true });
                     initialHandleAtTop = false;
                     const d = degFromEvent(e);
                     lastDeg = d;
@@ -649,6 +665,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 function onDrag(e) {
                     if (!dragging) return;
+                    if (e && e.preventDefault) e.preventDefault();
                     if (rafPending) return;
                     rafPending = true;
                     requestAnimationFrame(() => {
@@ -668,8 +685,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 function endDrag(e) {
                     dragging = false;
-                    document.removeEventListener('pointermove', onDrag);
-                    document.removeEventListener('pointerup', endDrag);
+                    window.removeEventListener('pointermove', onDrag);
+                    window.removeEventListener('pointerup', endDrag);
+                    knob.removeEventListener('pointercancel', endDrag);
                     try { knob.releasePointerCapture(e.pointerId); } catch(_) {}
                 }
                 knob.addEventListener('pointerdown', startDrag);
