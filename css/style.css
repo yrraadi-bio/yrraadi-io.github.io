@@ -78,50 +78,50 @@ body.blog-page footer .copyright {
     position: absolute;
     width: 5px;
     height: 5px;
-    background: radial-gradient(circle, rgba(200, 220, 255, 1), rgba(150, 200, 255, 0.3));
+    background: radial-gradient(circle, rgba(15, 52, 98, 1), rgba(15, 52, 98, 0.3));
     border-radius: 50%;
     pointer-events: none;
     z-index: 2;
     opacity: 0.8;
-    box-shadow: 0 0 18px rgba(150, 200, 255, 0.8);
+    box-shadow: 0 0 18px rgba(15, 52, 98, 0.8);
     animation: fireflyGlow 3s ease-in-out infinite;
 }
 
 .firefly.light-blue {
-    background: radial-gradient(circle, rgb(84, 137, 194), rgba(120, 180, 255, 0.4));
-    box-shadow: 0 0 22px rgba(89, 149, 213, 0.9);
+    background: radial-gradient(circle, rgba(15, 52, 98, 0.9), rgba(15, 52, 98, 0.4));
+    box-shadow: 0 0 22px rgba(15, 52, 98, 0.9);
 }
 
 .firefly.medium-blue {
-    background: radial-gradient(circle, rgba(100, 150, 255, 1), rgba(74, 158, 255, 0.4));
-    box-shadow: 0 0 22px rgba(74, 158, 255, 0.9);
+    background: radial-gradient(circle, rgba(15, 52, 98, 1), rgba(15, 52, 98, 0.4));
+    box-shadow: 0 0 22px rgba(15, 52, 98, 0.9);
 }
 
 .firefly.dark-blue {
-    background: radial-gradient(circle, rgba(60, 120, 200, 1), rgba(40, 100, 180, 0.4));
-    box-shadow: 0 0 22px rgba(60, 120, 200, 0.9);
+    background: radial-gradient(circle, rgba(15, 52, 98, 1), rgba(15, 52, 98, 0.4));
+    box-shadow: 0 0 22px rgba(15, 52, 98, 0.9);
 }
 
 .firefly.bright {
     transform: scale(1.5);
-    box-shadow: 0 0 25px rgb(105, 147, 192);
+    box-shadow: 0 0 25px rgba(15, 52, 98, 1);
 }
 
 .firefly.bright.light-blue {
-    box-shadow: 0 0 25px rgb(55, 100, 147);
+    box-shadow: 0 0 25px rgba(15, 52, 98, 0.9);
 }
 
 .firefly.bright.medium-blue {
-    box-shadow: 0 0 25px rgba(74, 158, 255, 1);
+    box-shadow: 0 0 25px rgba(15, 52, 98, 1);
 }
 
 .firefly.bright.dark-blue {
-    box-shadow: 0 0 25px rgba(60, 120, 200, 1);
+    box-shadow: 0 0 25px rgba(15, 52, 98, 1);
 }
 
 .firefly.dim {
     opacity: 0.2;
-    box-shadow: 0 0 4px rgba(150, 200, 255, 0.3);
+    box-shadow: 0 0 4px rgba(15, 52, 98, 0.3);
     transform: scale(0.7);
 }
 
@@ -129,12 +129,12 @@ body.blog-page footer .copyright {
     0%, 100% {
         opacity: 0.3;
         transform: scale(0.8);
-        box-shadow: 0 0 6px rgba(150, 200, 255, 0.4);
+        box-shadow: 0 0 6px rgba(15, 52, 98, 0.4);
     }
     50% {
         opacity: 1;
         transform: scale(1.2);
-        box-shadow: 0 0 16px rgba(150, 200, 255, 0.9);
+        box-shadow: 0 0 16px rgba(15, 52, 98, 0.9);
     }
 }
 
