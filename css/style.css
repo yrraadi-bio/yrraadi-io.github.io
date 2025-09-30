@@ -10,6 +10,12 @@ html {
     overflow: hidden;
 }
 
+/* Blog Page Overrides */
+html:has(.blog-page) {
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     background: #0f3462;
@@ -19,6 +25,40 @@ body {
     height: 100vh;
     display: flex;
     flex-direction: column;
+}
+
+body.blog-page {
+    overflow-y: auto;
+    height: auto;
+    min-height: 100vh;
+    background: #ffffff;
+    color: #1a1a1a;
+}
+
+body.blog-page header {
+    position: relative;
+    padding-bottom: 0;
+    padding-top: 2rem;
+}
+
+body.blog-page main {
+    padding-top: 0;
+}
+
+body.blog-page .dna-background {
+    display: none;
+}
+
+body.blog-page footer .social-link {
+    color: #1a1a1a;
+}
+
+body.blog-page footer .social-link:hover {
+    color: #4A9EFF;
+}
+
+body.blog-page footer .copyright {
+    color: #666666;
 }
 
 /* Interactive Particle System */
@@ -444,115 +484,94 @@ main {
 
 /* Blog Specific Styles */
 .blog-hero {
-    min-height: calc(100vh - 120px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0 3rem;
-    text-align: center;
+    min-height: auto;
+    padding: 0 3rem 2rem 3rem;
+    text-align: left;
 }
 
 .blog-content {
-    max-width: 600px;
+    max-width: 800px;
+    margin: 0 auto;
 }
 
-.blog-title {
-    font-size: clamp(2.5rem, 6vw, 4rem);
-    font-weight: 300;
-    margin-bottom: 2rem;
-    background: linear-gradient(135deg, #E5E5E5 0%, #A0A0A0 100%);
-    background-clip: text;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+.blog-article {
+    padding: 2rem 0;
 }
 
-.blog-subtitle {
-    margin-bottom: 3rem;
-    color: #B0B0B0;
-    font-size: 1.1rem;
-    font-weight: 300;
+.blog-article h2 {
+    font-size: 2rem;
+    font-weight: 400;
+    margin: 3rem 0 1.5rem 0;
+    color: #1a1a1a;
 }
 
-.coming-soon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 1rem;
-    margin-bottom: 4rem;
-    color: #808080;
+.blog-article h2:first-child {
+    margin-top: 0;
+}
+
+.blog-date {
+    color: #666666;
     font-size: 0.9rem;
-    letter-spacing: 1px;
+    margin-top: -1rem;
+    margin-bottom: 2rem;
+    font-style: italic;
 }
 
-.pulse-dot {
-    width: 8px;
-    height: 8px;
-    background: #4A9EFF;
-    border-radius: 50%;
-    animation: pulse 2s ease-in-out infinite;
+.blog-article h3 {
+    font-size: 1.5rem;
+    font-weight: 400;
+    margin: 2rem 0 1rem 0;
+    color: #2a2a2a;
 }
 
-.blog-molecular {
-    position: relative;
-    height: 100px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+.blog-article p {
+    font-size: 1.05rem;
+    line-height: 1.8;
+    margin-bottom: 1.5rem;
+    color: #333333;
 }
 
-.floating-molecule {
-    position: relative;
-    width: 60px;
-    height: 60px;
-    animation: floatSlow 6s ease-in-out infinite;
+.blog-article em {
+    color: #666666;
+    font-style: italic;
 }
 
-.mini-atom {
-    position: absolute;
-    width: 6px;
-    height: 6px;
-    background: radial-gradient(circle, #7B68EE, #5A4FCF);
-    border-radius: 50%;
-    box-shadow: 0 0 10px rgba(123, 104, 238, 0.3);
+.blog-article a {
+    color: #0066cc;
+    text-decoration: none;
+    border-bottom: 1px solid #0066cc;
+    transition: all 0.2s ease;
 }
 
-.mini-atom:nth-child(1) {
-    top: 10px;
-    left: 25px;
-    animation: miniFloat 4s ease-in-out infinite;
+.blog-article a:hover {
+    color: #004499;
+    border-bottom-color: #004499;
+    background-color: #f0f8ff;
 }
 
-.mini-atom:nth-child(2) {
-    top: 30px;
-    left: 10px;
-    animation: miniFloat 4s ease-in-out infinite -1.3s;
+.blog-image {
+    margin: 2rem 0;
+    width: 100%;
+    max-width: 100%;
 }
 
-.mini-atom:nth-child(3) {
-    top: 30px;
-    right: 10px;
-    animation: miniFloat 4s ease-in-out infinite -2.6s;
+.blog-image img {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    display: block;
 }
 
-@keyframes floatSlow {
-    0%, 100% {
-        transform: translateY(0) rotate(0deg);
-    }
-    50% {
-        transform: translateY(-10px) rotate(180deg);
-    }
+.blog-image figcaption {
+    margin-top: 0.75rem;
+    font-size: 0.9rem;
+    color: #666666;
+    text-align: center;
+    font-style: italic;
 }
 
-@keyframes miniFloat {
-    0%, 100% {
-        transform: translateY(0) scale(1);
-        opacity: 0.7;
-    }
-    50% {
-        transform: translateY(-3px) scale(1.2);
-        opacity: 1;
-    }
-}
 
 /* Footer */
 footer {
