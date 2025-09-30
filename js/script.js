@@ -471,6 +471,18 @@ document.addEventListener('DOMContentLoaded', () => {
             function createChart() {
                 drawAxes();
                 const ns = 'http://www.w3.org/2000/svg';
+                // Y-axis label
+                const yLabel = document.createElementNS(ns, 'text');
+                const yLabelX = padL - 28;
+                const yLabelY = H / 2;
+                yLabel.textContent = 'Enhancer activity';
+                yLabel.setAttribute('fill', '#425975');
+                yLabel.setAttribute('font-size', '12');
+                yLabel.setAttribute('text-anchor', 'middle');
+                yLabel.setAttribute('transform', `rotate(-90 ${yLabelX} ${yLabelY})`);
+                yLabel.setAttribute('x', yLabelX);
+                yLabel.setAttribute('y', yLabelY);
+                svg.appendChild(yLabel);
                 const curves = shapes.map((fn, idx) => {
                     const p = linePathForIndex(idx);
                     p.setAttribute('class', `curve curve-${colors[idx]}`);
