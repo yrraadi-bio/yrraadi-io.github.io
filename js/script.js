@@ -1,170 +1,117 @@
 document.addEventListener('DOMContentLoaded', () => {
     const easterEgg = document.getElementById('easterEgg');
     
-    // Firefly System - magical glowing fireflies that blink and drift
+    // Firefly System - only on pages with #particleBackground present
     const particleBackground = document.getElementById('particleBackground');
-    const fireflies = [];
-    
-    // Create fireflies
-    function createFireflies() {
-        const fireflyCount = 20;
+    if (particleBackground) {
+        const fireflies = [];
         
-        for (let i = 0; i < fireflyCount; i++) {
-            createSingleFirefly();
-        }
-    }
-    
-    function createSingleFirefly() {
-        const firefly = document.createElement('div');
-        firefly.className = 'firefly';
-        
-        // Random blue shade
-        const blueShades = ['light-blue', 'medium-blue', 'dark-blue'];
-        const randomShade = blueShades[Math.floor(Math.random() * blueShades.length)];
-        firefly.classList.add(randomShade);
-        
-        // Random position
-        const x = Math.random() * window.innerWidth;
-        const y = Math.random() * window.innerHeight;
-        
-        firefly.style.left = x + 'px';
-        firefly.style.top = y + 'px';
-        
-        // Random animation delay for natural effect
-        firefly.style.animationDelay = Math.random() * 3 + 's';
-        
-        // Store firefly data
-        const fireflyData = {
-            element: firefly,
-            x: x,
-            y: y,
-            vx: (Math.random() - 0.5) * 0.3, // Slower, more gentle movement
-            vy: (Math.random() - 0.5) * 0.3,
-            visible: true,
-            blinkState: 'normal',
-            color: randomShade
-        };
-        
-        fireflies.push(fireflyData);
-        particleBackground.appendChild(firefly);
-        
-        // Animate firefly
-        animateFirefly(fireflyData);
-        
-        // Random blinking behavior
-        scheduleFireflyBlinks(fireflyData);
-    }
-    
-    // Animate firefly floating (gentle, organic movement)
-    function animateFirefly(fireflyData) {
-        function move() {
-            if (fireflyData.visible) {
-                // Add some randomness to movement for organic feel
-                fireflyData.vx += (Math.random() - 0.5) * 0.02;
-                fireflyData.vy += (Math.random() - 0.5) * 0.02;
-                
-                // Limit velocity
-                fireflyData.vx = Math.max(-0.5, Math.min(0.5, fireflyData.vx));
-                fireflyData.vy = Math.max(-0.5, Math.min(0.5, fireflyData.vy));
-                
-                fireflyData.x += fireflyData.vx;
-                fireflyData.y += fireflyData.vy;
-                
-                // Gentle bounce off edges
-                if (fireflyData.x <= 0 || fireflyData.x >= window.innerWidth) {
-                    fireflyData.vx *= -0.8;
-                }
-                if (fireflyData.y <= 0 || fireflyData.y >= window.innerHeight) {
-                    fireflyData.vy *= -0.8;
-                }
-                
-                // Keep in bounds
-                fireflyData.x = Math.max(0, Math.min(window.innerWidth, fireflyData.x));
-                fireflyData.y = Math.max(0, Math.min(window.innerHeight, fireflyData.y));
-                
-                fireflyData.element.style.left = fireflyData.x + 'px';
-                fireflyData.element.style.top = fireflyData.y + 'px';
+        function createFireflies() {
+            const fireflyCount = 20;
+            for (let i = 0; i < fireflyCount; i++) {
+                createSingleFirefly();
             }
-            
-            requestAnimationFrame(move);
         }
-        move();
-    }
-    
-    // Schedule random blinking patterns
-    function scheduleFireflyBlinks(fireflyData) {
-        function randomBlink() {
-            if (!fireflyData.visible) return;
+        
+        function createSingleFirefly() {
+            const firefly = document.createElement('div');
+            firefly.className = 'firefly';
             
-            const blinkType = Math.random();
+            const blueShades = ['light-blue', 'medium-blue', 'dark-blue'];
+            const randomShade = blueShades[Math.floor(Math.random() * blueShades.length)];
+            firefly.classList.add(randomShade);
             
-            if (blinkType < 0.3) {
-                // Bright flash
-                fireflyData.element.classList.add('bright');
-                setTimeout(() => {
-                    fireflyData.element.classList.remove('bright');
-                }, 800);
-            } else if (blinkType < 0.6) {
-                // Dim out
-                fireflyData.element.classList.add('dim');
-                setTimeout(() => {
-                    fireflyData.element.classList.remove('dim');
-                }, 1200);
-            } else if (blinkType < 0.8) {
-                // Quick double blink
-                fireflyData.element.classList.add('bright');
-                setTimeout(() => {
-                    fireflyData.element.classList.remove('bright');
+            const x = Math.random() * window.innerWidth;
+            const y = Math.random() * window.innerHeight;
+            firefly.style.left = x + 'px';
+            firefly.style.top = y + 'px';
+            firefly.style.animationDelay = Math.random() * 3 + 's';
+            
+            const fireflyData = {
+                element: firefly,
+                x, y,
+                vx: (Math.random() - 0.5) * 0.3,
+                vy: (Math.random() - 0.5) * 0.3,
+                visible: true,
+                blinkState: 'normal',
+                color: randomShade
+            };
+            fireflies.push(fireflyData);
+            particleBackground.appendChild(firefly);
+            animateFirefly(fireflyData);
+            scheduleFireflyBlinks(fireflyData);
+        }
+        
+        function animateFirefly(fireflyData) {
+            function move() {
+                if (fireflyData.visible) {
+                    fireflyData.vx += (Math.random() - 0.5) * 0.02;
+                    fireflyData.vy += (Math.random() - 0.5) * 0.02;
+                    fireflyData.vx = Math.max(-0.5, Math.min(0.5, fireflyData.vx));
+                    fireflyData.vy = Math.max(-0.5, Math.min(0.5, fireflyData.vy));
+                    fireflyData.x += fireflyData.vx;
+                    fireflyData.y += fireflyData.vy;
+                    if (fireflyData.x <= 0 || fireflyData.x >= window.innerWidth) fireflyData.vx *= -0.8;
+                    if (fireflyData.y <= 0 || fireflyData.y >= window.innerHeight) fireflyData.vy *= -0.8;
+                    fireflyData.x = Math.max(0, Math.min(window.innerWidth, fireflyData.x));
+                    fireflyData.y = Math.max(0, Math.min(window.innerHeight, fireflyData.y));
+                    fireflyData.element.style.left = fireflyData.x + 'px';
+                    fireflyData.element.style.top = fireflyData.y + 'px';
+                }
+                requestAnimationFrame(move);
+            }
+            move();
+        }
+        
+        function scheduleFireflyBlinks(fireflyData) {
+            function randomBlink() {
+                if (!fireflyData.visible) return;
+                const blinkType = Math.random();
+                if (blinkType < 0.3) {
+                    fireflyData.element.classList.add('bright');
+                    setTimeout(() => fireflyData.element.classList.remove('bright'), 800);
+                } else if (blinkType < 0.6) {
+                    fireflyData.element.classList.add('dim');
+                    setTimeout(() => fireflyData.element.classList.remove('dim'), 1200);
+                } else if (blinkType < 0.8) {
+                    fireflyData.element.classList.add('bright');
                     setTimeout(() => {
-                        fireflyData.element.classList.add('bright');
+                        fireflyData.element.classList.remove('bright');
                         setTimeout(() => {
-                            fireflyData.element.classList.remove('bright');
-                        }, 300);
-                    }, 200);
-                }, 300);
-            } else {
-                // Disappear and reappear elsewhere (like real fireflies)
-                disappearFirefly(fireflyData);
-                setTimeout(() => {
-                    reappearFirefly(fireflyData);
-                }, Math.random() * 3000 + 1000);
+                            fireflyData.element.classList.add('bright');
+                            setTimeout(() => fireflyData.element.classList.remove('bright'), 300);
+                        }, 200);
+                    }, 300);
+                } else {
+                    disappearFirefly(fireflyData);
+                    setTimeout(() => reappearFirefly(fireflyData), Math.random() * 3000 + 1000);
+                }
+                setTimeout(randomBlink, Math.random() * 4000 + 2000);
             }
-            
-            // Schedule next blink
-            setTimeout(randomBlink, Math.random() * 4000 + 2000);
+            setTimeout(randomBlink, Math.random() * 2000);
         }
         
-        // Start with random delay
-        setTimeout(randomBlink, Math.random() * 2000);
-    }
-    
-    // Make firefly disappear
-    function disappearFirefly(fireflyData) {
-        fireflyData.visible = false;
-        fireflyData.element.style.opacity = '0';
-        fireflyData.element.style.transform = 'scale(0)';
-    }
-    
-    // Make firefly reappear in new location
-    function reappearFirefly(fireflyData) {
-        // New random position
-        fireflyData.x = Math.random() * window.innerWidth;
-        fireflyData.y = Math.random() * window.innerHeight;
-        fireflyData.element.style.left = fireflyData.x + 'px';
-        fireflyData.element.style.top = fireflyData.y + 'px';
+        function disappearFirefly(fireflyData) {
+            fireflyData.visible = false;
+            fireflyData.element.style.opacity = '0';
+            fireflyData.element.style.transform = 'scale(0)';
+        }
         
-        // New random velocity
-        fireflyData.vx = (Math.random() - 0.5) * 0.3;
-        fireflyData.vy = (Math.random() - 0.5) * 0.3;
+        function reappearFirefly(fireflyData) {
+            fireflyData.x = Math.random() * window.innerWidth;
+            fireflyData.y = Math.random() * window.innerHeight;
+            fireflyData.element.style.left = fireflyData.x + 'px';
+            fireflyData.element.style.top = fireflyData.y + 'px';
+            fireflyData.vx = (Math.random() - 0.5) * 0.3;
+            fireflyData.vy = (Math.random() - 0.5) * 0.3;
+            fireflyData.visible = true;
+            fireflyData.element.style.opacity = '1';
+            fireflyData.element.style.transform = 'scale(1)';
+        }
         
-        // Fade back in
-        fireflyData.visible = true;
-        fireflyData.element.style.opacity = '1';
-        fireflyData.element.style.transform = 'scale(1)';
+        // Initialize fireflies only on pages with the container
+        createFireflies();
     }
-    
-    // Initialize fireflies
-    createFireflies();
     
     // Easter Egg - Hidden message activation
     let clickCount = 0;
@@ -272,6 +219,347 @@ document.addEventListener('DOMContentLoaded', () => {
             logo.style.filter = 'brightness(1.1)';
         });
     }
+
+    // Switch visual demo: highlight cell states based on TF selection
+    if (document.body.classList.contains('blog-page')) {
+        const switchEl = document.querySelector('.visual-switch');
+        if (switchEl) {
+            const chips = Array.from(switchEl.querySelectorAll('.tf-chip'));
+            const nodes = Array.from(switchEl.querySelectorAll('.cell-node'));
+            const visualBody = switchEl.querySelector('.visual-body');
+            let wiresSvg = null;
+            const mapping = {
+                'TF-1': ['Cell State A', 'Cell State D'],
+                'TF-2': ['Cell State B'],
+                'TF-3': ['Cell State C', 'Cell State F', 'Cell State H'],
+                'TF-4': ['Cell State E', 'Cell State G'],
+                'TF-5': ['Cell State A', 'Cell State E', 'Cell State H', 'Cell State D'],
+                'TF-6': ['Cell State C', 'Cell State G']
+            };
+
+            function ensureWires() {
+                if (!wiresSvg) {
+                    wiresSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                    wiresSvg.classList.add('wires');
+                    visualBody.appendChild(wiresSvg);
+                }
+                return wiresSvg;
+            }
+
+            function drawWires(fromEl, tf) {
+                const svg = ensureWires();
+                // clear previous wires
+                while (svg.firstChild) svg.removeChild(svg.firstChild);
+                const bodyRect = visualBody.getBoundingClientRect();
+                const fromRect = fromEl.getBoundingClientRect();
+                const x1 = fromRect.left + fromRect.width / 2 - bodyRect.left;
+                const y1 = fromRect.top + fromRect.height / 2 - bodyRect.top;
+                const activeStates = new Set(mapping[tf] || []);
+                nodes.forEach(node => {
+                    const state = node.getAttribute('data-state');
+                    if (!activeStates.has(state)) return;
+                    const toRect = node.getBoundingClientRect();
+                    const x2 = toRect.left + toRect.width / 2 - bodyRect.left;
+                    const y2 = toRect.top + toRect.height / 2 - bodyRect.top;
+                    const cx1 = x1 + (x2 - x1) * 0.35;
+                    const cy1 = y1;
+                    const cx2 = x1 + (x2 - x1) * 0.65;
+                    const cy2 = y2;
+                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    const d = `M ${x1},${y1} C ${cx1},${cy1} ${cx2},${cy2} ${x2},${y2}`;
+                    path.setAttribute('d', d);
+                    path.setAttribute('class', 'wire-path');
+                    svg.appendChild(path);
+                    // animate draw and fade
+                    try {
+                        const len = path.getTotalLength();
+                        path.style.strokeDasharray = String(len);
+                        path.style.strokeDashoffset = String(len);
+                        path.style.opacity = '0';
+                        path.style.transition = 'stroke-dashoffset 1200ms ease, opacity 800ms ease';
+                        requestAnimationFrame(() => {
+                            path.style.strokeDashoffset = '0';
+                            path.style.opacity = '1';
+                        });
+                        // hold briefly, then fade and remove
+                        setTimeout(() => {
+                            path.style.opacity = '0';
+                            setTimeout(() => { if (path.parentNode) path.parentNode.removeChild(path); }, 900);
+                        }, 1600);
+                    } catch (_) {
+                        // if getTotalLength not supported, just fade
+                        path.style.transition = 'opacity 900ms ease';
+                        path.style.opacity = '1';
+                        setTimeout(() => {
+                            path.style.opacity = '0';
+                            setTimeout(() => { if (path.parentNode) path.parentNode.removeChild(path); }, 900);
+                        }, 1200);
+                    }
+                });
+            }
+
+            function clearActive() {
+                chips.forEach(c => c.setAttribute('aria-selected', 'false'));
+                nodes.forEach(n => n.classList.remove('on'));
+                if (wiresSvg) while (wiresSvg.firstChild) wiresSvg.removeChild(wiresSvg.firstChild);
+            }
+
+            function updateActive(tf, sourceEl) {
+                chips.forEach(c => c.setAttribute('aria-selected', c.dataset.tf === tf ? 'true' : 'false'));
+                nodes.forEach(n => {
+                    const state = n.getAttribute('data-state');
+                    const on = (mapping[tf] || []).includes(state);
+                    n.classList.toggle('on', on);
+                });
+                if (sourceEl && tf) drawWires(sourceEl, tf);
+            }
+
+            chips.forEach(chip => {
+                chip.addEventListener('click', () => {
+                    const isSelected = chip.getAttribute('aria-selected') === 'true';
+                    if (isSelected) {
+                        clearActive();
+                    } else {
+                        updateActive(chip.dataset.tf, chip);
+                    }
+                });
+                chip.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        const isSelected = chip.getAttribute('aria-selected') === 'true';
+                        if (isSelected) {
+                            clearActive();
+                        } else {
+                            updateActive(chip.dataset.tf, chip);
+                        }
+                    }
+                    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+                        e.preventDefault();
+                        const idx = chips.indexOf(chip);
+                        const dir = e.key === 'ArrowRight' ? 1 : -1;
+                        const next = (idx + dir + chips.length) % chips.length;
+                        chips[next].focus();
+                        updateActive(chips[next].dataset.tf, chips[next]);
+                    }
+                });
+            });
+
+            const selected = chips.find(c => c.getAttribute('aria-selected') === 'true');
+            if (selected) updateActive(selected.dataset.tf, selected);
+        }
+    }
+
+    // Dial visual demo: single knob controlling activity across multiple gains
+    if (document.body.classList.contains('blog-page')) {
+        const dialEl = document.querySelector('.visual-dial');
+        if (dialEl) {
+            const slider = dialEl.querySelector('.dial-slider');
+            const valueEl = dialEl.querySelector('.dial-value-num');
+            const svg = dialEl.querySelector('.dial-chart');
+            const knob = dialEl.querySelector('.dial-knob');
+            const handle = dialEl.querySelector('.dial-handle');
+            let ringRadius = null;
+            function computeRingRadius() {
+                if (!knob) return 0;
+                const kRect = knob.getBoundingClientRect();
+                const track = dialEl.querySelector('.dial-track');
+                const tRect = track ? track.getBoundingClientRect() : null;
+                const knobRadius = kRect.width / 2;
+                const borderW = parseFloat(getComputedStyle(knob).borderWidth) || 6;
+                const outerVisualR = knobRadius - borderW / 2; // center of the border
+                const innerR = tRect ? (tRect.width / 2) : (outerVisualR - 14); // track inset ~14px
+                ringRadius = (outerVisualR + innerR) / 2;
+                return ringRadius;
+            }
+            const W = 420, H = 240, padL = 40, padR = 16, padT = 16, padB = 32;
+            svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+
+            const xToSvg = x => padL + x * (W - padL - padR);
+            const yToSvg = y => H - padB - y * (H - padT - padB);
+
+            // Monotonic convex (quadratic-like) shapes with different saturation levels
+            // y_i(x) ≈ amp[i] * x^{pow[i]}, giving convex curves that do NOT converge to the same max
+            const amps = [0.70, 0.90, 1.00, 0.80];     // saturation levels for A,B,C,D
+            const pows = [2.2, 2.0, 1.8, 2.4];         // convex exponents (>1)
+            const shapes = amps.map((A, i) => (x) => Math.max(0, Math.min(1, A * Math.pow(x, pows[i]))));
+            const colors = ['a','b','c','d'];
+
+            function drawAxes() {
+                const ns = 'http://www.w3.org/2000/svg';
+                const axisX = document.createElementNS(ns, 'line');
+                axisX.setAttribute('x1', padL);
+                axisX.setAttribute('y1', yToSvg(0));
+                axisX.setAttribute('x2', W - padR);
+                axisX.setAttribute('y2', yToSvg(0));
+                axisX.setAttribute('class', 'axis');
+                svg.appendChild(axisX);
+
+                const axisY = document.createElementNS(ns, 'line');
+                axisY.setAttribute('x1', padL);
+                axisY.setAttribute('y1', yToSvg(0));
+                axisY.setAttribute('x2', padL);
+                axisY.setAttribute('y2', yToSvg(1));
+                axisY.setAttribute('class', 'axis');
+                svg.appendChild(axisY);
+
+                [0.5, 1].forEach(tx => {
+                    const t = document.createElementNS(ns, 'line');
+                    t.setAttribute('x1', xToSvg(tx));
+                    t.setAttribute('y1', yToSvg(0));
+                    t.setAttribute('x2', xToSvg(tx));
+                    t.setAttribute('y2', yToSvg(0) + 6);
+                    t.setAttribute('class', 'tick');
+                    svg.appendChild(t);
+                });
+            }
+
+            function linePathForIndex(idx) {
+                const ns = 'http://www.w3.org/2000/svg';
+                const path = document.createElementNS(ns, 'path');
+                const pts = [];
+                const N = 40;
+                for (let i = 0; i <= N; i++) {
+                    const x = i / N;
+                    const y = Math.max(0, Math.min(1, shapes[idx](x)));
+                    pts.push(`${i === 0 ? 'M' : 'L'} ${xToSvg(x)},${yToSvg(y)}`);
+                }
+                path.setAttribute('d', pts.join(' '));
+                return path;
+            }
+
+            function createChart() {
+                drawAxes();
+                const ns = 'http://www.w3.org/2000/svg';
+                const curves = shapes.map((fn, idx) => {
+                    const p = linePathForIndex(idx);
+                    p.setAttribute('class', `curve curve-${colors[idx]}`);
+                    svg.appendChild(p);
+                    return p;
+                });
+                const cursor = document.createElementNS(ns, 'line');
+                cursor.setAttribute('y1', padT);
+                cursor.setAttribute('y2', H - padB);
+                cursor.setAttribute('class', 'cursor-line');
+                svg.appendChild(cursor);
+
+                const markers = shapes.map((fn, idx) => {
+                    const c = document.createElementNS(ns, 'circle');
+                    c.setAttribute('r', 5);
+                    c.setAttribute('class', `marker marker-${colors[idx]}`);
+                    svg.appendChild(c);
+                    return c;
+                });
+
+                function setKnobVisual(val) {
+                    const deg = Math.max(0, Math.min(360, (val/100) * 360));
+                    const d1 = deg * 0.33;
+                    const d2 = deg * 0.66;
+                    const c1 = '#D6E3F3';
+                    const c2 = '#6FA7D8';
+                    const c3 = '#2E6FA8';
+                    const c4 = '#0F3460';
+                    const theta = deg - 90; // handle angle from right, offset to 12 o'clock
+                    const start = theta - deg; // start arc so it ends exactly at the handle
+                    knob.style.background = `conic-gradient(from ${start}deg, ${c1} 0deg, ${c2} ${d1}deg, ${c3} ${d2}deg, ${c4} ${deg}deg, #e6ecf5 ${deg}deg 360deg)`;
+                    const r = ringRadius != null ? ringRadius : computeRingRadius();
+                    if (handle) handle.style.transform = `rotate(${theta}deg) translate(${r}px) rotate(${-theta}deg)`;
+                    knob.setAttribute('aria-valuenow', String(Math.round(val)));
+                }
+
+                function update(val) {
+                    const x = Math.max(0, Math.min(1, val / 100));
+                    if (valueEl) valueEl.textContent = Math.round(val);
+                    cursor.setAttribute('x1', xToSvg(x));
+                    cursor.setAttribute('x2', xToSvg(x));
+                    markers.forEach((m, i) => {
+                        const y = Math.max(0, Math.min(1, shapes[i](x)));
+                        m.setAttribute('cx', xToSvg(x));
+                        m.setAttribute('cy', yToSvg(y));
+                    });
+                    setKnobVisual(val);
+                }
+
+                // initialize from slider value
+                computeRingRadius();
+                update(parseFloat(slider.value));
+                slider.addEventListener('input', () => update(parseFloat(slider.value)));
+                window.addEventListener('resize', () => { computeRingRadius(); update(parseFloat(slider.value)); });
+
+                // pointer interactions on knob
+                let dragging = false;
+                let rafPending = false;
+                function degFromEvent(e) {
+                    const rect = knob.getBoundingClientRect();
+                    const cx = rect.left + rect.width/2;
+                    const cy = rect.top + rect.height/2;
+                    const px = (e.touches ? e.touches[0].clientX : e.clientX) - cx;
+                    const py = (e.touches ? e.touches[0].clientY : e.clientY) - cy;
+                    let ang = Math.atan2(py, px); // -PI..PI
+                    let deg = ang * 180/Math.PI;  // -180..180
+                    deg = (deg + 360) % 360;      // 0..360 (0 at 3 o'clock)
+                    // normalize so 0 is at 12 o'clock
+                    const degFromTop = (deg + 90) % 360; // 0..360 clockwise
+                    return degFromTop;
+                }
+                let lastDeg = null;
+                let currentVal = parseFloat(slider.value);
+                function startDrag(e) {
+                    dragging = true;
+                    try { knob.setPointerCapture(e.pointerId); } catch(_) {}
+                    document.addEventListener('pointermove', onDrag);
+                    document.addEventListener('pointerup', endDrag);
+                    e.preventDefault();
+                    const d = degFromEvent(e);
+                    lastDeg = d;
+                    currentVal = Math.max(0, Math.min(100, (d/360) * 100));
+                    slider.value = String(currentVal);
+                    update(currentVal);
+                }
+                function onDrag(e) {
+                    if (!dragging) return;
+                    if (rafPending) return;
+                    rafPending = true;
+                    requestAnimationFrame(() => {
+                        const d = degFromEvent(e);
+                        if (lastDeg == null) lastDeg = d;
+                        // compute shortest angular delta (-180..180)
+                        let delta = d - lastDeg;
+                        if (delta > 180) delta -= 360;
+                        if (delta < -180) delta += 360;
+                        // convert to value change and clamp (prevents wrap-around at 0/100)
+                        currentVal = Math.max(0, Math.min(100, currentVal + (delta/360)*100));
+                        lastDeg = d;
+                        slider.value = String(currentVal);
+                        update(currentVal);
+                        rafPending = false;
+                    });
+                }
+                function endDrag(e) {
+                    dragging = false;
+                    document.removeEventListener('pointermove', onDrag);
+                    document.removeEventListener('pointerup', endDrag);
+                    try { knob.releasePointerCapture(e.pointerId); } catch(_) {}
+                }
+                knob.addEventListener('pointerdown', startDrag);
+                // keyboard on knob
+                knob.addEventListener('keydown', (e) => {
+                    let v = parseFloat(slider.value);
+                    if (e.key === 'ArrowRight' || e.key === 'ArrowUp') { v = Math.min(100, v + 2); }
+                    else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') { v = Math.max(0, v - 2); }
+                    else if (e.key === 'Home') { v = 0; }
+                    else if (e.key === 'End') { v = 100; }
+                    else return;
+                    e.preventDefault();
+                    slider.value = String(v);
+                    update(v);
+                });
+            }
+
+            createChart();
+        }
+    }
+
+    // Removed Table of Contents generation (will add later)
 });
 
 // Additional Interactive Element Option 2: Particle System

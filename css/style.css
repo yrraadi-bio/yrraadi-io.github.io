@@ -498,11 +498,22 @@ main {
     padding: 2rem 0;
 }
 
+/* Table of Contents styles removed */
+
 .blog-article h2 {
     font-size: 2rem;
     font-weight: 400;
     margin: 3rem 0 1.5rem 0;
     color: #1a1a1a;
+}
+
+/* Blog subheadings inside sections */
+.blog-article h4.blog-subheading {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 1.75rem 0 0.75rem 0;
+    line-height: 1.4;
 }
 
 .blog-article h2:first-child {
@@ -603,6 +614,8 @@ footer {
     letter-spacing: 0.5px;
 }
 
+/* Smooth scrolling removed with ToC */
+
 /* Responsive Design */
 @media (max-width: 768px) {
     header {
@@ -696,6 +709,11 @@ footer {
     }
 }
 
+/* Side ToC layout removed */
+
+/* Anchor offset so headings don't hide under viewport edges */
+/* Anchor offset removed with ToC */
+
 /* Hover Effects for Interactive Elements */
 .molecule:hover .atom {
     animation-duration: 1s;
@@ -706,3 +724,336 @@ footer {
     background: linear-gradient(90deg, transparent, rgba(74, 158, 255, 0.6), transparent);
 }
 
+/* Blog interactive visuals */
+.blog-visual {
+    border: 1px solid #e9edf4;
+    border-radius: 12px;
+    background: #ffffff;
+    padding: 1rem;
+    margin: 1rem 0 2rem 0;
+}
+
+.blog-visual .visual-header {
+    font-size: 0.95rem;
+    color: #0F3460;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    padding-left: 0.75rem;
+    border-left: 3px solid #0F3460;
+}
+
+.blog-visual .visual-body {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+}
+
+.blog-visual .visual-footer {
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+/* status removed */
+
+.blog-visual .group-label {
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #5b7290;
+    margin: 0.25rem 0 0.5rem 0.25rem;
+}
+
+/* controls removed */
+
+.blog-visual .legend-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 1px solid #bbb;
+    background: #fff;
+    margin: 0 0.25rem 0 0.5rem;
+    vertical-align: middle;
+}
+
+.blog-visual .legend-dot.on {
+    background: #0F3460;
+    border-color: #0F3460;
+}
+
+.visual-switch .tf-chips {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+}
+
+.visual-switch .tf-chip {
+    appearance: none;
+    border: 1px solid #d6dfec;
+    background: #f4f7fb;
+    color: #0F3460;
+    padding: 0.4rem 0.7rem;
+    border-radius: 999px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: 100%;
+    text-align: center;
+}
+
+/* removed leading dot on TF chips for cleaner look */
+
+.visual-switch .tf-chip[aria-selected="true"],
+.visual-switch .tf-chip:focus-visible {
+    outline: none;
+    border-color: #0F3460;
+    background: #e8eff8;
+    box-shadow: 0 0 0 2px rgba(15, 52, 96, 0.15);
+}
+
+.visual-switch .tf-chip:hover {
+    transform: translateY(-1px);
+    background: #eef3f9;
+}
+
+.visual-switch .tf-chip:active {
+    transform: translateY(0) scale(0.98);
+}
+
+.visual-switch .cell-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.visual-switch .cell-node {
+    background: #fbfcfe;
+    border: 1px solid #e6ecf5;
+    border-radius: 12px;
+    padding: 1.25rem 1rem;
+    text-align: center;
+    color: #1f2a3a;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    position: relative;
+}
+
+.visual-switch .cell-node::after {
+    content: '';
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #c8d3e3; /* inactive */
+}
+
+.visual-switch .cell-node span {
+    position: relative;
+    z-index: 1;
+}
+
+.visual-switch .cell-node::before {
+    content: '';
+    position: absolute;
+    inset: 0.6rem;
+    border-radius: 8px;
+    background: transparent;
+    transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.visual-switch .cell-node.on {
+    border-color: #0F3460;
+    box-shadow: 0 2px 6px rgba(15, 52, 96, 0.15);
+    transform: translateY(-1px);
+}
+
+.visual-switch .cell-node.on::before {
+    background: transparent; /* remove blue shading */
+}
+
+.visual-switch .cell-node.on::after {
+    background: #0F3460; /* active */
+}
+
+.visual-switch .cell-node.pulse::after {
+    box-shadow: 0 0 0 0 rgba(15, 52, 96, 0.35);
+    animation: pulseRing 600ms ease-out;
+}
+
+@keyframes pulseRing {
+    0% { box-shadow: 0 0 0 0 rgba(15, 52, 96, 0.35); }
+    100% { box-shadow: 0 0 0 10px rgba(15, 52, 96, 0); }
+}
+
+@media (min-width: 720px) {
+    .blog-visual .visual-body {
+        grid-template-columns: minmax(220px, 1fr) 2fr;
+        align-items: center;
+    }
+}
+
+/* sparkles */
+.visual-switch .cell-node .sparkle {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(15, 52, 96, 0.9);
+    box-shadow: 0 0 8px rgba(15, 52, 96, 0.45);
+    transform: scale(0.4);
+    animation: sparklePop 600ms ease-out forwards;
+}
+
+@keyframes sparklePop {
+    0% { opacity: 0; transform: scale(0.4); }
+    60% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(0.4); }
+}
+
+/* wire overlay */
+.visual-switch .wires {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.visual-switch .wire-path {
+    fill: none;
+    stroke: #0F3460;
+    stroke-opacity: 0.45;
+    stroke-width: 2;
+}
+
+/* Visual Dial (activity curves) */
+.visual-dial .dial-control {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.visual-dial .dial-value {
+    min-width: 3ch;
+    font-variant-numeric: tabular-nums;
+    color: #0F3460;
+    font-weight: 600;
+}
+
+/* hide the linear slider but keep it for accessibility/fallback */
+.visual-dial .dial-slider {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    width: 0;
+    height: 0;
+}
+
+.visual-dial .dial-knob {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: conic-gradient(#0F3460 0deg, #0F3460 0deg, #e6ecf5 0deg, #e6ecf5 360deg);
+    border: 6px solid #f4f7fb;
+    box-shadow: inset 0 0 0 1px #e6ecf5, 0 2px 8px rgba(15, 52, 96, 0.08);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.visual-dial .dial-knob:focus-visible {
+    outline: none;
+    box-shadow: inset 0 0 0 1px #e6ecf5, 0 0 0 4px rgba(15, 52, 96, 0.2);
+}
+
+.visual-dial .dial-track {
+    position: absolute;
+    inset: 14px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 50%, #ffffff 0%, #ffffff 60%, #f4f7fb 100%);
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.06);
+}
+
+.visual-dial .dial-handle {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 14px;
+    height: 14px;
+    margin: -7px; /* center */
+    border-radius: 50%;
+    background: #0F3460;
+    box-shadow: 0 0 0 3px #ffffff, 0 2px 6px rgba(15, 52, 96, 0.25);
+    transform: rotate(0deg) translate(47px) rotate(0deg);
+    transition: none;
+}
+
+.visual-dial .chart-area {
+    position: relative;
+    background: #fbfcfe;
+    border: 1px solid #e6ecf5;
+    border-radius: 12px;
+    padding: 0.5rem;
+}
+
+.visual-dial .dial-chart {
+    width: 100%;
+    height: 200px;
+    display: block;
+}
+
+.visual-dial .chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1rem;
+    margin: 0.25rem 0 0.25rem 0.5rem;
+    color: #425975;
+    font-size: 0.85rem;
+}
+
+.visual-dial .legend-item::before {
+    content: '';
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: -1px;
+}
+
+.visual-dial .legend-a::before { background: #0F3460; }
+.visual-dial .legend-b::before { background: #2B6BAA; }
+.visual-dial .legend-c::before { background: #2E6FA8; }
+.visual-dial .legend-d::before { background: #6FA7D8; }
+
+.visual-dial .curve { fill: none; stroke-width: 3; }
+.visual-dial .curve-a { stroke: #0F3460; }
+.visual-dial .curve-b { stroke: #2B6BAA; }
+.visual-dial .curve-c { stroke: #2E6FA8; }
+.visual-dial .curve-d { stroke: #6FA7D8; }
+.visual-dial .axis { stroke: #d7dfea; stroke-width: 1; }
+.visual-dial .tick { stroke: #e5ebf3; stroke-width: 1; }
+.visual-dial .cursor-line { stroke: #0F3460; stroke-opacity: 0.35; stroke-dasharray: 4 4; }
+.visual-dial .marker { fill: #fff; stroke-width: 2; }
+.visual-dial .marker-a { stroke: #0F3460; }
+.visual-dial .marker-b { stroke: #2B6BAA; }
+.visual-dial .marker-c { stroke: #2E6FA8; }
+.visual-dial .marker-d { stroke: #6FA7D8; }
+
+@media (min-width: 640px) {
+    .visual-switch .cell-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .visual-switch .tf-chips {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 960px) {
+    .visual-switch .cell-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
