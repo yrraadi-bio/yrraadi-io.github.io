@@ -549,15 +549,15 @@ main {
 }
 
 .blog-article a {
-    color: #0066cc;
+    color: #333333;
     text-decoration: none;
-    border-bottom: 1px solid #0066cc;
+    border-bottom: 1px solid #333333;
     transition: all 0.2s ease;
 }
 
 .blog-article a:hover {
-    color: #004499;
-    border-bottom-color: #004499;
+    color: #0066cc;
+    border-bottom-color: #0066cc;
     background-color: #f0f8ff;
 }
 
