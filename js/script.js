@@ -773,28 +773,30 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             function animateLine(lineEl, duration = 600, delay = 0) {
-                if (!lineEl || !schema) return;
-                const ns = 'http://www.w3.org/2000/svg';
-                const dot = document.createElementNS(ns, 'circle');
-                dot.setAttribute('r', '3');
-                dot.setAttribute('class', 'flow-dot');
-                schema.appendChild(dot);
-                const x1 = parseFloat(lineEl.getAttribute('x1')) || 0;
-                const y1 = parseFloat(lineEl.getAttribute('y1')) || 0;
-                const x2 = parseFloat(lineEl.getAttribute('x2')) || 0;
-                const y2 = parseFloat(lineEl.getAttribute('y2')) || 0;
-                const start = performance.now() + delay;
-                function step(now) {
-                    const tRaw = Math.max(0, Math.min(1, (now - start) / duration));
-                    // smoothstep easing for smoother motion
-                    const t = tRaw * tRaw * (3 - 2 * tRaw);
-                    const x = x1 + (x2 - x1) * t;
-                    const y = y1 + (y2 - y1) * t;
-                    dot.setAttribute('cx', String(x));
-                    dot.setAttribute('cy', String(y));
-                    if (t < 1) requestAnimationFrame(step); else setTimeout(() => dot.remove(), 150);
-                }
-                requestAnimationFrame(step);
+                return new Promise((resolve) => {
+                    if (!lineEl || !schema) return resolve();
+                    const ns = 'http://www.w3.org/2000/svg';
+                    const dot = document.createElementNS(ns, 'circle');
+                    dot.setAttribute('r', '3');
+                    dot.setAttribute('class', 'flow-dot');
+                    schema.appendChild(dot);
+                    const x1 = parseFloat(lineEl.getAttribute('x1')) || 0;
+                    const y1 = parseFloat(lineEl.getAttribute('y1')) || 0;
+                    const x2 = parseFloat(lineEl.getAttribute('x2')) || 0;
+                    const y2 = parseFloat(lineEl.getAttribute('y2')) || 0;
+                    const start = performance.now() + delay;
+                    function step(now) {
+                        const tRaw = Math.max(0, Math.min(1, (now - start) / duration));
+                        // smoothstep easing for smoother motion
+                        const t = tRaw * tRaw * (3 - 2 * tRaw);
+                        const x = x1 + (x2 - x1) * t;
+                        const y = y1 + (y2 - y1) * t;
+                        dot.setAttribute('cx', String(x));
+                        dot.setAttribute('cy', String(y));
+                        if (t < 1) requestAnimationFrame(step); else setTimeout(() => { dot.remove(); resolve(); }, 150);
+                    }
+                    requestAnimationFrame(step);
+                });
             }
 
             function updateXor() {
@@ -802,14 +804,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const on2 = toggles[1].getAttribute('aria-pressed') === 'true';
                 const active = (on1 !== on2); // XOR
                 target.classList.toggle('on', active);
-                // animate inputs
-                const durations = [];
-                if (on1 && in1) { animateLine(in1, 450, 0); durations.push(450); }
-                if (on2 && in2) { animateLine(in2, 450, 0); durations.push(450); }
-                // start output after inputs reach the gate body
+                // animate inputs and wait until they reach the gate body
+                const tasks = [];
+                if (on1 && in1) tasks.push(animateLine(in1, 450, 0));
+                if (on2 && in2) tasks.push(animateLine(in2, 450, 0));
                 if (active && out) {
-                    const maxIn = durations.length ? Math.max.apply(null, durations) : 0;
-                    animateLine(out, 650, maxIn + 120);
+                    Promise.all(tasks.length ? tasks : [Promise.resolve()]).then(() => {
+                        animateLine(out, 650, 0);
+                    });
                 }
             }
 
@@ -828,6 +830,9 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             layoutLines();
+            // run layout again on next frames to catch late style/layout changes (mobile)
+            requestAnimationFrame(layoutLines);
+            setTimeout(layoutLines, 200);
             updateXor();
             window.addEventListener('resize', () => { layoutLines(); });
         });

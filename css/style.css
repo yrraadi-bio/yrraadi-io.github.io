@@ -728,11 +728,10 @@ footer {
     .visual-switch .cell-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .visual-switch .tf-chips { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
-    /* XOR layout stacks vertically */
-    .visual-xor .visual-body { grid-template-columns: 1fr; align-items: stretch; }
-    .visual-xor .xor-gate-col { justify-content: flex-start; margin: 0.5rem 0; }
-    .visual-xor .xor-schematic { width: 100%; max-width: 240px; height: auto; }
-    .visual-xor .xor-gate { width: 96px; height: 56px; font-size: 0.9rem; }
+    /* XOR layout stacks vertically and centers */
+    .visual-xor .visual-body { grid-template-columns: 1fr; align-items: center; row-gap: 0.75rem; }
+    .visual-xor .xor-gate-col { justify-content: center; margin: 0.5rem 0; width: 100%; }
+    .visual-xor .xor-schematic { width: 100%; height: 140px; max-width: 340px; }
 }
 
 /* Side ToC layout removed */
@@ -1102,60 +1101,16 @@ footer {
         grid-template-columns: repeat(4, minmax(0, 1fr));
     }
 }
-/* XOR minimal interactive */
-.visual-xor .visual-body {
-    display: grid;
-    grid-template-columns: minmax(160px, 1fr) 160px 2fr;
-    align-items: stretch;
-    gap: 1rem;
-}
-
-.visual-xor .xor-controls {
-    display: flex;
-    flex-direction: column;
-    gap: 0.6rem;
-}
-
-.visual-xor .xor-toggle {
-    appearance: none;
-    border: 1px solid #d6dfec;
-    background: #f4f7fb;
-    color: #0F3460;
-    padding: 0.45rem 0.8rem;
-    border-radius: 999px;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.visual-xor .xor-toggle[aria-pressed="true"],
-.visual-xor .xor-toggle:focus-visible {
-    outline: none;
-    border-color: #0F3460;
-    background: #e8eff8;
-    box-shadow: 0 0 0 2px rgba(15, 52, 96, 0.15);
-}
-
-.visual-xor .xor-toggle:hover { transform: translateY(-1px); background: #eef3f9; }
-
-.visual-xor .xor-gate-col { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
-.visual-xor .xor-schematic { width: 100%; height: 100%; display: block; }
-.visual-xor .xor-gate {
-    width: 120px;
-    height: 56px;
-    border-radius: 18px;
-    border: 2px solid #0F3460;
-    background: radial-gradient(circle at 50% 60%, #ffffff 0%, #f5f8fd 70%, #eef3f9 100%);
-    color: #0F3460;
-    display: flex; align-items: center; justify-content: center;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    box-shadow: 0 2px 6px rgba(15, 52, 96, 0.12);
-}
-.visual-xor .xor-gate.active { box-shadow: 0 0 0 2px rgba(15,52,96,0.15), 0 0 18px rgba(15,52,96,0.25); }
-
-.visual-xor .cell-node { background: #fbfcfe; border: 1px solid #e6ecf5; border-radius: 12px; padding: 1.25rem 1rem; text-align: center; color: #1f2a3a; position: relative; transition: border-color .2s, box-shadow .2s; }
-.visual-xor .cell-node::after { content: ''; position: absolute; top: 8px; right: 10px; width: 8px; height: 8px; border-radius: 50%; background: #c8d3e3; }
+/* XOR simple truth-table-like row */
+.visual-xor .visual-body.xor-simple { display: grid; grid-template-columns: repeat(3, 1fr); align-items: center; gap: 0; border: 1px solid #e6ecf5; border-radius: 12px; overflow: hidden; }
+.visual-xor .xor-col { display: flex; flex-direction: column; align-items: stretch; gap: 0.35rem; padding: 0.6rem; border-right: 1px solid #e6ecf5; }
+.visual-xor .xor-col:last-child { border-right: none; }
+.visual-xor .xor-col .group-label { text-align: center; font-size: 0.8rem; color: #425975; margin-bottom: 0.1rem; }
+.visual-xor .xor-toggle { appearance: none; border: 1px solid #e6ecf5; background: #fbfcfe; color: #0F3460; border-radius: 10px; font-size: 0.9rem; cursor: pointer; transition: all 0.2s ease; height: 42px; display: flex; align-items: center; justify-content: center; width: 100%; }
+.visual-xor .xor-toggle[aria-pressed="true"], .visual-xor .xor-toggle:focus-visible { outline: none; border-color: #0F3460; background: #e8eff8; box-shadow: 0 0 0 2px rgba(15, 52, 96, 0.12); }
+.visual-xor .xor-toggle:hover { transform: translateY(-1px); background: #f4f7fb; }
+.visual-xor .cell-node { background: #fbfcfe; border: 1px solid #e6ecf5; border-radius: 10px; text-align: center; color: #1f2a3a; position: relative; transition: border-color .2s, box-shadow .2s; height: 42px; display: flex; align-items: center; justify-content: center; padding: 0 12px; width: 100%; min-width: 0; }
+.visual-xor .cell-node::after { content: ''; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 8px; height: 8px; border-radius: 50%; background: #c8d3e3; }
 .visual-xor .cell-node.on { border-color: #0F3460; box-shadow: 0 2px 6px rgba(15, 52, 96, 0.15); }
 .visual-xor .cell-node.on::after { background: #0F3460; }
 
