@@ -359,6 +359,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const knob = dialEl.querySelector('.dial-knob');
             const handle = dialEl.querySelector('.dial-handle');
             let ringRadius = null;
+            const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
             function computeRingRadius() {
                 if (!knob) return 0;
                 const kRect = knob.getBoundingClientRect();
@@ -450,6 +451,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     return c;
                 });
 
+                let initialHandleAtTop = false;
+
                 function setKnobVisual(val) {
                     const deg = Math.max(0, Math.min(360, (val/100) * 360));
                     const d1 = deg * 0.33;
@@ -458,9 +461,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     const c2 = '#6FA7D8';
                     const c3 = '#2E6FA8';
                     const c4 = '#0F3460';
-                    const theta = deg - 90; // handle angle from right, offset to 12 o'clock
-                    const start = theta - deg; // start arc so it ends exactly at the handle
-                    knob.style.background = `conic-gradient(from ${start}deg, ${c1} 0deg, ${c2} ${d1}deg, ${c3} ${d2}deg, ${c4} ${deg}deg, #e6ecf5 ${deg}deg 360deg)`;
+                    const fromAngle = isSafari ? '-90deg' : '-180deg';
+                    knob.style.background = `conic-gradient(from ${fromAngle}, ${c1} 0deg, ${c2} ${d1}deg, ${c3} ${d2}deg, ${c4} ${deg}deg, #e6ecf5 ${deg}deg 360deg)`;
+                    let theta = deg + (isSafari ? -90 : -180);
                     const r = ringRadius != null ? ringRadius : computeRingRadius();
                     if (handle) handle.style.transform = `rotate(${theta}deg) translate(${r}px) rotate(${-theta}deg)`;
                     knob.setAttribute('aria-valuenow', String(Math.round(val)));
@@ -482,7 +485,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // initialize from slider value
                 computeRingRadius();
                 update(parseFloat(slider.value));
-                slider.addEventListener('input', () => update(parseFloat(slider.value)));
+                slider.addEventListener('input', () => { initialHandleAtTop = false; update(parseFloat(slider.value)); });
                 window.addEventListener('resize', () => { computeRingRadius(); update(parseFloat(slider.value)); });
 
                 // pointer interactions on knob
@@ -497,8 +500,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     let ang = Math.atan2(py, px); // -PI..PI
                     let deg = ang * 180/Math.PI;  // -180..180
                     deg = (deg + 360) % 360;      // 0..360 (0 at 3 o'clock)
-                    // normalize so 0 is at 12 o'clock
-                    const degFromTop = (deg + 90) % 360; // 0..360 clockwise
+                    // normalize so 0 is at 9 o'clock
+                    const degFromTop = (deg + 180) % 360; // 0..360 clockwise
                     return degFromTop;
                 }
                 let lastDeg = null;
@@ -509,6 +512,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.addEventListener('pointermove', onDrag);
                     document.addEventListener('pointerup', endDrag);
                     e.preventDefault();
+                    initialHandleAtTop = false;
                     const d = degFromEvent(e);
                     lastDeg = d;
                     currentVal = Math.max(0, Math.min(100, (d/360) * 100));
@@ -550,6 +554,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     else if (e.key === 'End') { v = 100; }
                     else return;
                     e.preventDefault();
+                    initialHandleAtTop = false;
                     slider.value = String(v);
                     update(v);
                 });
