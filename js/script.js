@@ -250,6 +250,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 const svg = ensureWires();
                 // clear previous wires
                 while (svg.firstChild) svg.removeChild(svg.firstChild);
+                // add arrowhead marker definition
+                const ns = 'http://www.w3.org/2000/svg';
+                const defs = document.createElementNS(ns, 'defs');
+                const marker = document.createElementNS(ns, 'marker');
+                marker.setAttribute('id', 'wireArrow');
+                marker.setAttribute('viewBox', '0 0 14 14');
+                marker.setAttribute('refX', '12');
+                marker.setAttribute('refY', '7');
+                marker.setAttribute('markerWidth', '14');
+                marker.setAttribute('markerHeight', '14');
+                marker.setAttribute('markerUnits', 'userSpaceOnUse');
+                marker.setAttribute('orient', 'auto');
+                const mpath = document.createElementNS(ns, 'path');
+                mpath.setAttribute('d', 'M 0 0 L 14 7 L 0 14 z');
+                mpath.setAttribute('fill', '#0F3460');
+                mpath.setAttribute('opacity', '0.8');
+                marker.appendChild(mpath);
+                defs.appendChild(marker);
+                svg.appendChild(defs);
                 const bodyRect = visualBody.getBoundingClientRect();
                 const fromRect = fromEl.getBoundingClientRect();
                 const x1 = fromRect.left + fromRect.width / 2 - bodyRect.left;
@@ -265,10 +284,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     const cy1 = y1;
                     const cx2 = x1 + (x2 - x1) * 0.65;
                     const cy2 = y2;
-                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    const path = document.createElementNS(ns, 'path');
                     const d = `M ${x1},${y1} C ${cx1},${cy1} ${cx2},${cy2} ${x2},${y2}`;
                     path.setAttribute('d', d);
                     path.setAttribute('class', 'wire-path');
+                    path.setAttribute('marker-end', 'url(#wireArrow)');
+                    path.setAttribute('stroke-linecap', 'round');
                     svg.appendChild(path);
                     // animate draw and fade
                     try {
