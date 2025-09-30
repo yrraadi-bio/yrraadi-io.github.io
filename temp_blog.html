@@ -288,7 +288,7 @@
                         prediction tasks. Nucleotide and assay heads diverge after the final Transformer layer with some
                         additional processing specific to the assay prediction in-between. Cell type and the prompts
                         (regulatory type such as promoter + transcription factor proteins) are tokenized and appended to
-                        the input DNA sequence.</p>
+                        the input DNA sequence. The final loss is a linear combination of the cross-entropy for nucleotide prediction with a factorized poisson and multinomial loss to capture the profile and intensity of the regulatory region.</p>
 
                     <figure class="blog-image">
                         <img src="assets/model_arch.png" alt="Model Architecture Diagram" loading="lazy" />
@@ -296,13 +296,33 @@
                             nucleotide and assay prediction heads.</figcaption>
                     </figure>
 
-                    <p>The final loss is a linear combination of the cross-entropy for nucleotide prediction with a factorized poisson and multinomial loss to capture the profile and intensity of the regulatory region.</p>
-
                     <p>The source of the training data is ENCODE. We use intervals of independent cis-regulatory elements (CREs) from the ENCODE V4 Registry found on the SCREEN page. CREs are ranked by their mean activity and we derive a z-score ranking for every biosample and assay combination. CREs are then split into train and test scaffolds and we verify that there is no overlap of genomic coordinates in order to ensure zero contamination in the data used for benchmarking. Our data processing pipeline of the actual experimental files is identical to what is done and reported in the AlphaGenome paper.</p>
-                    
+
                     <h2>Benchmarks</h2>
 
-                    <p><em>(just titles of the 4 images)</em></p>
+                    <h3>Chromatin accessibility</h3>
+                    <div class="blog-image">
+                        <img src="assets/alphagenome/9.png" alt="Benchmark Overview" loading="lazy" />
+                        <figcaption>Figure 3: Overview of benchmark tasks and evaluation metrics for regulatory sequence prediction.</figcaption>
+                    </div>
+                    
+                    <h3>Lineage specification and maintenance factors</h3>
+                    <div class="blog-image">
+                        <img src="assets/alphagenome/10.png" alt="Axis vs AlphaGenome Performance" loading="lazy" />
+                        <figcaption>Figure 4: Axis outperforms AlphaGenome on key regulatory sequence prediction benchmarks.</figcaption>
+                    </div>
+                    
+                    <h3>Signal response factors</h3>
+                    <div class="blog-image">
+                        <img src="assets/alphagenome/11.png" alt="Cell Type Specific Performance" loading="lazy" />
+                        <figcaption>Figure 5: Cell type-specific benchmark results, highlighting Axis's strong performance across diverse cell types.</figcaption>
+                    </div>
+                    
+                    <h3>Chromatin architecture and growth control factors</h3>
+                    <div class="blog-image">
+                        <img src="assets/alphagenome/12.png" alt="Assay Breakdown" loading="lazy" />
+                        <figcaption>Figure 6: Performance breakdown by assay, showing Axis's robustness across different experimental modalities.</figcaption>
+                    </div>
 
                     <p>AlphaGenome is not robust to the distributional shift that occurs when the context window reduces from during training, suggesting difficulty with understanding local context features and an overreliance on long range patterns. Interestingly, even when AlphaGenome is given ~1000x more nucleotide context than Axis, Axis reaches 95% of AlphaGenome’s performance on these benchmarks.</p>
 
@@ -333,7 +353,7 @@
 
 
 
-
+                
             </div>
         </section>
     </main>
