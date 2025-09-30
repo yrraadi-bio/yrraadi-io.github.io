@@ -108,48 +108,22 @@
 
                     <p><em>(have those charts here)</em></p>
 
-                    <h2>Why Regulatory Elements Matter</h2>
+                    <h2>Gene Regulation &amp; Mechanical Control</h2>
 
-                    <p>Did you know that all the cells in your body share the same DNA? If so, have you wondered why
-                        your nerve cells and skin cells perform drastically different functions?</p>
+                    <p>
+                        An epigenetic code governs the accessibility of DNA, allowing proteins called transcription factors to bind to specific sites. This, in turn, switches on different genes within the DNA. The epigenetic code and the availability of these proteins differ from cell type to cell type, among other factors. As a result, different genes are expressed in nerve cells versus skin cells, giving them their distinct functions and identities.
+                    </p>
 
-                    <p>An epigenetic code governs the accessibility of DNA, allowing proteins called transcription
-                        factors to bind to specific sites - this in turn, switches on different genes within the DNA.
-                        The epigenetic code and the availability of the proteins, differs from cell to cell type amongst
-                        other things. Hence, different genes get expressed between nerve and skin cells, giving them
-                        their distinct function and identity.</p>
+                    <p>
+                        AI-designed regulatory sequences can enable precise control. TF-binding prompts let you specify promoters or enhancers by the transcription factors available in a given cell state or cell type, biasing gene expression where those factors are active and lowering exposure elsewhere. As specification expands—from binary binding to relative motif weights, excluded TFs, and simple logic (e.g., "A and B, not C")—the model can jointly tune level and specificity, pushing toward safer, more durable expression profiles that relieve poor efficacy, immune pressure, and off-tissue activity.
+                    </p>
 
-                    <p>Origin, when prompted with different transcription factors, will generate a regulatory sequence
-                        with a high likelihood of enabling the specified transcription factors to bind. One indication
-                        of ability to allow binding is the presence of short nucleotide sequences (~8-10 characters
-                        long) called "motifs" that act as binding sites. Most transcription factor proteins have a
-                        unique motif that they identify.</p>
+                    <p>
+                        Axis, when prompted with different transcription factors, will generate a regulatory sequence with a high likelihood of enabling the specified transcription factors to bind. One indication of this ability is the presence of short nucleotide sequences (~8–10 characters long) called "motifs" that act as binding sites. Most transcription factor proteins have a unique motif that they recognize.
+                    </p>
 
-                    <p>For every transcription factor the model was trained on, we prompted it to generate sequences
-                        with the intended binding of that transcription factor (Set A), and then asked it to generate
-                        sequences without explicit prompting of that same transcription factor (Set B). We observed
-                        clear motif enrichment - sequences from Set A had up to 14x more occurrences of the protein's
-                        consensus motif compared to Set B. This shows that not only did the model learn the distinct
-                        role of these sequences, but that it is also capable of following instructions.</p>
-
-                    <p>Transcription factor binding does not guarantee gene expression and binding can be often
-                        non-functional. In the next rendition of the model, additional increases in capabilities will
-                        include prediction and prompting by the actual transcriptional output the regulatory element
-                        drives along with incorporation of distal context. A key reason behind why we did choose
-                        transcription factor binding specification as the choice of prompting in the first model version
-                        was to show the modularity at which synthetic design using AI can be done. Being able to design
-                        a synthetic regulatory sequence by prompting a transcription factor or a combination of
-                        transcription factors allows potential for not just cell type specific activity, but to also
-                        localize on the state of a cell and on precise molecular pathways.</p>
-
-                    <p><em>(show TFs model supports)</em></p>
-
-                    <p>Generative models that learn the rules of transcription factor (TF) binding open up new ways to
-                        control and program gene therapies. Natural genomes only explore a fraction of the possible
-                        combinations of TF motifs, but synthetic design can uncover novel interactions and explore this
-                        design space. By capturing these rules, the model can not only design functional enhancers but
-                        also emulate circuit-like logic - starting from single TF binding site effects and extending to
-                        combinatorial interactions between multiple TF motifs for greater specificity and complexity.
+                    <p>
+                        For every transcription factor the model was trained on, we prompted it to generate sequences with the intended binding of that transcription factor (Set A), and then asked it to generate sequences without explicit prompting of that same transcription factor (Set B). We observed clear motif enrichment—sequences from Set A had up to 14× more occurrences of the protein’s consensus motif compared to Set B. This shows that not only did the model learn the distinct role of these sequences, but that it is also capable of following instructions.
                     </p>
 
                     <p>Here we convey intuition of the basic kind of programmability we envision using analogies of
@@ -313,20 +287,15 @@
                             nucleotide and assay prediction heads.</figcaption>
                     </figure>
 
-                    <p>The final loss is a linear combination of the cross-entropy for nucleotide prediction with a
-                        factorized poisson and multinomial loss to capture the profile and intensity of the regulatory
-                        region. The source of the training data is ENCODE. Our data processing pipeline is identical to
-                        what is done and reported in the AlphaGenome paper.</p>
+                    <p>The final loss is a linear combination of the cross-entropy for nucleotide prediction with a factorized poisson and multinomial loss to capture the profile and intensity of the regulatory region.</p>
 
+                    <p>The source of the training data is ENCODE. We use intervals of independent cis-regulatory elements (CREs) from the ENCODE V4 Registry found on the SCREEN page. CREs are ranked by their mean activity and we derive a z-score ranking for every biosample and assay combination. CREs are then split into train and test scaffolds and we verify that there is no overlap of genomic coordinates in order to ensure zero contamination in the data used for benchmarking. Our data processing pipeline of the actual experimental files is identical to what is done and reported in the AlphaGenome paper.</p>
+                    
                     <h2>Benchmarks</h2>
 
                     <p><em>(just titles of the 4 images)</em></p>
 
-                    <p>AlphaGenome is not robust to the distributional shift that occurs when the context window reduces
-                        from during training, suggesting difficulty with understanding local context features and an
-                        overreliance on long range patterns. Interestingly, even when AlphaGenome is given ~1000x more
-                        nucleotide context than Origin, Origin reaches 95% of AlphaGenome's performance on these
-                        benchmarks.</p>
+                    <p>AlphaGenome is not robust to the distributional shift that occurs when the context window reduces from during training, suggesting difficulty with understanding local context features and an overreliance on long range patterns. Interestingly, even when AlphaGenome is given ~1000x more nucleotide context than Axis, Axis reaches 95% of AlphaGenome’s performance on these benchmarks.</p>
 
                     <p><em>(give here again, highlight the one where we beat)</em></p>
 
@@ -334,25 +303,19 @@
 
                     <h2>Call for Lab Testing</h2>
 
-                    <p>Our immediate focus is on testing out the model's generated sequences in a wet-lab setting before
-                        publicly releasing the model. We are also interested in sharing access to the model via a free
-                        API to academic labs in order to get feedback. If you belong to a lab and are interested in
-                        either the wet-lab testing or trying out the model, please fill the form (here).</p>
+                    <p>Our immediate focus is on testing out the model’s generated sequences in a wet-lab setting before publicly releasing the model. We are also interested in sharing access to the model via a free API to academic labs in order to get feedback. If you belong to a lab and are interested in either the wet-lab testing or trying out the model, please fill the form (here).</p>
 
                     <h2>Conclusion</h2>
 
-                    <p>This is just the tip of the iceberg when it comes to how promptable and unified we believe these
-                        models can and should be. Unified not just across functions within one domain like DNA, but
-                        across RNA, proteins and cellular representations. We believe a fundamental reason behind the
-                        lack of reliability and impact of today's models is underspecification of the whole system.
-                        Biology is incredibly complex and in constant coordination - we must make AI models that learn
-                        to compress and reason over the whole puzzle and not just pieces of it. Completing this grand
-                        challenge can unlock a new era of developing therapies that are capable of addressing highly
-                        complex diseases, making human lives infinitely better.</p>
+                    <p>Imagine having to use one ChatGPT for translating text and another for captioning images. This reality, where there were marginalized models for different tasks was not far away from materializing. A conscious effort to explore the benefits of multi-task learning eventually paved the way for today’s technology. One such work was “Multi-task sequence-to-sequence learning” by the Google Brain team. The work reported that training a model to caption images also improved translation quality between English and German. This would serve as one of the many precursors to the language models of today, with one of the paper’s authors, Ilya Sutskever, going on to create the first GPT. </p>
 
-                    <p>If this work excites you and you want to dedicate your time and effort to tackling this problem
-                        with us, please reach out at hiring@origin.bio. We're looking for exceptional engineers and
-                        researchers.</p>
+                    <p>The success of this paradigm in the natural language processing domain was an initial motivation behind our pursuit of a multifunctional DNA model. With Axis, we report that training a model to generate DNA sequences at a high resolution also improved the model’s ability to predict the function of existing DNA sequences. We’re excited about the implications of this.</p>
+
+                    <p>We’re excited about the implications of this and believe that Axis is just the tip of the iceberg when it comes to how promptable and unifiedmodels can and should be. Unified not just across functions within one domain like DNA, but across RNA, proteins and cellular representations. We believe a fundamental reason behind the lack of reliability and impact of today’s models is underspecification of the whole system. Biology is incredibly complex and in constant coordination - we must make AI models that learn to compress and reason over the whole puzzle and not just pieces of it. Completing this grand challenge can unlock a new era of developing therapies that are capable of addressing highly complex diseases, making human lives infinitely better. </p>
+
+                    <p>If this work excites you and you want to dedicate your time and effort to tackling this problem with us, please reach out at hiring@origin.bio. We’re looking for exceptional engineers.</p>
+
+
                 </article>
 
 

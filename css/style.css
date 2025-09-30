@@ -39,6 +39,7 @@ body.blog-page header {
     position: relative;
     padding-bottom: 0;
     padding-top: 2rem;
+    margin-bottom: -2rem;
 }
 
 body.blog-page main {
