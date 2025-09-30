@@ -728,10 +728,10 @@ footer {
     .visual-switch .cell-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .visual-switch .tf-chips { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
-    /* XOR layout stacks vertically and centers */
-    .visual-xor .visual-body { grid-template-columns: 1fr; align-items: center; row-gap: 0.75rem; }
-    .visual-xor .xor-gate-col { justify-content: center; margin: 0.5rem 0; width: 100%; }
-    .visual-xor .xor-schematic { width: 100%; height: 140px; max-width: 340px; }
+    /* XOR: keep single truth-table row with 3 equal columns */
+    .visual-xor .visual-body.xor-simple { grid-template-columns: 1fr 1fr 1fr; align-items: center; column-gap: 0.5rem; row-gap: 0; }
+    .visual-xor .xor-toggle { width: 100%; height: 40px; }
+    .visual-xor .cell-node { min-width: 0; height: 40px; padding: 0 26px 0 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.9rem; }
 }
 
 /* Side ToC layout removed */
@@ -1109,7 +1109,7 @@ footer {
 .visual-xor .xor-toggle { appearance: none; border: 1px solid #e6ecf5; background: #fbfcfe; color: #0F3460; border-radius: 10px; font-size: 0.9rem; cursor: pointer; transition: all 0.2s ease; height: 42px; display: flex; align-items: center; justify-content: center; width: 100%; }
 .visual-xor .xor-toggle[aria-pressed="true"], .visual-xor .xor-toggle:focus-visible { outline: none; border-color: #0F3460; background: #e8eff8; box-shadow: 0 0 0 2px rgba(15, 52, 96, 0.12); }
 .visual-xor .xor-toggle:hover { transform: translateY(-1px); background: #f4f7fb; }
-.visual-xor .cell-node { background: #fbfcfe; border: 1px solid #e6ecf5; border-radius: 10px; text-align: center; color: #1f2a3a; position: relative; transition: border-color .2s, box-shadow .2s; height: 42px; display: flex; align-items: center; justify-content: center; padding: 0 12px; width: 100%; min-width: 0; }
+.visual-xor .cell-node { background: #fbfcfe; border: 1px solid #e6ecf5; border-radius: 10px; text-align: center; color: #1f2a3a; position: relative; transition: border-color .2s, box-shadow .2s; height: 42px; display: flex; align-items: center; justify-content: center; padding: 0 26px 0 12px; width: 100%; min-width: 0; }
 .visual-xor .cell-node::after { content: ''; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 8px; height: 8px; border-radius: 50%; background: #c8d3e3; }
 .visual-xor .cell-node.on { border-color: #0F3460; box-shadow: 0 2px 6px rgba(15, 52, 96, 0.15); }
 .visual-xor .cell-node.on::after { background: #0F3460; }
