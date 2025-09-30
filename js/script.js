@@ -710,6 +710,129 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // XOR option A: fixed gate + toggles, flow dots
+    if (document.body.classList.contains('blog-page')) {
+        document.querySelectorAll('.visual-xor').forEach((xorEl) => {
+            const toggles = Array.from(xorEl.querySelectorAll('.xor-toggle'));
+            const target = xorEl.querySelector('.xor-target');
+            const schema = xorEl.querySelector('.xor-schematic');
+            const in1 = schema ? schema.querySelector('#xor-in1') : null;
+            const in2 = schema ? schema.querySelector('#xor-in2') : null;
+            const out = schema ? schema.querySelector('#xor-out') : null;
+            const gateBody = schema ? schema.querySelector('#xor-body') : null;
+
+            function layoutLines() {
+                if (!schema) return;
+                const sRect = schema.getBoundingClientRect();
+                // match viewBox height to actual rendered height for accurate coordinates
+                const vbW = 180;
+                const vbH = Math.max(110, Math.round(sRect.height));
+                schema.setAttribute('viewBox', `0 0 ${vbW} ${vbH}`);
+                // Align input line Y positions with toggle button centers
+                if (toggles[0] && in1) {
+                    const r = toggles[0].getBoundingClientRect();
+                    const y = Math.max(8, Math.min(vbH - 8, (r.top + r.height / 2) - sRect.top));
+                    in1.setAttribute('y1', String(y));
+                    in1.setAttribute('y2', String(y));
+                }
+                if (toggles[1] && in2) {
+                    const r = toggles[1].getBoundingClientRect();
+                    const y = Math.max(8, Math.min(vbH - 8, (r.top + r.height / 2) - sRect.top));
+                    in2.setAttribute('y1', String(y));
+                    in2.setAttribute('y2', String(y));
+                }
+                // Place output line midway between inputs when available
+                if (out) {
+                    let yOut = vbH / 2;
+                    if (in1 && in2) {
+                        const y1 = parseFloat(in1.getAttribute('y1') || '0');
+                        const y2 = parseFloat(in2.getAttribute('y1') || '0');
+                        if (!isNaN(y1) && !isNaN(y2)) yOut = (y1 + y2) / 2 - 2;
+                    }
+                    out.setAttribute('y1', String(yOut));
+                    out.setAttribute('y2', String(yOut));
+                }
+                if (gateBody) {
+                    const bodyW = 56;
+                    const bodyH = Math.min(84, Math.max(60, vbH * 0.7));
+                    const x = (180 - bodyW) / 2; // centered in viewBox width
+                    const offsetY = 12; // further downward shift
+                    const y = (vbH - bodyH) / 2 + offsetY;
+                    gateBody.setAttribute('x', String(x));
+                    gateBody.setAttribute('y', String(y));
+                    gateBody.setAttribute('width', String(bodyW));
+                    gateBody.setAttribute('height', String(bodyH));
+                    gateBody.setAttribute('rx', '14');
+                    // Snap input lines to touch left edge of gate, and output to right edge
+                    const gbx = x;
+                    const gbw = bodyW;
+                    if (in1) in1.setAttribute('x2', String(gbx));
+                    if (in2) in2.setAttribute('x2', String(gbx));
+                    if (out) out.setAttribute('x1', String(gbx + gbw));
+                }
+            }
+
+            function animateLine(lineEl, duration = 600, delay = 0) {
+                if (!lineEl || !schema) return;
+                const ns = 'http://www.w3.org/2000/svg';
+                const dot = document.createElementNS(ns, 'circle');
+                dot.setAttribute('r', '3');
+                dot.setAttribute('class', 'flow-dot');
+                schema.appendChild(dot);
+                const x1 = parseFloat(lineEl.getAttribute('x1')) || 0;
+                const y1 = parseFloat(lineEl.getAttribute('y1')) || 0;
+                const x2 = parseFloat(lineEl.getAttribute('x2')) || 0;
+                const y2 = parseFloat(lineEl.getAttribute('y2')) || 0;
+                const start = performance.now() + delay;
+                function step(now) {
+                    const tRaw = Math.max(0, Math.min(1, (now - start) / duration));
+                    // smoothstep easing for smoother motion
+                    const t = tRaw * tRaw * (3 - 2 * tRaw);
+                    const x = x1 + (x2 - x1) * t;
+                    const y = y1 + (y2 - y1) * t;
+                    dot.setAttribute('cx', String(x));
+                    dot.setAttribute('cy', String(y));
+                    if (t < 1) requestAnimationFrame(step); else setTimeout(() => dot.remove(), 150);
+                }
+                requestAnimationFrame(step);
+            }
+
+            function updateXor() {
+                const on1 = toggles[0].getAttribute('aria-pressed') === 'true';
+                const on2 = toggles[1].getAttribute('aria-pressed') === 'true';
+                const active = (on1 !== on2); // XOR
+                target.classList.toggle('on', active);
+                // animate inputs
+                const durations = [];
+                if (on1 && in1) { animateLine(in1, 450, 0); durations.push(450); }
+                if (on2 && in2) { animateLine(in2, 450, 0); durations.push(450); }
+                // start output after inputs reach the gate body
+                if (active && out) {
+                    const maxIn = durations.length ? Math.max.apply(null, durations) : 0;
+                    animateLine(out, 650, maxIn + 120);
+                }
+            }
+
+            toggles.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    btn.setAttribute('aria-pressed', btn.getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
+                    updateXor();
+                });
+                btn.addEventListener('keydown', (e) => {
+                    if (e.key === ' ' || e.key === 'Enter') {
+                        e.preventDefault();
+                        btn.setAttribute('aria-pressed', btn.getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
+                        updateXor();
+                    }
+                });
+            });
+
+            layoutLines();
+            updateXor();
+            window.addEventListener('resize', () => { layoutLines(); });
+        });
+    }
+
     // Removed Table of Contents generation (will add later)
 });
 

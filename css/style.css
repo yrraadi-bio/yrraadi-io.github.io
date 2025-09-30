@@ -1102,3 +1102,61 @@ footer {
         grid-template-columns: repeat(4, minmax(0, 1fr));
     }
 }
+/* XOR minimal interactive */
+.visual-xor .visual-body {
+    display: grid;
+    grid-template-columns: minmax(160px, 1fr) 160px 2fr;
+    align-items: stretch;
+    gap: 1rem;
+}
+
+.visual-xor .xor-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.visual-xor .xor-toggle {
+    appearance: none;
+    border: 1px solid #d6dfec;
+    background: #f4f7fb;
+    color: #0F3460;
+    padding: 0.45rem 0.8rem;
+    border-radius: 999px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.visual-xor .xor-toggle[aria-pressed="true"],
+.visual-xor .xor-toggle:focus-visible {
+    outline: none;
+    border-color: #0F3460;
+    background: #e8eff8;
+    box-shadow: 0 0 0 2px rgba(15, 52, 96, 0.15);
+}
+
+.visual-xor .xor-toggle:hover { transform: translateY(-1px); background: #eef3f9; }
+
+.visual-xor .xor-gate-col { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
+.visual-xor .xor-schematic { width: 100%; height: 100%; display: block; }
+.visual-xor .xor-gate {
+    width: 120px;
+    height: 56px;
+    border-radius: 18px;
+    border: 2px solid #0F3460;
+    background: radial-gradient(circle at 50% 60%, #ffffff 0%, #f5f8fd 70%, #eef3f9 100%);
+    color: #0F3460;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    box-shadow: 0 2px 6px rgba(15, 52, 96, 0.12);
+}
+.visual-xor .xor-gate.active { box-shadow: 0 0 0 2px rgba(15,52,96,0.15), 0 0 18px rgba(15,52,96,0.25); }
+
+.visual-xor .cell-node { background: #fbfcfe; border: 1px solid #e6ecf5; border-radius: 12px; padding: 1.25rem 1rem; text-align: center; color: #1f2a3a; position: relative; transition: border-color .2s, box-shadow .2s; }
+.visual-xor .cell-node::after { content: ''; position: absolute; top: 8px; right: 10px; width: 8px; height: 8px; border-radius: 50%; background: #c8d3e3; }
+.visual-xor .cell-node.on { border-color: #0F3460; box-shadow: 0 2px 6px rgba(15, 52, 96, 0.15); }
+.visual-xor .cell-node.on::after { background: #0F3460; }
+
+.visual-xor .flow-dot { fill: #0F3460; opacity: 0.9; filter: drop-shadow(0 0 6px rgba(15,52,96,0.35)); }
