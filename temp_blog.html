@@ -146,14 +146,14 @@
                             <div>
                                 <div class="group-label">Cell States</div>
                                 <div class="cell-grid" aria-label="Cell states">
-                                    <div class="cell-node" data-state="Cell State A"><span>Cell State A</span></div>
-                                    <div class="cell-node" data-state="Cell State B"><span>Cell State B</span></div>
-                                    <div class="cell-node" data-state="Cell State C"><span>Cell State C</span></div>
-                                    <div class="cell-node" data-state="Cell State D"><span>Cell State D</span></div>
-                                    <div class="cell-node" data-state="Cell State E"><span>Cell State E</span></div>
-                                    <div class="cell-node" data-state="Cell State F"><span>Cell State F</span></div>
-                                    <div class="cell-node" data-state="Cell State G"><span>Cell State G</span></div>
-                                    <div class="cell-node" data-state="Cell State H"><span>Cell State H</span></div>
+                                    <div class="cell-node" data-state="Cell State A"><span>Cell State <span class="cell-suffix">A</span></span></div>
+                                    <div class="cell-node" data-state="Cell State B"><span>Cell State <span class="cell-suffix">B</span></span></div>
+                                    <div class="cell-node" data-state="Cell State C"><span>Cell State <span class="cell-suffix">C</span></span></div>
+                                    <div class="cell-node" data-state="Cell State D"><span>Cell State <span class="cell-suffix">D</span></span></div>
+                                    <div class="cell-node" data-state="Cell State E"><span>Cell State <span class="cell-suffix">E</span></span></div>
+                                    <div class="cell-node" data-state="Cell State F"><span>Cell State <span class="cell-suffix">F</span></span></div>
+                                    <div class="cell-node" data-state="Cell State G"><span>Cell State <span class="cell-suffix">G</span></span></div>
+                                    <div class="cell-node" data-state="Cell State H"><span>Cell State <span class="cell-suffix">H</span></span></div>
                                 </div>
                             </div>
                         </div>
@@ -253,8 +253,31 @@
                     <p>For certain TF pairs, the ratio of their binding sites determines whether the enhancer activates
                         or represses. This makes enhancers act like sliders that respond to relative abundance rather
                         than absolute levels.</p>
-                    <p><em>[Slider that goes from 0 to 1 indicating ratio of two factors and end effect on activation or
-                            repression]</em></p>
+                    <div class="blog-visual visual-slider" aria-label="Motif ratio slider demo">
+                        <div class="visual-header">Ratio sets the enhancer state</div>
+                        <div class="visual-body slider-simple">
+                            <div class="slider-col slider-controls">
+                                <div class="group-label">TF binding site ratio</div>
+                                <label class="slider-label" for="motif-ratio-slider">TF1 / (TF1 + TF2)</label>
+                                <div class="slider-input">
+                                    <input type="range" id="motif-ratio-slider" class="ratio-slider" min="0" max="0.99" step="0.01" value="0.35" aria-valuemin="0" aria-valuemax="0.99" aria-valuenow="0.35" aria-label="TF1 to TF2 binding site ratio">
+                                </div>
+                                <div class="slider-scale" aria-hidden="true">
+                                    <span>Activator-heavy</span>
+                                    <span>Repressor-heavy</span>
+                                </div>
+                                <div class="slider-readout">Ratio: <span class="slider-value">0.35</span></div>
+                            </div>
+                            <div class="slider-col slider-output">
+                                <div class="group-label">Cell response</div>
+                                <div class="cell-node slider-target" role="status" aria-live="polite" data-state="Cell State Slider">
+                                    <span class="slider-state-label">Reporter Activity</span>
+                                </div>
+                                <div class="slider-caption">Ratio favors activation.</div>
+                            </div>
+                        </div>
+                        <div class="visual-footer">Below 0.5 the enhancer activates; above it repression dominates.</div>
+                    </div>
 
                     <h2>About the Model & Data</h2>
 

@@ -511,7 +511,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const yLabel = document.createElementNS(ns, 'text');
                 const yLabelX = padL - 28;
                 const yLabelY = H / 2;
-                yLabel.textContent = 'Enhancer activity';
+                yLabel.textContent = 'Reporter activity';
                 yLabel.setAttribute('fill', '#425975');
                 yLabel.setAttribute('font-size', '12');
                 yLabel.setAttribute('text-anchor', 'middle');
@@ -707,6 +707,98 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             createChart();
+        });
+    }
+
+    if (document.body.classList.contains('blog-page')) {
+        document.querySelectorAll('.visual-slider').forEach((sliderEl) => {
+            const slider = sliderEl.querySelector('.ratio-slider');
+            const valueEl = sliderEl.querySelector('.slider-value');
+            const stateLabel = sliderEl.querySelector('.slider-state-label');
+            const caption = sliderEl.querySelector('.slider-caption');
+            const target = sliderEl.querySelector('.slider-target');
+            if (!slider || !target) return;
+            if (stateLabel) stateLabel.textContent = 'Reporter Activity';
+
+            const activeStart = [215, 227, 255]; // #d7e3ff
+            const activeStartIntense = [188, 209, 245]; // #bcd1f5
+            const activeEnd = [138, 167, 217]; // #8aa7d9
+            const activeEndIntense = [102, 138, 196]; // #668ac4
+            const repressStart = [212, 222, 235]; // #d4deeb
+            const repressStartIntense = [201, 214, 231]; // #c9d6e7
+            const repressEnd = [111, 139, 184]; // #6f8bb8
+            const repressEndIntense = [95, 120, 163]; // #5f78a3
+
+            const clamp01 = (x) => Math.min(1, Math.max(0, x));
+            const lerpColor = (c1, c2, t) => c1.map((v, i) => Math.round(v + (c2[i] - v) * t));
+            const rgb = (c) => `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
+            const rgba = (c, a) => `rgba(${c[0]}, ${c[1]}, ${c[2]}, ${Math.min(1, Math.max(0, a))})`;
+
+            function computePalette(value) {
+                const isRepressive = value >= 0.5;
+                const intensity = isRepressive ? clamp01((value - 0.5) / 0.5) : clamp01((0.5 - value) / 0.5);
+                const startColor = isRepressive
+                    ? lerpColor(repressStart, repressStartIntense, intensity)
+                    : lerpColor(activeStart, activeStartIntense, intensity);
+                const endColor = isRepressive
+                    ? lerpColor(repressEnd, repressEndIntense, intensity)
+                    : lerpColor(activeEnd, activeEndIntense, intensity);
+                const borderAlpha = isRepressive ? 0.55 : 0.5;
+                const shadowAlpha = 0.16 + intensity * 0.18;
+                const indicatorAlpha = 0.65 + intensity * 0.2;
+                return {
+                    isRepressive,
+                    intensity,
+                    startColor,
+                    endColor,
+                    background: `linear-gradient(135deg, ${rgb(startColor)} 0%, ${rgb(endColor)} 100%)`,
+                    border: rgba(endColor, borderAlpha),
+                    shadow: `0 4px 16px ${rgba(endColor, shadowAlpha)}`,
+                    indicator: rgba(endColor, indicatorAlpha)
+                };
+            }
+
+            function updateFromSlider(rawValue) {
+                let value = parseFloat(String(rawValue));
+                if (Number.isNaN(value)) value = 0;
+                value = Math.max(0, Math.min(0.99, value));
+                const formatted = value.toFixed(2);
+                if (Math.abs(parseFloat(slider.value) - value) > 0.0001) {
+                    slider.value = formatted;
+                }
+                slider.setAttribute('aria-valuenow', formatted);
+                if (valueEl) valueEl.textContent = formatted;
+
+                const palette = computePalette(value);
+                target.style.background = palette.background;
+                target.style.borderColor = palette.border;
+                target.style.boxShadow = palette.shadow;
+                target.style.setProperty('--slider-indicator-color', palette.indicator);
+                target.style.setProperty('--slider-indicator-glow', rgba(palette.endColor, 0.24 + palette.intensity * 0.24));
+
+                const isPoised = Math.abs(value - 0.5) <= 0.02;
+                target.classList.toggle('is-repressive', palette.isRepressive && !isPoised);
+                let stateDescriptor;
+                let captionText;
+                if (isPoised) {
+                    stateDescriptor = 'poised';
+                    captionText = 'Inputs balanced at tipping point.';
+                } else if (palette.isRepressive) {
+                    stateDescriptor = 'repressed';
+                    captionText = 'Ratio favors repression.';
+                } else {
+                    stateDescriptor = 'active';
+                    captionText = 'Ratio favors activation.';
+                }
+                if (caption) caption.textContent = captionText;
+                slider.setAttribute('aria-valuetext', `${formatted} ratio, ${stateDescriptor} reporter activity`);
+                const stateKey = isPoised ? 'poised' : (palette.isRepressive ? 'repressed' : 'active');
+                target.setAttribute('data-activity', stateKey);
+            }
+
+            updateFromSlider(slider.value);
+            slider.addEventListener('input', () => updateFromSlider(slider.value));
+            slider.addEventListener('change', () => updateFromSlider(slider.value));
         });
     }
 
