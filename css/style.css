@@ -713,10 +713,10 @@ footer {
     .blog-visual { padding: 0.75rem; }
 
     /* Dial visuals */
-    .visual-dial .dial-control { gap: 0.75rem; justify-content: center; flex-direction: column; align-items: center; }
+    .visual-dial .dial-control { gap: 0.6rem; justify-content: center; align-items: center; }
     .visual-dial .dial-knob { width: 96px; height: 96px; }
     .visual-dial .dial-handle { width: 14px; height: 14px; margin: -7px; }
-    .visual-dial .dial-value { text-align: center; }
+    .visual-dial .dial-value { font-size: 1.1rem; }
     .visual-dial .group-label { text-align: center; width: 100%; margin-left: 0; }
     .visual-dial .dial-chart { height: 180px; }
     .visual-dial .chart-legend { font-size: 0.8rem; gap: 0.5rem 0.75rem; }
@@ -958,17 +958,47 @@ footer {
 }
 
 /* Visual Dial (activity curves) */
+
+.visual-dial .visual-body {
+    justify-items: center;
+}
+
+.visual-dial .visual-body > div:first-child {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.65rem;
+}
+
+.visual-dial .visual-body > div:first-child .group-label {
+    text-align: center;
+}
+
 .visual-dial .dial-control {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    justify-content: center;
+    gap: 0.5rem;
+    position: relative;
 }
 
 .visual-dial .dial-value {
-    min-width: 3ch;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -52%);
+    width: 100%;
+    max-width: 90px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
     font-variant-numeric: tabular-nums;
     color: #0F3460;
     font-weight: 600;
+    font-size: 1.25rem;
+    pointer-events: none;
 }
 
 /* hide the linear slider but keep it for accessibility/fallback */
