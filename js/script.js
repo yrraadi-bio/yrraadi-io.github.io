@@ -360,6 +360,25 @@ document.addEventListener('DOMContentLoaded', () => {
             const handle = dialEl.querySelector('.dial-handle');
             let ringRadius = null;
             const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+            // Canvas overlay to draw ring precisely in sync with handle
+            const dialCanvas = document.createElement('canvas');
+            dialCanvas.className = 'dial-canvas';
+            // place canvas behind the handle
+            if (knob.firstChild) {
+                knob.insertBefore(dialCanvas, knob.firstChild);
+            } else {
+                knob.appendChild(dialCanvas);
+            }
+            const dialCtx = dialCanvas.getContext('2d');
+            function resizeDialCanvas() {
+                const size = knob.offsetWidth;
+                const dpr = window.devicePixelRatio || 1;
+                dialCanvas.width = size * dpr;
+                dialCanvas.height = size * dpr;
+                dialCanvas.style.width = size + 'px';
+                dialCanvas.style.height = size + 'px';
+                dialCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            }
             function computeRingRadius() {
                 if (!knob) return 0;
                 const kRect = knob.getBoundingClientRect();
@@ -454,17 +473,51 @@ document.addEventListener('DOMContentLoaded', () => {
                 let initialHandleAtTop = false;
 
                 function setKnobVisual(val) {
-                    const deg = Math.max(0, Math.min(360, (val/100) * 360));
-                    const d1 = deg * 0.33;
-                    const d2 = deg * 0.66;
-                    const c1 = '#D6E3F3';
-                    const c2 = '#6FA7D8';
-                    const c3 = '#2E6FA8';
-                    const c4 = '#0F3460';
-                    const fromAngle = isSafari ? '-90deg' : '-180deg';
-                    knob.style.background = `conic-gradient(from ${fromAngle}, ${c1} 0deg, ${c2} ${d1}deg, ${c3} ${d2}deg, ${c4} ${deg}deg, #e6ecf5 ${deg}deg 360deg)`;
-                    let theta = deg + (isSafari ? -90 : -180);
+                    // Draw track + progress on canvas for perfect alignment
+                    resizeDialCanvas();
+                    const size = knob.offsetWidth;
+                    const cx = size / 2, cy = size / 2;
                     const r = ringRadius != null ? ringRadius : computeRingRadius();
+                    const ringW = 12;
+                    // clear
+                    dialCtx.clearRect(0, 0, dialCanvas.width, dialCanvas.height);
+                    // track
+                    dialCtx.beginPath();
+                    dialCtx.lineWidth = ringW;
+                    dialCtx.lineCap = 'butt';
+                    dialCtx.strokeStyle = '#e6ecf5';
+                    dialCtx.arc(cx, cy, r, 0, Math.PI * 2);
+                    dialCtx.stroke();
+                    // progress from 9 o'clock baseline with fixed per-angle colors
+                    const frac = Math.max(0, Math.min(1, val/100));
+                    const start = -Math.PI; // 9 o'clock
+                    const total = Math.PI * 2;
+                    const stops = [
+                        { f: 0.00, c: '#D6E3F3' },
+                        { f: 0.33, c: '#6FA7D8' },
+                        { f: 0.66, c: '#2E6FA8' },
+                        { f: 1.00, c: '#0F3460' },
+                    ];
+                    let prevF = 0.0;
+                    for (let i = 0; i < stops.length; i++) {
+                        const segStartF = prevF;
+                        const segEndF = Math.min(frac, stops[i].f);
+                        if (segEndF > segStartF) {
+                            const a1 = start + total * segStartF;
+                            const a2 = start + total * segEndF;
+                            dialCtx.beginPath();
+                            dialCtx.lineWidth = ringW;
+                            dialCtx.lineCap = (i === stops.length - 1 && segEndF === frac) ? 'round' : 'butt';
+                            dialCtx.strokeStyle = stops[i].c;
+                            dialCtx.arc(cx, cy, r, a1, a2);
+                            dialCtx.stroke();
+                        }
+                        prevF = stops[i].f;
+                        if (frac <= segEndF) break;
+                    }
+                    // handle at end
+                    const deg = frac * 360;
+                    const theta = deg - 180; // 9 o'clock baseline
                     if (handle) handle.style.transform = `rotate(${theta}deg) translate(${r}px) rotate(${-theta}deg)`;
                     knob.setAttribute('aria-valuenow', String(Math.round(val)));
                 }
@@ -484,9 +537,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // initialize from slider value
                 computeRingRadius();
+                resizeDialCanvas();
                 update(parseFloat(slider.value));
                 slider.addEventListener('input', () => { initialHandleAtTop = false; update(parseFloat(slider.value)); });
-                window.addEventListener('resize', () => { computeRingRadius(); update(parseFloat(slider.value)); });
+                window.addEventListener('resize', () => { computeRingRadius(); resizeDialCanvas(); update(parseFloat(slider.value)); });
 
                 // pointer interactions on knob
                 let dragging = false;
