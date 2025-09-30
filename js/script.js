@@ -551,7 +551,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     thrLine.setAttribute('class', 'threshold-line');
                     svg.appendChild(thrLine);
                     thrText = document.createElementNS(ns, 'text');
-                    thrText.textContent = 'Activation';
+                    thrText.textContent = 'Activation Threshold';
                     thrText.setAttribute('class', 'threshold-label');
                     thrText.setAttribute('x', W - padR - 4);
                     thrText.setAttribute('y', yToSvg(threshold) - 6);
