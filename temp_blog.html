@@ -115,6 +115,10 @@
                         Axis, when prompted with different transcription factors, will generate a regulatory sequence with a high likelihood of enabling the specified transcription factors to bind. One indication of this ability is the presence of short nucleotide sequences (~8–10 characters long) called "motifs" that act as binding sites. Most transcription factor proteins have a unique motif that they recognize.
                     </p>
 
+                    <p>
+                        For every transcription factor the model was trained on, we prompted it to generate sequences with the intended binding of that transcription factor (Set A), and then asked it to generate sequences without explicit prompting of that same transcription factor (Set B). We observed clear motif enrichment—sequences from Set A had up to 14× more occurrences of the protein’s consensus motif compared to Set B. This shows that not only did the model learn the distinct role of these sequences, but that it is also capable of following instructions.
+                    </p>
+
                     <h3>Distal Enhancer Sequences</h3>
                     <div class="blog-image">
                         <img src="assets/alphagenome/19.png" alt="Distal Enhancer Like Sequences motif enrichment" loading="lazy" />
@@ -132,10 +136,6 @@
                         <img src="assets/alphagenome/21.png" alt="Proximal Enhancer Like Sequences motif enrichment" loading="lazy" />
                         <figcaption>Figure 5: 5x Average Motif Enrichment in Proximal Enhancer Like Sequences</figcaption>
                     </div>
-
-                    <p>
-                        For every transcription factor the model was trained on, we prompted it to generate sequences with the intended binding of that transcription factor (Set A), and then asked it to generate sequences without explicit prompting of that same transcription factor (Set B). We observed clear motif enrichment—sequences from Set A had up to 14× more occurrences of the protein’s consensus motif compared to Set B. This shows that not only did the model learn the distinct role of these sequences, but that it is also capable of following instructions.
-                    </p>
                     
                     <h2>Exploring larger design spaces</h2>
                     
