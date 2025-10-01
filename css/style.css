@@ -1156,10 +1156,10 @@ footer {
 
 /* Slider motif ratio visual */
 .visual-slider {
-    --slider-active-start: #d7e3ff;
-    --slider-active-end: #8aa7d9;
-    --slider-repress-start: #d4deeb;
-    --slider-repress-end: #6f8bb8;
+    --slider-active-start: #f4f8ff;
+    --slider-active-end: #c2dbff;
+    --slider-repress-start: #e6edf8;
+    --slider-repress-end: #5d7cab;
 }
 
 .visual-slider .visual-body.slider-simple {
@@ -1198,7 +1198,7 @@ footer {
     appearance: none;
     height: 12px;
     border-radius: 999px;
-    background: linear-gradient(90deg, rgba(138, 167, 217, 0.75) 0%, rgba(138, 167, 217, 0.75) 50%, rgba(111, 139, 184, 0.75) 50%, rgba(111, 139, 184, 0.75) 100%);
+    background: linear-gradient(90deg, #c2dbff 0%, #c2dbff 50%, #5d7cab 50%, #5d7cab 100%);
     outline: none;
     transition: box-shadow 0.2s ease;
 }
@@ -1284,6 +1284,10 @@ footer {
 .visual-slider .slider-target.is-repressive {
     background: var(--slider-repress-end) !important;
     border-color: rgba(79, 108, 150, 0.55);
+}
+
+.visual-slider .slider-target.is-repressive {
+    color: #ffffff;
 }
 
 .visual-slider .slider-caption {
