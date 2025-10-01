@@ -581,28 +581,25 @@ document.addEventListener('DOMContentLoaded', () => {
                     const frac = Math.max(0, Math.min(1, val/100));
                     const start = -Math.PI; // 9 o'clock
                     const total = Math.PI * 2;
-                    const stops = [
-                        { f: 0.00, c: '#D6E3F3' },
-                        { f: 0.33, c: '#6FA7D8' },
-                        { f: 0.66, c: '#2E6FA8' },
-                        { f: 1.00, c: '#0F3460' },
+                    const bands = [
+                        { limit: 0.33, color: '#6FA7D8' },
+                        { limit: 0.66, color: '#2E6FA8' },
+                        { limit: Infinity, color: '#0F3460' },
                     ];
-                    let prevF = 0.0;
-                    for (let i = 0; i < stops.length; i++) {
-                        const segStartF = prevF;
-                        const segEndF = Math.min(frac, stops[i].f);
-                        if (segEndF > segStartF) {
-                            const a1 = start + total * segStartF;
-                            const a2 = start + total * segEndF;
-                            dialCtx.beginPath();
-                            dialCtx.lineWidth = ringW;
-                            dialCtx.lineCap = (i === stops.length - 1 && segEndF === frac) ? 'round' : 'butt';
-                            dialCtx.strokeStyle = stops[i].c;
-                            dialCtx.arc(cx, cy, r, a1, a2);
-                            dialCtx.stroke();
+                    let activeColor = bands[bands.length - 1].color;
+                    for (let i = 0; i < bands.length; i++) {
+                        if (frac < bands[i].limit - 1e-4) {
+                            activeColor = bands[i].color;
+                            break;
                         }
-                        prevF = stops[i].f;
-                        if (frac <= segEndF) break;
+                    }
+                    if (frac > 0) {
+                        dialCtx.beginPath();
+                        dialCtx.lineWidth = ringW;
+                        dialCtx.lineCap = 'round';
+                        dialCtx.strokeStyle = activeColor;
+                        dialCtx.arc(cx, cy, r, start, start + total * frac, false);
+                        dialCtx.stroke();
                     }
                     // handle at end
                     const deg = frac * 360;
