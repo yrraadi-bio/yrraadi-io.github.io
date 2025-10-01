@@ -717,10 +717,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!slider || !target) return;
             if (stateLabel) stateLabel.textContent = 'Reporter Activity';
 
-            const activeStart = [244, 248, 255]; // #f4f8ff
-            const activeStartIntense = [228, 238, 255]; // #e4eeff
-            const activeEnd = [194, 219, 255]; // #c2dbff
-            const activeEndIntense = [148, 182, 240]; // #94b6f0
+            const activeBase = [194, 219, 255];   // #c2dbff
+            const activeAccent = [148, 182, 240]; // #94b6f0
             const repressStart = [230, 237, 248]; // #e6edf8
             const repressStartIntense = [210, 225, 242]; // #d2e1f2
             const repressEnd = [93, 124, 171]; // #5d7cab
@@ -733,25 +731,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
             function computePalette(value) {
                 const isRepressive = value >= 0.5;
-                const intensity = isRepressive ? clamp01((value - 0.5) / 0.5) : clamp01((0.5 - value) / 0.5);
-                const startColor = isRepressive
-                    ? lerpColor(repressStart, repressStartIntense, intensity)
-                    : lerpColor(activeStart, activeStartIntense, intensity);
-                const endColor = isRepressive
-                    ? lerpColor(repressEnd, repressEndIntense, intensity)
-                    : lerpColor(activeEnd, activeEndIntense, intensity);
-                const borderAlpha = isRepressive ? 0.55 : 0.5;
-                const shadowAlpha = 0.16 + intensity * 0.18;
-                const indicatorAlpha = 0.65 + intensity * 0.2;
+                let fillColor;
+                let intensity = 0;
+                if (isRepressive) {
+                    intensity = clamp01((value - 0.5) / 0.5);
+                    const startColor = lerpColor(repressStart, repressStartIntense, intensity);
+                    const endColor = lerpColor(repressEnd, repressEndIntense, intensity);
+                    fillColor = lerpColor(startColor, endColor, 0.75);
+                } else {
+                    intensity = clamp01(value / 0.5);
+                    fillColor = value < 0.33 ? activeBase.slice() : lerpColor(activeBase, activeAccent, clamp01((value - 0.33) / 0.17));
+                }
+                const borderAlpha = isRepressive ? 0.55 : 0.4;
+                const shadowAlpha = isRepressive ? 0.22 + intensity * 0.1 : 0.12 + intensity * 0.06;
+                const indicatorAlpha = isRepressive ? 0.75 + intensity * 0.2 : 0.4 + intensity * 0.2;
                 return {
                     isRepressive,
                     intensity,
-                    startColor,
-                    endColor,
-                    background: `linear-gradient(135deg, ${rgb(startColor)} 0%, ${rgb(endColor)} 100%)`,
-                    border: rgba(endColor, borderAlpha),
-                    shadow: `0 4px 16px ${rgba(endColor, shadowAlpha)}`,
-                    indicator: rgba(endColor, indicatorAlpha)
+                    fillColor,
+                    border: rgba(fillColor, borderAlpha),
+                    shadow: `0 4px 16px ${rgba(fillColor, shadowAlpha)}`,
+                    indicator: rgba(fillColor, indicatorAlpha)
                 };
             }
 
@@ -770,15 +770,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 const effective = ratio >= 0.5
                     ? 0.66 + ((ratio - 0.5) / 0.49) * 0.34
                     : ratio;
+                const isPoised = ratio >= 0.49 && ratio < 0.5;
+                const isRepressive = ratio >= 0.5;
                 const palette = computePalette(Math.min(1, Math.max(0, effective)));
-                target.style.background = palette.background;
+                if (isPoised) {
+                    const midColor = [128, 164, 216];
+                    palette.fillColor = midColor;
+                    palette.border = rgba(midColor, 0.45);
+                    palette.shadow = `0 4px 16px ${rgba(midColor, 0.18)}`;
+                    palette.indicator = rgba(midColor, 0.6);
+                }
+                const fill = palette.fillColor ? rgb(palette.fillColor) : '#c2dbff';
+                target.style.background = fill;
+                target.style.backgroundColor = fill;
                 target.style.borderColor = palette.border;
                 target.style.boxShadow = palette.shadow;
                 target.style.setProperty('--slider-indicator-color', palette.indicator);
-                target.style.setProperty('--slider-indicator-glow', rgba(palette.endColor, 0.24 + palette.intensity * 0.24));
+                target.style.setProperty('--slider-indicator-glow', fill);
 
-                const isPoised = ratio >= 0.49 && ratio < 0.5;
-                const isRepressive = ratio >= 0.5;
                 target.classList.toggle('is-repressive', isRepressive && !isPoised);
                 let stateDescriptor;
                 let captionText;
