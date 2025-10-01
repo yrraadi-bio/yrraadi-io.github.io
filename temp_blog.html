@@ -95,29 +95,6 @@
                         with cardiac enhancement concentrates micro-dystrophin in skeletal and cardiac muscle (including
                         the diaphragm), improving functional readouts while reducing unnecessary exposure elsewhere.</p>
 
-                    <p>The success of this paradigm in the natural language processing domain was an initial motivation
-                        behind our pursuit of a multifunctional DNA model. With Origin, we report that training a model
-                        to generate DNA sequences at a high resolution also improved the model's ability to predict the
-                        function of existing DNA sequences. We're excited about the implications of this</p>
-
-                        <h3>Distal Enhancer Sequences</h3>
-                        <div class="blog-image">
-                            <img src="assets/alphagenome/19.png" alt="Distal Enhancer Like Sequences motif enrichment" loading="lazy" />
-                            <figcaption>Figure 3: 5x Average Motif Enrichment in Distal Enhancer Like Sequences</figcaption>
-                        </div>
-                        
-                        <h3>Promoter Sequences</h3>
-                        <div class="blog-image">
-                            <img src="assets/alphagenome/20.png" alt="Promoter Like Sequences motif enrichment" loading="lazy" />
-                            <figcaption>Figure 4: 5x Average Motif Enrichment in Promoter Like Sequences</figcaption>
-                        </div>
-                        
-                        <h3>Proximal Enhancer Sequences</h3>
-                        <div class="blog-image">
-                            <img src="assets/alphagenome/21.png" alt="Proximal Enhancer Like Sequences motif enrichment" loading="lazy" />
-                            <figcaption>Figure 5: 5x Average Motif Enrichment in Proximal Enhancer Like Sequences</figcaption>
-                        </div>
-
                     <h2>Gene Regulation &amp; Mechanical Control</h2>
 
                     <p>
@@ -131,6 +108,24 @@
                     <p>
                         Axis, when prompted with different transcription factors, will generate a regulatory sequence with a high likelihood of enabling the specified transcription factors to bind. One indication of this ability is the presence of short nucleotide sequences (~8–10 characters long) called "motifs" that act as binding sites. Most transcription factor proteins have a unique motif that they recognize.
                     </p>
+
+                    <h3>Distal Enhancer Sequences</h3>
+                    <div class="blog-image">
+                        <img src="assets/alphagenome/19.png" alt="Distal Enhancer Like Sequences motif enrichment" loading="lazy" />
+                        <figcaption>Figure 3: 5x Average Motif Enrichment in Distal Enhancer Like Sequences</figcaption>
+                    </div>
+                    
+                    <h3>Promoter Sequences</h3>
+                    <div class="blog-image">
+                        <img src="assets/alphagenome/20.png" alt="Promoter Like Sequences motif enrichment" loading="lazy" />
+                        <figcaption>Figure 4: 5x Average Motif Enrichment in Promoter Like Sequences</figcaption>
+                    </div>
+                    
+                    <h3>Proximal Enhancer Sequences</h3>
+                    <div class="blog-image">
+                        <img src="assets/alphagenome/21.png" alt="Proximal Enhancer Like Sequences motif enrichment" loading="lazy" />
+                        <figcaption>Figure 5: 5x Average Motif Enrichment in Proximal Enhancer Like Sequences</figcaption>
+                    </div>
 
                     <p>
                         For every transcription factor the model was trained on, we prompted it to generate sequences with the intended binding of that transcription factor (Set A), and then asked it to generate sequences without explicit prompting of that same transcription factor (Set B). We observed clear motif enrichment—sequences from Set A had up to 14× more occurrences of the protein’s consensus motif compared to Set B. This shows that not only did the model learn the distinct role of these sequences, but that it is also capable of following instructions.
@@ -351,31 +346,7 @@
                         <figcaption>Figure 9: Chromatin architecture and growth control factors</figcaption>
                     </div>
 
-                    <p>AlphaGenome is not robust to the distributional shift that occurs when the context window reduces from during training, suggesting difficulty with understanding local context features and an overreliance on long range patterns. Interestingly, even when AlphaGenome is given ~1000x more nucleotide context than Axis, Axis reaches 95% of AlphaGenome's performance on these benchmarks.</p>
-
-                    <h3>Chromatin accessibility (AlphaGenome with 1MB context)</h3>
-                    <div class="blog-image">
-                        <img src="assets/alphagenome/14.png" alt="Chromatin accessibility (AlphaGenome with extended context)" loading="lazy" />
-                        <figcaption>Figure 10: Chromatin accessibility (AlphaGenome with extended context)</figcaption>
-                    </div>
-                    
-                    <h3>Lineage specification and maintenance factors (AlphaGenome with 1MB context)</h3>
-                    <div class="blog-image">
-                        <img src="assets/alphagenome/15.png" alt="Lineage specification and maintenance factors (AlphaGenome with extended context)" loading="lazy" />
-                        <figcaption>Figure 11: Lineage specification and maintenance factors (AlphaGenome with extended context)</figcaption>
-                    </div>
-                    
-                    <h3>Signal response factors (AlphaGenome with 1MB context)</h3>
-                    <div class="blog-image">
-                        <img src="assets/alphagenome/16.png" alt="Signal response factors (AlphaGenome with extended context)" loading="lazy" />
-                        <figcaption>Figure 12: Signal response factors (AlphaGenome with extended context)</figcaption>
-                    </div>
-                    
-                    <h3>Chromatin architecture and growth control factors (AlphaGenome with extended context)</h3>
-                    <div class="blog-image">
-                        <img src="assets/alphagenome/17.png" alt="Chromatin architecture and growth control factors (AlphaGenome with extended context)" loading="lazy" />
-                        <figcaption>Figure 13: Chromatin architecture and growth control factors (AlphaGenome with extended context)</figcaption>
-                    </div>
+                    <p>AlphaGenome is not robust to the distributional shift that occurs when the context window reduces from during training, suggesting difficulty with understanding local context features and an overreliance on long range patterns.</p>
 
                     <h2>Call for Lab Testing</h2>
 
