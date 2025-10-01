@@ -455,8 +455,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             } else {
                 // Monotonic convex (quadratic-like) shapes with different saturation levels
-                const amps = [0.70, 0.90, 1.00, 0.80];
-                const pows = [2.2, 2.0, 1.8, 2.4];
+                const amps = [0.42, 0.72, 1.00, 0.54];
+                const pows = [2.6, 2.2, 1.5, 2.8];
                 shapes = amps.map((A, i) => (x) => Math.max(0, Math.min(1, A * Math.pow(x, pows[i]))));
             }
             const colors = ['a','b','c','d'];
