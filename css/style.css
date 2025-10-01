@@ -562,15 +562,23 @@ main {
     margin: 2rem 0;
     width: 100%;
     max-width: 100%;
+    line-height: 0;
 }
 
-.blog-image img {
+.blog-image img,
+.blog-image video {
     width: 100% !important;
     max-width: 100% !important;
     height: auto;
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     display: block;
+}
+
+.blog-image video {
+    background-color: #f8f9fa;
+    object-fit: cover;
+    line-height: 0;
 }
 
 .blog-image figcaption {
@@ -613,6 +621,13 @@ footer {
 }
 
 /* Smooth scrolling removed with ToC */
+
+/* Video responsive adjustments */
+@media (max-width: 768px) {
+    .blog-image video {
+        border-radius: 4px;
+    }
+}
 
 /* Responsive Design */
 @media (max-width: 768px) {
