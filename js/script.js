@@ -717,14 +717,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!slider || !target) return;
             if (stateLabel) stateLabel.textContent = 'Reporter Activity';
 
-            const activeStart = [215, 227, 255]; // #d7e3ff
-            const activeStartIntense = [188, 209, 245]; // #bcd1f5
-            const activeEnd = [138, 167, 217]; // #8aa7d9
-            const activeEndIntense = [102, 138, 196]; // #668ac4
-            const repressStart = [212, 222, 235]; // #d4deeb
-            const repressStartIntense = [201, 214, 231]; // #c9d6e7
-            const repressEnd = [111, 139, 184]; // #6f8bb8
-            const repressEndIntense = [95, 120, 163]; // #5f78a3
+            const activeStart = [244, 248, 255]; // #f4f8ff
+            const activeStartIntense = [228, 238, 255]; // #e4eeff
+            const activeEnd = [194, 219, 255]; // #c2dbff
+            const activeEndIntense = [148, 182, 240]; // #94b6f0
+            const repressStart = [230, 237, 248]; // #e6edf8
+            const repressStartIntense = [210, 225, 242]; // #d2e1f2
+            const repressEnd = [93, 124, 171]; // #5d7cab
+            const repressEndIntense = [80, 107, 152]; // #506b98
 
             const clamp01 = (x) => Math.min(1, Math.max(0, x));
             const lerpColor = (c1, c2, t) => c1.map((v, i) => Math.round(v + (c2[i] - v) * t));
@@ -759,28 +759,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 let value = parseFloat(String(rawValue));
                 if (Number.isNaN(value)) value = 0;
                 value = Math.max(0, Math.min(0.99, value));
-                const formatted = value.toFixed(2);
-                if (Math.abs(parseFloat(slider.value) - value) > 0.0001) {
+                const ratio = value;
+                const formatted = ratio.toFixed(2);
+                if (Math.abs(parseFloat(slider.value) - ratio) > 0.0001) {
                     slider.value = formatted;
                 }
                 slider.setAttribute('aria-valuenow', formatted);
                 if (valueEl) valueEl.textContent = formatted;
 
-                const palette = computePalette(value);
+                const effective = ratio >= 0.5
+                    ? 0.66 + ((ratio - 0.5) / 0.49) * 0.34
+                    : ratio;
+                const palette = computePalette(Math.min(1, Math.max(0, effective)));
                 target.style.background = palette.background;
                 target.style.borderColor = palette.border;
                 target.style.boxShadow = palette.shadow;
                 target.style.setProperty('--slider-indicator-color', palette.indicator);
                 target.style.setProperty('--slider-indicator-glow', rgba(palette.endColor, 0.24 + palette.intensity * 0.24));
 
-                const isPoised = Math.abs(value - 0.5) <= 0.02;
-                target.classList.toggle('is-repressive', palette.isRepressive && !isPoised);
+                const isPoised = ratio >= 0.49 && ratio < 0.5;
+                const isRepressive = ratio >= 0.5;
+                target.classList.toggle('is-repressive', isRepressive && !isPoised);
                 let stateDescriptor;
                 let captionText;
                 if (isPoised) {
                     stateDescriptor = 'poised';
                     captionText = 'Inputs balanced at tipping point.';
-                } else if (palette.isRepressive) {
+                } else if (isRepressive) {
                     stateDescriptor = 'repressed';
                     captionText = 'Ratio favors repression.';
                 } else {
@@ -789,7 +794,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 if (caption) caption.textContent = captionText;
                 slider.setAttribute('aria-valuetext', `${formatted} ratio, ${stateDescriptor} reporter activity`);
-                const stateKey = isPoised ? 'poised' : (palette.isRepressive ? 'repressed' : 'active');
+                const stateKey = isPoised ? 'poised' : (isRepressive ? 'repressed' : 'active');
                 target.setAttribute('data-activity', stateKey);
             }
 
