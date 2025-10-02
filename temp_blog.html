@@ -114,19 +114,15 @@
                     <h2>Gene Regulation &amp; Mechanical Control</h2>
 
                     <p>
-                        An epigenetic code governs the accessibility of DNA, allowing proteins called transcription factors to bind to specific sites. This, in turn, switches on different genes within the DNA. The epigenetic code and the availability of these proteins differ from cell type to cell type, among other factors. As a result, different genes are expressed in nerve cells versus skin cells, giving them their distinct functions and identities.
+                        An epigenetic code governs the accessibility of DNA, allowing proteins called transcription factors (TF) to bind to specific sites. These sites are short nucleotide sequences (~8-10 characters long) and are called “motifs”. When TFs bind the motifs they identify, they switch on different genes within the DNA giving the cell its identity and function. The availability of the TFs  differs from cell to cell type. For example, REST is a TF that inhibits cells from making neuronal proteins and so it is only expressed in non-neuronal cells.
                     </p>
 
                     <p>
-                        AI-designed regulatory sequences can enable precise control. TF-binding prompts let you specify promoters or enhancers by the transcription factors available in a given cell state or cell type, biasing gene expression where those factors are active and lowering exposure elsewhere. As specification expands—from binary binding to relative motif weights, excluded TFs, and simple logic (e.g., "A and B, not C")—the model can jointly tune level and specificity, pushing toward safer, more durable expression profiles that relieve poor efficacy, immune pressure, and off-tissue activity.
+                        AI-designed regulatory sequences can enable precise control: TF-binding prompts let you  condition sequence generation on the presence of transcription factors in your target cell state and type, biasing gene expression where those factors are active and reducing exposure elsewhere.
                     </p>
 
                     <p>
-                        Axis, when prompted with different transcription factors, will generate a regulatory sequence with a high likelihood of enabling the specified transcription factors to bind. One indication of this ability is the presence of short nucleotide sequences (~8–10 characters long) called "motifs" that act as binding sites. Most transcription factor proteins have a unique motif that they recognize.
-                    </p>
-
-                    <p>
-                        For every transcription factor the model was trained on, we prompted it to generate sequences with the intended binding of that transcription factor (Set A), and then asked it to generate sequences without explicit prompting of that same transcription factor (Set B). We observed clear motif enrichment—sequences from Set A had up to 14× more occurrences of the protein’s consensus motif compared to Set B. This shows that not only did the model learn the distinct role of these sequences, but that it is also capable of following instructions.
+                        For every transcription factor Axis was trained on, we prompted it to generate sequences with the intended binding of that transcription factor (Set A), and then asked it to generate sequences without explicit prompting of that same transcription factor (Set B). We observed that  sequences from Set A had up to 5x more occurrences of the protein’s consensus motif compared to Set B. This motif enrichment shows that the model identifies the distinct role of these motifs and is also capable of following instructions.
                     </p>
 
                     <h3>Distal Enhancer Sequences</h3>
