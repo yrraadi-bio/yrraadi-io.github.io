@@ -35,17 +35,6 @@ body.blog-page {
     color: #1a1a1a;
 }
 
-body.blog-page header {
-    position: relative;
-    padding-bottom: 0;
-    padding-top: 2rem;
-    margin-bottom: -2rem;
-}
-
-body.blog-page main {
-    padding-top: 0;
-}
-
 body.blog-page .dna-background {
     display: none;
 }
