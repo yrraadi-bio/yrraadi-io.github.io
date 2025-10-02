@@ -581,6 +581,15 @@ main {
     line-height: 0;
 }
 
+#rest-video,
+#rest-video video,
+#rest-video img {
+    box-shadow: none !important;
+    filter: none !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+}
+
 .blog-image figcaption {
     margin-top: 0.75rem;
     font-size: 0.9rem;
