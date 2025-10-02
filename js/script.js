@@ -256,6 +256,39 @@ document.addEventListener('DOMContentLoaded', () => {
                 const x1 = fromRect.left + fromRect.width / 2 - bodyRect.left;
                 const y1 = fromRect.top + fromRect.height / 2 - bodyRect.top;
                 const activeStates = new Set(mapping[tf] || []);
+                const findIntersection = (x1, y1, x2, y2, rect) => {
+                    const minX = rect.left - bodyRect.left;
+                    const maxX = rect.right - bodyRect.left;
+                    const minY = rect.top - bodyRect.top;
+                    const maxY = rect.bottom - bodyRect.top;
+                    const dx = x2 - x1;
+                    const dy = y2 - y1;
+                    let t0 = 0;
+                    let t1 = 1;
+                    const clip = (p, q) => {
+                        if (p === 0) {
+                            return q >= 0;
+                        }
+                        const r = q / p;
+                        if (p < 0) {
+                            if (r > t1) return false;
+                            if (r > t0) t0 = r;
+                        } else {
+                            if (r < t0) return false;
+                            if (r < t1) t1 = r;
+                        }
+                        return true;
+                    };
+                    if (clip(-dx, x1 - minX) && clip(dx, maxX - x1) && clip(-dy, y1 - minY) && clip(dy, maxY - y1)) {
+                        const entry = t0;
+                        return {
+                            x: x1 + dx * entry,
+                            y: y1 + dy * entry
+                        };
+                    }
+                    return { x: x2, y: y2 };
+                };
+
                 nodes.forEach(node => {
                     const state = node.getAttribute('data-state');
                     if (!activeStates.has(state)) return;
@@ -264,39 +297,26 @@ document.addEventListener('DOMContentLoaded', () => {
                     const y2 = toRect.top + toRect.height / 2 - bodyRect.top;
                     const cx1 = x1 + (x2 - x1) * 0.35;
                     const cy1 = y1;
-                    const cx2 = x1 + (x2 - x1) * 0.65;
-                    const cy2 = y2;
+                    const { x: hitX, y: hitY } = findIntersection(x1, y1, x2, y2, toRect);
+                    const shrink = 1.5;
+                    const vx = x2 - hitX;
+                    const vy = y2 - hitY;
+                    const vlen = Math.hypot(vx, vy) || 1;
+                    const finalX = hitX - (vx / vlen) * shrink;
+                    const finalY = hitY - (vy / vlen) * shrink;
+                    const finalCx = x1 + (finalX - x1) * 0.65;
+                    const finalCy = y1 + (finalY - y1) * 0.65;
                     const path = document.createElementNS(ns, 'path');
-                    const d = `M ${x1},${y1} C ${cx1},${cy1} ${cx2},${cy2} ${x2},${y2}`;
+                    const d = `M ${x1},${y1} C ${cx1},${cy1} ${finalCx},${finalCy} ${finalX},${finalY}`;
                     path.setAttribute('d', d);
                     path.setAttribute('class', 'wire-path');
                     path.setAttribute('stroke-linecap', 'butt');
                     svg.appendChild(path);
-                    // manual arrowhead computed using path tangent at end (mobile-safe)
-                    let head = null;
-                    try {
-                        const len = path.getTotalLength();
-                        const eps = Math.max(8, Math.min(16, len * 0.1));
-                        const p0 = path.getPointAtLength(Math.max(0, len - eps));
-                        const p1 = path.getPointAtLength(len);
-                        const ang = Math.atan2(p1.y - p0.y, p1.x - p0.x);
-                        const L = 12, W = 6;
-                        const bx = p1.x - L * Math.cos(ang);
-                        const by = p1.y - L * Math.sin(ang);
-                        const nx = -Math.sin(ang), ny = Math.cos(ang);
-                        const xL = bx + W * nx, yL = by + W * ny;
-                        const xR = bx - W * nx, yR = by - W * ny;
-                        head = document.createElementNS(ns, 'polygon');
-                        head.setAttribute('points', `${p1.x},${p1.y} ${xL},${yL} ${xR},${yR}`);
-                        head.setAttribute('fill', '#0F3460');
-                        head.setAttribute('fill-opacity', '0.8');
-                        svg.appendChild(head);
-                    } catch (_) { /* fallback draws no head */ }
                     // animate draw and fade
                     try {
-                        const len = path.getTotalLength();
-                        path.style.strokeDasharray = String(len);
-                        path.style.strokeDashoffset = String(len);
+                        const lenPath = path.getTotalLength();
+                        path.style.strokeDasharray = String(lenPath);
+                        path.style.strokeDashoffset = String(lenPath);
                         path.style.opacity = '0';
                         path.style.transition = 'stroke-dashoffset 1200ms ease, opacity 800ms ease';
                         requestAnimationFrame(() => {
@@ -306,13 +326,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         // hold briefly, then fade and remove
                         setTimeout(() => {
                             path.style.opacity = '0';
-                            if (head) {
-                                head.style.transition = 'opacity 800ms ease';
-                                head.style.opacity = '0';
-                            }
                             setTimeout(() => {
                                 if (path.parentNode) path.parentNode.removeChild(path);
-                                if (head && head.parentNode) head.parentNode.removeChild(head);
                             }, 900);
                         }, 1600);
                     } catch (_) {
@@ -321,13 +336,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         path.style.opacity = '1';
                         setTimeout(() => {
                             path.style.opacity = '0';
-                            if (head) {
-                                head.style.transition = 'opacity 900ms ease';
-                                head.style.opacity = '0';
-                            }
                             setTimeout(() => {
                                 if (path.parentNode) path.parentNode.removeChild(path);
-                                if (head && head.parentNode) head.parentNode.removeChild(head);
                             }, 900);
                         }, 1200);
                     }
