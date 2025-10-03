@@ -220,8 +220,71 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Switch visual demo: highlight cell states based on TF selection
     if (document.body.classList.contains('blog-page')) {
+        const motifCarousel = document.querySelector('.motif-carousel');
+        if (motifCarousel) {
+            const track = motifCarousel.querySelector('.motif-track');
+            const slides = Array.from(track ? track.children : []);
+            const prevBtn = motifCarousel.querySelector('.motif-prev');
+            const nextBtn = motifCarousel.querySelector('.motif-next');
+            const dotsWrap = motifCarousel.querySelector('.motif-dots');
+            let current = 0;
+            let slideWidth = slides[0]?.getBoundingClientRect().width || 0;
+
+            function ensureDots() {
+                if (!dotsWrap) return;
+                dotsWrap.innerHTML = '';
+                slides.forEach((slide, idx) => {
+                    const dot = document.createElement('button');
+                    dot.type = 'button';
+                    const heading = slide.querySelector('h3');
+                    dot.setAttribute('aria-label', heading ? heading.textContent : `Slide ${idx + 1}`);
+                    dot.setAttribute('aria-selected', idx === current ? 'true' : 'false');
+                    dot.addEventListener('click', () => goTo(idx));
+                    dotsWrap.appendChild(dot);
+                });
+            }
+
+            function updateControls() {
+                if (prevBtn) prevBtn.disabled = current === 0;
+                if (nextBtn) nextBtn.disabled = current === slides.length - 1;
+                if (dotsWrap) {
+                    Array.from(dotsWrap.children).forEach((dot, idx) => {
+                        dot.setAttribute('aria-selected', idx === current ? 'true' : 'false');
+                    });
+                }
+            }
+
+            function applyTransform() {
+                if (!track) return;
+                const offset = -current * slideWidth;
+                track.style.transform = `translateX(${offset}px)`;
+            }
+
+            function goTo(idx) {
+                if (idx < 0 || idx >= slides.length) return;
+                current = idx;
+                updateControls();
+                applyTransform();
+            }
+
+            function onResize() {
+                if (!slides.length) return;
+                slideWidth = slides[0].getBoundingClientRect().width;
+                applyTransform();
+            }
+
+            if (slides.length > 0) {
+                ensureDots();
+                updateControls();
+                onResize();
+                window.addEventListener('resize', onResize);
+                if (prevBtn) prevBtn.addEventListener('click', () => goTo(Math.max(0, current - 1)));
+                if (nextBtn) nextBtn.addEventListener('click', () => goTo(Math.min(slides.length - 1, current + 1)));
+            }
+        }
+
+        // Switch visual demo: highlight cell states based on TF selection
         const switchEl = document.querySelector('.visual-switch');
         if (switchEl) {
             const chips = Array.from(switchEl.querySelectorAll('.tf-chip'));
