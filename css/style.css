@@ -1199,6 +1199,7 @@ footer {
     transform: rotate(0deg) translate(47px) rotate(0deg);
     transition: none;
     z-index: 2;
+    cursor: pointer;
 }
 
 /* canvas overlay for ring drawing */
@@ -1329,6 +1330,7 @@ footer {
     background: linear-gradient(90deg, #c2dbff 0%, #c2dbff 50%, #5d7cab 50%, #5d7cab 100%);
     outline: none;
     transition: box-shadow 0.2s ease;
+    cursor: pointer;
 }
 
 .visual-slider .ratio-slider:focus-visible {
@@ -1344,6 +1346,7 @@ footer {
     border: 2px solid #0F3460;
     box-shadow: 0 2px 6px rgba(15, 52, 96, 0.22);
     transition: transform 0.2s ease;
+    cursor: pointer;
 }
 
 .visual-slider .ratio-slider:active::-webkit-slider-thumb {
@@ -1358,6 +1361,7 @@ footer {
     border: 2px solid #0F3460;
     box-shadow: 0 2px 6px rgba(15, 52, 96, 0.22);
     transition: transform 0.2s ease;
+    cursor: pointer;
 }
 
 .visual-slider .ratio-slider:active::-moz-range-thumb {
