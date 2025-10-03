@@ -649,12 +649,12 @@ main {
     border-radius: 50%;
     border: 1px solid rgba(15, 52, 96, 0.25);
     background: #ffffff;
-    color: #0F3460;
+    color: #526792;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    transition: color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
     z-index: 2;
     box-shadow: 0 6px 18px rgba(15, 52, 96, 0.12);
 }
@@ -668,9 +668,16 @@ main {
 .motif-next { right: -12px; }
 
 .motif-nav:hover:not(:disabled) {
-    background: #0F3460;
-    color: #ffffff;
+    color: #0F3460;
     border-color: #0F3460;
+    box-shadow: 0 8px 22px rgba(15, 52, 96, 0.15);
+}
+
+.motif-nav:focus-visible {
+    outline: none;
+    color: #0F3460;
+    border-color: #0F3460;
+    box-shadow: 0 0 0 3px rgba(15, 52, 96, 0.2);
 }
 
 .motif-nav:disabled {
