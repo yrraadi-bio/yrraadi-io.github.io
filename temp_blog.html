@@ -135,7 +135,7 @@
                     </p>
 
                     <p>
-                        For every transcription factor Axis was trained on, we prompted it to generate sequences with the intended binding of that transcription factor (Set A), and then asked it to generate sequences without explicit prompting of that same transcription factor (Set B). We observed that  sequences from Set A had up to 5x more occurrences of the protein’s consensus motif compared to Set B. This motif enrichment shows that the model identifies the distinct role of these motifs and is also capable of following instructions.
+                        For every transcription factor Axis was trained on, we prompted it to generate sequences with the intended binding of that transcription factor (Set A), and then asked it to generate sequences without explicit prompting of that same transcription factor (Set B). We observed that  sequences from Set A had up to 9x more occurrences of the protein’s consensus motif compared to Set B. This motif enrichment shows that the model identifies the distinct role of these motifs and is also capable of following instructions.
                     </p>
 
                     <p>The above evaluation was done separately on three regulatory types (<em>see figures below</em>):</p>
@@ -181,7 +181,7 @@
                     </div>
 
                     <p>
-                        We used an inverse-entropy (“confidence-based”) sampling strategy to decide which positions to generate at each decoding step. Given the bidirectional nature of DNA and Axis’ learned understanding of motif spacing, placement, and orientation, we hypothesized that allowing the model to iteratively generate its most confident positions—conditioned on prior steps—would yield more biologically coherent sequences. To test this, we compared entropy-based sampling to a baseline that randomly selected which positions to generate (while still sampling nucleotides from the model’s logits). Our entropy-based approach led to up to a 5× increase in motif enrichment.
+                        We used an inverse-entropy (“confidence-based”) sampling strategy to decide which positions to generate at each decoding step. Given the bidirectional nature of DNA and Axis’ learned understanding of motif spacing, placement, and orientation, we hypothesized that allowing the model to iteratively generate its most confident positions—conditioned on prior steps—would yield more biologically coherent sequences. To test this, we compared entropy-based sampling to a baseline that randomly selected which positions to generate (while still sampling nucleotides from the model’s logits). Our entropy-based approach led to up to a 5x increase in motif enrichment.
                     </p>
 
                     <figure class="blog-image">
