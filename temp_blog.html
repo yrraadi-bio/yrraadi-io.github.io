@@ -181,7 +181,7 @@
                     </div>
 
                     <p>
-                        We used an inverse-entropy (“confidence-based”) sampling strategy to decide which positions to unmask at each decoding step. Given the bidirectional nature of DNA and Axis’ learned understanding of motif spacing, placement, and orientation, we hypothesized that allowing the model to iteratively unmask its most confident positions—conditioned on prior steps—would yield more biologically coherent sequences. To test this, we compared entropy-based sampling to a baseline that randomly selected which positions to unmask (while still sampling nucleotides from the model’s logits). Our entropy-based approach led to up to a 5× increase in motif enrichment.
+                        We used an inverse-entropy (“confidence-based”) sampling strategy to decide which positions to generate at each decoding step. Given the bidirectional nature of DNA and Axis’ learned understanding of motif spacing, placement, and orientation, we hypothesized that allowing the model to iteratively generate its most confident positions—conditioned on prior steps—would yield more biologically coherent sequences. To test this, we compared entropy-based sampling to a baseline that randomly selected which positions to generate (while still sampling nucleotides from the model’s logits). Our entropy-based approach led to up to a 5× increase in motif enrichment.
                     </p>
 
                     <figure class="blog-image">
