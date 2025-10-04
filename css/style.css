@@ -540,6 +540,16 @@ main {
     color: #333333;
 }
 
+.blog-article ul {
+    padding-left: 1.4rem;
+    margin: 0 0 1.5rem;
+}
+
+.blog-article li {
+    margin: 0.35rem 0;
+    color: #333333;
+}
+
 .blog-article em {
     color: #666666;
     font-style: italic;

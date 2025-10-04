@@ -138,6 +138,13 @@
                         For every transcription factor Axis was trained on, we prompted it to generate sequences with the intended binding of that transcription factor (Set A), and then asked it to generate sequences without explicit prompting of that same transcription factor (Set B). We observed that  sequences from Set A had up to 5x more occurrences of the protein’s consensus motif compared to Set B. This motif enrichment shows that the model identifies the distinct role of these motifs and is also capable of following instructions.
                     </p>
 
+                    <p>The above evaluation was done separately on three regulatory types (<em>see figures below</em>):</p>
+                    <ul>
+                        <li><strong>Distal Enhancer like Sequences (dELS)</strong>: Usually found &gt;2,000 bp away from a gene’s transcription start site (TSS). They’re involved in long-range control and activate target genes via enhancer-promoter contact.</li>
+                        <li><strong>Proximal Enhancer like Sequences (pELS)</strong>: Located within ~2,000 bp from a gene’s TSS. They modulate the nearby promoter and its responsiveness to signal.</li>
+                        <li><strong>Promoter like Sequences (PLS)</strong>: Found within 200 bp of a gene’s TSS. Involved in recruiting RNA Polymerase II to start gene transcription.</li>
+                    </ul>
+
                     <div class="motif-carousel" aria-label="Motif enrichment examples">
                         <button class="motif-nav motif-prev" type="button" aria-label="Previous motif" disabled>
                             <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true"><path d="M15.5 4.5L9 12l6.5 7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -172,7 +179,16 @@
                         </div>
                         <div class="motif-dots" role="tablist" aria-label="Select motif example"></div>
                     </div>
-                    
+
+                    <p>
+                        We used an inverse-entropy (“confidence-based”) sampling strategy to decide which positions to unmask at each decoding step. Given the bidirectional nature of DNA and Axis’ learned understanding of motif spacing, placement, and orientation, we hypothesized that allowing the model to iteratively unmask its most confident positions—conditioned on prior steps—would yield more biologically coherent sequences. To test this, we compared entropy-based sampling to a baseline that randomly selected which positions to unmask (while still sampling nucleotides from the model’s logits). Our entropy-based approach led to up to a 5× increase in motif enrichment.
+                    </p>
+
+                    <figure class="blog-image">
+                        <img src="assets/alphagenome/23.png" alt="Comparison of entropy-based and random unmasking strategies" loading="lazy" />
+                        <figcaption>Figure 5: Confidence-guided unmasking significantly improves motif enrichment relative to random unmasking.</figcaption>
+                    </figure>
+
                     <h2>Exploring larger design spaces</h2>
                     
                     <p>Generative models that learn the rules of transcription factor (TF) binding open up new ways to control and program gene
@@ -360,7 +376,7 @@
 
                     <figure class="blog-image">
                         <img src="assets/model_arch.png" alt="Model Architecture Diagram" loading="lazy" />
-                        <figcaption>Figure 5: Model architecture showing the shared Transformer backbone with separate
+                        <figcaption>Figure 6: Model architecture showing the shared Transformer backbone with separate
                             nucleotide and assay prediction heads.</figcaption>
                     </figure>
                     
@@ -371,14 +387,14 @@
                     <h3>Chromatin accessibility</h3>
                     <div class="blog-image">
                         <img src="assets/alphagenome/9.png" alt="Chromatin accessibility" loading="lazy" />
-                        <figcaption>Figure 6: Chromatin accessibility</figcaption>
+                        <figcaption>Figure 7: Chromatin accessibility</figcaption>
                     </div>
                     <p>Chromatin accessibility measures open sequences across the genome, highlighting regulatory regions that are accessible for TF binding.                    </p>
                     
                     <h3>Lineage specification and maintenance factors</h3>
                     <div class="blog-image">
                         <img src="assets/alphagenome/10.png" alt="Lineage specification and maintenance factors" loading="lazy" />
-                        <figcaption>Figure 7: Lineage specification and maintenance factors</figcaption>
+                        <figcaption>Figure 8: Lineage specification and maintenance factors</figcaption>
                     </div>
                     <p>Lineage specification and maintenance transcription factors control the activation or repression of lineage-specific transcriptional programs to maintain cell identity and function.
                     </p>
@@ -386,7 +402,7 @@
                     <h3>Signal response factors</h3>
                     <div class="blog-image">
                         <img src="assets/alphagenome/11.png" alt="Signal response factors" loading="lazy" />
-                        <figcaption>Figure 8: Signal response factors</figcaption>
+                        <figcaption>Figure 9: Signal response factors</figcaption>
                     </div>
                     <p>Signal response transcription factors act as sensors and responders, translating external stimuli into gene expression programs.
                     </p>
@@ -394,7 +410,7 @@
                     <h3>Chromatin architecture and growth control factors</h3>
                     <div class="blog-image">
                         <img src="assets/alphagenome/12.png" alt="Chromatin architecture and growth control factors" loading="lazy" />
-                        <figcaption>Figure 9: Chromatin architecture and growth control factors</figcaption>
+                        <figcaption>Figure 10: Chromatin architecture and growth control factors</figcaption>
                     </div>
                     <p>Chromatin architecture and growth control transcription factors perform functions like controlling structural access to regulatory elements and integrating growth signaling into transcriptional control. 
                     </p>
@@ -411,7 +427,7 @@
 
                     <div class="blog-image">
                         <img src="assets/alphagenome/22.png" alt="AlphaGenome illustration" loading="lazy" />
-                        <figcaption>Figure 10: Benefits of multitask learning with nucleotide loss objective</figcaption>
+                        <figcaption>Figure 11: Benefits of multitask learning with nucleotide loss objective</figcaption>
                     </div>
                     
                     <p>We’re excited about the implications of this and believe that Axis is just the tip of the iceberg when it comes to how promptable and unified models can and should be. Unified not just across functions within one domain like DNA, but across RNA, proteins and cellular representations. We believe a fundamental reason behind the lack of reliability and limited capabilities of today’s models is underspecification of the whole system. Biology is incredibly complex and in constant coordination with flow of information across modalities. We <i>must</i> make AI models that learn to compress and reason over the whole puzzle and not just pieces of it. Progress at every step of the way will make human lives better. Completing this grand challenge will unlock a new era of developing therapies that are capable of addressing highly complex diseases.</p>
