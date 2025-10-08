@@ -680,6 +680,33 @@ main {
     line-height: 0;
 }
 
+.blog-takeaways {
+    background: #f4f8ff;
+    border: 1px solid #d7e2f6;
+    border-radius: 14px;
+    padding: 1.5rem 1.75rem;
+    margin: 0 0 2.5rem;
+}
+
+.blog-takeaways h3 {
+    margin: 0 0 0.9rem;
+    font-size: 1.1rem;
+    color: #0F3460;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
+.blog-takeaways ul {
+    margin: 0;
+    padding-left: 1.35rem;
+}
+
+.blog-takeaways li {
+    margin: 0.45rem 0;
+    color: #29374d;
+    line-height: 1.6;
+}
+
 .blog-image img,
 .blog-image video {
     width: 100% !important;
