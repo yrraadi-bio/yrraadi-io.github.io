@@ -98,7 +98,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // flowOffset removed to stop linear movement
 
             const isMobile = window.innerWidth < 768;
-            const activeWidth = isMobile ? width : width * 0.55;
+            const splitRatio = window.innerWidth <= 1024 ? 0.5 : 0.55;
+            const activeWidth = isMobile ? width : width * splitRatio;
 
             // Pulse DNA particles
             particles.forEach(p => {
@@ -131,7 +132,8 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.clearRect(0, 0, width, height);
 
             const isMobile = window.innerWidth < 768;
-            const separatorX = isMobile ? width : width * 0.55;
+            const splitRatio = window.innerWidth <= 1024 ? 0.5 : 0.55;
+            const separatorX = isMobile ? width : width * splitRatio;
             const centerX = separatorX / 2;
             const centerY = height / 2;
 
@@ -292,7 +294,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // FORCE CLEAR RIGHT SIDE (Failsafe)
             if (!isMobile) {
-                ctx.clearRect(separatorX, 0, width - separatorX, height);
+            ctx.clearRect(separatorX, 0, width - separatorX, height);
             }
         }
 
