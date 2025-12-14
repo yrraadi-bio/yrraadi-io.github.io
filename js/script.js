@@ -173,7 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Helper to draw one helix
             function drawHelix(offsetX, offsetY, scaleMult, alphaMult, radiusMult) {
-                const helixRadius = 200 * radiusMult; // Increased from 160 for wider helix
+                const helixRadius = (isMobile ? 120 : 200) * radiusMult;
                 const renderPoints = [];
                 const strand1Points = [];
                 const strand2Points = [];
@@ -241,7 +241,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         ctx.beginPath();
                         ctx.moveTo(px1, py1);
                         ctx.lineTo(px2, py2);
-                        ctx.lineWidth = 2 * scaleMult;
+                        ctx.lineWidth = (isMobile ? 1 : 2) * scaleMult;
                         ctx.strokeStyle = `rgba(74, 158, 255, ${0.25 * ((scale1 + scale2) / 2) * alphaMult})`;
                         ctx.stroke();
                     }
@@ -254,7 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     ctx.beginPath();
                     ctx.strokeStyle = color;
-                    ctx.lineWidth = 3 * scaleMult;
+                    ctx.lineWidth = (isMobile ? 1.5 : 3) * scaleMult;
                     for (let i = 0; i < points.length - 1; i++) {
                         const p1 = points[i];
                         const p2 = points[i + 1];
@@ -279,7 +279,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 renderPoints.forEach(p => {
                     ctx.beginPath();
-                    ctx.arc(p.x, p.y, Math.max(0, p.radius * p.scale), 0, Math.PI * 2);
+                    const r = isMobile ? p.radius * 0.7 : p.radius;
+                    ctx.arc(p.x, p.y, Math.max(0, r * p.scale), 0, Math.PI * 2);
                     ctx.fillStyle = p.color;
                     ctx.globalAlpha = Math.max(0.1, p.scale * 0.8 * alphaMult);
                     ctx.fill();
