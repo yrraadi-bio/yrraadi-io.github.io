@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-4DGX45FJCJ"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-4DGX45FJCJ');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optimizers for Biology‑Focused Models — Origin Bio</title>
+    <meta name="description" content="Exploring Adam, Muon, and Hyperball optimizers for DNA and biology-focused AI models. Weight decay, singular values, and scale invariance." />
+    <meta property="og:type" content="article" />
+    <meta property="og:site_name" content="Origin Bio" />
+    <meta property="og:title" content="Optimizers for Biology‑Focused Models — Origin" />
+    <meta property="og:description" content="Exploring Adam, Muon, and Hyperball optimizers for DNA and biology-focused AI models." />
+    <meta property="og:url" content="https://origin.bio/blogs/optimizers-for-biology/" />
+    <meta property="og:image" content="https://origin.bio/assets/thumbnail-og.jpg?v=1" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="canonical" href="https://origin.bio/blogs/optimizers-for-biology/">
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="icon" href="/assets/favicon.png" type="image/png">
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['\\(', '\\)']],
+                displayMath: [['\\[', '\\]']],
+                processEscapes: true
+            }
+        };
+    </script>
+</head>
+
+<body class="blog-page">
+    <div class="dna-background">
+        <div class="dna-strand"></div>
+        <div class="dna-strand"></div>
+        <div class="dna-strand"></div>
+    </div>
+
+    <header>
+        <a href="/" class="logo-link">
+            <img src="/assets/Origin%20logo+text%20(blue%20on%20transparent).png" alt="Origin Logo" class="header-logo">
+        </a>
+    </header>
+
+    <main>
+        <section class="blog-hero">
+            <div class="blog-content">
+                <article class="blog-article">
+                    <h2>Optimizers for biology-focused models</h2>
+                    <p class="blog-date">February 10, 2026</p>
+
+                    <p>Simply put, optimizers are tools that help us perform SGD effectively during model training.</p>
+
+                    <p>Most optimizers used today in language modelling are variations of AdamW<sup><a href="#ref-adamw">1</a></sup> or (more recently) Muon<sup><a href="#ref-muon">2</a></sup>, and so most algorithmic and architectural improvements for language models have been optimal to these two algorithms (in fact, since many optimizations were pre-Muon, it can be argued that they are mostly optimal to AdamW).</p>
+
+                    <p>Similarly, the main optimizers for SOTA DNA models like Alphagenome<sup><a href="#ref-alphagenome">3</a></sup>, Enformer<sup><a href="#ref-enformer">4</a></sup>, and Evo<sup><a href="#ref-evo">5</a></sup> have been variations of AdamW. When most SOTA models are trained using some variation of the AdamW optimizer, and most algorithmic and architectural advancements are made in conjunction with AdamW, it begs the question: are these advancements really globally optimal? Or are they simply locally optimal to AdamW? Is there another, more optimal algorithm for DNA modeling?</p>
+
+                    <p>When we train with Adam, research shows that the weights stay stuck in the initial neighborhood of where they started<sup><a href="#ref-lazy">6</a>, <a href="#ref-ntk">7</a></sup>. Additionally, during training, certain directions in the hidden space could be given a greater signal than other directions, indicating that they receive more updates. Muon was pitched to mitigate these problems, as the update is &ldquo;spread out&rdquo; across the different singular dimensions of the matrix space, and the math that does this also forces the weights to move far away from their initialization points, &ldquo;erasing&rdquo; their initial distributions<sup><a href="#ref-erasure">8</a></sup>. This is because, unlike Adam, Muon treats neural network layers like actual matrices rather than flat lists of numbers, and ensures that every direction in the matrix's space is learned with almost equal priority. It does so by bringing all singular values of the weight updates close to \(1\) (this will be important later).</p>
+
+                    <p>Weight decay is used to control the norm of weight matrices and updates in all SOTA AI models, and it has been postulated that it controls the effective step size and equilibrium weight norm of the model during training<sup><a href="#ref-wdeq">9</a>, <a href="#ref-adamw">1</a>, <a href="#ref-hyperball">10</a></sup> (without decay, it seems to grow \(\propto \sqrt{t}\) as training progresses<sup><a href="#ref-hyperball">10</a></sup>). This is important because if the step size is too small, and the norm is too big, the model cannot learn properly. However, what if there were more direct, more efficient ways of controlling the norm of the weights? Is this the correct norm to be controlling?</p>
+
+                    <h3>Adam Overview</h3>
+                    <p>Let \(g_t = \nabla_W \mathcal{L}(W_t)\) denote the gradient at step \(t\). Adam maintains two exponential moving averages (EMAs):</p>
+                    <ul>
+                        <li>a <em>first moment</em> estimate (mean) \(m_t\),</li>
+                        <li>a <em>second moment</em> estimate (uncentered variance) \(v_t\).</li>
+                    </ul>
+                    <p>Specifically, with hyperparameters \(\beta_1,\beta_2 \in [0,1)\) and initialization \(m_0 = 0\), \(v_0 = 0\):</p>
+                    \[
+                      m_t = \beta_1 m_{t-1} + (1-\beta_1) g_t,
+                      \qquad
+                      v_t = \beta_2 v_{t-1} + (1-\beta_2) g_t^2,
+                    \]
+                    <p>where \(g_t^2\) denotes elementwise squaring.</p>
+
+                    <p>Because both EMAs start at zero, they are biased toward \(0\) early in training. Adam, therefore, uses bias-corrected estimates</p>
+                    \[
+                      \hat m_t = \frac{m_t}{1-\beta_1^t},
+                      \qquad
+                      \hat v_t = \frac{v_t}{1-\beta_2^t}.
+                    \]
+                    <p>The vanilla Adam update is then,</p>
+                    \[
+                      W_{t+1} = W_t - \eta\, \frac{\hat m_t}{\sqrt{\hat v_t}+\varepsilon},
+                    \]
+                    <p>with learning rate \(\eta\) and small \(\varepsilon > 0\) for numerical stability.</p>
+
+                    <h4 class="blog-subheading">Weight decay (AdamW)</h4>
+                    <p>Soft L2-regularization can be implemented by adding \(\lambda W_t\) to the gradient, but AdamW instead <em>decouples</em> weight decay from the adaptive gradient step. In its common form:</p>
+                    \[
+                      W_{t+1} = (1-\eta\lambda)\,W_t \; - \; \eta\, \frac{\hat m_t}{\sqrt{\hat v_t}+\varepsilon},
+                    \]
+                    <p>so weight decay shrinks parameters directly (multiplicatively), while the Adam step uses the adaptive per-parameter scaling.</p>
+
+                    <h4 class="blog-subheading">Independent weight decay</h4>
+                    <p>In our setting, we use <em>independent</em> weight decay: the shrinkage is applied as a separate step, not through the gradient, and is not tied to the learning rate.</p>
+                    <p>Concretely, if \(U_t\) denotes the optimizer's proposed parameter update (e.g., the Adam step \(U_t=-\eta\, \hat m_t/(\sqrt{\hat v_t}+\varepsilon)\)), then independent weight decay applies</p>
+                    \[
+                      W_{t+1} = (1-\lambda)\,W_t + U_t,
+                    \]
+                    <p>So the decay rate \(\lambda\) is not multiplied by the learning rate and can be scheduled separately.</p>
+
+                    <h3>Muon overview</h3>
+                    <p>Muon<sup><a href="#ref-muon">2</a></sup> is a <em>matrix-aware</em> optimizer designed for weight matrices (whereas Adam treats all weights like vectors, not matrices). The core idea is to take a gradient update \(g_t=\nabla_W \mathcal{L}(W_t)\) and then <em>reshape</em> it so that the learning signal is distributed more evenly across the singular directions of the matrix<sup><a href="#ref-cesista">11</a></sup>.</p>
+
+                    <p>Just like Adam, we first form a momentum-like exponential moving average of gradients; denote this by \(u_t\):</p>
+                    \[
+                      u_t = \beta\,u_{t-1} + (1-\beta)\,g_t,
+                    \]
+                    <p>(with \(u_0=0\)). This plays the same role as Adam's first-moment estimate \(m_t\), but is then processed using matrix structure.</p>
+
+                    <p>A convenient way to describe the matrix processing step is via the singular value decomposition (SVD).</p>
+
+                    <h4 class="blog-subheading">Singular value decomposition (SVD)</h4>
+                    <p>For any real matrix \(A \in \mathbb{R}^{m\times n}\), the SVD factorizes \(A\) into</p>
+                    \[
+                      A = U\Sigma V^\top,
+                    \]
+                    <p>where \(U\in\mathbb{R}^{m\times m}\) and \(V\in\mathbb{R}^{n\times n}\) are orthogonal matrices (their columns form orthonormal bases), and \(\Sigma\in\mathbb{R}^{m\times n}\) is diagonal (rectangular) with nonnegative entries \(\sigma_1\ge \sigma_2\ge \cdots \ge 0\) called the <em>singular values</em>. Geometrically, \(V^\top\) rotates (or reflects) the input space, \(\Sigma\) scales along the orthogonal axes, and \(U\) rotates (or reflects) the output space.</p>
+
+                    <h4 class="blog-subheading">What are singular values?</h4>
+                    <p>The singular values of \(A\) are the square roots of the eigenvalues of \(A^\top A\) (or equivalently, of \(AA^\top\)). Concretely, for eigenpairs \((\lambda_i, v_i)\) of \(A^\top A\),
+                    \[
+                      A^\top A v_i = \lambda_i v_i, \qquad \sigma_i = \sqrt{\lambda_i}.
+                    \]
+                    They quantify how much \(A\) <em>stretches</em> vectors: along the right singular direction \(v_i\), the mapping scales by exactly \(\sigma_i\). Geometrically, the largest singular value is the <em>maximum stretch</em> induced by \(A\) on any unit vector:
+                    \[
+                      \sigma_1 = \max_{\|x\|=1}\|Ax\|.
+                    \]
+                    <span class="sidenote-group"><sup class="sidenote-ref">1</sup><span class="sidenote-card side-right">For completeness, we can generalize this idea either recursively (where we define \(\sigma_i\) as the max stretch orthogonal to \(v_j\) \(\forall j < i\)), or succinctly using the Min-max theorem: \(\sigma_i=\min_{U\le \mathbb R^n:\:\dim (U)=n-i+1}\max_{x\in U:\:\|x\|=1}\|Ax\|\), where \(n\) is the total number of singular values.</span></span>
+                    </p>
+
+                    <h4 class="blog-subheading">Why are they special?</h4>
+                    <p>They control several important properties at once:</p>
+                    <ul>
+                        <li><strong>Spectral norm/stability:</strong> The spectral norm is defined as \(\|\cdot\|_2=\sigma_1(\cdot)\) on matrix inputs. It is the operator norm<span class="sidenote-group"><sup class="sidenote-ref">2</sup><span class="sidenote-card side-left">Formally, the operator norm \(\|\cdot\|_p\) is defined for \(A\in \mathbb R^{n\times m}\) as \(\|A\|_p=\max\{\|Ax\|_p:x\in \mathbb R^m, \|x\|_p\le 1\}\), where we apply the \(\ell_p\) norm to the vectors.</span></span> induced by the vector \(\ell_2\) norm. As previously mentioned, \(\sigma_1(A) = \|A\|_2\) is the maximum amplification (or stretch) of \(A\); this is important for Lipschitz bounds, which are a common assumption behind stability and generalization arguments in ML<sup><a href="#ref-spectral">12</a></sup>.</li>
+                        <li><strong>Rank / effective dimension:</strong> the number of nonzero \(\sigma_i\) equals \(\mathrm{rank}(A)\); many tiny \(\sigma_i\) indicates a nearly low-rank map.</li>
+                        <li><strong>Conditioning:</strong> the ratio \(\sigma_1/\sigma_r\) (for \(\sigma_r = \min_{\neq 0}\sigma_i\)) measures how unevenly \(A\) scales different directions; large ratios typically mean some directions learn/propagate signal much more strongly than others, which can hurt optimization and numerical stability.</li>
+                    </ul>
+
+                    <h4 class="blog-subheading">Back to Muon</h4>
+                    <p>In Muon, we apply the SVD to the (momentum) update matrix \(u_t\):
+                    \[
+                      u_t = U\Sigma V^\top.
+                    \]
+                    Muon constructs an update whose singular vectors match those of \(u_t\), but whose singular values are pushed toward \(1\):
+                    \[
+                      \tilde u_t = U\,\tilde\Sigma\,V^\top,
+                    \]
+                    where \(\tilde\Sigma\) is a diagonal matrix with entries close to \(1\), (typically in \([0.7, 1.3]\)), to a sphere called the Spectral Sphere<sup><a href="#ref-muon">2</a></sup><span class="sidenote-group"><sup class="sidenote-ref">3</sup><span class="sidenote-card side-right">The Spectral Sphere is a sphere on which all matrices have a spectral norm of 1 (\(\sigma_1=1\)).</span></span> &ldquo;whitening&rdquo; or &ldquo;equalizing&rdquo; the update across singular dimensions.</p>
+
+                    <p>Intuitively, this prevents a few directions from dominating the step, and encourages motion in many independent directions of the layer's matrix space. In contrast to optimizers that treat parameters as a flat vector, Muon explicitly uses matrix structure, which can help avoid updates that remain concentrated near the initialization subspace.</p>
+
+                    <p>In practice, the resulting parameter update has the form
+                    \[
+                      W_{t+1} = W_t + U_t, \qquad U_t = -\eta\,\tilde u_t,
+                    \]
+                    (with optional weight decay applied as described for AdamW).</p>
+
+                    <h4 class="blog-subheading">Connecting Muon to norm control</h4>
+                    <p>Muon already manipulates singular values of the <em>update</em> (by pushing those of \(\tilde u_t\) toward \(1\)), which suggests a different view of regularization than standard weight decay. Classical weight decay controls the \(\ell_2\) or Frobenius norm of the weight matrices (defined as \(\|W\|_F =\|\vec W\|_2= \sqrt{\sum_{i}\sum_jw_{ij}^2}\)<span class="sidenote-group"><sup class="sidenote-ref">4</sup><span class="sidenote-card side-right">\(\vec W\) denotes the vectorized form of matrix \(W\); more specifically, if \(W=[c_1, c_2 ..., c_m]\) where \(c_i\) is the \(i\)th column of \(W\), then \(\vec W=\begin{bmatrix} c_1\\c_2\\\vdots\\c_m \end{bmatrix}\) has them merged into one column.</span></span><span class="sidenote-group"><sup class="sidenote-ref">5</sup><span class="sidenote-card side-left">It also happens to be the case that \(\|W\|_F=\sqrt{\sum_i \sigma_i^2}\), but this is a bit of a digression and I will not prove this here.</span></span>), but in a matrix-aware setting one can instead target properties tied to singular values:</p>
+                    <ul>
+                        <li><strong>Rank / intrinsic dimension:</strong> shaping the smaller singular values can encourage using many subspaces of the hidden stream, rather than collapsing the layer to an effectively low-rank map.</li>
+                        <li><strong>Stability:</strong> bounding the largest singular value (the spectral norm) controls the layer Lipschitz constant, and helps prevent activation and gradient blowups<sup><a href="#ref-spectral">12</a>, <a href="#ref-cesista">11</a></sup>.</li>
+                    </ul>
+                    <p>This perspective is especially relevant for high-dimensional, structured sequence representations (like DNA), where controlling intrinsic dimensionality can matter a lot.</p>
+
+                    <h3>Why is weight decay necessary?</h3>
+                    <p>Both empirically and in studies, we find that adding weight decay tends to improve both Adam and Muon compared to running the base optimizers without any decay<sup><a href="#ref-hyperball">10</a>, <a href="#ref-adamw">1</a>, <a href="#ref-wdeq">9</a></sup>. Conceptually, decay provides a simple stabilizing \(\ell_2\) bias toward smaller parameter norms, which can help prevent explosive norm growth, reduce overfitting, and keep the effective step sizes at a scale where the optimizer's updates remain meaningful<sup><a href="#ref-wdeq">9</a></sup>.</p>
+
+                    <p>In particular, Adam+decay and Muon+decay often outperform Adam and Muon alone because the optimizer determines <em>directional</em> update structure (via moments for Adam and via singular-direction shaping for Muon), while weight decay provides a control knob on overall parameter scale<sup><a href="#ref-wdeq">9</a></sup>.</p>
+
+                    <p>It has been proven that weight decay provides an equilibrium weight norm that the model approaches towards the end of training<sup><a href="#ref-wdeq">9</a>, <a href="#ref-hyperball">10</a></sup>, but there are a few things to note: firstly, this isn't a hard setting; the weight is always &ldquo;hovering&rdquo; around that length, and secondly, the actual norm of the weight matrix doesn't matter. In fact, with correctly placed RMSNorms, the scale of the weight matrices doesn't impact capacity at all<sup><a href="#ref-rmsnorm">13</a>, <a href="#ref-hyperball">10</a></sup>, and for said scale-invariant matrices, loss contribution hence depends only on the direction of the weights.</p>
+
+                    <p>Now, even though the weight decay prevents a norm blowup, there are still ways to substantially reduce the space we are searching for the optimal matrices. Why is that? Well, imagine that the equilibrium norm describes a hyperball of said radius centered at the origin in the matrix space; most of the volume of the hyperball is concentrated at the outer shell (where the norm hovers). We can prove this like so:</p>
+
+                    <h4 class="blog-subheading">Proposition 1 (mass concentrates near the boundary in high dimension)</h4>
+                    <p>Let \(B_n(R)=\{x\in\mathbb{R}^n:\|x\|\le R\}\) be the Euclidean \(n\)-ball of radius \(R\), and let \(0 \lt \varepsilon \lt R/2\). Define the outer shell
+                    \[
+                      S_{n}(R,\varepsilon)=\{x\in\mathbb{R}^n: R-\varepsilon \le \|x\|\le R\}.
+                    \]
+                    Then the fraction of volume in the shell satisfies
+                    \[
+                      \frac{\mathrm{Vol}(S_{n}(R,2\varepsilon))}{\mathrm{Vol}(B_n(R))}
+                      = 1 - \left(1-\frac{2\varepsilon}{R}\right)^{n}
+                      \xrightarrow[n\to\infty]{} 1.
+                    \]
+                    Equivalently, the &ldquo;interior&rdquo; ball \(B_n(R-2\varepsilon)\) contains an asymptotically negligible fraction of the total volume.</p>
+
+                    <h4 class="blog-subheading">Proof</h4>
+                    <p>The volume of an \(n\)-ball scales like \(R^n\): there is a constant \(c_n=\mathrm{Vol}(B_n(1))\) such that
+                    \[
+                      \mathrm{Vol}(B_n(R)) = c_n R^n.
+                    \]
+                    Therefore, the shell volume is
+                    \[
+                      \mathrm{Vol}(S_n(R,2\varepsilon))
+                      = \mathrm{Vol}(B_n(R)) - \mathrm{Vol}(B_n(R-2\varepsilon))
+                      = c_n(R^n-(R-2\varepsilon)^n).
+                    \]
+                    Dividing by \(\mathrm{Vol}(B_n(R))=c_nR^n\) gives
+                    \[
+                      \frac{\mathrm{Vol}(S_n(R,2\varepsilon))}{\mathrm{Vol}(B_n(R))}
+                      = 1-\left(\frac{R-2\varepsilon}{R}\right)^n
+                      = 1-\left(1-\frac{2\varepsilon}{R}\right)^n.
+                    \]
+                    Since \(0<1-2\varepsilon/R<1\), the term \((1-2\varepsilon/R)^n\to 0\) as \(n\to\infty\), so the ratio tends to \(1\).</p>
+
+                    <p>Why is this relevant? Suppose the equilibrium norm is \(N=R-\varepsilon\), we can see that even if the norm &lsquo;hovers&rsquo; within just \(0<\varepsilon\ll N\) of the equilibrium, we still have to consider a relatively large space of values within the hyperball of radius \(R\). Proposition 1 exists to demonstrate that no matter how small we make \(\varepsilon>0\), we will still have to consider a relatively large space of values near the equilibrium hypersphere<span class="sidenote-group"><sup class="sidenote-ref">6</sup><span class="sidenote-card side-right">Note that a hypersphere and hyperball are not the same thing. A &lsquo;ball&rsquo; refers to the entire solid object, but a &lsquo;sphere&rsquo; refers only to the shell/boundary of said ball.</span></span> of radius \(N\) (especially as the matrix dimension is roughly \(O(d^2)\) where \(d\) is the hidden size of the model). If the weight norm does not matter at all, why do this? Wouldn't it be more efficient to fix the norm (set \(\varepsilon=0\) manually) and let the weight update focus on changing the direction, rather than magnitude?</p>
+
+                    <h3>The Hyperball update</h3>
+                    <p>The intuition of Hyperball<sup><a href="#ref-hyperball">10</a></sup> is to, for a weight matrix \(W\), simply fix the Frobenius norm of \(W\)<span class="sidenote-group"><sup class="sidenote-ref">7</sup><span class="sidenote-card side-left">The Frobenius inner product \(\langle A, B\rangle_F=\operatorname{Tr}(A^TB)=\langle\vec A,\vec B\rangle=\sum_{i,j}a_{ij}b_{ij}\) is the sum of the element-wise product of the matrices \(A\) and \(B\).</span></span> and update \(U\) to the initial radius \(R := \|W_0\|_F\). Rather confusingly, this confines the weight matrix to a hypersphere of radius \(R\), not a ball, but let us ignore this superficial detail. Suppose \(\mathrm{Normalize}(\cdot)\) used the \(\ell_2\) norm to normalize its input, given a Muon or Adam update \(u_t\), let the actual update be:
+                    \[
+                      U_t = -\eta R\,\mathrm{Normalize}(u_t),
+                    \]
+                    then let
+                    \[
+                      W_{t+1} = R\,\mathrm{Normalize}(W_t + U_t).
+                    \]
+                    What makes this optimization special is that it can be wrapped around any optimizer update, so it works with Adam and Muon (using it alongside weight decay would be useless, as we hard-set the weight norms in the wrapper function).</p>
+
+                    <p>Note that not only do we set the weight norm to be \(R\), but the update vector norm is also set to \(R\). Let \(\Delta W = W_{t+1}-W_t\), if we make the generous assumption that \(\|U_t\|_F\approx \|\Delta W\|_F\), we can see that we have a relative step size of:
+                    \[
+                      \frac{\|\Delta W\|_F}{\|W_t\|_F}\approx\frac{\|U_t\|_F}{\|W_t\|_F}=\eta
+                    \]
+                    which is an easily adjustable hyperparameter!</p>
+
+                    <p>For low \(\eta\), we can make estimations: \(1+\eta^2+2\eta\gamma\approx1\), so we get \(x\approx R\sqrt{2}\sqrt{1-\sqrt{1-(\eta^2-\gamma^2\eta^2)}}\). Using \(\sqrt{1-z}\approx 1-z/2\) we can see \(x\approx R\eta\sqrt{1-\gamma^2}=R\eta\sin\theta\), which is just a tangent approximation of the step size! This would make the relative step size \(\frac{x}{\|W_t\|}\approx\eta\sqrt{1-\gamma^2}\), and we get something very similar to our initial estimate of \(\eta\). In fact, for \(\gamma=0\), they are exactly equal!</p>
+
+                    <p>It is very &lsquo;nice&rsquo; that \(\frac{x}{\|W_t\|}\propto\eta\), because when we have a weight decay instead, the effective step size is \(\propto\sqrt{\eta\lambda}\)<sup><a href="#ref-hyperball">10</a></sup>, which has more hyperparameters to control than just \(\eta\), and also grows explosively in both of them.</p>
+
+                    <figure class="blog-image">
+                        <img src="/blogs/optimizers-for-biology/assets/relative-step-size.png" alt="Relative step size bound: x/||W_t|| as eta increases and gamma decreases" loading="lazy" />
+                        <figcaption>Relative step size bound. As \(\eta\) increases and \(\gamma\) decreases, the relative step size increases.</figcaption>
+                    </figure>
+
+                    <h3>Results</h3>
+                    <p>In this section, we summarize the sweep results for Adam and Muon, with Weight decay vs Hyperball.</p>
+
+                    <figure class="blog-image">
+                        <img src="/blogs/optimizers-for-biology/assets/loss_curves_nucleotide_loss.png" alt="Learning curves for nucleotide loss" loading="lazy" />
+                        <figcaption>Learning curves for the most optimial runs for all 4 optimizer combinations: AdamW, AdamH, MuonW, MuonH. Loss axis is log nucleotide cross-entropy loss.</figcaption>
+                    </figure>
+
+                    <p>It seems like the worst optimizer combination is AdamW (Adam + weight decay) with independent weight decay, then comes AdamH (Adam + Hyperball wrapper). Next, interestingly, is MuonH, followed by MuonW (with independent decay again). It seems like the model with the best nucleotide loss is Muon with independent weight decay! Hyperball improves the performance of Adam, but worsens it for Muon, while Muon performs better than Adam no matter what. I hypothesize that this is because Muon &lsquo;whitens&rsquo; the update, or maps it to the unit Spectral Sphere, and then the hyperball wrapper maps this update to have Frobenius norm of \(\eta R\). Perhaps the fact that we mapping the update directly from the Spectral Sphere to our Frobenius sphere is not good, and it may take us too far from the unit sphere in the spectral space<span class="sidenote-group"><sup class="sidenote-ref">8</sup><span class="sidenote-card side-left">It is actually possible to be on both spheres at once as they DO intersect, but our algorithm does not guarantee that we enter the intersection. As a clarification: There exists an identity \(\|W\|_2\le \|W\|_F\le \sqrt{n}\|W\|_2\), so one might believe that \(\|W\|_F\in[1,\sqrt{n}]\) guarantees that \(W\) lies in the intersection, but this is a necessary condition, not a sufficient one!</span></span>. The weight decay firstly does <em>not</em> alter the Muon update, it only decays the matrix it is added to! Additionally, weight decay explores a much larger space of matrices than Hyperball (look at Propostion 1), which may also contribute. Perhaps Muon with only the latter Hyperball update would work better, but we would have to tune the radius of the hypersphere to keep the relative update size reasonable, so it is not as easily done.</p>
+
+                    <figure class="blog-image">
+                        <img src="/blogs/optimizers-for-biology/assets/adam_heatmap.png" alt="Adam sweep summary" loading="lazy" style="margin-bottom: 0.5rem;" />
+                        <img src="/blogs/optimizers-for-biology/assets/muon_heatmap.png" alt="Muon sweep summary" loading="lazy" />
+                        <figcaption>Sweep summary (robustness). Look for a wider &ldquo;good&rdquo; region: a larger set of hyperparameters achieving near-best performance (less tuning sensitivity).</figcaption>
+                    </figure>
+
+                    <h3>How did we enforce scale invariance?</h3>
+                    <p>A key ingredient is RMSNorm, which rescales a vector by its root-mean-square (RMS) magnitude. Given an activation vector \(x\in\mathbb{R}^d\), RMSNorm computes
+                    \[
+                      \mathrm{RMSNorm}(x) = g\odot \frac{x}{\sqrt{\frac{1}{d}\sum_{i=1}^d x_i^2 + \varepsilon}},
+                    \]
+                    where \(g\in\mathbb{R}^d\) is a learned per-coordinate gain and \(\varepsilon>0\) is for numerical stability.</p>
+
+                    <h4 class="blog-subheading">Rescaling property</h4>
+                    <p>Ignoring \(\varepsilon\) (or when \(\|x\|\) is not tiny), RMSNorm is <em>scale invariant</em>: for any scalar \(\alpha>0\),
+                    \[
+                      \mathrm{RMSNorm}(\alpha x)= \mathrm{RMSNorm}(x).
+                    \]
+                    Intuitively, scaling the input by \(\alpha\) scales the denominator by the same \(\alpha\), so the normalized direction stays the same.</p>
+
+                    <h4 class="blog-subheading">Why this makes weight matrices scale-invariant</h4>
+                    <p>Consider a linear map \(y = Wx\). If the model applies RMSNorm before the next computation (pre-norm, post-norm, or both), then multiplying the weight matrix by a scalar often has little effect on the downstream activations:
+                    \[
+                      \mathrm{RMSNorm}((\alpha W)x) = \mathrm{RMSNorm}(\alpha (Wx)) = \mathrm{RMSNorm}(Wx).
+                    \]
+                    So for these &ldquo;RMSNorm sandwiched&rdquo; layers, scale doesn't matter as the RMSNorm layer itself learns the scaling factor necessary for the output.</p>
+
+                    <p>In Axis, our original model architecture, we used MuP initialization and layer pre-normalization, but that wasn't enough to enforce scale invariance in our model. To further enforce it, I added a layer post-norm and then QK-norm (like Gemma 3's architecture<sup><a href="#ref-gemma">14</a></sup>), which seemed to be enough to enforce scale invariance (although, it seems like only adding the post-norm was sufficient for our model; the QK-norm was added for completeness).</p>
+
+                    <h3>Next steps</h3>
+                    <p>Next, we plan to:</p>
+                    <ul>
+                        <li><strong>Run the full sweep with SSO:</strong> repeat the Adam/Muon \(\times\) Hyperball sweeps using the Spectral Sphere Optimizer (SSO) to test whether controlling \(\sigma_1\) directly improves stability and performance compared to Frobenius-norm control.</li>
+                        <li><strong>Explore hybrid optimizers:</strong> evaluate combinations of Muon and Adam updates (like PRISM variants) and compare against these results.</li>
+                    </ul>
+
+                    <hr style="margin: 3rem 0 2rem; border: none; border-top: 1px solid #ddd;">
+                    <h3>References</h3>
+                    <ol class="blog-references">
+                        <li id="ref-adamw">Loshchilov &amp; Hutter. <a href="https://arxiv.org/abs/1711.05101" target="_blank">Fixing Weight Decay Regularization in Adam</a>. arXiv 2017.</li>
+                        <li id="ref-muon">Jordan et al. <a href="https://kellerjordan.github.io/posts/muon/" target="_blank">Muon: An optimizer for hidden layers in neural networks</a>. 2024.</li>
+                        <li id="ref-alphagenome">Avsec et al. <a href="https://www.biorxiv.org/content/early/2025/06/27/2025.06.25.661532" target="_blank">AlphaGenome: advancing regulatory variant effect prediction</a>. bioRxiv 2025.</li>
+                        <li id="ref-enformer">Avsec et al. <a href="https://doi.org/10.1038/s41592-021-01252-x" target="_blank">Effective gene expression prediction from sequence by integrating long-range interactions</a>. Nature Methods 2021.</li>
+                        <li id="ref-evo">Brixi et al. <a href="https://www.biorxiv.org/content/early/2025/02/21/2025.02.18.638918" target="_blank">Genome modeling and design across all domains of life with Evo 2</a>. bioRxiv 2025.</li>
+                        <li id="ref-lazy">Chizat et al. <a href="https://arxiv.org/abs/1812.07956" target="_blank">On Lazy Training in Differentiable Programming</a>. NeurIPS 2019.</li>
+                        <li id="ref-ntk">Jacot et al. <a href="https://arxiv.org/abs/1806.07572" target="_blank">Neural Tangent Kernel: Convergence and Generalization in Neural Networks</a>. NeurIPS 2018.</li>
+                        <li id="ref-erasure">Jeremy Bernstein. <a href="https://docs.modula.systems/examples/weight-erasure" target="_blank">The Modula Docs - Weight Erasure</a>. 2025.</li>
+                        <li id="ref-wdeq">Kosson et al. <a href="https://arxiv.org/abs/2305.17212" target="_blank">Rotational Equilibrium: How Weight Decay Balances Learning Across Neural Networks</a>. ICML 2024.</li>
+                        <li id="ref-hyperball">Wen et al. <a href="https://whenwen.github.io/wd_blog/public/hyperball-part-1.html" target="_blank">Fantastic Pretraining Optimizers and Where to Find Them II: From Weight Decay to Hyperball Optimization</a>. 2025.</li>
+                        <li id="ref-cesista">Cesista. <a href="https://leloykun.github.io/ponder/steepest-descent-non-riemannian/" target="_blank">Muon and a Selective Survey on Steepest Descent in Riemannian and Non-Riemannian Manifolds</a>. 2025.</li>
+                        <li id="ref-spectral">Bartlett et al. <a href="https://proceedings.neurips.cc/paper/2017/hash/0e55666a4ad822e0e34299df3591d979-Abstract.html" target="_blank">Spectrally-normalized margin bounds for neural networks</a>. NeurIPS 2017.</li>
+                        <li id="ref-rmsnorm">Zhang &amp; Sennrich. <a href="https://arxiv.org/abs/1910.07467" target="_blank">Root Mean Square Layer Normalization</a>. NeurIPS 2019.</li>
+                        <li id="ref-gemma">Gemma Team. <a href="https://arxiv.org/abs/2503.19786" target="_blank">Gemma 3 Technical Report</a>. arXiv 2025.</li>
+                    </ol>
+                </article>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="social-links">
+            <a href="https://x.com/origin_bio" target="_blank" class="social-link" aria-label="Twitter">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                </svg>
+            </a>
+            <a href="https://linkedin.com/company/origin-bio-inc" target="_blank" class="social-link" aria-label="LinkedIn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+                </svg>
+            </a>
+        </div>
+        <div class="copyright">© 2026 Origin Bio</div>
+    </footer>
+
+    <script src="/js/script.js"></script>
+</body>
+
+</html>

@@ -1177,6 +1177,215 @@ main {
     line-height: 1.6;
 }
 
+/* Blog index page */
+.blog-index-intro {
+    margin-bottom: 2.5rem;
+    color: #555;
+}
+
+.blog-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.blog-list-item {
+    display: block;
+    padding: 1.5rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.blog-list-item:hover {
+    border-color: #4a9eff;
+    box-shadow: 0 4px 12px rgba(74, 158, 255, 0.15);
+}
+
+.blog-list-tag {
+    display: block;
+    font-size: 0.85rem;
+    color: #4a9eff;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+}
+
+.blog-list-title {
+    font-size: 1.35rem;
+    font-weight: 500;
+    margin: 0 0 0.5rem;
+    color: #1a1a1a;
+}
+
+.blog-list-description {
+    font-size: 0.95rem;
+    color: #555;
+    margin: 0;
+    line-height: 1.6;
+}
+
+.blog-references {
+    margin: 1rem 0 0;
+    padding-left: 1.5rem;
+    font-size: 0.9rem;
+    color: #444;
+}
+
+.blog-references li {
+    margin: 1rem 0;
+    line-height: 1.6;
+}
+
+.blog-article .MathJax {
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+/* Sidenotes Layout */
+
+/* Base styles for sidenote references */
+.sidenote-ref {
+    cursor: pointer;
+    color: #0066cc;
+    font-weight: 600;
+    font-size: 0.75em;
+    margin-left: 1px;
+    vertical-align: super;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.sidenote-ref:hover {
+    color: #004499;
+    text-decoration: underline;
+}
+
+/* Base styles for sidenote cards (mobile/default) */
+.sidenote-card {
+    display: block;
+    margin: 1rem 0;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-left: 3px solid #0066cc;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    color: #444;
+    position: static;
+    width: 100%;
+    box-shadow: none;
+    line-height: 1.5;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.sidenote-group {
+    position: relative; /* Context for mobile if needed, but mostly static */
+    display: inline;
+}
+
+/* Visual Link: Hovering the group (ref or card) highlights both */
+.sidenote-group:hover .sidenote-card {
+    border-color: #0066cc;
+    box-shadow: 0 4px 16px rgba(0, 102, 204, 0.15);
+}
+
+.sidenote-group:hover .sidenote-ref {
+    color: #004499;
+}
+
+@media (min-width: 1300px) {
+    .blog-content {
+        max-width: 1400px;
+        padding: 0 2rem;
+    }
+
+    /* Create positioning context for sidenotes on desktop */
+    .blog-article p,
+    .blog-article li,
+    .blog-article h2,
+    .blog-article h3,
+    .blog-article h4,
+    .blog-article h4.blog-subheading,
+    .blog-article ul,
+    .blog-article ol,
+    .blog-article blockquote,
+    .blog-article figure {
+        position: relative;
+        max-width: 680px; /* Slightly narrower for better reading experience */
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    /* Allow wide images */
+    .blog-article figure.wide {
+        max-width: 100%;
+    }
+
+    .sidenote-group {
+        position: static; /* Let card position relative to paragraph/list item */
+    }
+
+    .sidenote-card {
+        display: block; /* Override default if needed */
+        position: absolute;
+        width: 250px; /* Increased from 220px for more space */
+        padding: 0.85rem;
+        background: #ffffff;
+        border: 1px solid #eee;
+        border-left: 1px solid #eee; /* Reset mobile style */
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        font-size: 0.8rem;
+        color: #666;
+        line-height: 1.45;
+        z-index: 100;
+        text-align: left;
+        top: auto; /* Respect vertical flow */
+        margin-top: -0.2rem; /* Slight alignment tweak */
+        /* Prevent overflow into main text */
+        overflow-x: auto; 
+        scrollbar-width: thin; /* Firefox */
+    }
+
+    /* Webkit scrollbar styling for sidenotes */
+    .sidenote-card::-webkit-scrollbar {
+        height: 4px;
+    }
+    .sidenote-card::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    .sidenote-card::-webkit-scrollbar-thumb {
+        background-color: #ddd;
+        border-radius: 4px;
+    }
+
+    /* Scale down math inside sidenotes */
+    .sidenote-card .MathJax {
+        font-size: 0.85em;
+    }
+
+    .sidenote-card.side-right {
+        left: 100%;
+        margin-left: 2rem;
+    }
+
+    .sidenote-card.side-left {
+        right: 100%;
+        margin-right: 2rem;
+    }
+}
+
+@media (max-width: 1299px) {
+    /* Ensure content is centered on smaller screens */
+    .blog-content {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 0 1.5rem;
+    }
+}
+
+
 .blog-image img,
 .blog-image video {
     width: 100% !important;
