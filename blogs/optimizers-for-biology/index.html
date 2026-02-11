@@ -232,9 +232,45 @@
                     \]
                     which is an easily adjustable hyperparameter!</p>
 
-                    <p>For low \(\eta\), we can make estimations: \(1+\eta^2+2\eta\gamma\approx1\), so we get \(x\approx R\sqrt{2}\sqrt{1-\sqrt{1-(\eta^2-\gamma^2\eta^2)}}\). Using \(\sqrt{1-z}\approx 1-z/2\) we can see \(x\approx R\eta\sqrt{1-\gamma^2}=R\eta\sin\theta\), which is just a tangent approximation of the step size! This would make the relative step size \(\frac{x}{\|W_t\|}\approx\eta\sqrt{1-\gamma^2}\), and we get something very similar to our initial estimate of \(\eta\). In fact, for \(\gamma=0\), they are exactly equal!</p>
+                    <p>Now, this <em>is</em> a generous assumption, so we can make better estimates. Let us use the Frobenius norm throughout the next calculation; suppose that we know the mean normalized dot product<span class="sidenote-group"><sup class="sidenote-ref">8</sup><span class="sidenote-card side-right">The Frobenius inner product \(\langle A, B\rangle_F=\operatorname{Tr}(A^TB)=\langle\vec A,\vec B\rangle=\sum_{i,j}a_{ij}b_{ij}\) is the sum of the element-wise product of the matrices \(A\) and \(B\).</span></span> \(\gamma=\frac{\langle W_t, U_t\rangle_F }{\|U_t\|_F\|W_t\|_F}=\frac{\langle W_t, U_t\rangle_F}{\eta R^2}=\cos\theta\), where \(\theta:=\angle(\vec W_t, \vec U_t)\). From this, we can calculate the relative step size:</p>
 
-                    <p>It is very &lsquo;nice&rsquo; that \(\frac{x}{\|W_t\|}\propto\eta\), because when we have a weight decay instead, the effective step size is \(\propto\sqrt{\eta\lambda}\)<sup><a href="#ref-hyperball">10</a></sup>, which has more hyperparameters to control than just \(\eta\), and also grows explosively in both of them.</p>
+                    \[
+                    \begin{aligned}
+                     \text{Using the cosine rule: } \|W_t+U_t\|^2
+                        &= R^2 + \eta^2 R^2 - 2\eta R^2\cos(\pi-\theta) \\
+                         &= R^2 + \eta^2 R^2 + 2\eta R^2\cos(\theta),\\
+                     \text{Pre-retraction update length: }  c &:= \|W_t+U_t\| = R \sqrt{1 + \eta^2+ 2\eta \cos\theta}\\
+                      \text{Angular change of the update: } \phi &:= \angle(\vec W_t, \vec W_{t+1})\\
+                      \text{Using the sine rule: }\frac{\sin\phi}{\|U\|}&=\frac{\sin(\pi-\theta)}{\|W_t+U\|}\implies \sin\phi=\frac{\eta R}{c}\sin\theta=\frac{\eta R}{c}\sqrt{1-\cos^2\theta}\\
+                      \implies \cos\phi&=\sqrt{1-\sin^2\phi}=\sqrt{1-\frac{\eta^2R^2}{c^2}(1-\cos^2\theta)}=\sqrt{1-\frac{\eta^2R^2(1-\cos^2\theta)}{R^2(1+\eta^2+2\eta\cos\theta)}} \\
+                      &= \sqrt{1-\frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}}\\
+                      \text{Using the cosine rule: }\|\Delta W\|^2&=R^2+R^2-2R^2\cos\phi\\
+                      \text{Length of weight update: }x&:=\|\Delta W\|=R\sqrt 2\sqrt{1-\cos\phi}=R\sqrt 2\sqrt{1-\sqrt{1-\frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}}}
+                    \end{aligned}
+                    \]
+
+                    <p>Now, suppose we know that \(\gamma,\eta\in(0,1)\). We can infer from this (using Figure 1) that:</p>
+
+                    \[
+                    \begin{aligned}
+                    &\arg\min_{\gamma,\eta\in[0,1]} \frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma} = (0,0)\implies \inf_{\gamma,\eta\in(0,1)} \frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma} = 0 \\
+                    &\arg\max_{\gamma,\eta\in[0,1]} \frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma} = (0,1)\implies \sup_{\gamma,\eta\in(0,1)}\frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}=1/2\\
+                    &\implies \frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}\in (0,1/2)\\
+                    &\implies 1-\frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}\in (1/2,1)\\
+                    &\implies \sqrt{1-\frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}}\in (1/\sqrt2,1)\\
+                    &\implies 1-\sqrt{1-\frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}}\in (0,1-1/\sqrt2)\\
+                    &\implies \sqrt{1-\sqrt{1-\frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}}}\in (0,\sqrt{1-1/\sqrt2})\\
+                    &\implies x\in (0, R\sqrt2\sqrt{1-1/\sqrt2})=(0,R\sqrt{2-\sqrt2})\approx(0, 0.765R)\\
+                    &\implies \frac{x}{\|W_t\|}\in (0,\sqrt{2-\sqrt 2})\approx (0, 0.765)
+                    \end{aligned}
+                    \]
+
+                    <p>This is the tightest bound on relative step size that I could find without knowing \(\gamma\). Now, I am not really sure how to calculate \(\gamma\) either, due to the repeated retractions onto the hypersphere; any previous arguments using momentum and weight decay are difficult to translate<sup><a href="#ref-hyperball">10</a></sup>. Therefore, I will stop here because if you notice, this bound does not really give us any new information! The lower bound is completely useless, and the upper bound is so much looser than the ideal \(\eta\). Now, if, for instance, we input our tried and tested range ~\(\eta\in (10^{-4},10^{-1})\) and fix \(\gamma=0\), we get a slightly tighter bound of \((0.000099,0.099)\), where a higher learning rate corresponds to a higher step size. For a higher dot product like \(\gamma=0.5\), we get a bound of \((0.0000866, 0.0823)\), which is lower.</p>
+
+                    <h4 class="blog-subheading">Estimations for low \(\eta\)</h4>
+                    <p>Knowing that our practical learning rates are such that \(\eta^2\ll1\), we can make some estimations, like \(1+\eta^2+2\eta\gamma\approx1\), so we get \(x\approx R\sqrt{2}\sqrt{1-\sqrt{1-(\eta^2-\gamma^2\eta^2)}}\). Using \(\sqrt{1-z}\approx 1-z/2\) we can see \(x\approx R\sqrt2\sqrt{1-(1-(\eta^2-\gamma^2\eta^2)/2)}=R\eta\sqrt{1-\gamma^2}=R\eta\sin\theta\), which is just a tangent approximation of the step size! This would make the relative step size \(\frac{x}{\|W_t\|}\approx\eta\sqrt{1-\gamma^2}\), and we get something very similar to our initial estimate of \(\eta\). In fact, for \(\gamma=0\), they are exactly equal!</p>
+
+                    <p>It is very &lsquo;nice&rsquo; that \(\frac{x}{\|W_t\|}\propto\eta\), because when we have a weight decay instead, the effective step size is \(\propto\sqrt{\eta\lambda}\)<sup><a href="#ref-hyperball">10</a></sup>, which has more hyperparameters to control than just \(\eta\), and also grows explosively in both of them (as they are both \(<1\), \(\sqrt\eta>\eta\)).</p>
 
                     <figure class="blog-image">
                         <img src="/blogs/optimizers-for-biology/assets/relative-step-size.png" alt="Relative step size bound: x/||W_t|| as eta increases and gamma decreases" loading="lazy" />
@@ -249,20 +285,30 @@
                         <figcaption>Learning curves for the most optimial runs for all 4 optimizer combinations: AdamW, AdamH, MuonW, MuonH. Loss axis is log nucleotide cross-entropy loss.</figcaption>
                     </figure>
 
-                    <p>It seems like the worst optimizer combination is AdamW (Adam + weight decay) with independent weight decay, then comes AdamH (Adam + Hyperball wrapper). Next, interestingly, is MuonH, followed by MuonW (with independent decay again). It seems like the model with the best nucleotide loss is Muon with independent weight decay! Hyperball improves the performance of Adam, but worsens it for Muon, while Muon performs better than Adam no matter what. I hypothesize that this is because Muon &lsquo;whitens&rsquo; the update, or maps it to the unit Spectral Sphere, and then the hyperball wrapper maps this update to have Frobenius norm of \(\eta R\). Perhaps the fact that we mapping the update directly from the Spectral Sphere to our Frobenius sphere is not good, and it may take us too far from the unit sphere in the spectral space<span class="sidenote-group"><sup class="sidenote-ref">8</sup><span class="sidenote-card side-left">It is actually possible to be on both spheres at once as they DO intersect, but our algorithm does not guarantee that we enter the intersection. As a clarification: There exists an identity \(\|W\|_2\le \|W\|_F\le \sqrt{n}\|W\|_2\), so one might believe that \(\|W\|_F\in[1,\sqrt{n}]\) guarantees that \(W\) lies in the intersection, but this is a necessary condition, not a sufficient one!</span></span>. The weight decay firstly does <em>not</em> alter the Muon update, it only decays the matrix it is added to! Additionally, weight decay explores a much larger space of matrices than Hyperball (look at Propostion 1), which may also contribute. Perhaps Muon with only the latter Hyperball update would work better, but we would have to tune the radius of the hypersphere to keep the relative update size reasonable, so it is not as easily done.</p>
+                    <p>It seems like the worst optimizer combination is AdamW (Adam + weight decay) with independent weight decay, then comes AdamH (Adam + Hyperball wrapper). Next, interestingly, is MuonH, followed by MuonW (with independent decay again). It seems like the model with the best nucleotide loss is Muon with independent weight decay! Hyperball improves the performance of Adam, but worsens it for Muon, while Muon performs better than Adam no matter what. Most research has shown that Muon performs better than Adam, so that was an expected result<sup><a href="#ref-muon">2</a></sup><sup>,</sup><sup><a href="#ref-hyperball">10</a></sup>, but why did Hyperball worsen Muon's performance? I hypothesize that this is because Muon &lsquo;whitens&rsquo; the update, or maps it to the unit Spectral Sphere, and then the hyperball wrapper maps this update to have Frobenius norm of \(\eta R\). Perhaps the fact that we mapping the update directly from the Spectral Sphere to our Frobenius sphere is not good, and it may take us too far from the unit sphere in the spectral space<span class="sidenote-group"><sup class="sidenote-ref">9</sup><span class="sidenote-card side-left">It is actually possible to be on both spheres at once as they DO intersect, but our algorithm does not guarantee that we enter the intersection. As a clarification: There exists an identity \(\|W\|_2\le \|W\|_F\le \sqrt{n}\|W\|_2\), so one might believe that \(\|W\|_F\in[1,\sqrt{n}]\) guarantees that \(W\) lies in the intersection, but this is a necessary condition, not a sufficient one (think of a rank 1 matrix within this range)!</span></span>. On the other hand, weight decay does <em>not</em> alter the Muon update, it only decays the matrix said update is added to! Additionally, weight decay explores a much larger space of matrices than Hyperball (through an argument similar to Proposition 1), which may also contribute. Perhaps Muon with only the latter Hyperball update would work better, but we would have to tune the radius of the hypersphere to keep the relative update size reasonable, so this is not as easily done.</p>
+
+                    <figure class="blog-image">
+                        <img src="/blogs/optimizers-for-biology/assets/adam_comparison.png" alt="Comparison of Adam and AdamH diagnostics" loading="lazy" style="margin-bottom: 0.5rem;" />
+                        <img src="/blogs/optimizers-for-biology/assets/muon_comparison.png" alt="Comparison of Muon and MuonH diagnostics" loading="lazy" />
+                        <figcaption>Training dynamics for Top: AdamW vs AdamH, Bottom: MuonW vs MuonH</figcaption>
+                    </figure>
+
+                    <p>Over here, we can see how our sweeps trained. Although Hyperball performs worse for a large number of step sizes, we only care about the absolute minimum point. For Adam, the lowest point is in the middle with Hyperball, and with Muon, the lowest point is on the right with weight decay (although Hyperball is not too far behind).</p>
 
                     <figure class="blog-image">
                         <img src="/blogs/optimizers-for-biology/assets/adam_heatmap.png" alt="Adam sweep summary" loading="lazy" style="margin-bottom: 0.5rem;" />
                         <img src="/blogs/optimizers-for-biology/assets/muon_heatmap.png" alt="Muon sweep summary" loading="lazy" />
-                        <figcaption>Sweep summary (robustness). Look for a wider &ldquo;good&rdquo; region: a larger set of hyperparameters achieving near-best performance (less tuning sensitivity).</figcaption>
+                        <figcaption>Top: Heatmap of Top: AdamW vs AdamH, Bottom: MuonW vs MuonH</figcaption>
                     </figure>
+
+                    <p>This heatmap gives us a clearer picture of where Hyperball (green) has the advantage over weight decay (red). The split is surprisingly even, with the exception of the highest learning rate, where weight decay dominates.</p>
 
                     <h3>How did we enforce scale invariance?</h3>
                     <p>A key ingredient is RMSNorm, which rescales a vector by its root-mean-square (RMS) magnitude. Given an activation vector \(x\in\mathbb{R}^d\), RMSNorm computes
                     \[
                       \mathrm{RMSNorm}(x) = g\odot \frac{x}{\sqrt{\frac{1}{d}\sum_{i=1}^d x_i^2 + \varepsilon}},
                     \]
-                    where \(g\in\mathbb{R}^d\) is a learned per-coordinate gain and \(\varepsilon>0\) is for numerical stability.</p>
+                    where \(g\in\mathbb{R}^d\) is a learned per-coordinate gain, \(\varepsilon>0\) is for numerical stability, and \(\odot\) is the Hamard product (element-wise multiplication).</p>
 
                     <h4 class="blog-subheading">Rescaling property</h4>
                     <p>Ignoring \(\varepsilon\) (or when \(\|x\|\) is not tiny), RMSNorm is <em>scale invariant</em>: for any scalar \(\alpha>0\),
