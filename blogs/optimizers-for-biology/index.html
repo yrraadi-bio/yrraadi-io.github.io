@@ -34,6 +34,14 @@
             }
         };
     </script>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"
+        }
+    }
+    </script>
 </head>
 
 <body class="blog-page">
@@ -226,115 +234,178 @@
                     \]
                     which is an easily adjustable hyperparameter!</p>
 
-                    <p>Now, this <em>is</em> a generous assumption, so we can make better estimates. Let us use the Frobenius norm throughout the next calculation; suppose that we know the mean normalized dot product<span class="sidenote-group"><sup class="sidenote-ref">8</sup><span class="sidenote-card side-right">The Frobenius inner product \(\langle A, B\rangle_F=\operatorname{Tr}(A^TB)=\langle\vec A,\vec B\rangle=\sum_{i,j}a_{ij}b_{ij}\) is the sum of the element-wise product of the matrices \(A\) and \(B\).</span></span> \(\gamma=\frac{\langle W_t, U_t\rangle_F }{\|U_t\|_F\|W_t\|_F}=\frac{\langle W_t, U_t\rangle_F}{\eta R^2}=\cos\theta\), where \(\theta:=\angle(\vec W_t, \vec U_t)\). From this, we can calculate the relative step size:</p>
+                    <p>Now, this <em>is</em> a generous assumption, so we can make better estimates. Let us use the Frobenius norm throughout the next calculation; suppose that we know the mean normalized dot product<span class="sidenote-group"><sup class="sidenote-ref">8</sup><span class="sidenote-card side-right">The Frobenius inner product \(\langle A, B\rangle_F=\operatorname{Tr}(A^TB)=\langle\vec A,\vec B\rangle=\sum_{i,j}a_{ij}b_{ij}\) is the sum of the element-wise product of the matrices \(A\) and \(B\).</span></span> \(\gamma=\frac{\langle W_t, U_t\rangle_F }{\|U_t\|_F\|W_t\|_F}=\frac{\langle W_t, U_t\rangle_F}{\eta R^2}=\cos\theta\), where \(\theta:=\angle(\vec W_t, \vec U_t)\). By applying the cosine and sine rules to the triangle formed by the origin, \(W_t\), and \(W_t+U_t\) (see the interactive visualization below and <a href="#appendix-a">Appendix A</a> for the full derivation), we obtain the exact relative step size:</p>
 
                     \[
-                    \begin{aligned}
-                     \text{Using the cosine rule: } \|W_t+U_t\|^2
-                        &= R^2 + \eta^2 R^2 - 2\eta R^2\cos(\pi-\theta) \\
-                         &= R^2 + \eta^2 R^2 + 2\eta R^2\cos(\theta),\\
-                     \text{Pre-retraction update length: }  c &:= \|W_t+U_t\| = R \sqrt{1 + \eta^2+ 2\eta \cos\theta}\\
-                      \text{Angular change of the update: } \phi &:= \angle(\vec W_t, \vec W_{t+1})\\
-                      \text{Using the sine rule: }\frac{\sin\phi}{\|U\|}&=\frac{\sin(\pi-\theta)}{\|W_t+U\|}\implies \sin\phi=\frac{\eta R}{c}\sin\theta=\frac{\eta R}{c}\sqrt{1-\cos^2\theta}\\
-                      \implies \cos\phi&=\sqrt{1-\sin^2\phi}=\sqrt{1-\frac{\eta^2R^2}{c^2}(1-\cos^2\theta)}=\sqrt{1-\frac{\eta^2R^2(1-\cos^2\theta)}{R^2(1+\eta^2+2\eta\cos\theta)}} \\
-                      &= \sqrt{1-\frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}}\\
-                      \text{Using the cosine rule: }\|\Delta W\|^2&=R^2+R^2-2R^2\cos\phi\\
-                      \text{Length of weight update: }x&:=\|\Delta W\|=R\sqrt 2\sqrt{1-\cos\phi}=R\sqrt 2\sqrt{1-\sqrt{1-\frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}}}
-                    \end{aligned}
+                      x := \|\Delta W\| = R\sqrt{2}\sqrt{1 - \cos\phi}, \quad\text{where}\quad \cos\phi = \sqrt{1-\frac{\eta^2(1-\gamma^2)}{1+\eta^2+2\eta\gamma}}.
                     \]
 
-                    <p>Now, suppose we know that \(\gamma,\eta\in(0,1)\). We can infer from this (using Figure 1) that:</p>
+                    <!-- Interactive 3D Sphere -->
+                    <figure class="blog-image">
+                        <div id="sphere-3d-wrap" style="position:relative; width:100%; height:520px; border:1px solid #e7e5e4; border-radius:8px; overflow:hidden; background:#fafaf9;">
+                            <div id="sphere-3d" style="width:100%; height:100%; position:relative;"></div>
+                            <div style="position:absolute; bottom:12px; left:12px; right:12px; display:flex; gap:24px; align-items:center; background:rgba(255,255,255,0.92); padding:10px 16px; border-radius:6px; font-size:13px; color:#57534e; z-index:2;">
+                                <label style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
+                                    <span style="font-style:italic;">η</span>
+                                    <input type="range" id="eta-slider" min="0.05" max="0.50" step="0.01" value="0.25" style="flex:1;accent-color:#3b82f6;min-width:0;">
+                                    <span id="eta-val" style="min-width:36px;text-align:right;font-variant-numeric:tabular-nums;">0.25</span>
+                                </label>
+                                <label style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
+                                    <span style="font-style:italic;">θ</span>
+                                    <input type="range" id="theta-slider" min="20" max="160" step="1" value="65" style="flex:1;accent-color:#3b82f6;min-width:0;">
+                                    <span id="theta-val" style="min-width:36px;text-align:right;font-variant-numeric:tabular-nums;">65°</span>
+                                </label>
+                            </div>
+                        </div>
+                        <figcaption>Interactive 3D visualization of the hyperball retraction. <strong style="color:#2563eb;">Blue:</strong> \(W_t\), <strong style="color:#ea580c;">Orange:</strong> \(U_t\), <strong style="color:#16a34a;">Green:</strong> \(W_{t+1}\), <strong style="color:#9333ea;">Purple dashed:</strong> \(\Delta W\). The gray dashed lines show \(W_t+U_t\) and the retraction projection. Drag to orbit; scroll to zoom.</figcaption>
+                    </figure>
 
-                    \[
-                    \begin{aligned}
-                    &\arg\min_{\gamma,\eta\in[0,1]} \frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma} = (0,0)\implies \inf_{\gamma,\eta\in(0,1)} \frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma} = 0 \\
-                    &\arg\max_{\gamma,\eta\in[0,1]} \frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma} = (0,1)\implies \sup_{\gamma,\eta\in(0,1)}\frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}=1/2\\
-                    &\implies \frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}\in (0,1/2)\\
-                    &\implies 1-\frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}\in (1/2,1)\\
-                    &\implies \sqrt{1-\frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}}\in (1/\sqrt2,1)\\
-                    &\implies 1-\sqrt{1-\frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}}\in (0,1-1/\sqrt2)\\
-                    &\implies \sqrt{1-\sqrt{1-\frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}}}\in (0,\sqrt{1-1/\sqrt2})\\
-                    &\implies x\in (0, R\sqrt2\sqrt{1-1/\sqrt2})=(0,R\sqrt{2-\sqrt2})\approx(0, 0.765R)\\
-                    &\implies \frac{x}{\|W_t\|}\in (0,\sqrt{2-\sqrt 2})\approx (0, 0.765)
-                    \end{aligned}
-                    \]
+                    <script type="module">
+                    import * as THREE from 'three';
+                    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+                    import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 
-                    <p>This is the tightest bound on relative step size that I could find without knowing \(\gamma\). Now, I am not really sure how to calculate \(\gamma\) either, due to the repeated retractions onto the hypersphere; any previous arguments using momentum and weight decay are difficult to translate<sup><a href="#ref-hyperball">10</a></sup>. Therefore, I will stop here because if you notice, this bound does not really give us any new information! The lower bound is completely useless, and the upper bound is so much looser than the ideal \(\eta\). Now, if, for instance, we input our tried and tested range ~\(\eta\in (10^{-4},10^{-1})\) and fix \(\gamma=0\), we get a slightly tighter bound of \((0.000099,0.099)\), where a higher learning rate corresponds to a higher step size. For a higher dot product like \(\gamma=0.5\), we get a bound of \((0.0000866, 0.0823)\), which is lower.</p>
+                    (function () {
+                        const wrap = document.getElementById('sphere-3d-wrap');
+                        const container = document.getElementById('sphere-3d');
+                        if (!container) return;
+
+                        const scene = new THREE.Scene();
+                        const W = container.clientWidth, H = container.clientHeight;
+                        const camera = new THREE.PerspectiveCamera(42, W / H, 0.1, 100);
+                        camera.position.set(2.4, 1.6, 2.4);
+                        camera.lookAt(0, 0.2, 0);
+
+                        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                        renderer.setSize(W, H);
+                        container.appendChild(renderer.domElement);
+
+                        const labelRenderer = new CSS2DRenderer();
+                        labelRenderer.setSize(W, H);
+                        labelRenderer.domElement.style.position = 'absolute';
+                        labelRenderer.domElement.style.top = '0';
+                        labelRenderer.domElement.style.left = '0';
+                        labelRenderer.domElement.style.pointerEvents = 'none';
+                        container.appendChild(labelRenderer.domElement);
+
+                        const controls = new OrbitControls(camera, renderer.domElement);
+                        controls.enableDamping = true;
+                        controls.dampingFactor = 0.08;
+                        controls.minDistance = 1.8;
+                        controls.maxDistance = 6;
+
+                        /* Wireframe sphere */
+                        const sGeo = new THREE.SphereGeometry(1, 32, 20);
+                        scene.add(new THREE.Mesh(sGeo, new THREE.MeshBasicMaterial({ color: 0x93c5fd, wireframe: true, transparent: true, opacity: 0.10 })));
+                        /* Equator ring */
+                        const eqPts = []; for (let i = 0; i <= 64; i++) { const a = i / 64 * Math.PI * 2; eqPts.push(new THREE.Vector3(Math.cos(a), 0, Math.sin(a))); }
+                        scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(eqPts), new THREE.LineBasicMaterial({ color: 0xd6d3d1, transparent: true, opacity: 0.35 })));
+
+                        let eta = 0.25, theta = 65 * Math.PI / 180;
+                        const dynGroup = new THREE.Group();
+                        scene.add(dynGroup);
+
+                        function arrow(from, to, color) {
+                            const d = new THREE.Vector3().subVectors(to, from);
+                            const len = d.length(); if (len < 1e-4) return new THREE.Group();
+                            d.normalize();
+                            return new THREE.ArrowHelper(d, from, len, color, Math.min(len * 0.18, 0.07), Math.min(len * 0.10, 0.04));
+                        }
+                        function dashed(from, to, color) {
+                            const g = new THREE.BufferGeometry().setFromPoints([from, to]);
+                            const l = new THREE.Line(g, new THREE.LineDashedMaterial({ color, dashSize: 0.045, gapSize: 0.025 }));
+                            l.computeLineDistances(); return l;
+                        }
+                        function label(html, pos, style) {
+                            const d = document.createElement('div');
+                            d.innerHTML = html;
+                            d.style.cssText = 'font:600 12px/1 -apple-system,BlinkMacSystemFont,sans-serif;padding:2px 5px;border-radius:3px;white-space:nowrap;pointer-events:none;' + (style || '');
+                            const o = new CSS2DObject(d); o.position.copy(pos); return o;
+                        }
+                        function arc(center, d1, d2, r, color, n) {
+                            n = n || 28; const pts = [];
+                            for (let i = 0; i <= n; i++) { const t = i / n; pts.push(new THREE.Vector3().lerpVectors(d1, d2, t).normalize().multiplyScalar(r).add(center)); }
+                            return new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color, linewidth: 2 }));
+                        }
+
+                        function rebuild() {
+                            dynGroup.clear();
+
+                            /* W_t on sphere */
+                            const elev = 50 * Math.PI / 180, azim = 15 * Math.PI / 180;
+                            const wt = new THREE.Vector3(Math.cos(elev) * Math.cos(azim), Math.sin(elev), Math.cos(elev) * Math.sin(azim));
+                            const wtN = wt.clone().normalize();
+
+                            /* perpendicular for U_t construction */
+                            let perp = new THREE.Vector3(0, 0, 1).cross(wtN).normalize();
+                            if (perp.length() < 0.5) perp = new THREE.Vector3(1, 0, 0).cross(wtN).normalize();
+
+                            const utDir = wtN.clone().multiplyScalar(Math.cos(theta)).add(perp.clone().multiplyScalar(Math.sin(theta))).normalize();
+                            const ut = utDir.clone().multiplyScalar(eta);
+                            const b = wt.clone().add(ut);          /* W_t + U_t */
+                            const wt1 = b.clone().normalize();      /* W_{t+1} */
+                            const O = new THREE.Vector3();
+
+                            /* Arrows */
+                            dynGroup.add(arrow(O, wt, 0x2563eb));
+                            dynGroup.add(arrow(wt.clone(), b, 0xea580c));
+                            dynGroup.add(dashed(O, b, 0x9ca3af));
+                            dynGroup.add(arrow(O, wt1, 0x16a34a));
+                            dynGroup.add(dashed(wt.clone(), wt1.clone(), 0x9333ea));
+                            dynGroup.add(dashed(b.clone(), wt1.clone(), 0x78716c));
+
+                            /* Labels */
+                            dynGroup.add(label('W<sub>t</sub>', wt.clone().multiplyScalar(1.10), 'color:#2563eb;background:rgba(255,255,255,0.88);'));
+                            const utMid = wt.clone().add(ut.clone().multiplyScalar(0.55)).add(perp.clone().multiplyScalar(0.06));
+                            dynGroup.add(label('U<sub>t</sub>', utMid, 'color:#ea580c;background:rgba(255,255,255,0.88);'));
+                            dynGroup.add(label('W<sub>t</sub>+U<sub>t</sub>', b.clone().add(utDir.clone().multiplyScalar(0.08)), 'color:#57534e;background:rgba(255,255,255,0.88);font-size:11px;'));
+                            dynGroup.add(label('W<sub>t+1</sub>', wt1.clone().multiplyScalar(1.12), 'color:#16a34a;background:rgba(255,255,255,0.88);'));
+                            const dwM = wt.clone().add(wt1).multiplyScalar(0.5).add(new THREE.Vector3(-0.06, -0.04, 0.04));
+                            dynGroup.add(label('\u0394W', dwM, 'color:#9333ea;background:rgba(255,255,255,0.88);'));
+
+                            /* Side length labels */
+                            const oaMid = wt.clone().multiplyScalar(0.45);
+                            const leftN = wtN.clone().cross(new THREE.Vector3(0, 1, 0)).normalize();
+                            oaMid.add(leftN.multiplyScalar(0.07));
+                            dynGroup.add(label('<i>R</i>', oaMid, 'color:#78716c;background:rgba(255,255,255,0.7);font-size:11px;'));
+                            dynGroup.add(label('<i>\u03B7R</i>', wt.clone().add(ut.clone().multiplyScalar(0.5)).add(new THREE.Vector3(0, 0.07, 0)), 'color:#78716c;background:rgba(255,255,255,0.7);font-size:11px;'));
+                            dynGroup.add(label('<i>c</i>', b.clone().multiplyScalar(0.48).add(new THREE.Vector3(0.06, 0, 0)), 'color:#9ca3af;background:rgba(255,255,255,0.7);font-size:11px;font-style:italic;'));
+
+                            /* Angle arcs */
+                            dynGroup.add(arc(O, wtN, wt1.clone().normalize(), 0.22, 0x2563eb));
+                            dynGroup.add(label('\u03C6', wtN.clone().add(wt1.clone().normalize()).normalize().multiplyScalar(0.29), 'color:#2563eb;background:rgba(255,255,255,0.8);font-size:13px;'));
+                            const aoDir = O.clone().sub(wt).normalize();
+                            dynGroup.add(arc(wt.clone(), aoDir, utDir, 0.16, 0xea580c));
+                            dynGroup.add(label('\u03C0\u2212\u03B8', wt.clone().add(aoDir.clone().add(utDir).normalize().multiplyScalar(0.22)), 'color:#ea580c;background:rgba(255,255,255,0.8);font-size:11px;'));
+                        }
+                        rebuild();
+
+                        /* Slider wiring */
+                        const etaSl = document.getElementById('eta-slider'), thSl = document.getElementById('theta-slider');
+                        const etaV = document.getElementById('eta-val'), thV = document.getElementById('theta-val');
+                        etaSl.addEventListener('input', () => { eta = +etaSl.value; etaV.textContent = eta.toFixed(2); rebuild(); });
+                        thSl.addEventListener('input', () => { theta = +thSl.value * Math.PI / 180; thV.textContent = Math.round(+thSl.value) + '\u00B0'; rebuild(); });
+
+                        /* Render loop */
+                        (function anim() { requestAnimationFrame(anim); controls.update(); renderer.render(scene, camera); labelRenderer.render(scene, camera); })();
+
+                        /* Resize */
+                        const ro = new ResizeObserver(() => {
+                            const w = container.clientWidth, h = container.clientHeight;
+                            camera.aspect = w / h; camera.updateProjectionMatrix();
+                            renderer.setSize(w, h); labelRenderer.setSize(w, h);
+                        });
+                        ro.observe(container);
+                    })();
+                    </script>
+
+                    <p>When \(\gamma,\eta\in(0,1)\), a careful bounding argument (<a href="#appendix-b">Appendix B</a>) shows that the relative step size lies in \(\frac{x}{\|W_t\|}\in (0,\sqrt{2-\sqrt{2}})\approx (0, 0.765)\). This is quite loose without knowing \(\gamma\); for practical learning rates \(\eta\in(10^{-4},10^{-1})\) with \(\gamma=0\), the bound tightens to roughly \((0.0001, 0.099)\).</p>
 
                     <h4 class="blog-subheading">Estimations for low \(\eta\)</h4>
                     <p>Knowing that our practical learning rates are such that \(\eta^2\ll1\), we can make some estimations, like \(1+\eta^2+2\eta\gamma\approx1\), so we get \(x\approx R\sqrt{2}\sqrt{1-\sqrt{1-(\eta^2-\gamma^2\eta^2)}}\). Using \(\sqrt{1-z}\approx 1-z/2\) we can see \(x\approx R\sqrt2\sqrt{1-(1-(\eta^2-\gamma^2\eta^2)/2)}=R\eta\sqrt{1-\gamma^2}=R\eta\sin\theta\), which is just a tangent approximation of the step size! This would make the relative step size \(\frac{x}{\|W_t\|}\approx\eta\sqrt{1-\gamma^2}\), and we get something very similar to our initial estimate of \(\eta\). In fact, for \(\gamma=0\), they are exactly equal!</p>
 
                     <p>It is very &lsquo;nice&rsquo; that \(\frac{x}{\|W_t\|}\propto\eta\), because when we have a weight decay instead, the effective step size is a nonlinear function of \(eta\) and \(\lambda\)<sup><a href="#ref-hyperball">10</a></sup>, which adds another layer of complexity to the solution space.</p>
-
-                    <figure class="blog-image">
-                        <div id="step-size-plot" style="width: 100%; height: 550px;"></div>
-                        <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
-                        <script>
-                        (function() {
-                            var N = 80;
-                            var etaVals = [], gammaVals = [];
-                            for (var i = 0; i <= N; i++) {
-                                etaVals.push(0.01 + (i / N) * 0.98);
-                                gammaVals.push(0.01 + (i / N) * 0.98);
-                            }
-                            var zData = [];
-                            for (var j = 0; j <= N; j++) {
-                                var row = [];
-                                for (var i = 0; i <= N; i++) {
-                                    var eta = etaVals[i];
-                                    var gamma = gammaVals[j];
-                                    var inner = (eta * eta * (1 - gamma * gamma)) / (1 + eta * eta + 2 * eta * gamma);
-                                    var val = Math.sqrt(2) * Math.sqrt(1 - Math.sqrt(1 - inner));
-                                    row.push(val);
-                                }
-                                zData.push(row);
-                            }
-                            var data = [{
-                                type: 'surface',
-                                x: etaVals,
-                                y: gammaVals,
-                                z: zData,
-                                colorscale: [
-                                    [0, '#dbeafe'],
-                                    [0.25, '#93c5fd'],
-                                    [0.5, '#3b82f6'],
-                                    [0.75, '#1d4ed8'],
-                                    [1, '#1e3a5f']
-                                ],
-                                colorbar: {
-                                    title: { text: 'x / ||W||', font: { size: 13 } },
-                                    thickness: 15,
-                                    len: 0.6
-                                },
-                                contours: {
-                                    z: { show: true, usecolormap: true, highlightcolor: "#fff", project: { z: false } }
-                                },
-                                hovertemplate: 'η = %{x:.3f}<br>γ = %{y:.3f}<br>x/||W|| = %{z:.4f}<extra></extra>'
-                            }];
-                            var layout = {
-                                margin: { l: 10, r: 10, t: 30, b: 10 },
-                                scene: {
-                                    xaxis: { title: { text: 'η (learning rate)', font: { size: 13 } }, range: [0, 1] },
-                                    yaxis: { title: { text: 'γ (cos θ)', font: { size: 13 } }, range: [0, 1] },
-                                    zaxis: { title: { text: 'Relative step size', font: { size: 13 } }, range: [0, 0.8] },
-                                    camera: { eye: { x: 1.6, y: -1.8, z: 0.9 } },
-                                    aspectratio: { x: 1, y: 1, z: 0.8 }
-                                },
-                                paper_bgcolor: 'rgba(0,0,0,0)',
-                                plot_bgcolor: 'rgba(0,0,0,0)',
-                                font: { family: 'Roboto, sans-serif', color: '#333' }
-                            };
-                            var config = {
-                                responsive: true,
-                                displayModeBar: true,
-                                modeBarButtonsToRemove: ['toImage', 'sendDataToCloud'],
-                                displaylogo: false
-                            };
-                            Plotly.newPlot('step-size-plot', data, layout, config);
-                        })();
-                        </script>
-                        <figcaption>Interactive relative step size bound. Drag to rotate, scroll to zoom. As \(\eta\) increases and \(\gamma\) decreases, the relative step size increases.</figcaption>
-                    </figure>
 
                     <h3>Results</h3>
                     <p>In this section, we summarize the sweep results for Adam and Muon, with and without Hyperball. These figures are necessary to know which optimizer performs best with our DNA model and data.</p>
@@ -346,7 +417,7 @@
 
                     <p>It seems like the worst optimizer combination is AdamW (Adam + weight decay) with independent weight decay, then comes AdamH (Adam + Hyperball wrapper). Next, interestingly, is MuonH, followed by MuonW (with independent decay again). It seems like the model with the best nucleotide loss is Muon with independent weight decay!</p>
                     
-                    <p>Hyperball improves the performance of Adam, but worsens it for Muon<span class="sidenote-group"><sup class="sidenote-ref">9</sup><span class="sidenote-card side-right">The Hyperball blog<sup><a href="#ref-hyperball">10</a></sup> actually shows that for Muon, the losses are comparable for models with &le; 500M parameters, and Hyperball dominates for the largest model of &gt;1B parameters. Our largest model is actually ~520M parameters large, so it is still possible for MuonH to outperform MuonW at a larger scale.</span></span>, while Muon performs better than Adam no matter what. Most research has shown that Muon performs better than Adam, so that was an expected result<sup><a href="#ref-muon">2</a></sup><sup>,</sup><sup><a href="#ref-hyperball">10</a></sup>, but why did Hyperball worsen Muon's performance?</p> 
+                    <p>Hyperball improves the performance of Adam, but worsens it for Muon<span class="sidenote-group"><sup class="sidenote-ref">9</sup><span class="sidenote-card side-right">The Hyperball blog<sup><a href="#ref-hyperball">10</a></sup> actually shows that for Muon, the losses are comparable for models with &le; 500M parameters, and Hyperball dominates for the largest model of &gt;1B parameters. Our largest model is actually ~520M parameters large (as we are somewhat compute bound), so it is still possible for MuonH to outperform MuonW at a larger scale.</span></span>, while Muon performs better than Adam no matter what. Most research has shown that Muon performs better than Adam, so that was an expected result<sup><a href="#ref-muon">2</a></sup><sup>,</sup><sup><a href="#ref-hyperball">10</a></sup>, but why did Hyperball worsen Muon's performance?</p> 
                     
                     <p>I hypothesize that this is because Muon &lsquo;whitens&rsquo; the update, or maps it to the unit Spectral Sphere, and then the hyperball wrapper maps this update to have Frobenius norm of \(\eta R\). Perhaps the fact that we mapping the update directly from the Spectral Sphere to our Frobenius sphere is not good, and it may take us too far from the unit sphere in the spectral space<span class="sidenote-group"><sup class="sidenote-ref">10</sup><span class="sidenote-card side-left">It is actually possible to be on both spheres at once as they DO intersect, but our algorithm does not guarantee that we enter the intersection. As a clarification: There exists an identity \(\|W\|_2\le \|W\|_F\le \sqrt{n}\|W\|_2\), so one might believe that \(\|W\|_F\in[1,\sqrt{n}]\) guarantees that \(W\) lies in the intersection, but this is a necessary condition, not a sufficient one (think of a rank 1 matrix within this range)!</span></span>.</p>
                     
@@ -397,6 +468,188 @@
                         <li><strong>Run the full sweep with SSO:</strong> repeat the Adam/Muon \(\times\) Hyperball sweeps using the Spectral Sphere Optimizer (SSO) to test whether controlling \(\sigma_1\) directly improves stability and performance compared to Frobenius-norm control.</li>
                         <li><strong>Explore hybrid optimizers:</strong> evaluate combinations of Muon and Adam updates (like PRISM variants) and compare against these results.</li>
                     </ul>
+
+                    <hr style="margin: 3rem 0 2rem; border: none; border-top: 1px solid #ddd;">
+                    <h3 id="appendix">Appendix</h3>
+
+                    <h4 id="appendix-a" class="blog-subheading">Appendix A: Full derivation of the relative step size</h4>
+
+                    <p>The Hyperball retraction maps \(W_t + U_t\) back onto the hypersphere of radius \(R\). The geometry is captured by two triangles in the vectorized matrix space:</p>
+                    <ol>
+                        <li><strong>Triangle \(O\text{-}A\text{-}B\):</strong> where \(O\) is the origin, \(A = W_t\) lies on the sphere, and \(B = W_t + U_t\) is the pre-retraction sum (generally off the sphere). Sides: \(\|OA\|=R\), \(\|AB\|=\eta R\), \(\|OB\|=c\). Interior angle at \(A\): \(\pi-\theta\).</li>
+                        <li><strong>Triangle \(O\text{-}A\text{-}C\):</strong> where \(C = W_{t+1} = R\,\mathrm{Normalize}(W_t+U_t)\) is the retracted weight, also on the sphere. This is an isoceles triangle with \(\|OA\|=\|OC\|=R\), chord \(\|AC\|=x=\|\Delta W\|\), and apex angle \(\phi\).</li>
+                    </ol>
+                    <p>The 2D diagram below labels all lengths and angles used in the derivation that follows.</p>
+
+                    <!-- 2D Geometry Diagram -->
+                    <figure class="blog-image">
+                        <svg viewBox="0 0 560 440" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:560px;display:block;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+                            <defs>
+                                <marker id="ah-blue" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0.5 L7,3 L0,5.5" fill="#2563eb"/></marker>
+                                <marker id="ah-orange" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0.5 L7,3 L0,5.5" fill="#ea580c"/></marker>
+                                <marker id="ah-green" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0.5 L7,3 L0,5.5" fill="#16a34a"/></marker>
+                            </defs>
+                            <!-- Sphere arc (partial circle centered at O) -->
+                            <path d="M 343,274 A 280,280 0 0,0 152,100" fill="none" stroke="#d6d3d1" stroke-width="1.5" stroke-dasharray="8,5"/>
+                            <!-- O -> A : W_t (blue) -->
+                            <line x1="80" y1="370" x2="236" y2="139" stroke="#2563eb" stroke-width="2.2" marker-end="url(#ah-blue)"/>
+                            <!-- A -> B : U_t (orange) -->
+                            <line x1="241" y1="141" x2="319" y2="155" stroke="#ea580c" stroke-width="2.2" marker-end="url(#ah-orange)"/>
+                            <!-- O -> B : c (gray dashed) -->
+                            <line x1="80" y1="370" x2="323" y2="155" stroke="#9ca3af" stroke-width="1.5" stroke-dasharray="7,4"/>
+                            <!-- O -> C : W_{t+1} (green) -->
+                            <line x1="80" y1="370" x2="286" y2="183" stroke="#16a34a" stroke-width="2.2" marker-end="url(#ah-green)"/>
+                            <!-- A -> C : ΔW (purple dashed) -->
+                            <line x1="241" y1="141" x2="290" y2="185" stroke="#9333ea" stroke-width="2" stroke-dasharray="6,3"/>
+                            <!-- B -> C : retraction (gray dotted) -->
+                            <line x1="323" y1="155" x2="290" y2="185" stroke="#78716c" stroke-width="1.2" stroke-dasharray="3,3"/>
+                            <!-- Angle arc: φ at O (between OA and OC) -->
+                            <path d="M 112,326 A 55,55 0 0,1 121,335" fill="none" stroke="#2563eb" stroke-width="1.8"/>
+                            <!-- Angle arc: π−θ at A (interior angle) -->
+                            <path d="M 218,174 A 42,42 0 0,0 282,148" fill="none" stroke="#ea580c" stroke-width="1.8"/>
+                            <!-- Points -->
+                            <circle cx="80" cy="370" r="4.5" fill="#1c1917"/>
+                            <circle cx="241" cy="141" r="4" fill="#2563eb"/>
+                            <circle cx="323" cy="155" r="4" fill="#ea580c"/>
+                            <circle cx="290" cy="185" r="4" fill="#16a34a"/>
+                            <!-- Point labels -->
+                            <text x="62" y="393" font-size="14" font-weight="600" fill="#1c1917">O</text>
+                            <text x="213" y="127" font-size="13" font-weight="600" fill="#2563eb">A = W&#x209C;</text>
+                            <text x="332" y="155" font-size="13" font-weight="600" fill="#ea580c">B = W&#x209C;+U&#x209C;</text>
+                            <text x="296" y="200" font-size="13" font-weight="600" fill="#16a34a">C = W&#x209C;&#x208A;&#x2081;</text>
+                            <!-- Side labels -->
+                            <text x="128" y="248" font-size="13" font-weight="500" fill="#2563eb" font-style="italic" transform="rotate(-55,128,248)">R = &#x2016;W&#x209C;&#x2016;</text>
+                            <text x="270" y="133" font-size="12" font-weight="500" fill="#ea580c" font-style="italic">&#x03B7;R = &#x2016;U&#x209C;&#x2016;</text>
+                            <text x="210" y="275" font-size="12" font-weight="500" fill="#9ca3af" font-style="italic" transform="rotate(-47,210,275)">c = &#x2016;W&#x209C;+U&#x209C;&#x2016;</text>
+                            <text x="155" y="290" font-size="13" font-weight="500" fill="#16a34a" font-style="italic" transform="rotate(-42,155,290)">R = &#x2016;W&#x209C;&#x208A;&#x2081;&#x2016;</text>
+                            <text x="274" y="168" font-size="12" font-weight="500" fill="#9333ea" font-style="italic">x = &#x2016;&#x0394;W&#x2016;</text>
+                            <!-- Angle labels -->
+                            <text x="117" y="320" font-size="14" font-weight="600" fill="#2563eb" font-style="italic">&#x03C6;</text>
+                            <text x="243" y="182" font-size="12" font-weight="600" fill="#ea580c">&#x03C0;&#x2212;&#x03B8;</text>
+                            <!-- Retraction annotation -->
+                            <text x="318" y="183" font-size="10" fill="#78716c" font-style="italic">retract</text>
+                        </svg>
+                        <figcaption>2D cross-section of the hyperball retraction geometry. The origin \(O\), weight \(W_t\) (point \(A\)), pre-retraction sum \(W_t+U_t\) (point \(B\)), and retracted weight \(W_{t+1}\) (point \(C\)) are shown. All lengths and angles used in the derivation below are labeled.</figcaption>
+                    </figure>
+
+                    <p>We now derive the exact step size. Using the cosine rule on triangle \(O\text{-}A\text{-}B\) (where \(O\) is the origin, \(A = W_t\), and \(B = W_t + U_t\)), noting that the interior angle at \(A\) is \(\pi - \theta\):</p>
+
+                    \[
+                    \begin{aligned}
+                     \text{Cosine rule on } \triangle OAB\!: \quad \|W_t+U_t\|^2
+                        &= R^2 + \eta^2 R^2 - 2\eta R^2\cos(\pi-\theta) \\
+                         &= R^2 + \eta^2 R^2 + 2\eta R^2\cos(\theta),\\
+                     \text{Pre-retraction length: }  c &:= \|W_t+U_t\| = R \sqrt{1 + \eta^2+ 2\eta \cos\theta}.\\
+                    \end{aligned}
+                    \]
+
+                    <p>Since \(W_{t+1}\) lies on the ray from \(O\) through \(B\), the angular change \(\phi := \angle(\vec W_t, \vec W_{t+1})\) equals \(\angle AOB\). Applying the sine rule to \(\triangle OAB\):</p>
+
+                    \[
+                    \begin{aligned}
+                      \text{Sine rule: }\frac{\sin\phi}{\|U_t\|}&=\frac{\sin(\pi-\theta)}{\|W_t+U_t\|}\implies \sin\phi=\frac{\eta R}{c}\sin\theta=\frac{\eta R}{c}\sqrt{1-\gamma^2},\\
+                      \implies \cos\phi&=\sqrt{1-\sin^2\phi}=\sqrt{1-\frac{\eta^2R^2(1-\gamma^2)}{c^2}} = \sqrt{1-\frac{\eta^2(1-\gamma^2)}{1+\eta^2+2\eta\gamma}}.\\
+                    \end{aligned}
+                    \]
+
+                    <p>Finally, \(W_t\) and \(W_{t+1}\) both lie on the sphere of radius \(R\), so we apply the cosine rule to the isoceles triangle \(\triangle OAC\):</p>
+
+                    \[
+                    \begin{aligned}
+                      \text{Cosine rule on } \triangle OAC\!: \quad \|\Delta W\|^2&=R^2+R^2-2R^2\cos\phi,\\
+                      \text{Exact step size: } \quad x&:=\|\Delta W\|=R\sqrt{2}\sqrt{1-\cos\phi}=R\sqrt{2}\sqrt{1-\sqrt{1-\frac{\eta^2(1-\gamma^2)}{1+\eta^2+2\eta\gamma}}}.
+                    \end{aligned}
+                    \]
+
+                    <h4 id="appendix-b" class="blog-subheading">Appendix B: Bounds on the relative step size</h4>
+
+                    <p>Now, suppose we know that \(\gamma,\eta\in(0,1)\). We can infer from this (using the interactive surface plot below) that:</p>
+
+                    \[
+                    \begin{aligned}
+                    &\arg\min_{\gamma,\eta\in[0,1]} \frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma} = (0,0)\implies \inf_{\gamma,\eta\in(0,1)} \frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma} = 0 \\
+                    &\arg\max_{\gamma,\eta\in[0,1]} \frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma} = (0,1)\implies \sup_{\gamma,\eta\in(0,1)}\frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}=1/2\\
+                    &\implies \frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}\in (0,1/2)\\
+                    &\implies 1-\frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}\in (1/2,1)\\
+                    &\implies \sqrt{1-\frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}}\in (1/\sqrt2,1)\\
+                    &\implies 1-\sqrt{1-\frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}}\in (0,1-1/\sqrt2)\\
+                    &\implies \sqrt{1-\sqrt{1-\frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}}}\in (0,\sqrt{1-1/\sqrt2})\\
+                    &\implies x\in (0, R\sqrt2\sqrt{1-1/\sqrt2})=(0,R\sqrt{2-\sqrt2})\approx(0, 0.765R)\\
+                    &\implies \frac{x}{\|W_t\|}\in (0,\sqrt{2-\sqrt 2})\approx (0, 0.765)
+                    \end{aligned}
+                    \]
+
+                    <p>This is the tightest bound on relative step size that I could find without knowing \(\gamma\). Now, I am not really sure how to calculate \(\gamma\) either, due to the repeated retractions onto the hypersphere; any previous arguments using momentum and weight decay are difficult to translate<sup><a href="#ref-hyperball">10</a></sup>. Therefore, I will stop here because if you notice, this bound does not really give us any new information! The lower bound is completely useless, and the upper bound is so much looser than the ideal \(\eta\). Now, if, for instance, we input our tried and tested range ~\(\eta\in (10^{-4},10^{-1})\) and fix \(\gamma=0\), we get a slightly tighter bound of \((0.000099,0.099)\), where a higher learning rate corresponds to a higher step size. For a higher dot product like \(\gamma=0.5\), we get a bound of \((0.0000866, 0.0823)\), which is lower.</p>
+
+                    <figure class="blog-image">
+                        <div id="step-size-plot" style="width: 100%; height: 550px;"></div>
+                        <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+                        <script>
+                        (function() {
+                            var N = 80;
+                            var etaVals = [], gammaVals = [];
+                            for (var i = 0; i <= N; i++) {
+                                etaVals.push(0.01 + (i / N) * 0.98);
+                                gammaVals.push(0.01 + (i / N) * 0.98);
+                            }
+                            var zData = [];
+                            for (var j = 0; j <= N; j++) {
+                                var row = [];
+                                for (var i = 0; i <= N; i++) {
+                                    var eta = etaVals[i];
+                                    var gamma = gammaVals[j];
+                                    var inner = (eta * eta * (1 - gamma * gamma)) / (1 + eta * eta + 2 * eta * gamma);
+                                    var val = Math.sqrt(2) * Math.sqrt(1 - Math.sqrt(1 - inner));
+                                    row.push(val);
+                                }
+                                zData.push(row);
+                            }
+                            var data = [{
+                                type: 'surface',
+                                x: etaVals,
+                                y: gammaVals,
+                                z: zData,
+                                colorscale: [
+                                    [0, '#dbeafe'],
+                                    [0.25, '#93c5fd'],
+                                    [0.5, '#3b82f6'],
+                                    [0.75, '#1d4ed8'],
+                                    [1, '#1e3a5f']
+                                ],
+                                colorbar: {
+                                    title: { text: 'x / ||W||', font: { size: 13 } },
+                                    thickness: 15,
+                                    len: 0.6
+                                },
+                                contours: {
+                                    z: { show: true, usecolormap: true, highlightcolor: "#fff", project: { z: false } }
+                                },
+                                hovertemplate: '\u03B7 = %{x:.3f}<br>\u03B3 = %{y:.3f}<br>x/||W|| = %{z:.4f}<extra></extra>'
+                            }];
+                            var layout = {
+                                margin: { l: 10, r: 10, t: 30, b: 10 },
+                                scene: {
+                                    xaxis: { title: { text: '\u03B7 (learning rate)', font: { size: 13 } }, range: [0, 1] },
+                                    yaxis: { title: { text: '\u03B3 (cos \u03B8)', font: { size: 13 } }, range: [0, 1] },
+                                    zaxis: { title: { text: 'Relative step size', font: { size: 13 } }, range: [0, 0.8] },
+                                    camera: { eye: { x: 1.6, y: -1.8, z: 0.9 } },
+                                    aspectratio: { x: 1, y: 1, z: 0.8 }
+                                },
+                                paper_bgcolor: 'rgba(0,0,0,0)',
+                                plot_bgcolor: 'rgba(0,0,0,0)',
+                                font: { family: 'Roboto, sans-serif', color: '#333' }
+                            };
+                            var config = {
+                                responsive: true,
+                                displayModeBar: true,
+                                modeBarButtonsToRemove: ['toImage', 'sendDataToCloud'],
+                                displaylogo: false
+                            };
+                            Plotly.newPlot('step-size-plot', data, layout, config);
+                        })();
+                        </script>
+                        <figcaption>Interactive relative step size surface. Drag to rotate, scroll to zoom. As \(\eta\) increases and \(\gamma\) decreases, the relative step size increases.</figcaption>
+                    </figure>
 
                     <hr style="margin: 3rem 0 2rem; border: none; border-top: 1px solid #ddd;">
                     <h3>References</h3>
