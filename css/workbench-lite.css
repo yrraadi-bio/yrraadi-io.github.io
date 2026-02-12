@@ -362,6 +362,10 @@ body {
     gap: 32px;
 }
 
+.advisor-dots {
+    display: none;
+}
+
 .advisor-card {
     display: flex;
     flex-direction: column;
@@ -620,6 +624,28 @@ body {
     /* Ensure last card has right spacing */
     .advisor-card:last-child {
         margin-right: 20px;
+    }
+
+    .advisor-dots {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        margin-top: 8px;
+    }
+
+    .advisor-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #d6d3d1;
+        transition: all 0.2s ease;
+    }
+
+    .advisor-dot.active {
+        width: 18px;
+        border-radius: 999px;
+        background: #78716c;
     }
 
     /* Footer */
