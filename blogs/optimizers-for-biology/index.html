@@ -250,8 +250,8 @@
                                 </label>
                                 <label style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
                                     <span style="font-style:italic;">θ</span>
-                                    <input type="range" id="theta-slider" min="20" max="160" step="1" value="65" style="flex:1;accent-color:#3b82f6;min-width:0;">
-                                    <span id="theta-val" style="min-width:36px;text-align:right;font-variant-numeric:tabular-nums;">65°</span>
+                                    <input type="range" id="theta-slider" min="0.35" max="2.79" step="0.01" value="1.13" style="flex:1;accent-color:#3b82f6;min-width:0;">
+                                    <span id="theta-val" style="min-width:36px;text-align:right;font-variant-numeric:tabular-nums;">1.13</span>
                                 </label>
                             </div>
                         </div>
@@ -300,7 +300,7 @@
                         const eqPts = []; for (let i = 0; i <= 64; i++) { const a = i / 64 * Math.PI * 2; eqPts.push(new THREE.Vector3(Math.cos(a), 0, Math.sin(a))); }
                         scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(eqPts), new THREE.LineBasicMaterial({ color: 0xd6d3d1, transparent: true, opacity: 0.35 })));
 
-                        let eta = 0.25, theta = 65 * Math.PI / 180;
+                        let eta = 0.25, theta = 1.13;
                         const dynGroup = new THREE.Group();
                         scene.add(dynGroup);
 
@@ -383,7 +383,7 @@
                         const etaSl = document.getElementById('eta-slider'), thSl = document.getElementById('theta-slider');
                         const etaV = document.getElementById('eta-val'), thV = document.getElementById('theta-val');
                         etaSl.addEventListener('input', () => { eta = +etaSl.value; etaV.textContent = eta.toFixed(2); rebuild(); });
-                        thSl.addEventListener('input', () => { theta = +thSl.value * Math.PI / 180; thV.textContent = Math.round(+thSl.value) + '\u00B0'; rebuild(); });
+                        thSl.addEventListener('input', () => { theta = +thSl.value; thV.textContent = (+thSl.value).toFixed(2); rebuild(); });
 
                         /* Render loop */
                         (function anim() { requestAnimationFrame(anim); controls.update(); renderer.render(scene, camera); labelRenderer.render(scene, camera); })();
