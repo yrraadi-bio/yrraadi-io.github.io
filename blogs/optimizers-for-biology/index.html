@@ -65,7 +65,7 @@
                     <p class="blog-date">February 10, 2026</p>
 
                     <p>Optimizers dictate the parameter update rules that govern the convergence trajectory of Stochastic Gradient Descent (SGD). At present, variations of AdamW<sup><a href="#ref-adamw">1</a></sup> and Muon<sup><a href="#ref-muon">2</a></sup> dominate both language and DNA modeling (e.g., AlphaGenome<sup><a href="#ref-alphagenome">3</a></sup>, Enformer<sup><a href="#ref-enformer">4</a></sup>, Evo<sup><a href="#ref-evo">5</a></sup>), prompting the question of whether recent architectural advancements are merely locally optimal to these specific algorithms.</p>
-                    <p>While Adam updates can lead to weight stagnation<sup><a href="#ref-lazy">6</a></sup> and uneven signal propagation, Muon mitigates this by treating layers as matrices and &ldquo;whitening&rdquo;, or spreading out updates across singular dimensions to ensure all directions are learned with equal priority. Unlike Adam, which treats weights as flat vectors and risks remaining within the initialization neighborhood, Muon forces weights to diverge from their starting points by distributing updates across the matrix space, thereby erasing initial distributions<sup><a href="#ref-erasure">8</a></sup>. This is achieved by constraining all singular values of the weight updates to be close to \(1\), effectively &ldquo;whitening&rdquo; the update.</p>
+                    <p>While Adam updates can lead to weight stagnation<sup><a href="#ref-lazy">6</a></sup><sup>,</sup><sup><a href="#ref-ntk">7</a></sup> and uneven signal propagation, Muon mitigates this by treating layers as matrices and &ldquo;whitening&rdquo;, or spreading out updates across singular dimensions to ensure all directions are learned with equal priority. Unlike Adam, which treats weights as flat vectors and risks remaining within the initialization neighborhood (closer to the NTK regime<sup><a href="#ref-ntk">7</a></sup>), Muon forces weights to diverge from their starting points by distributing updates across the matrix space, thereby erasing initial distributions<sup><a href="#ref-erasure">8</a></sup>. This is achieved by constraining all singular values of the weight updates to be close to \(1\), effectively &ldquo;whitening&rdquo; the update.</p>
 
 
                     <h3>Adam Overview</h3>
@@ -156,7 +156,7 @@
                     \[
                       \tilde u_t = U\,\tilde\Sigma\,V^\top,
                     \]
-                    where \(\tilde\Sigma\) is a diagonal matrix with entries close to \(1\), (typically in \([0.7, 1.3]\)), to a sphere called the Spectral Sphere<sup><a href="#ref-muon">2</a></sup><span class="sidenote-group"><sup class="sidenote-ref">3</sup><span class="sidenote-card side-right">The Spectral Sphere is a sphere on which all matrices have a spectral norm of 1 (\(\sigma_1=1\)).</span></span> &ldquo;whitening&rdquo; or &ldquo;equalizing&rdquo; the update across singular dimensions.</p>
+                    where \(\tilde\Sigma\) is a diagonal matrix with entries close to \(1\) (typically in \([0.7, 1.3]\)), projecting the update to a sphere called the Spectral Sphere<sup><a href="#ref-muon">2</a></sup><span class="sidenote-group"><sup class="sidenote-ref">3</sup><span class="sidenote-card side-right">The Spectral Sphere is a sphere on which all matrices have a spectral norm of 1 (\(\sigma_1=1\)).</span></span> &ldquo;whitening&rdquo; or &ldquo;equalizing&rdquo; the update across singular dimensions.</p>
 
                     <p>Intuitively, this prevents a few directions from dominating the step, and encourages motion in many independent directions of the layer's matrix space. In contrast to optimizers that treat parameters as a flat vector, Muon explicitly uses matrix structure, which can help avoid updates that remain concentrated near the initialization subspace.</p>
 
@@ -218,7 +218,7 @@
                     <p>Why is this relevant? Suppose the equilibrium norm is \(N=R-\varepsilon\), we can see that even if the norm &lsquo;hovers&rsquo; within just \(0<\varepsilon\ll N\) of the equilibrium, we still have to consider a relatively large space of values within the hyperball of radius \(R\). Proposition 1 exists to demonstrate that no matter how small we make \(\varepsilon>0\), we will still have to consider a relatively large space of values near the equilibrium hypersphere<span class="sidenote-group"><sup class="sidenote-ref">6</sup><span class="sidenote-card side-right">Note that a hypersphere and hyperball are not the same thing. A &lsquo;ball&rsquo; refers to the entire solid object, but a &lsquo;sphere&rsquo; refers only to the shell/boundary of said ball.</span></span> of radius \(N\) (especially as the matrix dimension is roughly \(O(d^2)\) where \(d\) is the hidden size of the model). If the weight norm does not matter at all, why do this? Wouldn't it be more efficient to fix the norm (set \(\varepsilon=0\) manually) and let the weight update focus on changing the direction, rather than magnitude?</p>
 
                     <h3>The Hyperball update</h3>
-                    <p>The intuition of Hyperball<sup><a href="#ref-hyperball">10</a></sup> is to, for a weight matrix \(W\), simply fix the Frobenius norm of \(W\)<span class="sidenote-group"><sup class="sidenote-ref">7</sup><span class="sidenote-card side-left">The Frobenius inner product \(\langle A, B\rangle_F=\operatorname{Tr}(A^TB)=\langle\vec A,\vec B\rangle=\sum_{i,j}a_{ij}b_{ij}\) is the sum of the element-wise product of the matrices \(A\) and \(B\).</span></span> and update \(U\) to the initial radius \(R := \|W_0\|_F\). Rather confusingly, this confines the weight matrix to a hypersphere of radius \(R\), not a ball, but let us ignore this superficial detail. Suppose \(\mathrm{Normalize}(\cdot)\) used the \(\ell_2\) norm to normalize its input, given a Muon or Adam update \(u_t\), let the actual update be:
+                    <p>The intuition of Hyperball<sup><a href="#ref-hyperball">10</a></sup> is to, for a weight matrix \(W\), simply fix the Frobenius norm of \(W\) and to the initial radius \(R := \|W_0\|_F\), and update \(U\) to \(\eta R\). Rather confusingly, this confines the weight matrix to a hypersphere of radius \(R\), not a ball, but let us ignore this superficial detail. Suppose \(\mathrm{Normalize}(\cdot)\) used the \(\ell_2\) norm to normalize its input, given a Muon or Adam update \(u_t\), let the actual update be:
                     \[
                       U_t = -\eta R\,\mathrm{Normalize}(u_t),
                     \]
@@ -228,13 +228,13 @@
                     \]
                     What makes this optimization special is that it can be wrapped around any optimizer update, so it works with Adam and Muon (using it alongside weight decay would be useless, as we hard-set the weight norms in the wrapper function).</p>
 
-                    <p>Note that not only do we set the weight norm to be \(R\), but the update vector norm is also set to \(R\). Let \(\Delta W = W_{t+1}-W_t\), if we make the generous assumption that \(\|U_t\|_F\approx \|\Delta W\|_F\), we can see that we have a relative step size of:
+                    <p>Note that not only do we set the weight norm to be \(R\), but the update vector norm is set to \(\eta R\). Let \(\Delta W = W_{t+1}-W_t\), if we make the generous assumption that \(\|U_t\|_F\approx \|\Delta W\|_F\), we can see that we have a relative step size of:
                     \[
                       \frac{\|\Delta W\|_F}{\|W_t\|_F}\approx\frac{\|U_t\|_F}{\|W_t\|_F}=\eta
                     \]
                     which is an easily adjustable hyperparameter!</p>
 
-                    <p>Now, this <em>is</em> a generous assumption, so we can make better estimates. Let us use the Frobenius norm throughout the next calculation; suppose that we know the mean normalized dot product<span class="sidenote-group"><sup class="sidenote-ref">8</sup><span class="sidenote-card side-right">The Frobenius inner product \(\langle A, B\rangle_F=\operatorname{Tr}(A^TB)=\langle\vec A,\vec B\rangle=\sum_{i,j}a_{ij}b_{ij}\) is the sum of the element-wise product of the matrices \(A\) and \(B\).</span></span> \(\gamma=\frac{\langle W_t, U_t\rangle_F }{\|U_t\|_F\|W_t\|_F}=\frac{\langle W_t, U_t\rangle_F}{\eta R^2}=\cos\theta\), where \(\theta:=\angle(\vec W_t, \vec U_t)\). By applying the cosine and sine rules to the triangle formed by the origin, \(W_t\), and \(W_t+U_t\) (see the interactive visualization below and <a href="#appendix-a">Appendix A</a> for the full derivation), we obtain the exact relative step size:</p>
+                    <p>Now, this <em>is</em> a generous assumption, so we can make better estimates. Let us use the Frobenius norm throughout the next calculation; suppose that we know the mean normalized dot product<span class="sidenote-group"><sup class="sidenote-ref">7</sup><span class="sidenote-card side-right">The Frobenius inner product \(\langle A, B\rangle_F=\operatorname{Tr}(A^TB)=\langle\vec A,\vec B\rangle=\sum_{i,j}a_{ij}b_{ij}\) is the sum of the element-wise product of the matrices \(A\) and \(B\).</span></span> \(\gamma=\frac{\langle W_t, U_t\rangle_F }{\|U_t\|_F\|W_t\|_F}=\frac{\langle W_t, U_t\rangle_F}{\eta R^2}=\cos\theta\), where \(\theta:=\angle(\vec W_t, \vec U_t)\). By applying the cosine and sine rules to the triangle formed by the origin, \(W_t\), and \(W_t+U_t\) (see the interactive visualization below and <a href="#appendix-a">Appendix A</a> for the full derivation), we obtain the exact relative step size:</p>
 
                     \[
                       x := \|\Delta W\| = R\sqrt{2}\sqrt{1 - \cos\phi}, \quad\text{where}\quad \cos\phi = \sqrt{1-\frac{\eta^2(1-\gamma^2)}{1+\eta^2+2\eta\gamma}}.
@@ -400,26 +400,97 @@
                     })();
                     </script>
 
-                    <p>When \(\gamma,\eta\in(0,1)\), a careful bounding argument (<a href="#appendix-b">Appendix B</a>) shows that the relative step size lies in \(\frac{x}{\|W_t\|}\in (0,\sqrt{2-\sqrt{2}})\approx (0, 0.765)\). This is quite loose without knowing \(\gamma\); for practical learning rates \(\eta\in(10^{-4},10^{-1})\) with \(\gamma=0\), the bound tightens to roughly \((0.0001, 0.099)\).</p>
+                    <p>When \(\gamma,\eta\in(0,1)\), a careful bounding argument (<a href="#appendix-b">Appendix B</a>) shows that the relative step size lies in \(\frac{x}{\|W_t\|}\in (0,\sqrt{2-\sqrt{2}})\approx (0, 0.765)\). This is quite loose without knowing \(\gamma\); for practical learning rates \(\eta\in(10^{-4},10^{-1})\) with \(\gamma=0\), the bound tightens to roughly \((0.0001, 0.0996)\).</p>
+
+                    <figure class="blog-image">
+                        <div id="step-size-plot" style="width: 100%; height: 550px;"></div>
+                        <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+                        <script>
+                        (function() {
+                            var N = 80;
+                            var etaVals = [], gammaVals = [];
+                            for (var i = 0; i <= N; i++) {
+                                etaVals.push(0.01 + (i / N) * 0.98);
+                                gammaVals.push(0.01 + (i / N) * 0.98);
+                            }
+                            var zData = [];
+                            for (var j = 0; j <= N; j++) {
+                                var row = [];
+                                for (var i = 0; i <= N; i++) {
+                                    var eta = etaVals[i];
+                                    var gamma = gammaVals[j];
+                                    var inner = (eta * eta * (1 - gamma * gamma)) / (1 + eta * eta + 2 * eta * gamma);
+                                    var val = Math.sqrt(2) * Math.sqrt(1 - Math.sqrt(1 - inner));
+                                    row.push(val);
+                                }
+                                zData.push(row);
+                            }
+                            var data = [{
+                                type: 'surface',
+                                x: etaVals,
+                                y: gammaVals,
+                                z: zData,
+                                colorscale: [
+                                    [0, '#dbeafe'],
+                                    [0.25, '#93c5fd'],
+                                    [0.5, '#3b82f6'],
+                                    [0.75, '#1d4ed8'],
+                                    [1, '#1e3a5f']
+                                ],
+                                colorbar: {
+                                    title: { text: 'x / ||W||', font: { size: 13 } },
+                                    thickness: 15,
+                                    len: 0.6
+                                },
+                                contours: {
+                                    z: { show: true, usecolormap: true, highlightcolor: "#fff", project: { z: false } }
+                                },
+                                hovertemplate: '\u03B7 = %{x:.3f}<br>\u03B3 = %{y:.3f}<br>x/||W|| = %{z:.4f}<extra></extra>'
+                            }];
+                            var layout = {
+                                title: { text: 'Relative step size for \u03B7, \u03B3 \u2208 (0, 1)', font: { size: 15 } },
+                                margin: { l: 10, r: 10, t: 50, b: 10 },
+                                scene: {
+                                    xaxis: { title: { text: '\u03B7 (learning rate)', font: { size: 13 } }, range: [0, 1] },
+                                    yaxis: { title: { text: '\u03B3 (cos \u03B8)', font: { size: 13 } }, range: [0, 1] },
+                                    zaxis: { title: { text: 'Relative step size', font: { size: 13 } }, range: [0, 0.8] },
+                                    camera: { eye: { x: 1.6, y: -1.8, z: 0.9 } },
+                                    aspectratio: { x: 1, y: 1, z: 0.8 }
+                                },
+                                paper_bgcolor: 'rgba(0,0,0,0)',
+                                plot_bgcolor: 'rgba(0,0,0,0)',
+                                font: { family: 'Roboto, sans-serif', color: '#333' }
+                            };
+                            var config = {
+                                responsive: true,
+                                displayModeBar: true,
+                                modeBarButtonsToRemove: ['toImage', 'sendDataToCloud'],
+                                displaylogo: false
+                            };
+                            Plotly.newPlot('step-size-plot', data, layout, config);
+                        })();
+                        </script>
+                        <figcaption>Interactive relative step size surface. Drag to rotate, scroll to zoom. As \(\eta\) increases and \(\gamma\) decreases, the relative step size increases.</figcaption>
+                    </figure>
 
                     <h4 class="blog-subheading">Estimations for low \(\eta\)</h4>
                     <p>Knowing that our practical learning rates are such that \(\eta^2\ll1\), we can make some estimations, like \(1+\eta^2+2\eta\gamma\approx1\), so we get \(x\approx R\sqrt{2}\sqrt{1-\sqrt{1-(\eta^2-\gamma^2\eta^2)}}\). Using \(\sqrt{1-z}\approx 1-z/2\) we can see \(x\approx R\sqrt2\sqrt{1-(1-(\eta^2-\gamma^2\eta^2)/2)}=R\eta\sqrt{1-\gamma^2}=R\eta\sin\theta\), which is just a tangent approximation of the step size! This would make the relative step size \(\frac{x}{\|W_t\|}\approx\eta\sqrt{1-\gamma^2}\), and we get something very similar to our initial estimate of \(\eta\). In fact, for \(\gamma=0\), they are exactly equal!</p>
 
-                    <p>It is very &lsquo;nice&rsquo; that \(\frac{x}{\|W_t\|}\propto\eta\), because when we have a weight decay instead, the effective step size is a nonlinear function of \(eta\) and \(\lambda\)<sup><a href="#ref-hyperball">10</a></sup>, which adds another layer of complexity to the solution space.</p>
+                    <p>It is very &lsquo;nice&rsquo; that \(\frac{x}{\|W_t\|}\propto\eta\), because when we have a weight decay instead, the effective step size is a nonlinear function of \(\eta\) and \(\lambda\)<sup><a href="#ref-hyperball">10</a></sup>, which adds another layer of complexity to the solution space.</p>
 
                     <h3>Results</h3>
                     <p>In this section, we summarize the sweep results for Adam and Muon, with and without Hyperball. These figures are necessary to know which optimizer performs best with our DNA model and data.</p>
 
                     <figure class="blog-image">
                         <img src="/blogs/optimizers-for-biology/assets/loss_curves_nucleotide_loss.png" alt="Learning curves for nucleotide loss" loading="lazy" />
-                        <figcaption>Learning curves for the most optimial runs for all 4 optimizer combinations: AdamW, AdamH, MuonW, MuonH. Loss axis is log nucleotide cross-entropy loss.</figcaption>
+                        <figcaption>Learning curves for the most optimal runs for all 4 optimizer combinations: AdamW, AdamH, MuonW, MuonH. Loss axis is log nucleotide cross-entropy loss.</figcaption>
                     </figure>
 
                     <p>It seems like the worst optimizer combination is AdamW (Adam + weight decay) with independent weight decay, then comes AdamH (Adam + Hyperball wrapper). Next, interestingly, is MuonH, followed by MuonW (with independent decay again). It seems like the model with the best nucleotide loss is Muon with independent weight decay!</p>
                     
-                    <p>Hyperball improves the performance of Adam, but worsens it for Muon<span class="sidenote-group"><sup class="sidenote-ref">9</sup><span class="sidenote-card side-right">The Hyperball blog<sup><a href="#ref-hyperball">10</a></sup> actually shows that for Muon, the losses are comparable for models with &le; 500M parameters, and Hyperball dominates for the largest model of &gt;1B parameters. Our largest model is actually ~520M parameters large (as we are somewhat compute bound), so it is still possible for MuonH to outperform MuonW at a larger scale.</span></span>, while Muon performs better than Adam no matter what. Most research has shown that Muon performs better than Adam, so that was an expected result<sup><a href="#ref-muon">2</a></sup><sup>,</sup><sup><a href="#ref-hyperball">10</a></sup>, but why did Hyperball worsen Muon's performance?</p> 
+                    <p>Hyperball improves the performance of Adam, but worsens it for Muon<span class="sidenote-group"><sup class="sidenote-ref">8</sup><span class="sidenote-card side-right">The Hyperball blog<sup><a href="#ref-hyperball">10</a></sup> actually shows that for Muon, the losses are comparable for models with &le; 500M parameters, and Hyperball dominates for the largest model of &gt;1B parameters. Our largest model is actually ~520M parameters large (as we are somewhat compute bound), so it is still possible for MuonH to outperform MuonW at a larger scale.</span></span>, while Muon performs better than Adam no matter what. Most research has shown that Muon performs better than Adam, so that was an expected result<sup><a href="#ref-muon">2</a></sup><sup>,</sup><sup><a href="#ref-hyperball">10</a></sup>, but why did Hyperball worsen Muon's performance?</p> 
                     
-                    <p>I hypothesize that this is because Muon &lsquo;whitens&rsquo; the update, or maps it to the unit Spectral Sphere, and then the hyperball wrapper maps this update to have Frobenius norm of \(\eta R\). Perhaps the fact that we mapping the update directly from the Spectral Sphere to our Frobenius sphere is not good, and it may take us too far from the unit sphere in the spectral space<span class="sidenote-group"><sup class="sidenote-ref">10</sup><span class="sidenote-card side-left">It is actually possible to be on both spheres at once as they DO intersect, but our algorithm does not guarantee that we enter the intersection. As a clarification: There exists an identity \(\|W\|_2\le \|W\|_F\le \sqrt{n}\|W\|_2\), so one might believe that \(\|W\|_F\in[1,\sqrt{n}]\) guarantees that \(W\) lies in the intersection, but this is a necessary condition, not a sufficient one (think of a rank 1 matrix within this range)!</span></span>.</p>
+                    <p>I hypothesize that this is because Muon &lsquo;whitens&rsquo; the update, or maps it to the unit Spectral Sphere, and then the hyperball wrapper maps this update to have Frobenius norm of \(\eta R\). Perhaps the fact that we are mapping the update directly from the Spectral Sphere to our Frobenius sphere is not good, and it may take us too far from the unit sphere in the spectral space<span class="sidenote-group"><sup class="sidenote-ref">9</sup><span class="sidenote-card side-left">It is actually possible to be on both spheres at once as they DO intersect, but our algorithm does not guarantee that we enter the intersection. As a clarification: There exists an identity \(\|W\|_2\le \|W\|_F\le \sqrt{n}\|W\|_2\), so one might believe that \(\|W\|_F\in[1,\sqrt{n}]\) guarantees that \(W\) lies in the intersection, but this is a necessary condition, not a sufficient one (think of a rank 1 matrix within this range)!</span></span>.</p>
                     
                     <p>On the other hand, weight decay does <em>not</em> alter the Muon update, it only decays the matrix said update is added to! Additionally, weight decay explores a much larger space of matrices than Hyperball (through an argument similar to Proposition 1), which may also contribute. Perhaps Muon with only the latter Hyperball update would work better, but we would have to tune the radius of the hypersphere to keep the relative update size reasonable, so this is not as easily done.</p>
 
@@ -434,7 +505,7 @@
                     <figure class="blog-image">
                         <img src="/blogs/optimizers-for-biology/assets/adam_heatmap.png" alt="Adam sweep summary" loading="lazy" style="margin-bottom: 0.5rem;" />
                         <img src="/blogs/optimizers-for-biology/assets/muon_heatmap.png" alt="Muon sweep summary" loading="lazy" />
-                        <figcaption>Top: Heatmap of Top: AdamW vs AdamH, Bottom: MuonW vs MuonH</figcaption>
+                        <figcaption>Heatmap of Top: AdamW vs AdamH, Bottom: MuonW vs MuonH</figcaption>
                     </figure>
 
                     <p>This heatmap gives us a clearer picture of where Hyperball (green) has the advantage over weight decay (red). The split is surprisingly even, with the exception of the highest learning rate, where weight decay dominates. I believe this is because the effective step size grows too large (it grows \(\propto\eta\)), and the training can never stabilise. Of course, we are trying to optimize for the lowest loss, not the average loss in this space, but it is still interesting to see how Hyperball doesn't necessarily dominate the train loss across our sweeps.</p>
@@ -444,7 +515,7 @@
                     \[
                       \mathrm{RMSNorm}(x) = g\odot \frac{x}{\sqrt{\frac{1}{d}\sum_{i=1}^d x_i^2 + \varepsilon}},
                     \]
-                    where \(g\in\mathbb{R}^d\) is a learned per-coordinate gain, \(\varepsilon>0\) is for numerical stability, and \(\odot\) is the Hamard product (element-wise multiplication).</p>
+                    where \(g\in\mathbb{R}^d\) is a learned per-coordinate gain, \(\varepsilon>0\) is for numerical stability, and \(\odot\) is the Hadamard product (element-wise multiplication).</p>
 
                     <h4 class="blog-subheading">Rescaling property</h4>
                     <p>Ignoring \(\varepsilon\) (or when \(\|x\|\) is not tiny), RMSNorm is <em>scale invariant</em>: for any scalar \(\alpha>0\),
@@ -477,7 +548,7 @@
                     <p>The Hyperball retraction maps \(W_t + U_t\) back onto the hypersphere of radius \(R\). The geometry is captured by two triangles in the vectorized matrix space:</p>
                     <ol>
                         <li><strong>Triangle \(O\text{-}A\text{-}B\):</strong> where \(O\) is the origin, \(A = W_t\) lies on the sphere, and \(B = W_t + U_t\) is the pre-retraction sum (generally off the sphere). Sides: \(\|OA\|=R\), \(\|AB\|=\eta R\), \(\|OB\|=c\). Interior angle at \(A\): \(\pi-\theta\).</li>
-                        <li><strong>Triangle \(O\text{-}A\text{-}C\):</strong> where \(C = W_{t+1} = R\,\mathrm{Normalize}(W_t+U_t)\) is the retracted weight, also on the sphere. This is an isoceles triangle with \(\|OA\|=\|OC\|=R\), chord \(\|AC\|=x=\|\Delta W\|\), and apex angle \(\phi\).</li>
+                        <li><strong>Triangle \(O\text{-}A\text{-}C\):</strong> where \(C = W_{t+1} = R\,\mathrm{Normalize}(W_t+U_t)\) is the retracted weight, also on the sphere. This is an isosceles triangle with \(\|OA\|=\|OC\|=R\), chord \(\|AC\|=x=\|\Delta W\|\), and apex angle \(\phi\).</li>
                     </ol>
                     <p>The 2D diagram below labels all lengths and angles used in the derivation that follows.</p>
 
@@ -552,7 +623,7 @@
                     \end{aligned}
                     \]
 
-                    <p>Finally, \(W_t\) and \(W_{t+1}\) both lie on the sphere of radius \(R\), so we apply the cosine rule to the isoceles triangle \(\triangle OAC\):</p>
+                    <p>Finally, \(W_t\) and \(W_{t+1}\) both lie on the sphere of radius \(R\), so we apply the cosine rule to the isosceles triangle \(\triangle OAC\):</p>
 
                     \[
                     \begin{aligned}
@@ -567,7 +638,7 @@
 
                     \[
                     \begin{aligned}
-                    &\arg\min_{\gamma,\eta\in[0,1]} \frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma} = (0,0)\implies \inf_{\gamma,\eta\in(0,1)} \frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma} = 0 \\
+                    &\min_{\gamma,\eta\in[0,1]} \frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma} = 0 \implies \inf_{\gamma,\eta\in(0,1)} \frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma} = 0 \\
                     &\arg\max_{\gamma,\eta\in[0,1]} \frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma} = (0,1)\implies \sup_{\gamma,\eta\in(0,1)}\frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}=1/2\\
                     &\implies \frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}\in (0,1/2)\\
                     &\implies 1-\frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}\in (1/2,1)\\
@@ -579,77 +650,7 @@
                     \end{aligned}
                     \]
 
-                    <p>This is the tightest bound on relative step size that I could find without knowing \(\gamma\). Now, I am not really sure how to calculate \(\gamma\) either, due to the repeated retractions onto the hypersphere; any previous arguments using momentum and weight decay are difficult to translate<sup><a href="#ref-hyperball">10</a></sup>. Therefore, I will stop here because if you notice, this bound does not really give us any new information! The lower bound is completely useless, and the upper bound is so much looser than the ideal \(\eta\). Now, if, for instance, we input our tried and tested range ~\(\eta\in (10^{-4},10^{-1})\) and fix \(\gamma=0\), we get a slightly tighter bound of \((0.000099,0.099)\), where a higher learning rate corresponds to a higher step size. For a higher dot product like \(\gamma=0.5\), we get a bound of \((0.0000866, 0.0823)\), which is lower.</p>
-
-                    <figure class="blog-image">
-                        <div id="step-size-plot" style="width: 100%; height: 550px;"></div>
-                        <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
-                        <script>
-                        (function() {
-                            var N = 80;
-                            var etaVals = [], gammaVals = [];
-                            for (var i = 0; i <= N; i++) {
-                                etaVals.push(0.01 + (i / N) * 0.98);
-                                gammaVals.push(0.01 + (i / N) * 0.98);
-                            }
-                            var zData = [];
-                            for (var j = 0; j <= N; j++) {
-                                var row = [];
-                                for (var i = 0; i <= N; i++) {
-                                    var eta = etaVals[i];
-                                    var gamma = gammaVals[j];
-                                    var inner = (eta * eta * (1 - gamma * gamma)) / (1 + eta * eta + 2 * eta * gamma);
-                                    var val = Math.sqrt(2) * Math.sqrt(1 - Math.sqrt(1 - inner));
-                                    row.push(val);
-                                }
-                                zData.push(row);
-                            }
-                            var data = [{
-                                type: 'surface',
-                                x: etaVals,
-                                y: gammaVals,
-                                z: zData,
-                                colorscale: [
-                                    [0, '#dbeafe'],
-                                    [0.25, '#93c5fd'],
-                                    [0.5, '#3b82f6'],
-                                    [0.75, '#1d4ed8'],
-                                    [1, '#1e3a5f']
-                                ],
-                                colorbar: {
-                                    title: { text: 'x / ||W||', font: { size: 13 } },
-                                    thickness: 15,
-                                    len: 0.6
-                                },
-                                contours: {
-                                    z: { show: true, usecolormap: true, highlightcolor: "#fff", project: { z: false } }
-                                },
-                                hovertemplate: '\u03B7 = %{x:.3f}<br>\u03B3 = %{y:.3f}<br>x/||W|| = %{z:.4f}<extra></extra>'
-                            }];
-                            var layout = {
-                                margin: { l: 10, r: 10, t: 30, b: 10 },
-                                scene: {
-                                    xaxis: { title: { text: '\u03B7 (learning rate)', font: { size: 13 } }, range: [0, 1] },
-                                    yaxis: { title: { text: '\u03B3 (cos \u03B8)', font: { size: 13 } }, range: [0, 1] },
-                                    zaxis: { title: { text: 'Relative step size', font: { size: 13 } }, range: [0, 0.8] },
-                                    camera: { eye: { x: 1.6, y: -1.8, z: 0.9 } },
-                                    aspectratio: { x: 1, y: 1, z: 0.8 }
-                                },
-                                paper_bgcolor: 'rgba(0,0,0,0)',
-                                plot_bgcolor: 'rgba(0,0,0,0)',
-                                font: { family: 'Roboto, sans-serif', color: '#333' }
-                            };
-                            var config = {
-                                responsive: true,
-                                displayModeBar: true,
-                                modeBarButtonsToRemove: ['toImage', 'sendDataToCloud'],
-                                displaylogo: false
-                            };
-                            Plotly.newPlot('step-size-plot', data, layout, config);
-                        })();
-                        </script>
-                        <figcaption>Interactive relative step size surface. Drag to rotate, scroll to zoom. As \(\eta\) increases and \(\gamma\) decreases, the relative step size increases.</figcaption>
-                    </figure>
+                    <p>This is the tightest bound on relative step size that I could find without knowing \(\gamma\). Now, I am not really sure how to calculate \(\gamma\) either, due to the repeated retractions onto the hypersphere; any previous arguments using momentum and weight decay are difficult to translate<sup><a href="#ref-hyperball">10</a></sup>. Therefore, I will stop here because if you notice, this bound does not really give us any new information! The lower bound is completely useless, and the upper bound is so much looser than the ideal \(\eta\). Now, if, for instance, we input our tried and tested range ~\(\eta\in (10^{-4},10^{-1})\) and fix \(\gamma=0\), we get a slightly tighter bound of \((0.0001, 0.0996)\), where a higher learning rate corresponds to a higher step size. For a higher dot product like \(\gamma=0.5\), we get a bound of \((0.0000866, 0.0823)\), which is lower.</p>
 
                     <hr style="margin: 3rem 0 2rem; border: none; border-top: 1px solid #ddd;">
                     <h3>References</h3>
@@ -691,6 +692,29 @@
     </footer>
 
     <script src="/js/script.js"></script>
+    <script>
+    /* Sidenote toggle for mobile: tap footnote number to expand/collapse */
+    (function () {
+        var mq = window.matchMedia('(max-width: 1299px)');
+        function wire() {
+            document.querySelectorAll('.sidenote-ref').forEach(function (ref) {
+                ref.addEventListener('click', function (e) {
+                    if (!mq.matches) return;          /* desktop — do nothing */
+                    e.preventDefault();
+                    var card = ref.closest('.sidenote-group').querySelector('.sidenote-card');
+                    if (!card) return;
+                    /* close any other open sidenote first */
+                    document.querySelectorAll('.sidenote-card.open').forEach(function (c) {
+                        if (c !== card) c.classList.remove('open');
+                    });
+                    card.classList.toggle('open');
+                });
+            });
+        }
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire);
+        else wire();
+    })();
+    </script>
 </body>
 
 </html>
