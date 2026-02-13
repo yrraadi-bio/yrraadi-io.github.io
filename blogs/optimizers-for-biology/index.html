@@ -11,11 +11,11 @@
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Optimizers for Biology‑Focused Models — Origin Bio</title>
+    <title>Fine-Tuning Life: Choosing the Best Optimizers for Biological Models — Origin Bio</title>
     <meta name="description" content="Exploring Adam, Muon, and Hyperball optimizers for DNA and biology-focused AI models. Weight decay, singular values, and scale invariance." />
     <meta property="og:type" content="article" />
     <meta property="og:site_name" content="Origin Bio" />
-    <meta property="og:title" content="Optimizers for Biology‑Focused Models — Origin" />
+    <meta property="og:title" content="Fine-Tuning Life: Choosing the Best Optimizers for Biological Models" />
     <meta property="og:description" content="Exploring Adam, Muon, and Hyperball optimizers for DNA and biology-focused AI models." />
     <meta property="og:url" content="https://origin.bio/blogs/optimizers-for-biology/" />
     <meta property="og:image" content="https://origin.bio/assets/thumbnail-og.jpg?v=1" />
@@ -60,12 +60,11 @@
         <section class="blog-hero">
             <div class="blog-content">
                 <article class="blog-article">
-                    <h2>Optimizers for biology-focused models</h2>
+                    <h2>Fine-Tuning Life: Choosing the Best Optimizers for Biological Models</h2>
                     <p class="blog-date">February 12, 2026 &middot; Viraj Doshi</p>
 
-                    <p>Optimizers dictate the parameter update rules that govern the convergence trajectory of Stochastic Gradient Descent (SGD). At present, variations of AdamW<sup><a href="#ref-adamw">1</a></sup> and Muon<sup><a href="#ref-muon">2</a></sup> dominate both language and DNA modeling (e.g., AlphaGenome<sup><a href="#ref-alphagenome">3</a></sup>, Enformer<sup><a href="#ref-enformer">4</a></sup>, Evo<sup><a href="#ref-evo">5</a></sup>), prompting the question of whether recent architectural advancements are merely locally optimal to these specific algorithms.</p>
-                    <p>While Adam updates can lead to weight stagnation<sup><a href="#ref-lazy">6</a></sup><sup>,</sup><sup><a href="#ref-ntk">7</a></sup> and uneven signal propagation, Muon mitigates this by treating layers as matrices and &ldquo;whitening&rdquo;, or spreading out updates across singular dimensions to ensure all directions are learned with equal priority. Unlike Adam, which treats weights as flat vectors and risks remaining within the initialization neighborhood (closer to the NTK regime<sup><a href="#ref-ntk">7</a></sup>), Muon forces weights to diverge from their starting points by distributing updates across the matrix space, thereby erasing initial distributions<sup><a href="#ref-erasure">8</a></sup>. This is achieved by constraining all singular values of the weight updates to be close to \(1\), effectively &ldquo;whitening&rdquo; the update.</p>
-
+                    <p>Optimizers dictate the parameter update rules that govern the convergence trajectory of Stochastic Gradient Descent (SGD). At present, variations of Adam<sup><a href="#ref-adamw">1</a></sup> dominate DNA modeling (e.g., AlphaGenome<sup><a href="#ref-alphagenome">3</a></sup>, Enformer<sup><a href="#ref-enformer">4</a></sup>, Evo<sup><a href="#ref-evo">5</a></sup>), and Muon<sup><a href="#ref-muon">2</a></sup> has been shown to be effective for natural language modeling. This raises the question of whether recent architectural advancements are merely locally optimal to Adam and Muon in the case of natural language, and to Adam alone in the case of DNA modeling. <br>
+                    <br>In this blog, I explore the behavior of recent optimizers on DNA sequence modeling in regulatory regions. This domain is characterized by a concentrated vocabulary size (4 bases versus ~100k tokens), explicit local syntactical rules (transcription factor binding motifs), and long range dependencies that are structurally unlike those in natural language. Here, I evaluate whether optimizer choices that work well for LLMs transfer to this distinct setting.</p>
 
                     <h3>Adam Overview</h3>
                     <p>Let \(g_t = \nabla_W \mathcal{L}(W_t)\) denote the gradient at step \(t\). Adam maintains two exponential moving averages (EMAs):</p>
@@ -81,7 +80,7 @@
                     \]
                     <p>where \(g_t^2\) denotes elementwise squaring.</p>
 
-                    <p>Because both EMAs start at zero, they are biased toward \(0\) early in training. Adam, therefore, uses bias-corrected estimates</p>
+                    <p>Because both EMAs start at zero, they are biased toward \(0\) early in training. Adam, therefore, uses bias corrected estimates</p>
                     \[
                       \hat m_t = \frac{m_t}{1-\beta_1^t},
                       \qquad
@@ -94,11 +93,11 @@
                     <p>with learning rate \(\eta\) and small \(\varepsilon > 0\) for numerical stability.</p>
 
                     <h4 class="blog-subheading">Weight decay (AdamW)</h4>
-                    <p>Soft L2-regularization can be implemented by adding \(\lambda W_t\) to the gradient, but AdamW instead <em>decouples</em> weight decay from the adaptive gradient step. In its common form:</p>
+                    <p>Soft L2 regularization can be implemented by adding \(\lambda W_t\) to the gradient, but AdamW instead <em>decouples</em> weight decay from the adaptive gradient step. In its common form:</p>
                     \[
                       W_{t+1} = (1-\eta\lambda)\,W_t \; - \; \eta\, \frac{\hat m_t}{\sqrt{\hat v_t}+\varepsilon},
                     \]
-                    <p>so weight decay shrinks parameters directly (multiplicatively), while the Adam step uses the adaptive per-parameter scaling.</p>
+                    <p>so weight decay shrinks parameters directly (multiplicatively), while the Adam step uses the adaptive per parameter scaling.</p>
 
                     <h4 class="blog-subheading">Independent weight decay</h4>
                     <p>In our setting, we use <em>independent</em> weight decay: the shrinkage is applied as a separate step, not through the gradient, and is not tied to the learning rate.</p>
@@ -108,14 +107,16 @@
                     \]
                     <p>So the decay rate \(\lambda\) is not multiplied by the learning rate and can be scheduled separately.</p>
 
-                    <h3>Muon overview</h3>
-                    <p>Muon<sup><a href="#ref-muon">2</a></sup> is a <em>matrix-aware</em> optimizer designed for weight matrices (whereas Adam treats all weights like vectors, not matrices). The core idea is to take a gradient update \(g_t=\nabla_W \mathcal{L}(W_t)\) and then <em>reshape</em> it so that the learning signal is distributed more evenly across the singular directions of the matrix<sup><a href="#ref-cesista">11</a></sup>.</p>
+                    <p>While Adam updates can lead to weight stagnation<sup><a href="#ref-lazy">6</a></sup><sup>,</sup><sup><a href="#ref-ntk">7</a></sup> and uneven signal propagation, Muon mitigates this by treating layers as matrices and &ldquo;whitening&rdquo;, or spreading out updates across singular dimensions to ensure all directions are learned with equal priority. Unlike Adam, which treats weights as flat vectors and risks remaining within the initialization neighborhood (closer to the NTK regime<sup><a href="#ref-ntk">7</a></sup>), Muon forces weights to diverge from their starting points by distributing updates across the matrix space, thereby erasing initial distributions<sup><a href="#ref-erasure">8</a></sup>. This is achieved by constraining all singular values of the weight updates to be close to \(1\), effectively &ldquo;whitening&rdquo; the update.</p>
 
-                    <p>Just like Adam, we first form a momentum-like exponential moving average of gradients; denote this by \(u_t\):</p>
+                    <h3>Muon overview</h3>
+                    <p>Muon<sup><a href="#ref-muon">2</a></sup> is a <em>matrix aware</em> optimizer designed for weight matrices (whereas Adam treats all weights like vectors, not matrices). The core idea is to take a gradient update \(g_t=\nabla_W \mathcal{L}(W_t)\) and then <em>reshape</em> it so that the learning signal is distributed more evenly across the singular directions of the matrix<sup><a href="#ref-cesista">11</a></sup>.</p>
+
+                    <p>Just like Adam, we first form a momentum like exponential moving average of gradients, denoted by \(u_t\):</p>
                     \[
                       u_t = \beta\,u_{t-1} + (1-\beta)\,g_t,
                     \]
-                    <p>(with \(u_0=0\)). This plays the same role as Adam's first-moment estimate \(m_t\), but is then processed using matrix structure.</p>
+                    <p>(with \(u_0=0\)). This plays the same role as Adam's first moment estimate \(m_t\), but is then processed using matrix structure.</p>
 
                     <p>A convenient way to describe the matrix processing step is via the singular value decomposition (SVD).</p>
 
@@ -135,13 +136,13 @@
                     \[
                       \sigma_1 = \max_{\|x\|=1}\|Ax\|.
                     \]</p>
-                    <p>Note that \(\sigma_2\) is the maximum stretch induced orthogonal to \(v_1=\arg\max_{\|x\|=1}\|Ax\|\), or \(\sigma_2=\max_{x\perp v_1:\:\|x\|=1}\|Ax\|\), and \(\sigma_3\) has the stretch orthogonal to the first 2, and so on<span class="sidenote-group"><sup class="sidenote-ref">1</sup><span class="sidenote-card side-right">For completeness, we can generalize this idea either recursively (where we define \(\sigma_i\) as the max stretch orthogonal to \(v_j\) \(\forall j < i\)), or succinctly using the Min-max theorem: \(\sigma_i=\min_{U\le \mathbb R^n:\:\dim (U)=n-i+1}\max_{x\in U:\:\|x\|=1}\|Ax\|\), where \(n\) is the dimension of the domain (number of columns).</span></span>.</p>
+                    <p>Note that \(\sigma_2\) is the maximum stretch induced orthogonal to \(v_1=\arg\max_{\|x\|=1}\|Ax\|\), or \(\sigma_2=\max_{x\perp v_1:\:\|x\|=1}\|Ax\|\), and \(\sigma_3\) has the stretch orthogonal to the first 2, and so on<span class="sidenote-group"><sup class="sidenote-ref">1</sup><span class="sidenote-card side-right">For completeness, we can generalize this idea either recursively (where we define \(\sigma_i\) as the max stretch orthogonal to \(v_j\) \(\forall j < i\)), or succinctly using the Min max theorem: \(\sigma_i=\min_{U\le \mathbb R^n:\:\dim (U)=n-i+1}\max_{x\in U:\:\|x\|=1}\|Ax\|\), where \(n\) is the dimension of the domain (number of columns).</span></span>.</p>
 
                     <h4 class="blog-subheading">Why are they special?</h4>
                     <p>They control several important properties at once:</p>
                     <ul>
                         <li><strong>Spectral norm/stability:</strong> The spectral norm is defined as \(\|\cdot\|_2=\sigma_1(\cdot)\) on matrix inputs. It is the operator norm<span class="sidenote-group"><sup class="sidenote-ref">2</sup><span class="sidenote-card side-left">Formally, the operator norm \(\|\cdot\|_p\) is defined for \(A\in \mathbb R^{m\times n}\) as \(\|A\|_p=\max\{\|Ax\|_p:x\in \mathbb R^n, \|x\|_p\le 1\}\), where we apply the \(\ell_p\) norm to the vectors.</span></span> induced by the vector \(\ell_2\) norm. As previously mentioned, \(\sigma_1(A) = \|A\|_2\) is the maximum amplification (or stretch) of \(A\); this is important for Lipschitz bounds, which are a common assumption behind stability and generalization arguments in ML<sup><a href="#ref-spectral">12</a></sup>.</li>
-                        <li><strong>Rank / effective dimension:</strong> the number of nonzero \(\sigma_i\) equals \(\mathrm{rank}(A)\); many tiny \(\sigma_i\) indicates a nearly low-rank map.</li>
+                        <li><strong>Rank / effective dimension:</strong> the number of nonzero \(\sigma_i\) equals \(\mathrm{rank}(A)\); many tiny \(\sigma_i\) indicates a nearly low rank map.</li>
                         <li><strong>Conditioning:</strong> the ratio \(\sigma_1/\sigma_r\) (for \(\sigma_r = \min_{\neq 0}\sigma_i\)) measures how unevenly \(A\) scales different directions; large ratios typically mean some directions learn/propagate signal much more strongly than others, which can hurt optimization and numerical stability.</li>
                     </ul>
 
@@ -165,21 +166,21 @@
                     (with optional weight decay applied as described for AdamW).</p>
 
                     <h4 class="blog-subheading">Connecting Muon to norm control</h4>
-                    <p>Muon already manipulates singular values of the <em>update</em> (by pushing those of \(\tilde u_t\) toward \(1\)), which suggests a different view of regularization than standard weight decay. Classical weight decay controls the \(\ell_2\) or Frobenius norm of the weight matrices (defined as \(\|W\|_F =\|\vec W\|_2= \sqrt{\sum_{i}\sum_jw_{ij}^2}\)<span class="sidenote-group"><sup class="sidenote-ref">4</sup><span class="sidenote-card side-right">\(\vec W\) denotes the vectorized form of matrix \(W\); more specifically, if \(W=[c_1, c_2 ..., c_m]\) where \(c_i\) is the \(i\)th column of \(W\), then \(\vec W=\begin{bmatrix} c_1\\c_2\\\vdots\\c_m \end{bmatrix}\) has them merged into one column.</span></span><span class="sidenote-group"><sup class="sidenote-ref">5</sup><span class="sidenote-card side-left">It also happens to be the case that \(\|W\|_F=\sqrt{\sum_i \sigma_i^2}\), but this is a bit of a digression and I will not prove this here.</span></span>), but in a matrix-aware setting one can instead target properties tied to singular values:</p>
+                    <p>Muon already manipulates singular values of the <em>update</em> (by pushing those of \(\tilde u_t\) toward \(1\)), which suggests a different view of regularization than standard weight decay. Classical weight decay controls the \(\ell_2\) or Frobenius norm of the weight matrices (defined as \(\|W\|_F =\|\vec W\|_2= \sqrt{\sum_{i}\sum_jw_{ij}^2}\)<span class="sidenote-group"><sup class="sidenote-ref">4</sup><span class="sidenote-card side-right">\(\vec W\) denotes the vectorized form of matrix \(W\); more specifically, if \(W=[c_1, c_2 ..., c_m]\) where \(c_i\) is the \(i\)th column of \(W\), then \(\vec W=\begin{bmatrix} c_1\\c_2\\\vdots\\c_m \end{bmatrix}\) has them merged into one column.</span></span><span class="sidenote-group"><sup class="sidenote-ref">5</sup><span class="sidenote-card side-left">It also happens to be the case that \(\|W\|_F=\sqrt{\sum_i \sigma_i^2}\), but this is a bit of a digression and I will not prove this here.</span></span>), but in a matrix aware setting one can instead target properties tied to singular values:</p>
                     <ul>
-                        <li><strong>Rank / intrinsic dimension:</strong> shaping the smaller singular values can encourage using many subspaces of the hidden stream, rather than collapsing the layer to an effectively low-rank map.</li>
+                        <li><strong>Rank / intrinsic dimension:</strong> shaping the smaller singular values can encourage using many subspaces of the hidden stream, rather than collapsing the layer to an effectively low rank map.</li>
                         <li><strong>Stability:</strong> bounding the largest singular value (the spectral norm) controls the layer Lipschitz constant, and helps prevent activation and gradient blowups<sup><a href="#ref-spectral">12</a>, <a href="#ref-cesista">11</a></sup>.</li>
                     </ul>
-                    <p>This perspective is especially relevant for high-dimensional, structured sequence representations (like DNA), where controlling intrinsic dimensionality can matter a lot.</p>
+                    <p>This perspective is especially relevant for high dimensional, structured sequence representations (like DNA), where controlling intrinsic dimensionality can matter a lot.</p>
 
                     <h3>Why is weight decay necessary?</h3>
                     <p>Weight decay is used to control the norm of weight matrices and updates in all current models, and it has been postulated that it controls the effective step size and equilibrium weight norm of the model during training<sup><a href="#ref-wdeq">9</a>, <a href="#ref-adamw">1</a>, <a href="#ref-hyperball">10</a></sup> (without decay, it seems to grow \(\propto \sqrt{t}\) as training progresses<sup><a href="#ref-hyperball">10</a></sup>). This is critical because if the step size is too small or the norm too large, learning is hindered. Both empirically and in studies, we find that adding weight decay tends to improve both Adam and Muon compared to running the base optimizers without any decay<sup><a href="#ref-hyperball">10</a>, <a href="#ref-adamw">1</a>, <a href="#ref-wdeq">9</a></sup>. Conceptually, decay provides a simple stabilizing \(\ell_2\) bias toward smaller parameter norms, which can help prevent explosive norm growth, reduce overfitting, and keep the effective step sizes at a scale where the optimizer's updates remain meaningful<sup><a href="#ref-wdeq">9</a></sup>.</p>
 
-                    <p>In particular, Adam+decay and Muon+decay often outperform Adam and Muon alone because the optimizer determines <em>directional</em> update structure (via moments for Adam and via singular-direction shaping for Muon), while weight decay provides a control knob on overall parameter scale<sup><a href="#ref-wdeq">9</a></sup>.</p>
+                    <p>In particular, Adam+decay and Muon+decay often outperform Adam and Muon alone because the optimizer determines <em>directional</em> update structure (via moments for Adam and via singular direction shaping for Muon), while weight decay provides a control knob on overall parameter scale<sup><a href="#ref-wdeq">9</a></sup>.</p>
 
-                    <p>It has been proven that weight decay provides an equilibrium weight norm that the model approaches towards the end of training<sup><a href="#ref-wdeq">9</a>, <a href="#ref-hyperball">10</a></sup>, but there are a few things to note: firstly, this isn't a hard setting; the weight is always &ldquo;hovering&rdquo; around that length, and secondly, the actual norm of the weight matrix doesn't matter. In fact, with correctly placed RMSNorms, the scale of the weight matrices doesn't impact capacity at all<sup><a href="#ref-rmsnorm">13</a>, <a href="#ref-hyperball">10</a></sup>, and for said scale-invariant matrices, loss contribution hence depends only on the direction of the weights.</p>
+                    <p>It has been proven that weight decay provides an equilibrium weight norm that the model approaches towards the end of training<sup><a href="#ref-wdeq">9</a>, <a href="#ref-hyperball">10</a></sup>, but there are a few things to note: firstly, this isn't a hard setting; the weight is always &ldquo;hovering&rdquo; around that length, and secondly, the actual norm of the weight matrix doesn't matter. In fact, with correctly placed RMSNorms, the scale of the weight matrices doesn't impact capacity at all<sup><a href="#ref-rmsnorm">13</a>, <a href="#ref-hyperball">10</a></sup>, and for said scale invariant matrices, loss contribution hence depends only on the direction of the weights.</p>
 
-                    <p>Now, even though the weight decay prevents a norm blowup, there are still ways to substantially reduce the space we are searching for the optimal matrices. Why is that? Well, imagine that the equilibrium norm describes a hyperball of said radius centered at the origin in the matrix space; most of the volume of the hyperball is concentrated at the outer shell (where the norm hovers). We can prove this like so:</p>
+                    <p>Now, even though the weight decay prevents a norm blowup, there are still ways to substantially reduce the space we are searching for the optimal matrices. Why is that? Imagine that the equilibrium norm describes a hyperball of said radius centered at the origin in the matrix space; most of the volume of the hyperball is concentrated at the outer shell (where the norm hovers). We can prove this as follows:</p>
 
                     <h4 class="blog-subheading">Proposition 1 (mass concentrates near the boundary in high dimension)</h4>
                     <p>Let \(B_n(R)=\{x\in\mathbb{R}^n:\|x\|\le R\}\) be the Euclidean \(n\)-ball of radius \(R\), and let \(0 \lt \varepsilon \lt R/2\). Define the outer shell
@@ -230,9 +231,9 @@
                     \[
                       \frac{\|\Delta W\|_F}{\|W_t\|_F}\approx\frac{\|U_t\|_F}{\|W_t\|_F}=\eta
                     \]
-                    which is an easily adjustable hyperparameter!</p>
+                    which is an easily adjustable hyperparameter.</p>
 
-                    <p>Now, this <em>is</em> a generous assumption, so we can make better estimates. Let us use the Frobenius norm throughout the next calculation; suppose that we know the mean normalized dot product<span class="sidenote-group"><sup class="sidenote-ref">7</sup><span class="sidenote-card side-right">The Frobenius inner product \(\langle A, B\rangle_F=\operatorname{Tr}(A^TB)=\langle\vec A,\vec B\rangle=\sum_{i,j}a_{ij}b_{ij}\) is the sum of the element-wise product of the matrices \(A\) and \(B\).</span></span> \(\gamma=\frac{\langle W_t, U_t\rangle_F }{\|U_t\|_F\|W_t\|_F}=\frac{\langle W_t, U_t\rangle_F}{\eta R^2}=\cos\theta\), where \(\theta:=\angle(\vec W_t, \vec U_t)\). By applying the cosine and sine rules to the triangle formed by the origin, \(W_t\), and \(W_t+U_t\) (see the interactive visualization below and <a href="#appendix-a">Appendix A</a> for the full derivation), we obtain the exact relative step size:</p>
+                    <p>Now, this <em>is</em> a generous assumption, so we can make better estimates. Let us use the Frobenius norm throughout the next calculation; suppose that we know the mean normalized dot product<span class="sidenote-group"><sup class="sidenote-ref">7</sup><span class="sidenote-card side-right">The Frobenius inner product \(\langle A, B\rangle_F=\operatorname{Tr}(A^TB)=\langle\vec A,\vec B\rangle=\sum_{i,j}a_{ij}b_{ij}\) is the sum of the element wise product of the matrices \(A\) and \(B\).</span></span> \(\gamma=\frac{\langle W_t, U_t\rangle_F }{\|U_t\|_F\|W_t\|_F}=\frac{\langle W_t, U_t\rangle_F}{\eta R^2}=\cos\theta\), where \(\theta:=\angle(\vec W_t, \vec U_t)\). By applying the cosine and sine rules to the triangle formed by the origin, \(W_t\), and \(W_t+U_t\) (see the interactive visualization below and <a href="#appendix-a">Appendix A</a> for the full derivation), we obtain the exact relative step size:</p>
 
                     \[
                       x := \|\Delta W\| = R\sqrt{2}\sqrt{1 - \cos\phi}, \quad\text{where}\quad \cos\phi = \sqrt{1-\frac{\eta^2(1-\gamma^2)}{1+\eta^2+2\eta\gamma}}.
@@ -484,11 +485,11 @@
                         <figcaption>Learning curves for the most optimal runs for all 4 optimizer combinations: AdamW, AdamH, MuonW, MuonH. Loss axis is nucleotide cross-entropy loss.</figcaption>
                     </figure>
 
-                    <p>It seems like the worst optimizer combination is AdamW (Adam + weight decay) with independent weight decay, then comes AdamH (Adam + Hyperball wrapper). Next, interestingly, is MuonH, followed by MuonW (with independent decay again). It seems like the model with the best nucleotide loss is Muon with independent weight decay!</p>
+                    <p>The worst optimizer combination is AdamW (Adam + weight decay, where we use independent weight decay), followed by AdamH (Adam + Hyperball wrapper). Next, interestingly, is MuonH, followed by MuonW (with independent decay again). The model achieving the best nucleotide loss is Muon with independent weight decay.</p>
                     
-                    <p>Hyperball improves the performance of Adam, but worsens it for Muon<span class="sidenote-group"><sup class="sidenote-ref">8</sup><span class="sidenote-card side-right">The Hyperball blog<sup><a href="#ref-hyperball">10</a></sup> actually shows that for Muon, the losses are comparable for models with &le; 500M parameters, and Hyperball dominates for the largest model of &gt;1B parameters. Our largest model is actually ~420M parameters large (as we are somewhat compute bound), so it is still possible for MuonH to outperform MuonW at a larger scale.</span></span>, while Muon performs better than Adam no matter what. Most research has shown that Muon performs better than Adam, so that was an expected result<sup><a href="#ref-muon">2</a></sup><sup>,</sup><sup><a href="#ref-hyperball">10</a></sup>, but why did Hyperball worsen Muon's performance?</p> 
+                    <p>Hyperball improves the performance of Adam, but worsens it for Muon<span class="sidenote-group"><sup class="sidenote-ref">8</sup><span class="sidenote-card side-right">The Hyperball blog<sup><a href="#ref-hyperball">10</a></sup> actually shows that for Muon, the losses are comparable for models with &le; 500M parameters, and Hyperball dominates for the largest model of &gt;1B parameters. Our largest model is actually ~420M parameters large (as we are somewhat compute bound), so it is still possible for MuonH to outperform MuonW at a larger scale.</span></span>, while Muon performs better than Adam no matter what. Most research has shown that Muon performs better than Adam, which is consistent with existing literature<sup><a href="#ref-muon">2</a></sup><sup>,</sup><sup><a href="#ref-hyperball">10</a></sup>. However, why did Hyperball worsen Muon's performance?</p> 
                     
-                    <p>I hypothesize that this is because Muon &lsquo;whitens&rsquo; the update, or maps it to the unit Spectral Sphere, and then the hyperball wrapper maps this update to have Frobenius norm of \(\eta R\). Perhaps the fact that we are mapping the update directly from the Spectral Sphere to our Frobenius sphere is not good, and it may take us too far from the unit sphere in the spectral space<span class="sidenote-group"><sup class="sidenote-ref">9</sup><span class="sidenote-card side-left">It is actually possible to be on both spheres at once as they DO intersect, but our algorithm does not guarantee that we enter the intersection. As a clarification: There exists an inequality \(\|W\|_2\le \|W\|_F\le \sqrt{n}\|W\|_2\), so one might believe that \(\|W\|_F\in[1,\sqrt{n}]\) guarantees that \(W\) lies in the intersection, but this is a necessary condition, not a sufficient one (think of a rank 1 matrix within this range)!</span></span>.</p>
+                    <p>I hypothesize that this is because Muon &lsquo;whitens&rsquo; the update, or maps it to the unit Spectral Sphere, and then the hyperball wrapper maps this update to have Frobenius norm of \(\eta R\). Perhaps mapping the update directly from the Spectral Sphere to our Frobenius sphere discards the spectral conditioning that Muon carefully enforces, potentially displacing the weights too far from the unit sphere in spectral space<span class="sidenote-group"><sup class="sidenote-ref">9</sup><span class="sidenote-card side-left">It is actually possible to be on both spheres at once as they DO intersect, but our algorithm does not guarantee that we enter the intersection. As a clarification: There exists an inequality \(\|W\|_2\le \|W\|_F\le \sqrt{n}\|W\|_2\), so one might believe that \(\|W\|_F\in[1,\sqrt{n}]\) guarantees that \(W\) lies in the intersection, but this is a necessary condition, not a sufficient one (think of a rank 1 matrix within this range)!</span></span>.</p>
                     
                     <p>On the other hand, weight decay does <em>not</em> alter the Muon update, it only decays the matrix said update is added to! Additionally, weight decay explores a much larger space of matrices than Hyperball (through an argument similar to Proposition 1), which may also contribute. Perhaps Muon with only the latter Hyperball update would work better, but we would have to tune the radius of the hypersphere to keep the relative update size reasonable, so this is not as easily done.</p>
 
@@ -498,7 +499,7 @@
                         <figcaption>Training dynamics for Top: AdamW vs AdamH, Bottom: MuonW vs MuonH</figcaption>
                     </figure>
 
-                    <p>Over here, we can see how our sweeps trained. Although Hyperball performs worse for a large number of step sizes, we only care about the absolute minimum point. For Adam, the lowest point is in the middle with Hyperball, and with Muon, the lowest point is on the right with weight decay (although Hyperball is not too far behind).</p>
+                    <p>These figures illustrate how our sweeps trained. Although Hyperball performs worse for a large number of step sizes, we only care about the absolute minimum point. For Adam, the lowest point is in the middle with Hyperball, and with Muon, the lowest point is on the right with weight decay (although Hyperball is not too far behind).</p>
 
                     <figure class="blog-image">
                         <img src="/blogs/optimizers-for-biology/assets/adam_heatmap.png" alt="Adam sweep summary" loading="lazy" style="margin-bottom: 0.5rem;" />
@@ -513,7 +514,7 @@
                     \[
                       \mathrm{RMSNorm}(x) = g\odot \frac{x}{\sqrt{\frac{1}{d}\sum_{i=1}^d x_i^2 + \varepsilon}},
                     \]
-                    where \(g\in\mathbb{R}^d\) is a learned per-coordinate gain, \(\varepsilon>0\) is for numerical stability, and \(\odot\) is the Hadamard product (element-wise multiplication).</p>
+                    where \(g\in\mathbb{R}^d\) is a learned per coordinate gain, \(\varepsilon>0\) is for numerical stability, and \(\odot\) is the Hadamard product (element wise multiplication).</p>
 
                     <h4 class="blog-subheading">Rescaling property</h4>
                     <p>Ignoring \(\varepsilon\) (or when \(\|x\|\) is not tiny), RMSNorm is <em>scale invariant</em>: for any scalar \(\alpha>0\),
@@ -522,7 +523,7 @@
                     \]
                     Intuitively, scaling the input by \(\alpha\) scales the denominator by the same \(\alpha\), so the normalized direction stays the same.</p>
 
-                    <h4 class="blog-subheading">Why this makes weight matrices scale-invariant</h4>
+                    <h4 class="blog-subheading">Why this makes weight matrices scale invariant</h4>
                     <p>Consider a linear map \(y = Wx\). If the model applies RMSNorm before the next computation (pre-norm, post-norm, or both), then multiplying the weight matrix by a scalar often has little effect on the downstream activations:
                     \[
                       \mathrm{RMSNorm}((\alpha W)x) = \mathrm{RMSNorm}(\alpha (Wx)) = \mathrm{RMSNorm}(Wx).
@@ -648,7 +649,7 @@
                     \end{aligned}
                     \]
 
-                    <p>This is the tightest bound on relative step size that I could find without knowing \(\gamma\). Now, I am not really sure how to calculate \(\gamma\) either, due to the repeated retractions onto the hypersphere; any previous arguments using momentum and weight decay are difficult to translate<sup><a href="#ref-hyperball">10</a></sup>. Therefore, I will stop here because if you notice, this bound does not really give us any new information! The lower bound is completely useless, and the upper bound is so much looser than the ideal \(\eta\). Now, if, for instance, we input our tried and tested range ~\(\eta\in (10^{-4},10^{-1})\) and fix \(\gamma=0\), we get a slightly tighter bound of \((0.0001, 0.0996)\), where a higher learning rate corresponds to a higher step size. For a higher dot product like \(\gamma=0.5\), we get a bound of \((0.0000866, 0.0823)\), which is lower.</p>
+                    <p>This is the tightest bound on the relative step size obtainable without knowledge of \(\gamma\). Computing \(\gamma\) analytically remains an open question, as the repeated retractions onto the hypersphere make it difficult to translate previous arguments involving momentum and weight decay<sup><a href="#ref-hyperball">10</a></sup>. Unfortunately, this bound is not particularly informative: the lower bound is vacuous, and the upper bound is substantially looser than the ideal \(O(\eta)\). Now, if, for instance, we input our tried and tested range ~\(\eta\in (10^{-4},10^{-1})\) and fix \(\gamma=0\), we get a slightly tighter bound of \((0.0001, 0.0996)\), where a higher learning rate corresponds to a higher step size. For a higher dot product like \(\gamma=0.5\), we get a bound of \((0.0000866, 0.0823)\), which is lower.</p>
 
                     <hr style="margin: 3rem 0 2rem; border: none; border-top: 1px solid #ddd;">
                     <h3>References</h3>
