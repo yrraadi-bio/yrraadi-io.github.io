@@ -62,7 +62,7 @@
             <div class="blog-content">
                 <article class="blog-article">
                     <h2>Optimizers for biology-focused models</h2>
-                    <p class="blog-date">February 10, 2026</p>
+                    <p class="blog-date">February 12, 2026 &middot; Viraj Doshi</p>
 
                     <p>Optimizers dictate the parameter update rules that govern the convergence trajectory of Stochastic Gradient Descent (SGD). At present, variations of AdamW<sup><a href="#ref-adamw">1</a></sup> and Muon<sup><a href="#ref-muon">2</a></sup> dominate both language and DNA modeling (e.g., AlphaGenome<sup><a href="#ref-alphagenome">3</a></sup>, Enformer<sup><a href="#ref-enformer">4</a></sup>, Evo<sup><a href="#ref-evo">5</a></sup>), prompting the question of whether recent architectural advancements are merely locally optimal to these specific algorithms.</p>
                     <p>While Adam updates can lead to weight stagnation<sup><a href="#ref-lazy">6</a></sup><sup>,</sup><sup><a href="#ref-ntk">7</a></sup> and uneven signal propagation, Muon mitigates this by treating layers as matrices and &ldquo;whitening&rdquo;, or spreading out updates across singular dimensions to ensure all directions are learned with equal priority. Unlike Adam, which treats weights as flat vectors and risks remaining within the initialization neighborhood (closer to the NTK regime<sup><a href="#ref-ntk">7</a></sup>), Muon forces weights to diverge from their starting points by distributing updates across the matrix space, thereby erasing initial distributions<sup><a href="#ref-erasure">8</a></sup>. This is achieved by constraining all singular values of the weight updates to be close to \(1\), effectively &ldquo;whitening&rdquo; the update.</p>
