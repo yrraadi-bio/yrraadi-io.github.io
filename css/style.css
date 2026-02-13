@@ -1108,6 +1108,46 @@ main {
     color: #2a2a2a;
 }
 
+/* Collapsible sections */
+.blog-article details.collapsible-section {
+    border: none;
+    background: none;
+    padding: 0;
+    margin: 0;
+}
+
+.blog-article details.collapsible-section > summary {
+    list-style: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 2rem 0 1rem 0;
+}
+
+.blog-article details.collapsible-section > summary::-webkit-details-marker {
+    display: none;
+}
+
+.blog-article details.collapsible-section > summary::before {
+    content: '\25B6';
+    font-size: 0.55em;
+    color: #999;
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.blog-article details.collapsible-section[open] > summary::before {
+    transform: rotate(90deg);
+}
+
+.blog-article details.collapsible-section > summary h3 {
+    margin: 0;
+    display: inline;
+    line-height: 1;
+}
+
 .blog-article p {
     font-size: 1.05rem;
     line-height: 1.8;
@@ -1333,7 +1373,8 @@ main {
     .blog-article ul,
     .blog-article ol,
     .blog-article blockquote,
-    .blog-article figure {
+    .blog-article figure,
+    .blog-article details.collapsible-section {
         position: relative;
         max-width: 680px; /* Slightly narrower for better reading experience */
         margin-left: auto;
