@@ -1142,7 +1142,8 @@ main {
     transform: rotate(90deg);
 }
 
-.blog-article details.collapsible-section > summary h3 {
+.blog-article details.collapsible-section > summary h3,
+.blog-article details.collapsible-section > summary h4 {
     margin: 0;
     display: inline;
     line-height: 1;
