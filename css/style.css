@@ -1440,6 +1440,13 @@ main {
         right: 100%;
         margin-right: 2rem;
     }
+
+    /* Glowing effect for active sidenote on desktop */
+    .sidenote-card.glowing {
+        border-color: #4A9EFF;
+        box-shadow: 0 0 15px rgba(74, 158, 255, 0.3), 0 4px 12px rgba(74, 158, 255, 0.15);
+        transition: all 0.3s ease;
+    }
 }
 
 @media (max-width: 1299px) {

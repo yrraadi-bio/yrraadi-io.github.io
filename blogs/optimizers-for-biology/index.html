@@ -162,8 +162,8 @@
                         u_t = \beta\,u_{t-1} + (1-\beta)\,g_t,
                         \]
                         <p>(with \(u_0=0\)). This plays the same role as Adam's first moment
-                            estimate \(m_t\), but is then processed using matrix structure. In our implementation we use Nesterov momentum<span
-                                class="sidenote-group"><sup class="sidenote-ref">12</sup><span
+                            estimate \(m_t\), but is then processed using matrix structure. In our implementation we use
+                            Nesterov momentum<span class="sidenote-group"><sup class="sidenote-ref">1</sup><span
                                     class="sidenote-card side-right">Concretely, the input fed into the NS\(_5\)
                                     orthogonalization is not the raw gradient \(g_t\) but the lerp
                                     \((1-\beta)\,g_t + \beta\,u_{t}\). This Nesterov interpolation means the
@@ -204,7 +204,7 @@
                         <p>Note that \(\sigma_2\) is the maximum stretch induced orthogonal to
                             \(v_1=\arg\max_{\|x\|=1}\|Ax\|\), or \(\sigma_2=\max_{x\perp v_1:\:\|x\|=1}\|Ax\|\), and
                             \(\sigma_3\) has the stretch orthogonal to the first 2, and so on<span
-                                class="sidenote-group"><sup class="sidenote-ref">1</sup><span
+                                class="sidenote-group"><sup class="sidenote-ref">2</sup><span
                                     class="sidenote-card side-right">For completeness, we can generalize this idea
                                     either recursively (where we define \(\sigma_i\) as the max stretch orthogonal to
                                     \(v_j\) \(\forall j < i\)), or succinctly using the Min max theorem:
@@ -217,7 +217,7 @@
                         <ul>
                             <li><strong>Spectral norm/stability:</strong> The spectral norm is defined as
                                 \(\|\cdot\|_2=\sigma_1(\cdot)\) on matrix inputs. It is the operator norm<span
-                                    class="sidenote-group"><sup class="sidenote-ref">2</sup><span
+                                    class="sidenote-group"><sup class="sidenote-ref">3</sup><span
                                         class="sidenote-card side-left">Formally, the operator norm \(\|\cdot\|_p\) is
                                         defined for \(A\in \mathbb R^{m\times n}\) as \(\|A\|_p=\max\{\|Ax\|_p:x\in
                                         \mathbb R^n, \|x\|_p\le 1\}\), where we apply the \(\ell_p\) norm to the
@@ -246,7 +246,7 @@
                             where \(\tilde\Sigma\) is a diagonal matrix with entries close to \(1\) (typically in
                             \([0.7, 1.3]\)), projecting the update to a sphere called the Spectral Sphere<sup><a
                                     href="#ref-muon">2</a></sup><span class="sidenote-group"><sup
-                                    class="sidenote-ref">3</sup><span class="sidenote-card side-right">The Spectral
+                                    class="sidenote-ref">4</sup><span class="sidenote-card side-right">The Spectral
                                     Sphere is a sphere on which all matrices have a spectral norm of 1
                                     (\(\sigma_1=1\)).</span></span> &ldquo;whitening&rdquo; or &ldquo;equalizing&rdquo;
                             the update across singular dimensions.</p>
@@ -267,12 +267,12 @@
                             u_t\) toward \(1\)), which suggests a different view of regularization than standard weight
                             decay. Classical weight decay controls the \(\ell_2\) or Frobenius norm of the weight
                             matrices (defined as \(\|W\|_F =\|\vec W\|_2= \sqrt{\sum_{i}\sum_jw_{ij}^2}\)<span
-                                class="sidenote-group"><sup class="sidenote-ref">4</sup><span
+                                class="sidenote-group"><sup class="sidenote-ref">5</sup><span
                                     class="sidenote-card side-right">\(\vec W\) denotes the vectorized form of matrix
                                     \(W\); more specifically, if \(W=[c_1, c_2 ..., c_m]\) where \(c_i\) is the \(i\)th
                                     column of \(W\), then \(\vec W=\begin{bmatrix} c_1\\c_2\\\vdots\\c_m \end{bmatrix}\)
                                     has them merged into one column.</span></span><span class="sidenote-group"><sup
-                                    class="sidenote-ref">5</sup><span class="sidenote-card side-left">It also happens to
+                                    class="sidenote-ref">6</sup><span class="sidenote-card side-left">It also happens to
                                     be the case that \(\|W\|_F=\sqrt{\sum_i \sigma_i^2}\), but this is a bit of a
                                     digression and I will not prove this here.</span></span>), but in a matrix aware
                             setting one can instead target properties tied to singular values:</p>
@@ -301,76 +301,33 @@
                         shaping for Muon), while decay provides a control knob on overall parameter scale<sup><a
                                 href="#ref-wdeq">9</a></sup>.</p>
 
-                    <p>Weight decay drives the norm toward an equilibrium value<sup><a href="#ref-wdeq">9</a>, <a
-                                href="#ref-hyperball">10</a></sup>, though the norm only &ldquo;hovers&rdquo; near this
-                        value rather than being fixed to it. Crucially, with correctly placed RMSNorms these weight
-                        matrices become <em>scale invariant</em> (<a href="#appendix-c">Appendix C</a>); their
-                        scale does not impact capacity at all<sup><a href="#ref-rmsnorm">13</a>, <a
-                                href="#ref-hyperball">10</a></sup>, and loss depends only on the <em>direction</em> of
-                        the weights. So although decay prevents a norm blowup, the optimizer must still search a large
-                        space: the equilibrium norm defines a hyperball in matrix space, and by concentration of
-                        measure, nearly all of its volume lies in a thin shell at the boundary. We can prove this as
-                        follows:</p>
-
-                    <h4 class="blog-subheading">Lemma (concentration of measure in high-dimensional balls)</h4>
-                    <p>Let \(B_n(R)=\{x\in\mathbb{R}^n:\|x\|\le R\}\) be the Euclidean \(n\)-ball of radius \(R\), and
-                        let \(0 \lt \varepsilon \lt R/2\). Define the outer shell
-                        \[
-                        S_{n}(R,\varepsilon)=\{x\in\mathbb{R}^n: R-\varepsilon \le \|x\|\le R\}.
-                        \]
-                        Then the fraction of volume in the shell satisfies
-                        \[
-                        \frac{\mathrm{Vol}(S_{n}(R,2\varepsilon))}{\mathrm{Vol}(B_n(R))}
-                        = 1 - \left(1-\frac{2\varepsilon}{R}\right)^{n}
-                        \xrightarrow[n\to\infty]{} 1.
-                        \]
-                        Equivalently, the &ldquo;interior&rdquo; ball \(B_n(R-2\varepsilon)\) contains an asymptotically
-                        negligible fraction of the total volume.</p>
-
-                    <h4 class="blog-subheading">Proof</h4>
-                    <p>The volume of an \(n\)-ball scales like \(R^n\): there is a constant \(c_n=\mathrm{Vol}(B_n(1))\)
-                        such that
-                        \[
-                        \mathrm{Vol}(B_n(R)) = c_n R^n.
-                        \]
-                        Therefore, the shell volume is
-                        \[
-                        \mathrm{Vol}(S_n(R,2\varepsilon))
-                        = \mathrm{Vol}(B_n(R)) - \mathrm{Vol}(B_n(R-2\varepsilon))
-                        = c_n(R^n-(R-2\varepsilon)^n).
-                        \]
-                        Dividing by \(\mathrm{Vol}(B_n(R))=c_nR^n\) gives
-                        \[
-                        \frac{\mathrm{Vol}(S_n(R,2\varepsilon))}{\mathrm{Vol}(B_n(R))}
-                        = 1-\left(\frac{R-2\varepsilon}{R}\right)^n
-                        = 1-\left(1-\frac{2\varepsilon}{R}\right)^n.
-                        \]
-                        Since \(0<1-2\varepsilon /R<1\), the term \((1-2\varepsilon/R)^n\to 0\) as \(n\to\infty\), so
-                            the ratio tends to \(1\).</p>
-
-                            <p>Why is this relevant? Suppose the equilibrium norm is \(N=R-\varepsilon\), we can see
-                                that even if the norm &lsquo;hovers&rsquo; within just \(0<\varepsilon\ll N\) of the
-                                    equilibrium (in \([N-\varepsilon, N+\varepsilon]=[R-2\varepsilon, R]\)), we still
-                                    have to consider a relatively large space of values within the hyperball of radius
-                                    \(R\). The lemma above demonstrates that no matter how small we make \(\varepsilon>
-                                    0\), we will still have to consider a relatively large space of values near the
-                                    equilibrium hypersphere<span class="sidenote-group"><sup
-                                            class="sidenote-ref">6</sup><span class="sidenote-card side-right">Note that
-                                            a hypersphere and hyperball are not the same thing. A &lsquo;ball&rsquo;
-                                            refers to the entire solid object, but a &lsquo;sphere&rsquo; refers only to
-                                            the shell/boundary of said ball.</span></span> of radius \(N\) (especially
-                                    as the matrix dimension is roughly \(O(d^2)\) where \(d\) is the hidden size of the
-                                    model).<br>
-                                    <br>If the weight matrices were scale invariant (see <a href="#appendix-c">Appendix
-                                        C</a>), then the norm would not matter at all, so why do this? Wouldn't it be
-                                    more efficient to fix the norm (set \(\varepsilon=0\) manually) and let the weight
-                                    update focus on changing the direction, rather than magnitude?</p>
+                    <p>Although weight decay drives the norm toward an equilibrium, the weights only &ldquo;hover&rdquo;
+                        near it, and the optimizer must still search the space created by these fluctuations. Even if
+                        the
+                        norm &lsquo;hovers&rsquo; within just \(0<\varepsilon\ll N\) of the equilibrium \(N\) (or in the
+                            range \([N-\varepsilon, N+\varepsilon]\)), we still have to consider a relatively large
+                            space of values within the hyperball. By <a href="#appendix-a">Appendix A</a>, nearly all of
+                            this
+                            volume lies in a thin shell at the boundary.
+                            <p>
+                                Crucially, with correctly placed RMSNorms, these matrices become <em>scale
+                                    invariant</em>
+                                (<a href="#appendix-d">Appendix D</a>); their scale does not impact capacity, only
+                                direction. Since scale is irrelevant, wouldn't it be more
+                                efficient to fix the norm (set \(\varepsilon=0\)) and let the update focus solely on
+                                direction?
+                            </p>
 
                             <h3>The Hyperball update</h3>
                             <p>The intuition of Hyperball<sup><a href="#ref-hyperball">10</a></sup> is to, for a weight
                                 matrix \(W\), simply fix the Frobenius norm of \(W\) to the initial radius \(R :=
                                 \|W_0\|_F\), and update \(U\) to \(\eta R\). Rather confusingly, this confines the
-                                weight matrix to a hypersphere of radius \(R\), not a ball, but let us ignore this
+                                weight matrix to a hypersphere of radius \(R\), not a ball<span
+                                    class="sidenote-group"><sup class="sidenote-ref">6</sup><span
+                                        class="sidenote-card side-right">Note that
+                                        a hypersphere and hyperball are not the same thing. A &lsquo;ball&rsquo;
+                                        refers to the entire solid object, but a &lsquo;sphere&rsquo; refers only to
+                                        the shell/boundary of said ball.</span></span>, but let us ignore this
                                 superficial detail. Suppose \(\mathrm{Normalize}(\cdot)\) used the \(\ell_2\) norm to
                                 normalize its input, given a Muon or Adam update \(u_t\), let the actual update be:
                                 \[
@@ -403,7 +360,7 @@
                                 }{\|U_t\|_F\|W_t\|_F}=\frac{\langle W_t, U_t\rangle_F}{\eta R^2}=\cos\theta\), where
                                 \(\theta:=\angle(\vec W_t, \vec U_t)\). By applying the cosine and sine rules to the
                                 triangle formed by the origin, \(W_t\), and \(W_t+U_t\) (see the interactive
-                                visualization below and <a href="#appendix-a">Appendix A</a> for the full derivation),
+                                visualization below and <a href="#appendix-b">Appendix B</a> for the full derivation),
                                 we obtain the exact relative step size:</p>
 
                             \[
@@ -575,8 +532,8 @@
                                 })();
                             </script>
 
-                            <p>When \(\gamma,\eta\in(0,1)\), a careful bounding argument (<a href="#appendix-b">Appendix
-                                    B</a>) shows that the relative step size lies in \(\frac{x}{\|W_t\|}\in
+                            <p>When \(\gamma,\eta\in(0,1)\), a careful bounding argument (<a href="#appendix-c">Appendix
+                                    C</a>) shows that the relative step size lies in \(\frac{x}{\|W_t\|}\in
                                 (0,\sqrt{2-\sqrt{2}})\approx (0, 0.765)\). This is quite loose without knowing
                                 \(\gamma\); for practical learning rates \(\eta\in(10^{-4},10^{-1})\) with \(\gamma=0\),
                                 the bound tightens to roughly \((0.0001, 0.0996)\).</p>
@@ -689,7 +646,7 @@
                                 nucleotide loss is Muon with independent weight decay.</p>
 
                             <p>Hyperball improves the performance of Adam, but worsens it for Muon<span
-                                    class="sidenote-group"><sup class="sidenote-ref">8</sup><span
+                                    class="sidenote-group"><sup class="sidenote-ref">9</sup><span
                                         class="sidenote-card side-right">The Hyperball blog<sup><a
                                                 href="#ref-hyperball">10</a></sup> actually shows that for Muon, the
                                         losses are comparable for models with &le; 500M parameters, and Hyperball
@@ -699,7 +656,8 @@
                                 while Muon performs better than Adam no matter what. Most research has shown that Muon
                                 performs better than Adam, which is consistent with existing literature<sup><a
                                         href="#ref-muon">2</a></sup><sup>,</sup><sup><a
-                                        href="#ref-hyperball">10</a></sup>. However, why did Hyperball worsen Muon's
+                                        href="#ref-hyperball">10</a></sup>.
+                                However, why did Hyperball worsen Muon's
                                 performance?</p>
 
                             <p>I hypothesize that this is because Muon &lsquo;whitens&rsquo; the update, or maps it to
@@ -707,7 +665,7 @@
                                 Frobenius norm of \(\eta R\). Perhaps mapping the update directly from the Spectral
                                 Sphere to our Frobenius sphere discards the spectral conditioning that Muon carefully
                                 enforces, potentially displacing the weights too far from the unit sphere in spectral
-                                space<span class="sidenote-group"><sup class="sidenote-ref">9</sup><span
+                                space<span class="sidenote-group"><sup class="sidenote-ref">10</sup><span
                                         class="sidenote-card side-left">It is actually possible to be on both spheres at
                                         once as they DO intersect, but our algorithm does not guarantee that we enter
                                         the intersection. As a clarification: There exists an inequality \(\|W\|_2\le
@@ -718,7 +676,9 @@
 
                             <p>On the other hand, weight decay does <em>not</em> alter the Muon update, it only decays
                                 the matrix said update is added to! Additionally, weight decay explores a much larger
-                                space of matrices than Hyperball (through an argument similar to the lemma), which may
+                                space of matrices than Hyperball (through an argument similar to <a
+                                    href="#appendix-a">Appendix
+                                    A</a>), which may
                                 also contribute. Perhaps Muon with only the latter Hyperball update would work better,
                                 but we would have to tune the radius of the hypersphere to keep the relative update size
                                 reasonable, so this is not as easily done.</p>
@@ -758,15 +718,15 @@
                                 dominate the train loss across our sweeps.</p>
 
 
-                            <h3>Spectral Analysis: The Case for Infinite Capacity</h3>
+                            <h3>Spectral Analysis</h3>
                             <p>To understand <em>why</em> Muon with independent weight decay (MuonW) outperforms its
                                 constrained counterpart (MuonH), we must look at the spectral properties of the learned
                                 representations. Following the eigenspectral framework of NerVE<sup><a
                                         href="#ref-nerve">15</a></sup><span class="sidenote-group"><sup
                                         class="sidenote-ref">11</sup><span class="sidenote-card side-right">NerVE
-                                            originally applies these metrics to track activation dynamics through FFN
-                                            layers, but the same spectral measures are equally well defined for weight
-                                            matrices.</span></span>, we track two key metrics for the weight
+                                        originally applies these metrics to track activation dynamics through FFN
+                                        layers, but the same spectral measures are equally well defined for weight
+                                        matrices.</span></span>, we track two key metrics for the weight
                                 matrices:</p>
                             <ul>
                                 <li><strong>SVD Entropy:</strong> A measure of how uniformly variance is distributed
@@ -785,11 +745,13 @@
                                     alt="Participation Ratio Mean for FFN Layer 3" loading="lazy" />
                                 <figcaption>Spectral metrics for FFN Layer 3. <strong>Blue:</strong> MuonW,
                                     <strong>Red:</strong> MuonH, <strong>Orange:</strong> AdamW,
-                                    <strong>Green:</strong> AdamH. Note how MuonH (Red) collapses to a low-entropy,
+                                    <strong>Green:</strong> AdamH. Note how MuonH (Red) collapses to a low entropy,
                                     low-rank state, while MuonW (Blue) maintains high capacity.<span
-                                        class="sidenote-group"><sup class="sidenote-ref">10</sup><span
-                                            class="sidenote-card side-right">All weight matrices exhibited similar
-                                            patterns; we show only one here for simplicity.</span></span></figcaption>
+                                        class="sidenote-group"><sup class="sidenote-ref">12</sup><span
+                                            class="sidenote-card side-right">All weight
+                                            matrices exhibited similar
+                                            patterns; we show only one here for simplicity.</span></span>
+                                </figcaption>
                             </figure>
 
                             <p>The plots reveal a striking "Spectral Paradox". Standard theory suggests that rank
@@ -819,7 +781,8 @@
                                     so the actual weight change includes a decay term \(-\lambda W_t\) whose
                                     spectral structure is that of the current weights, not the whitened update.
                                     Even if \(U_t\) were perfectly whitened, \(\Delta W\) would still inherit the
-                                    spectral bias of \(W_t\).</p>
+                                    spectral bias of \(W_t\).
+                                </p>
                             </details>
 
                             <h4 class="blog-subheading">1. The Zero-Sum Game of Constrained Optimization</h4>
@@ -834,7 +797,8 @@
                                 no zero-sum competition among singular values. Dominant features can grow
                                 <em>without</em> cannibalizing the weak ones, and the high entropy we observe reflects
                                 a feature rich, high capacity model that preserves the complex, combinatorial grammar
-                                of the genome.</p>
+                                of the genome.
+                            </p>
 
                             <details class="collapsible-section">
                                 <summary>
@@ -844,15 +808,16 @@
                                     coordinate wise updates inject unstructured noise into trailing dimensions,
                                     artificially propping up their singular values. MuonW achieves high entropy
                                     through "clean" whitening updates that amplify rare directions, not through
-                                    noise. This distinction aligns with NerVE's<sup><a
-                                            href="#ref-nerve">15</a></sup> finding that stable spectral signatures
+                                    noise. This distinction aligns with NerVE's<sup><a href="#ref-nerve">15</a></sup>
+                                    finding that stable spectral signatures
                                     correlate with generalization ability and respond predictably to architectural
                                     and optimizer design choices.</p>
                             </details>
 
                             <h4 class="blog-subheading">2. Implicit Annealing & Relative Step Size</h4>
                             <p>The second piece of the puzzle lies in the relative step size. We define the
-                                <em>relative step size</em> as \(\frac{\|\Delta W\|}{\|W\|}\). </p>
+                                <em>relative step size</em> as \(\frac{\|\Delta W\|}{\|W\|}\).
+                            </p>
 
                             <figure class="blog-image">
                                 <img src="/blogs/optimizers-for-biology/assets/weight_frobenius_norm.png"
@@ -879,32 +844,76 @@
                                 constant temperature, preventing the fine grained convergence needed for optimal
                                 performance.</p>
 
-                            <h4 class="blog-subheading">3. Activation Hacking: A Caveat</h4>
-                            <p>There is an alternative, less flattering interpretation of MuonW's success. As
-                                noted above, MuonW's weight norm never reaches the equilibrium that weight decay
-                                should impose. The updates persistently outpace the decay. While the
-                                RMSNorm-sandwiched hidden layers are scale invariant (<a
-                                    href="#appendix-c">Appendix C</a>), the final output projection is
-                                <em>not</em>. There is no normalization between the last linear layer and the
-                                softmax. This means the runaway norm growth could potentially inflate the magnitude of the
-                                output logits, sharpening the softmax distribution and pushing the model toward
-                                higher confidence predictions.</p>
+                            <h4 class="blog-subheading">3. Activation Hacking: The Logit Inflation "Cheat"</h4>
+                            <p>There is an alternative, less flattering interpretation of MuonW's success: fit the
+                                cross-entropy
+                                loss by simply inflating the logits. In classification tasks, the cross-entropy loss can
+                                be
+                                decreased by sharpening the probability distribution (making the model more
+                                "confident"), even
+                                if the ranking of classes doesn't change.</p>
 
-                            <p>Whether this "activation hacking" helps or hurts depends on the task. DNA has a
-                                vocabulary of just 4 bases, and in regulatory regions the correct nucleotide often
-                                dominates its context window. Sharper predictions on a tiny, low-entropy vocabulary
-                                are frequently correct, so inflated logits translate directly into lower
-                                cross-entropy loss. Natural language, by contrast, has a vocabulary of ~100k tokens
-                                with genuinely ambiguous contexts where probability mass must be spread across many
-                                plausible continuations. Overconfidence in the DNA vocabulary suppresses valid alternatives and
-                                hurts generalization.</p>
+                            <figure class="blog-image">
+                                <img src="/blogs/optimizers-for-biology/assets/OutputLogits.png"
+                                    alt="Output Logits Distribution" loading="lazy" />
+                                <figcaption>Distribution of output logits during training. MuonW (Blue) logits grow
+                                    significantly larger than MuonH (Red), leading to sharper softmax distributions.
+                                </figcaption>
+                            </figure>
 
-                            <p>This means that part of MuonW's advantage may be an artifact of the
-                                domain. The optimizer exploiting the low cardinality and low entropy of the DNA
-                                vocabulary to "hack" the loss via logit scaling, rather than learning richer
-                                internal representations. Disentangling this effect from the genuine spectral
-                                capacity gains discussed above is an important open question, and one that a
-                                controlled comparison with a fixed norm output head could help resolve.</p>
+                            <p>As noted above, MuonW's weight norm grows unboundedly. While the RMSNorm-sandwiched
+                                hidden layers
+                                are scale invariant (<a href="#appendix-d">Appendix D</a>), the final output projection
+                                is
+                                <em>not</em>. There is no normalization between the last linear layer and the softmax.
+                                This
+                                means the runaway norm growth could potentially inflate the magnitude of the output
+                                logits,
+                                sharpening the softmax distribution and pushing the model toward higher confidence
+                                predictions.
+                            </p>
+
+                            <p>This acts exactly like <em>lowering the softmax temperature</em>. Whether this
+                                "activation
+                                hacking" helps or hurts depends on the task. DNA has a vocabulary of just 4 bases, and
+                                in
+                                regulatory regions the correct nucleotide often dominates its context window. Sharper
+                                predictions on a tiny, low entropy vocabulary are frequently correct, so inflated logits
+                                translate directly into lower cross-entropy loss. Natural language, by contrast, has a
+                                vocabulary of ~100k tokens with genuinely ambiguous contexts where probability mass must
+                                be
+                                spread across many plausible continuations<span class="sidenote-group"><sup
+                                        class="sidenote-ref">16</sup><span class="sidenote-card side-left">
+                                        Quantitatively, consider the softmax function \(\sigma(\mathbf{z})_i =
+                                        \frac{e^{z_i}}{\sum_{j=1}^K e^{z_j}}\). If we multiply the logits by a large
+                                        factor \(k\), the terms become \(e^{k z_i}\). Since the exponential function
+                                        grows incredibly fast, even a small difference in raw logits becomes a massive
+                                        difference after exponentiation. The largest logit \(z_i\) will dominate the sum
+                                        in the denominator, pushing the probability \(\sigma(\mathbf{z})_i\) towards
+                                        1 (provided \(k\) is large enough).<br><br>
+                                        For DNA (\(K=4\)), there are only 3 other terms in the denominator to compete
+                                        with. Even a small lead for the correct nucleotide allows it to overwhelm the
+                                        others; let \(k_{DNA}\) be the minimal such multiplier. For NLP (\(K \approx
+                                        100,000\)), the denominator sums over 100,000 other
+                                        terms. Even if each is small, their total mass is significant, acting as a
+                                        "drag" that prevents the correct token from dominating the distribution purely
+                                        through scaling by \(k_{DNA}\).
+                                    </span></span>. Overconfidence in the DNA vocabulary suppresses valid alternatives
+                                and hurts
+                                generalization.</p>
+
+                            <p>This means that part of MuonW's advantage may be an artifact of the domain. The optimizer
+                                exploiting the low cardinality and low entropy of the DNA vocabulary to "hack" the loss
+                                via
+                                logit scaling, rather than learning richer internal representations. MuonH (Red), with
+                                its
+                                strict norm constraint, is mathematically forbidden from using this trick, which may
+                                explain its
+                                higher loss despite learning a "cleaner" low-rank representation. Disentangling this
+                                effect from
+                                the genuine spectral capacity gains discussed above is an important open question, and
+                                one that
+                                a controlled comparison with a fixed norm output head could help resolve.</p>
 
                             <h3>Next steps</h3>
                             <p>Next, we plan to:</p>
@@ -918,275 +927,378 @@
                             </ul>
 
                             <hr style="margin: 3rem 0 2rem; border: none; border-top: 1px solid #ddd;">
-                            <h3 id="appendix">Appendix</h3>
+                            <h3 id="appendix">Appendices</h3>
 
-                            <h4 id="appendix-a" class="blog-subheading">Appendix A: Full derivation of the relative step
-                                size</h4>
-
-                            <p>The Hyperball retraction maps \(W_t + U_t\) back onto the hypersphere of radius \(R\).
-                                The geometry is captured by two triangles in the vectorized matrix space:</p>
-                            <ol>
-                                <li><strong>Triangle \(O\text{-}A\text{-}B\):</strong> where \(O\) is the origin, \(A =
-                                    W_t\) lies on the sphere, and \(B = W_t + U_t\) is the pre-retraction sum (generally
-                                    off the sphere). Sides: \(\|OA\|=R\), \(\|AB\|=\eta R\), \(\|OB\|=c\). Interior
-                                    angle at \(A\): \(\pi-\theta\).</li>
-                                <li><strong>Triangle \(O\text{-}A\text{-}C\):</strong> where \(C = W_{t+1} =
-                                    R\,\mathrm{Normalize}(W_t+U_t)\) is the retracted weight, also on the sphere. This
-                                    is an isosceles triangle with \(\|OA\|=\|OC\|=R\), chord \(\|AC\|=x=\|\Delta W\|\),
-                                    and apex angle \(\phi\).</li>
-                            </ol>
-                            <p>The 2D diagram below labels all lengths and angles used in the derivation that follows.
-                            </p>
-
-                            <!-- 2D Geometry Diagram -->
-                            <figure class="blog-image">
-                                <svg viewBox="0 0 560 440" xmlns="http://www.w3.org/2000/svg"
-                                    style="width:100%;max-width:560px;display:block;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-                                    <defs>
-                                        <marker id="ah-blue" markerWidth="8" markerHeight="6" refX="7" refY="3"
-                                            orient="auto">
-                                            <path d="M0,0.5 L7,3 L0,5.5" fill="#2563eb" />
-                                        </marker>
-                                        <marker id="ah-orange" markerWidth="8" markerHeight="6" refX="7" refY="3"
-                                            orient="auto">
-                                            <path d="M0,0.5 L7,3 L0,5.5" fill="#ea580c" />
-                                        </marker>
-                                        <marker id="ah-green" markerWidth="8" markerHeight="6" refX="7" refY="3"
-                                            orient="auto">
-                                            <path d="M0,0.5 L7,3 L0,5.5" fill="#16a34a" />
-                                        </marker>
-                                    </defs>
-                                    <!-- Sphere arc (partial circle centered at O) -->
-                                    <path d="M 343,274 A 280,280 0 0,0 152,100" fill="none" stroke="#d6d3d1"
-                                        stroke-width="1.5" stroke-dasharray="8,5" />
-                                    <!-- O -> A : W_t (blue) -->
-                                    <line x1="80" y1="370" x2="236" y2="139" stroke="#2563eb" stroke-width="2.2"
-                                        marker-end="url(#ah-blue)" />
-                                    <!-- A -> B : U_t (orange) -->
-                                    <line x1="241" y1="141" x2="319" y2="155" stroke="#ea580c" stroke-width="2.2"
-                                        marker-end="url(#ah-orange)" />
-                                    <!-- O -> B : c (gray dashed) -->
-                                    <line x1="80" y1="370" x2="323" y2="155" stroke="#9ca3af" stroke-width="1.5"
-                                        stroke-dasharray="7,4" />
-                                    <!-- O -> C : W_{t+1} (green) -->
-                                    <line x1="80" y1="370" x2="286" y2="183" stroke="#16a34a" stroke-width="2.2"
-                                        marker-end="url(#ah-green)" />
-                                    <!-- A -> C : ΔW (purple dashed) -->
-                                    <line x1="241" y1="141" x2="290" y2="185" stroke="#9333ea" stroke-width="2"
-                                        stroke-dasharray="6,3" />
-                                    <!-- B -> C : retraction (gray dotted) -->
-                                    <line x1="323" y1="155" x2="290" y2="185" stroke="#78716c" stroke-width="1.2"
-                                        stroke-dasharray="3,3" />
-                                    <!-- Angle arc: φ at O (between OA and OC) -->
-                                    <path d="M 112,326 A 55,55 0 0,1 121,335" fill="none" stroke="#2563eb"
-                                        stroke-width="1.8" />
-                                    <!-- Angle arc: π−θ at A (interior angle) -->
-                                    <path d="M 218,174 A 42,42 0 0,0 282,148" fill="none" stroke="#ea580c"
-                                        stroke-width="1.8" />
-                                    <!-- Points -->
-                                    <circle cx="80" cy="370" r="4.5" fill="#1c1917" />
-                                    <circle cx="241" cy="141" r="4" fill="#2563eb" />
-                                    <circle cx="323" cy="155" r="4" fill="#ea580c" />
-                                    <circle cx="290" cy="185" r="4" fill="#16a34a" />
-                                    <!-- Point labels -->
-                                    <text x="62" y="393" font-size="14" font-weight="600" fill="#1c1917">O</text>
-                                    <text x="213" y="127" font-size="13" font-weight="600" fill="#2563eb">A =
-                                        W&#x209C;</text>
-                                    <text x="332" y="155" font-size="13" font-weight="600" fill="#ea580c">B =
-                                        W&#x209C;+U&#x209C;</text>
-                                    <text x="296" y="200" font-size="13" font-weight="600" fill="#16a34a">C =
-                                        W&#x209C;&#x208A;&#x2081;</text>
-                                    <!-- Side labels -->
-                                    <text x="128" y="248" font-size="13" font-weight="500" fill="#2563eb"
-                                        font-style="italic" transform="rotate(-55,128,248)">R =
-                                        &#x2016;W&#x209C;&#x2016;</text>
-                                    <text x="270" y="133" font-size="12" font-weight="500" fill="#ea580c"
-                                        font-style="italic">&#x03B7;R = &#x2016;U&#x209C;&#x2016;</text>
-                                    <text x="210" y="275" font-size="12" font-weight="500" fill="#9ca3af"
-                                        font-style="italic" transform="rotate(-47,210,275)">c =
-                                        &#x2016;W&#x209C;+U&#x209C;&#x2016;</text>
-                                    <text x="155" y="290" font-size="13" font-weight="500" fill="#16a34a"
-                                        font-style="italic" transform="rotate(-42,155,290)">R =
-                                        &#x2016;W&#x209C;&#x208A;&#x2081;&#x2016;</text>
-                                    <text x="274" y="168" font-size="12" font-weight="500" fill="#9333ea"
-                                        font-style="italic">x = &#x2016;&#x0394;W&#x2016;</text>
-                                    <!-- Angle labels -->
-                                    <text x="117" y="320" font-size="14" font-weight="600" fill="#2563eb"
-                                        font-style="italic">&#x03C6;</text>
-                                    <text x="243" y="182" font-size="12" font-weight="600"
-                                        fill="#ea580c">&#x03C0;&#x2212;&#x03B8;</text>
-                                    <!-- Retraction annotation -->
-                                    <text x="318" y="183" font-size="10" fill="#78716c"
-                                        font-style="italic">retract</text>
-                                </svg>
-                                <figcaption>2D cross-section of the hyperball retraction geometry. The origin \(O\),
-                                    weight \(W_t\) (point \(A\)), pre-retraction sum \(W_t+U_t\) (point \(B\)), and
-                                    retracted weight \(W_{t+1}\) (point \(C\)) are shown. All lengths and angles used in
-                                    the derivation below are labeled.</figcaption>
-                            </figure>
-
-                            <p>We now derive the exact step size. Using the cosine rule on triangle
-                                \(O\text{-}A\text{-}B\) (where \(O\) is the origin, \(A = W_t\), and \(B = W_t + U_t\)),
-                                noting that the interior angle at \(A\) is \(\pi - \theta\):</p>
-
-                            \[
-                            \begin{aligned}
-                            \text{Cosine rule on } \triangle OAB\!: \quad \|W_t+U_t\|^2
-                            &= R^2 + \eta^2 R^2 - 2\eta R^2\cos(\pi-\theta) \\
-                            &= R^2 + \eta^2 R^2 + 2\eta R^2\cos(\theta),\\
-                            \text{Pre-retraction length: } c &:= \|W_t+U_t\| = R \sqrt{1 + \eta^2+ 2\eta \cos\theta}.\\
-                            \end{aligned}
-                            \]
-
-                            <p>Since \(W_{t+1}\) lies on the ray from \(O\) through \(B\), the angular change \(\phi :=
-                                \angle(\vec W_t, \vec W_{t+1})\) equals \(\angle AOB\). Applying the sine rule to
-                                \(\triangle OAB\):</p>
-
-                            \[
-                            \begin{aligned}
-                            \text{Sine rule: }\frac{\sin\phi}{\|U_t\|}&=\frac{\sin(\pi-\theta)}{\|W_t+U_t\|}\implies
-                            \sin\phi=\frac{\eta R}{c}\sin\theta=\frac{\eta R}{c}\sqrt{1-\gamma^2},\\
-                            \implies \cos\phi&=\sqrt{1-\sin^2\phi}=\sqrt{1-\frac{\eta^2R^2(1-\gamma^2)}{c^2}} =
-                            \sqrt{1-\frac{\eta^2(1-\gamma^2)}{1+\eta^2+2\eta\gamma}}.\\
-                            \end{aligned}
-                            \]
-
-                            <p>Finally, \(W_t\) and \(W_{t+1}\) both lie on the sphere of radius \(R\), so we apply the
-                                cosine rule to the isosceles triangle \(\triangle OAC\):</p>
-
-                            \[
-                            \begin{aligned}
-                            \text{Cosine rule on } \triangle OAC\!: \quad \|\Delta W\|^2&=R^2+R^2-2R^2\cos\phi,\\
-                            \text{Exact step size: } \quad x&:=\|\Delta
-                            W\|=R\sqrt{2}\sqrt{1-\cos\phi}=R\sqrt{2}\sqrt{1-\sqrt{1-\frac{\eta^2(1-\gamma^2)}{1+\eta^2+2\eta\gamma}}}.
-                            \end{aligned}
-                            \]
-
-                            <h4 id="appendix-b" class="blog-subheading">Appendix B: Bounds on the relative step size
-                            </h4>
-
-                            <p>Now, suppose we know that \(\gamma,\eta\in(0,1)\). We can infer from this (using the
-                                interactive surface plot below) that:</p>
-
-                            \[
-                            \begin{aligned}
-                            &\min_{\gamma,\eta\in[0,1]} \frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma} = 0 \implies
-                            \inf_{\gamma,\eta\in(0,1)} \frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma} = 0 \\
-                            &\arg\max_{\gamma,\eta\in[0,1]} \frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma} =
-                            (0,1)\implies
-                            \sup_{\gamma,\eta\in(0,1)}\frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}=1/2\\
-                            &\implies \frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}\in (0,1/2)\\
-                            &\implies 1-\frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}\in (1/2,1)\\
-                            &\implies \sqrt{1-\frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}}\in (1/\sqrt2,1)\\
-                            &\implies 1-\sqrt{1-\frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}}\in (0,1-1/\sqrt2)\\
-                            &\implies \sqrt{1-\sqrt{1-\frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}}}\in
-                            (0,\sqrt{1-1/\sqrt2})\\
-                            &\implies x\in (0, R\sqrt2\sqrt{1-1/\sqrt2})=(0,R\sqrt{2-\sqrt2})\approx(0, 0.765R)\\
-                            &\implies \frac{x}{\|W_t\|}\in (0,\sqrt{2-\sqrt 2})\approx (0, 0.765)
-                            \end{aligned}
-                            \]
-
-                            <p>This is the tightest bound on the relative step size obtainable without knowledge of
-                                \(\gamma\). Computing \(\gamma\) analytically remains an open question, as the repeated
-                                retractions onto the hypersphere make it difficult to translate previous arguments
-                                involving momentum and weight decay<sup><a href="#ref-hyperball">10</a></sup>.
-                                Unfortunately, this bound is not particularly informative: the lower bound is vacuous,
-                                and the upper bound is substantially looser than the ideal \(O(\eta)\). Now, if, for
-                                instance, we input our tried and tested range ~\(\eta\in (10^{-4},10^{-1})\) and fix
-                                \(\gamma=0\), we get a slightly tighter bound of \((0.0001, 0.0996)\), where a higher
-                                learning rate corresponds to a higher step size. For a higher dot product like
-                                \(\gamma=0.5\), we get a bound of \((0.0000866, 0.0823)\), which is lower.</p>
-
-                            <h4 id="appendix-c" class="blog-subheading">Appendix C: Enforcing scale invariance</h4>
-
-                            <p>A key ingredient is RMSNorm, which rescales a vector by its root-mean-square (RMS)
-                                magnitude. Given an activation vector \(x\in\mathbb{R}^d\), RMSNorm computes
+                            <h4 id="appendix-a" class="blog-subheading">Appendix A: Concentration of measure in the
+                                hyperball</h4>
+                            <p>Let \(B_n(R)=\{x\in\mathbb{R}^n:\|x\|\le R\}\) be the Euclidean \(n\)-ball of radius
+                                \(R\), and let \(0 \lt \varepsilon \lt R/2\). Define the outer shell
                                 \[
-                                \mathrm{RMSNorm}(x) = g\odot \frac{x}{\sqrt{\frac{1}{d}\sum_{i=1}^d x_i^2 +
-                                \varepsilon}},
+                                S_{n}(R,\varepsilon)=\{x\in\mathbb{R}^n: R-\varepsilon \le \|x\|\le R\}.
                                 \]
-                                where \(g\in\mathbb{R}^d\) is a learned per coordinate gain, \(\varepsilon>0\) is for
-                                numerical stability, and \(\odot\) is the Hadamard product (element wise
-                                multiplication).</p>
-
-                            <h5 class="blog-subheading">Rescaling property</h5>
-                            <p>Ignoring \(\varepsilon\) (or when \(\|x\|\) is not tiny), RMSNorm is <em>scale
-                                    invariant</em>: for any scalar \(\alpha>0\),
+                                Then the fraction of volume in the shell satisfies
                                 \[
-                                \mathrm{RMSNorm}(\alpha x)= \mathrm{RMSNorm}(x).
+                                \frac{\mathrm{Vol}(S_{n}(R,2\varepsilon))}{\mathrm{Vol}(B_n(R))}
+                                = 1 - \left(1-\frac{2\varepsilon}{R}\right)^{n}
+                                \xrightarrow[n\to\infty]{} 1.
                                 \]
-                                Intuitively, scaling the input by \(\alpha\) scales the denominator by the same
-                                \(\alpha\), so the normalized direction stays the same.</p>
-
-                            <h5 class="blog-subheading">Why this makes weight matrices scale invariant</h5>
-                            <p>Consider a linear map \(y = Wx\). If the model applies RMSNorm before the next
-                                computation (pre-norm, post-norm, or both), then multiplying the weight matrix by a
-                                scalar often has little effect on the downstream activations:
+                                Equivalently, the &ldquo;interior&rdquo; ball \(B_n(R-2\varepsilon)\) contains an
+                                asymptotically negligible fraction of the total volume.</p>
+                            <p> <strong>Proof.</strong> The volume of an \(n\)-ball scales like \(R^n\): there is a
+                                constant
+                                \(c_n=\mathrm{Vol}(B_n(1))\) such that
                                 \[
-                                \mathrm{RMSNorm}((\alpha W)x) = \mathrm{RMSNorm}(\alpha (Wx)) = \mathrm{RMSNorm}(Wx).
+                                \mathrm{Vol}(B_n(R)) = c_n R^n.
                                 \]
-                                So for these &ldquo;RMSNorm sandwiched&rdquo; layers, scale doesn't matter as the
-                                RMSNorm layer itself learns the scaling factor necessary for the output.</p>
+                                Therefore, the shell volume is
+                                \[
+                                \mathrm{Vol}(S_n(R,2\varepsilon))
+                                = \mathrm{Vol}(B_n(R)) - \mathrm{Vol}(B_n(R-2\varepsilon))
+                                = c_n(R^n-(R-2\varepsilon)^n).
+                                \]
+                                Dividing by \(\mathrm{Vol}(B_n(R))=c_nR^n\) gives
+                                \[
+                                \frac{\mathrm{Vol}(S_n(R,2\varepsilon))}{\mathrm{Vol}(B_n(R))}
+                                = 1-\left(\frac{R-2\varepsilon}{R}\right)^n
+                                = 1-\left(1-\frac{2\varepsilon}{R}\right)^n.
+                                \]
+                                Since \(0<1-2\varepsilon /R<1\), the term \((1-2\varepsilon/R)^n\to 0\) as
+                                    \(n\to\infty\), so the ratio tends to \(1\).</p>
 
-                            <p>In Axis, our original model architecture, we used MuP initialization and layer
-                                pre-normalization, but that wasn't enough to enforce scale invariance in our model. To
-                                further enforce it, I added a layer post-norm and then QK-norm (like Gemma 3's
-                                architecture<sup><a href="#ref-gemma">14</a></sup>), which seemed to be enough to
-                                enforce scale invariance (although, it seems like only adding the post-norm was
-                                sufficient for our model; the QK-norm was added for completeness).</p>
+                                    <p>Suppose the equilibrium norm is \(N=R-\varepsilon\); we can see
+                                        that even if the norm &lsquo;hovers&rsquo; within just \(0<\varepsilon\ll N\) of
+                                            the equilibrium (in \([N-\varepsilon, N+\varepsilon]=[R-2\varepsilon, R]\)),
+                                            we still have to consider a relatively large space of values within the
+                                            hyperball of radius \(R\). <a href="#appendix-a">Appendix A</a> demonstrates
+                                            that no matter how small we
+                                            make \(\varepsilon>
+                                            0\), we will still have to consider a relatively large space of values near
+                                            the
+                                            equilibrium hypersphere of radius \(N\) (especially
+                                            as the matrix dimension is roughly \(O(d^2)\) where \(d\) is the hidden size
+                                            of the
+                                            model).</p>
 
-                            <hr style="margin: 3rem 0 2rem; border: none; border-top: 1px solid #ddd;">
-                            <h3>References</h3>
-                            <ol class="blog-references">
-                                <li id="ref-adamw">Loshchilov &amp; Hutter. <a href="https://arxiv.org/abs/1711.05101"
-                                        target="_blank">Fixing Weight Decay Regularization in Adam</a>. arXiv 2017.</li>
-                                <li id="ref-muon">Jordan et al. <a href="https://kellerjordan.github.io/posts/muon/"
-                                        target="_blank">Muon: An optimizer for hidden layers in neural networks</a>.
-                                    2024.</li>
-                                <li id="ref-alphagenome">Avsec et al. <a
-                                        href="https://www.biorxiv.org/content/early/2025/06/27/2025.06.25.661532"
-                                        target="_blank">AlphaGenome: advancing regulatory variant effect prediction</a>.
-                                    bioRxiv 2025.</li>
-                                <li id="ref-enformer">Avsec et al. <a href="https://doi.org/10.1038/s41592-021-01252-x"
-                                        target="_blank">Effective gene expression prediction from sequence by
-                                        integrating long-range interactions</a>. Nature Methods 2021.</li>
-                                <li id="ref-evo">Brixi et al. <a
-                                        href="https://www.biorxiv.org/content/early/2025/02/21/2025.02.18.638918"
-                                        target="_blank">Genome modeling and design across all domains of life with Evo
-                                        2</a>. bioRxiv 2025.</li>
-                                <li id="ref-lazy">Chizat et al. <a href="https://arxiv.org/abs/1812.07956"
-                                        target="_blank">On Lazy Training in Differentiable Programming</a>. NeurIPS
-                                    2019.</li>
-                                <li id="ref-ntk">Jacot et al. <a href="https://arxiv.org/abs/1806.07572"
-                                        target="_blank">Neural Tangent Kernel: Convergence and Generalization in Neural
-                                        Networks</a>. NeurIPS 2018.</li>
-                                <li id="ref-erasure">Jeremy Bernstein. <a
-                                        href="https://docs.modula.systems/examples/weight-erasure" target="_blank">The
-                                        Modula Docs - Weight Erasure</a>. 2025.</li>
-                                <li id="ref-wdeq">Kosson et al. <a href="https://arxiv.org/abs/2305.17212"
-                                        target="_blank">Rotational Equilibrium: How Weight Decay Balances Learning
-                                        Across Neural Networks</a>. ICML 2024.</li>
-                                <li id="ref-hyperball">Wen et al. <a
-                                        href="https://whenwen.github.io/wd_blog/public/hyperball-part-1.html"
-                                        target="_blank">Fantastic Pretraining Optimizers and Where to Find Them II: From
-                                        Weight Decay to Hyperball Optimization</a>. 2025.</li>
-                                <li id="ref-cesista">Cesista. <a
-                                        href="https://leloykun.github.io/ponder/steepest-descent-non-riemannian/"
-                                        target="_blank">Muon and a Selective Survey on Steepest Descent in Riemannian
-                                        and Non-Riemannian Manifolds</a>. 2025.</li>
-                                <li id="ref-spectral">Bartlett et al. <a
-                                        href="https://proceedings.neurips.cc/paper/2017/hash/0e55666a4ad822e0e34299df3591d979-Abstract.html"
-                                        target="_blank">Spectrally-normalized margin bounds for neural networks</a>.
-                                    NeurIPS 2017.</li>
-                                <li id="ref-rmsnorm">Zhang &amp; Sennrich. <a href="https://arxiv.org/abs/1910.07467"
-                                        target="_blank">Root Mean Square Layer Normalization</a>. NeurIPS 2019.</li>
-                                <li id="ref-gemma">Gemma Team. <a href="https://arxiv.org/abs/2503.19786"
-                                        target="_blank">Gemma 3 Technical Report</a>. arXiv 2025.</li>
-                                <li id="ref-nerve">Jha &amp; Reagen. <a
-                                        href="https://openreview.net/forum?id=W5BPGXR9jf"
-                                        target="_blank">NerVE: Nonlinear Eigenspectrum Dynamics in LLM Feed-Forward
-                                        Networks</a>. ICLR 2026.</li>
-                            </ol>
+                                    <h4 id="appendix-b" class="blog-subheading">Appendix B: Full derivation of the
+                                        relative step
+                                        size</h4>
+
+                                    <p>The Hyperball retraction maps \(W_t + U_t\) back onto the hypersphere of radius
+                                        \(R\).
+                                        The geometry is captured by two triangles in the vectorized matrix space:</p>
+                                    <ol>
+                                        <li><strong>Triangle \(O\text{-}A\text{-}B\):</strong> where \(O\) is the
+                                            origin, \(A =
+                                            W_t\) lies on the sphere, and \(B = W_t + U_t\) is the pre-retraction sum
+                                            (generally
+                                            off the sphere). Sides: \(\|OA\|=R\), \(\|AB\|=\eta R\), \(\|OB\|=c\).
+                                            Interior
+                                            angle at \(A\): \(\pi-\theta\).</li>
+                                        <li><strong>Triangle \(O\text{-}A\text{-}C\):</strong> where \(C = W_{t+1} =
+                                            R\,\mathrm{Normalize}(W_t+U_t)\) is the retracted weight, also on the
+                                            sphere. This
+                                            is an isosceles triangle with \(\|OA\|=\|OC\|=R\), chord \(\|AC\|=x=\|\Delta
+                                            W\|\),
+                                            and apex angle \(\phi\).</li>
+                                    </ol>
+                                    <p>The 2D diagram below labels all lengths and angles used in the derivation that
+                                        follows.
+                                    </p>
+
+                                    <!-- 2D Geometry Diagram -->
+                                    <figure class="blog-image">
+                                        <svg viewBox="0 0 560 440" xmlns="http://www.w3.org/2000/svg"
+                                            style="width:100%;max-width:560px;display:block;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+                                            <defs>
+                                                <marker id="ah-blue" markerWidth="8" markerHeight="6" refX="7" refY="3"
+                                                    orient="auto">
+                                                    <path d="M0,0.5 L7,3 L0,5.5" fill="#2563eb" />
+                                                </marker>
+                                                <marker id="ah-orange" markerWidth="8" markerHeight="6" refX="7"
+                                                    refY="3" orient="auto">
+                                                    <path d="M0,0.5 L7,3 L0,5.5" fill="#ea580c" />
+                                                </marker>
+                                                <marker id="ah-green" markerWidth="8" markerHeight="6" refX="7" refY="3"
+                                                    orient="auto">
+                                                    <path d="M0,0.5 L7,3 L0,5.5" fill="#16a34a" />
+                                                </marker>
+                                            </defs>
+                                            <!-- Sphere arc (partial circle centered at O) -->
+                                            <path d="M 343,274 A 280,280 0 0,0 152,100" fill="none" stroke="#d6d3d1"
+                                                stroke-width="1.5" stroke-dasharray="8,5" />
+                                            <!-- O -> A : W_t (blue) -->
+                                            <line x1="80" y1="370" x2="236" y2="139" stroke="#2563eb" stroke-width="2.2"
+                                                marker-end="url(#ah-blue)" />
+                                            <!-- A -> B : U_t (orange) -->
+                                            <line x1="241" y1="141" x2="319" y2="155" stroke="#ea580c"
+                                                stroke-width="2.2" marker-end="url(#ah-orange)" />
+                                            <!-- O -> B : c (gray dashed) -->
+                                            <line x1="80" y1="370" x2="323" y2="155" stroke="#9ca3af" stroke-width="1.5"
+                                                stroke-dasharray="7,4" />
+                                            <!-- O -> C : W_{t+1} (green) -->
+                                            <line x1="80" y1="370" x2="286" y2="183" stroke="#16a34a" stroke-width="2.2"
+                                                marker-end="url(#ah-green)" />
+                                            <!-- A -> C : ΔW (purple dashed) -->
+                                            <line x1="241" y1="141" x2="290" y2="185" stroke="#9333ea" stroke-width="2"
+                                                stroke-dasharray="6,3" />
+                                            <!-- B -> C : retraction (gray dotted) -->
+                                            <line x1="323" y1="155" x2="290" y2="185" stroke="#78716c"
+                                                stroke-width="1.2" stroke-dasharray="3,3" />
+                                            <!-- Angle arc: φ at O (between OA and OC) -->
+                                            <path d="M 112,326 A 55,55 0 0,1 121,335" fill="none" stroke="#2563eb"
+                                                stroke-width="1.8" />
+                                            <!-- Angle arc: π−θ at A (interior angle) -->
+                                            <path d="M 218,174 A 42,42 0 0,0 282,148" fill="none" stroke="#ea580c"
+                                                stroke-width="1.8" />
+                                            <!-- Points -->
+                                            <circle cx="80" cy="370" r="4.5" fill="#1c1917" />
+                                            <circle cx="241" cy="141" r="4" fill="#2563eb" />
+                                            <circle cx="323" cy="155" r="4" fill="#ea580c" />
+                                            <circle cx="290" cy="185" r="4" fill="#16a34a" />
+                                            <!-- Point labels -->
+                                            <text x="62" y="393" font-size="14" font-weight="600"
+                                                fill="#1c1917">O</text>
+                                            <text x="213" y="127" font-size="13" font-weight="600" fill="#2563eb">A =
+                                                W&#x209C;</text>
+                                            <text x="332" y="155" font-size="13" font-weight="600" fill="#ea580c">B =
+                                                W&#x209C;+U&#x209C;</text>
+                                            <text x="296" y="200" font-size="13" font-weight="600" fill="#16a34a">C =
+                                                W&#x209C;&#x208A;&#x2081;</text>
+                                            <!-- Side labels -->
+                                            <text x="128" y="248" font-size="13" font-weight="500" fill="#2563eb"
+                                                font-style="italic" transform="rotate(-55,128,248)">R =
+                                                &#x2016;W&#x209C;&#x2016;</text>
+                                            <text x="270" y="133" font-size="12" font-weight="500" fill="#ea580c"
+                                                font-style="italic">&#x03B7;R = &#x2016;U&#x209C;&#x2016;</text>
+                                            <text x="210" y="275" font-size="12" font-weight="500" fill="#9ca3af"
+                                                font-style="italic" transform="rotate(-47,210,275)">c =
+                                                &#x2016;W&#x209C;+U&#x209C;&#x2016;</text>
+                                            <text x="155" y="290" font-size="13" font-weight="500" fill="#16a34a"
+                                                font-style="italic" transform="rotate(-42,155,290)">R =
+                                                &#x2016;W&#x209C;&#x208A;&#x2081;&#x2016;</text>
+                                            <text x="274" y="168" font-size="12" font-weight="500" fill="#9333ea"
+                                                font-style="italic">x = &#x2016;&#x0394;W&#x2016;</text>
+                                            <!-- Angle labels -->
+                                            <text x="117" y="320" font-size="14" font-weight="600" fill="#2563eb"
+                                                font-style="italic">&#x03C6;</text>
+                                            <text x="243" y="182" font-size="12" font-weight="600"
+                                                fill="#ea580c">&#x03C0;&#x2212;&#x03B8;</text>
+                                            <!-- Retraction annotation -->
+                                            <text x="318" y="183" font-size="10" fill="#78716c"
+                                                font-style="italic">retract</text>
+                                        </svg>
+                                        <figcaption>2D cross-section of the hyperball retraction geometry. The origin
+                                            \(O\),
+                                            weight \(W_t\) (point \(A\)), pre-retraction sum \(W_t+U_t\) (point \(B\)),
+                                            and
+                                            retracted weight \(W_{t+1}\) (point \(C\)) are shown. All lengths and angles
+                                            used in
+                                            the derivation below are labeled.</figcaption>
+                                    </figure>
+
+                                    <p>We now derive the exact step size. Using the cosine rule on triangle
+                                        \(O\text{-}A\text{-}B\) (where \(O\) is the origin, \(A = W_t\), and \(B = W_t +
+                                        U_t\)),
+                                        noting that the interior angle at \(A\) is \(\pi - \theta\):</p>
+
+                                    \[
+                                    \begin{aligned}
+                                    \text{Cosine rule on } \triangle OAB\!: \quad \|W_t+U_t\|^2
+                                    &= R^2 + \eta^2 R^2 - 2\eta R^2\cos(\pi-\theta) \\
+                                    &= R^2 + \eta^2 R^2 + 2\eta R^2\cos(\theta),\\
+                                    \text{Pre-retraction length: } c &:= \|W_t+U_t\| = R \sqrt{1 + \eta^2+ 2\eta
+                                    \cos\theta}.\\
+                                    \end{aligned}
+                                    \]
+
+                                    <p>Since \(W_{t+1}\) lies on the ray from \(O\) through \(B\), the angular change
+                                        \(\phi :=
+                                        \angle(\vec W_t, \vec W_{t+1})\) equals \(\angle AOB\). Applying the sine rule
+                                        to
+                                        \(\triangle OAB\):</p>
+
+                                    \[
+                                    \begin{aligned}
+                                    \text{Sine rule:
+                                    }\frac{\sin\phi}{\|U_t\|}&=\frac{\sin(\pi-\theta)}{\|W_t+U_t\|}\implies
+                                    \sin\phi=\frac{\eta R}{c}\sin\theta=\frac{\eta R}{c}\sqrt{1-\gamma^2},\\
+                                    \implies \cos\phi&=\sqrt{1-\sin^2\phi}=\sqrt{1-\frac{\eta^2R^2(1-\gamma^2)}{c^2}} =
+                                    \sqrt{1-\frac{\eta^2(1-\gamma^2)}{1+\eta^2+2\eta\gamma}}.\\
+                                    \end{aligned}
+                                    \]
+
+                                    <p>Finally, \(W_t\) and \(W_{t+1}\) both lie on the sphere of radius \(R\), so we
+                                        apply the
+                                        cosine rule to the isosceles triangle \(\triangle OAC\):</p>
+
+                                    \[
+                                    \begin{aligned}
+                                    \text{Cosine rule on } \triangle OAC\!: \quad \|\Delta
+                                    W\|^2&=R^2+R^2-2R^2\cos\phi,\\
+                                    \text{Exact step size: } \quad x&:=\|\Delta
+                                    W\|=R\sqrt{2}\sqrt{1-\cos\phi}=R\sqrt{2}\sqrt{1-\sqrt{1-\frac{\eta^2(1-\gamma^2)}{1+\eta^2+2\eta\gamma}}}.
+                                    \end{aligned}
+                                    \]
+
+                                    <h4 id="appendix-c" class="blog-subheading">Appendix C: Bounds on the relative step
+                                        size
+                                    </h4>
+
+                                    <p>Now, suppose we know that \(\gamma,\eta\in(0,1)\). We can infer from this (using
+                                        the
+                                        interactive surface plot below) that:</p>
+
+                                    \[
+                                    \begin{aligned}
+                                    &\min_{\gamma,\eta\in[0,1]} \frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma} = 0
+                                    \implies
+                                    \inf_{\gamma,\eta\in(0,1)} \frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma} = 0 \\
+                                    &\arg\max_{\gamma,\eta\in[0,1]} \frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma} =
+                                    (0,1)\implies
+                                    \sup_{\gamma,\eta\in(0,1)}\frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}=1/2\\
+                                    &\implies \frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}\in (0,1/2)\\
+                                    &\implies 1-\frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}\in (1/2,1)\\
+                                    &\implies \sqrt{1-\frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}}\in
+                                    (1/\sqrt2,1)\\
+                                    &\implies 1-\sqrt{1-\frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}}\in
+                                    (0,1-1/\sqrt2)\\
+                                    &\implies \sqrt{1-\sqrt{1-\frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}}}\in
+                                    (0,\sqrt{1-1/\sqrt2})\\
+                                    &\implies x\in (0, R\sqrt2\sqrt{1-1/\sqrt2})=(0,R\sqrt{2-\sqrt2})\approx(0,
+                                    0.765R)\\
+                                    &\implies \frac{x}{\|W_t\|}\in (0,\sqrt{2-\sqrt 2})\approx (0, 0.765)
+                                    \end{aligned}
+                                    \]
+
+                                    <p>This is the tightest bound on the relative step size obtainable without knowledge
+                                        of
+                                        \(\gamma\). Computing \(\gamma\) analytically remains an open question, as the
+                                        repeated
+                                        retractions onto the hypersphere make it difficult to translate previous
+                                        arguments
+                                        involving momentum and weight decay<sup><a href="#ref-hyperball">10</a></sup>.
+                                        Unfortunately, this bound is not particularly informative: the lower bound is
+                                        vacuous,
+                                        and the upper bound is substantially looser than the ideal \(O(\eta)\). Now, if,
+                                        for
+                                        instance, we input our tried and tested range ~\(\eta\in (10^{-4},10^{-1})\) and
+                                        fix
+                                        \(\gamma=0\), we get a slightly tighter bound of \((0.0001, 0.0996)\), where a
+                                        higher
+                                        learning rate corresponds to a higher step size. For a higher dot product like
+                                        \(\gamma=0.5\), we get a bound of \((0.0000866, 0.0823)\), which is lower.</p>
+
+                                    <h4 id="appendix-d" class="blog-subheading">Appendix D: Enforcing scale invariance
+                                    </h4>
+
+                                    <p>A key ingredient is RMSNorm, which rescales a vector by its root-mean-square
+                                        (RMS)
+                                        magnitude. Given an activation vector \(x\in\mathbb{R}^d\), RMSNorm computes
+                                        \[
+                                        \mathrm{RMSNorm}(x) = g\odot \frac{x}{\sqrt{\frac{1}{d}\sum_{i=1}^d x_i^2 +
+                                        \varepsilon}},
+                                        \]
+                                        where \(g\in\mathbb{R}^d\) is a learned per coordinate gain, \(\varepsilon>0\)
+                                        is for
+                                        numerical stability, and \(\odot\) is the Hadamard product (element wise
+                                        multiplication).</p>
+
+                                    <p><strong>Rescaling property</strong><br>
+                                        Ignoring \(\varepsilon\) (or when \(\|x\|\) is not tiny), RMSNorm is <em>scale
+                                            invariant</em>: for any scalar \(\alpha>0\),
+                                        \[
+                                        \mathrm{RMSNorm}(\alpha x)= \mathrm{RMSNorm}(x).
+                                        \]
+                                        Intuitively, scaling the input by \(\alpha\) scales the denominator by the same
+                                        \(\alpha\), so the normalized direction stays the same.</p>
+
+                                    <p><strong>Why this makes weight matrices scale invariant</strong><br>
+                                        Consider a linear map \(y = Wx\). If the model applies RMSNorm before the next
+                                        computation (pre-norm, post-norm, or both), then multiplying the weight matrix
+                                        by a
+                                        scalar often has little effect on the downstream activations:
+                                        \[
+                                        \mathrm{RMSNorm}((\alpha W)x) = \mathrm{RMSNorm}(\alpha (Wx)) =
+                                        \mathrm{RMSNorm}(Wx).
+                                        \]
+                                        So for these &ldquo;RMSNorm sandwiched&rdquo; layers, scale doesn't matter as
+                                        the
+                                        RMSNorm layer itself learns the scaling factor necessary for the output.</p>
+
+                                    <p>In Axis, our original model architecture, we used MuP initialization and layer
+                                        pre-normalization, but that wasn't enough to enforce scale invariance in our
+                                        model. To
+                                        further enforce it, I added a layer post-norm and then QK-norm (like Gemma 3's
+                                        architecture<sup><a href="#ref-gemma">14</a></sup>), which seemed to be enough
+                                        to
+                                        enforce scale invariance (although, it seems like only adding the post-norm was
+                                        sufficient for our model; the QK-norm was added for completeness).</p>
+
+                                    <hr style="margin: 3rem 0 2rem; border: none; border-top: 1px solid #ddd;">
+                                    <h3>References</h3>
+                                    <ol class="blog-references">
+                                        <li id="ref-adamw">Loshchilov &amp; Hutter. <a
+                                                href="https://arxiv.org/abs/1711.05101" target="_blank">Fixing Weight
+                                                Decay Regularization in Adam</a>. arXiv 2017.</li>
+                                        <li id="ref-muon">Jordan et al. <a
+                                                href="https://kellerjordan.github.io/posts/muon/" target="_blank">Muon:
+                                                An optimizer for hidden layers in neural networks</a>.
+                                            2024.</li>
+                                        <li id="ref-alphagenome">Avsec et al. <a
+                                                href="https://www.biorxiv.org/content/early/2025/06/27/2025.06.25.661532"
+                                                target="_blank">AlphaGenome: advancing regulatory variant effect
+                                                prediction</a>.
+                                            bioRxiv 2025.</li>
+                                        <li id="ref-enformer">Avsec et al. <a
+                                                href="https://doi.org/10.1038/s41592-021-01252-x"
+                                                target="_blank">Effective gene expression prediction from sequence by
+                                                integrating long-range interactions</a>. Nature Methods 2021.</li>
+                                        <li id="ref-evo">Brixi et al. <a
+                                                href="https://www.biorxiv.org/content/early/2025/02/21/2025.02.18.638918"
+                                                target="_blank">Genome modeling and design across all domains of life
+                                                with Evo
+                                                2</a>. bioRxiv 2025.</li>
+                                        <li id="ref-lazy">Chizat et al. <a href="https://arxiv.org/abs/1812.07956"
+                                                target="_blank">On Lazy Training in Differentiable Programming</a>.
+                                            NeurIPS
+                                            2019.</li>
+                                        <li id="ref-ntk">Jacot et al. <a href="https://arxiv.org/abs/1806.07572"
+                                                target="_blank">Neural Tangent Kernel: Convergence and Generalization in
+                                                Neural
+                                                Networks</a>. NeurIPS 2018.</li>
+                                        <li id="ref-erasure">Jeremy Bernstein. <a
+                                                href="https://docs.modula.systems/examples/weight-erasure"
+                                                target="_blank">The
+                                                Modula Docs - Weight Erasure</a>. 2025.</li>
+                                        <li id="ref-wdeq">Kosson et al. <a href="https://arxiv.org/abs/2305.17212"
+                                                target="_blank">Rotational Equilibrium: How Weight Decay Balances
+                                                Learning
+                                                Across Neural Networks</a>. ICML 2024.</li>
+                                        <li id="ref-hyperball">Wen et al. <a
+                                                href="https://whenwen.github.io/wd_blog/public/hyperball-part-1.html"
+                                                target="_blank">Fantastic Pretraining Optimizers and Where to Find Them
+                                                II: From
+                                                Weight Decay to Hyperball Optimization</a>. 2025.</li>
+                                        <li id="ref-cesista">Cesista. <a
+                                                href="https://leloykun.github.io/ponder/steepest-descent-non-riemannian/"
+                                                target="_blank">Muon and a Selective Survey on Steepest Descent in
+                                                Riemannian
+                                                and Non-Riemannian Manifolds</a>. 2025.</li>
+                                        <li id="ref-spectral">Bartlett et al. <a
+                                                href="https://proceedings.neurips.cc/paper/2017/hash/0e55666a4ad822e0e34299df3591d979-Abstract.html"
+                                                target="_blank">Spectrally-normalized margin bounds for neural
+                                                networks</a>.
+                                            NeurIPS 2017.</li>
+                                        <li id="ref-rmsnorm">Zhang &amp; Sennrich. <a
+                                                href="https://arxiv.org/abs/1910.07467" target="_blank">Root Mean Square
+                                                Layer Normalization</a>. NeurIPS 2019.</li>
+                                        <li id="ref-gemma">Gemma Team. <a href="https://arxiv.org/abs/2503.19786"
+                                                target="_blank">Gemma 3 Technical Report</a>. arXiv 2025.</li>
+                                        <li id="ref-nerve">Jha &amp; Reagen. <a
+                                                href="https://openreview.net/forum?id=W5BPGXR9jf" target="_blank">NerVE:
+                                                Nonlinear Eigenspectrum Dynamics in LLM Feed-Forward
+                                                Networks</a>. ICLR 2026.</li>
+                                    </ol>
                 </article>
             </div>
         </section>
@@ -1219,15 +1331,24 @@
             function wire() {
                 document.querySelectorAll('.sidenote-ref').forEach(function (ref) {
                     ref.addEventListener('click', function (e) {
-                        if (!mq.matches) return;          /* desktop — do nothing */
                         e.preventDefault();
                         var card = ref.closest('.sidenote-group').querySelector('.sidenote-card');
                         if (!card) return;
-                        /* close any other open sidenote first */
-                        document.querySelectorAll('.sidenote-card.open').forEach(function (c) {
-                            if (c !== card) c.classList.remove('open');
-                        });
-                        card.classList.toggle('open');
+
+                        if (mq.matches) {
+                            /* mobile: toggle open/close */
+                            document.querySelectorAll('.sidenote-card.open').forEach(function (c) {
+                                if (c !== card) c.classList.remove('open');
+                            });
+                            card.classList.toggle('open');
+                        } else {
+                            /* desktop: toggle glowing effect */
+                            var wasGlowing = card.classList.contains('glowing');
+                            document.querySelectorAll('.sidenote-card.glowing').forEach(function (c) {
+                                c.classList.remove('glowing');
+                            });
+                            if (!wasGlowing) card.classList.add('glowing');
+                        }
                     });
                 });
             }
