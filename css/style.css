@@ -444,7 +444,7 @@ body.blog-page header {
     position: relative;
     padding-bottom: 0;
     padding-top: 2rem;
-    margin-bottom: -2rem;
+    margin-bottom: 0;
 }
 
 body.blog-page main {
@@ -1178,6 +1178,31 @@ main {
     transition: all 0.2s ease;
 }
 
+.blog-article sup:has(a[href^="#ref-"]) {
+    font-size: 0.75em;
+    color: #9ca3af;
+}
+
+.blog-article sup a[href^="#ref-"] {
+    color: inherit;
+    border-bottom: none;
+    transition: color 0.2s ease;
+}
+
+.blog-article sup a[href^="#ref-"]::before {
+    content: "[";
+}
+
+.blog-article sup a[href^="#ref-"]::after {
+    content: "]";
+}
+
+.blog-article sup a[href^="#ref-"]:hover {
+    color: #666;
+    background-color: transparent;
+    border-bottom: none;
+}
+
 .blog-article a:hover {
     color: #0066cc;
     border-bottom-color: #0066cc;
@@ -1293,10 +1318,19 @@ main {
     font-weight: 600;
     font-size: 0.75em;
     margin-left: 1px;
+    /* parentheses are added via ::before / ::after below */
     vertical-align: super;
     text-decoration: none;
     transition: color 0.2s ease;
     -webkit-tap-highlight-color: transparent;
+}
+
+.sidenote-ref::before {
+    content: "(";
+}
+
+.sidenote-ref::after {
+    content: ")";
 }
 
 .sidenote-ref:hover {

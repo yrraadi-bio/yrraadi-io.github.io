@@ -11,17 +11,18 @@
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fine-Tuning Life: Choosing the Best Optimizers for Biological Models — Origin Bio</title>
+    <title>Rotating Optimizers about the Axis: From NLP to DNA Models — Origin Bio</title>
     <meta name="description"
         content="Exploring Adam, Muon, and Hyperball optimizers for DNA and biology-focused AI models. Weight decay, singular values, and scale invariance." />
     <meta property="og:type" content="article" />
     <meta property="og:site_name" content="Origin Bio" />
-    <meta property="og:title" content="Fine-Tuning Life: Choosing the Best Optimizers for Biological Models" />
+    <meta property="og:title" content="Rotating Optimizers about the Axis: From NLP to DNA Models" />
     <meta property="og:description"
         content="Exploring Adam, Muon, and Hyperball optimizers for DNA and biology-focused AI models." />
     <meta property="og:url" content="https://origin.bio/blogs/optimizers-for-biology/" />
     <meta property="og:image" content="https://origin.bio/assets/thumbnail-og.jpg?v=1" />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Rotating Optimizers about the Axis: From NLP to DNA Models" />
     <link rel="canonical" href="https://origin.bio/blogs/optimizers-for-biology/">
     <link rel="stylesheet" href="/css/style.css">
     <link rel="icon" href="/assets/favicon.png" type="image/png">
@@ -62,7 +63,7 @@
         <section class="blog-hero">
             <div class="blog-content">
                 <article class="blog-article">
-                    <h2>Fine-Tuning Life: Choosing the Best Optimizers for Biological Models</h2>
+                    <h2>Rotating Optimizers about the Axis: From NLP to DNA Models</h2>
                     <p class="blog-date">February 12, 2026 &middot; Viraj Doshi</p>
 
                     <p>Optimizers dictate the parameter update rules that govern the convergence trajectory of
@@ -129,14 +130,14 @@
                             \(U_t=-\eta\, \hat m_t/(\sqrt{\hat v_t}+\varepsilon)\)), then independent weight decay
                             applies</p>
                         \[
-                        W_{t+1} = (1-\lambda)\,W_t + U_t,
+                        W_{t+1} = (1-\lambda)\,W_t + U_t.
                         \]
                         <p>So the decay rate \(\lambda\) is not multiplied by the learning rate and can be scheduled
                             separately.</p>
                     </details>
 
                     <p>While Adam updates can lead to weight stagnation<sup><a
-                                href="#ref-lazy">6</a></sup><sup>,</sup><sup><a href="#ref-ntk">7</a></sup> and uneven
+                                href="#ref-lazy">6</a><a href="#ref-ntk">7</a></sup> and uneven
                         signal propagation, Muon mitigates this by treating layers as matrices and
                         &ldquo;whitening&rdquo;, or spreading out updates across singular dimensions to ensure all
                         directions are learned with equal priority. Unlike Adam, which treats weights as flat vectors
@@ -269,7 +270,7 @@
                             matrices (defined as \(\|W\|_F =\|\vec W\|_2= \sqrt{\sum_{i}\sum_jw_{ij}^2}\)<span
                                 class="sidenote-group"><sup class="sidenote-ref">5</sup><span
                                     class="sidenote-card side-right">\(\vec W\) denotes the vectorized form of matrix
-                                    \(W\); more specifically, if \(W=[c_1, c_2 ..., c_m]\) where \(c_i\) is the \(i\)th
+                                    \(W\); more specifically, if \(W=[c_1, c_2, \dots, c_m]\) where \(c_i\) is the \(i\)th
                                     column of \(W\), then \(\vec W=\begin{bmatrix} c_1\\c_2\\\vdots\\c_m \end{bmatrix}\)
                                     has them merged into one column.</span></span><span class="sidenote-group"><sup
                                     class="sidenote-ref">6</sup><span class="sidenote-card side-left">It also happens to
@@ -282,7 +283,7 @@
                                 an effectively low rank map.</li>
                             <li><strong>Stability:</strong> bounding the largest singular value (the spectral norm)
                                 controls the layer Lipschitz constant, and helps prevent activation and gradient
-                                blowups<sup><a href="#ref-spectral">12</a>, <a href="#ref-cesista">11</a></sup>.</li>
+                                blowups<sup><a href="#ref-spectral">12</a><a href="#ref-cesista">11</a></sup>.</li>
                         </ul>
                         <p>This perspective is especially relevant for high dimensional, structured sequence
                             representations (like DNA), where controlling intrinsic dimensionality can matter a lot.</p>
@@ -293,9 +294,8 @@
                         progresses<sup><a href="#ref-hyperball">10</a></sup>. This unchecked growth inflates the
                         parameter scale relative to the step size, effectively shrinking the learning signal and
                         hindering convergence. Weight decay counteracts this by imposing an \(\ell_2\) bias that drives
-                        the norm toward an equilibrium value<sup><a href="#ref-wdeq">9</a>, <a href="#ref-adamw">1</a>,
-                            <a href="#ref-hyperball">10</a></sup>, and empirically, adding decay improves both Adam and
-                        Muon<sup><a href="#ref-hyperball">10</a>, <a href="#ref-adamw">1</a>, <a
+                        the norm toward an equilibrium value<sup><a href="#ref-wdeq">9</a><a href="#ref-adamw">1</a><a href="#ref-hyperball">10</a></sup>, and empirically, adding decay improves both Adam and
+                        Muon<sup><a href="#ref-hyperball">10</a><a href="#ref-adamw">1</a><a
                                 href="#ref-wdeq">9</a></sup>. The reason is a clean separation of concerns: the
                         optimizer determines <em>directional</em> update structure (moments for Adam, singular direction
                         shaping for Muon), while decay provides a control knob on overall parameter scale<sup><a
@@ -308,7 +308,7 @@
                             range \([N-\varepsilon, N+\varepsilon]\)), we still have to consider a relatively large
                             space of values within the hyperball. By <a href="#appendix-a">Appendix A</a>, nearly all of
                             this
-                            volume lies in a thin shell at the boundary.
+                            volume lies in a thin shell at the boundary.</p>
                             <p>
                                 Crucially, with correctly placed RMSNorms, these matrices become <em>scale
                                     invariant</em>
@@ -323,13 +323,13 @@
                                 matrix \(W\), simply fix the Frobenius norm of \(W\) to the initial radius \(R :=
                                 \|W_0\|_F\), and update \(U\) to \(\eta R\). Rather confusingly, this confines the
                                 weight matrix to a hypersphere of radius \(R\), not a ball<span
-                                    class="sidenote-group"><sup class="sidenote-ref">6</sup><span
+                                    class="sidenote-group"><sup class="sidenote-ref">7</sup><span
                                         class="sidenote-card side-right">Note that
                                         a hypersphere and hyperball are not the same thing. A &lsquo;ball&rsquo;
                                         refers to the entire solid object, but a &lsquo;sphere&rsquo; refers only to
                                         the shell/boundary of said ball.</span></span>, but let us ignore this
-                                superficial detail. Suppose \(\mathrm{Normalize}(\cdot)\) used the \(\ell_2\) norm to
-                                normalize its input, given a Muon or Adam update \(u_t\), let the actual update be:
+                                superficial detail. Suppose \(\mathrm{Normalize}(\cdot)\) uses the \(\ell_2\) norm to
+                                normalize its input. Given a Muon or Adam update \(u_t\), let the actual update be:
                                 \[
                                 U_t = -\eta R\,\mathrm{Normalize}(u_t),
                                 \]
@@ -353,7 +353,7 @@
                             <p>Now, this <em>is</em> a generous assumption, so we can make better estimates. Let us use
                                 the Frobenius norm throughout the next calculation; suppose that we know the expected
                                 normalized dot product<span class="sidenote-group"><sup
-                                        class="sidenote-ref">7</sup><span class="sidenote-card side-right">The Frobenius
+                                        class="sidenote-ref">8</sup><span class="sidenote-card side-right">The Frobenius
                                         inner product \(\langle A, B\rangle_F=\operatorname{Tr}(A^TB)=\langle\vec A,\vec
                                         B\rangle=\sum_{i,j}a_{ij}b_{ij}\) is the sum of the element wise product of the
                                         matrices \(A\) and \(B\).</span></span> \(\gamma=\frac{\langle W_t, U_t\rangle_F
@@ -539,7 +539,19 @@
                                 the bound tightens to roughly \((0.0001, 0.0996)\).</p>
 
                             <figure class="blog-image">
-                                <div id="step-size-plot" style="width: 100%; height: 550px;"></div>
+                                <div style="position:relative;">
+                                    <div id="step-size-plot" style="width: 100%; height: 550px;"></div>
+                                    <button id="plot-menu-btn" aria-label="Plot tools" style="position:absolute;top:8px;right:8px;z-index:10;background:rgba(255,255,255,0.85);border:1px solid #e5e7eb;border-radius:6px;width:32px;height:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:background 0.15s,box-shadow 0.15s;" onmouseenter="this.style.background='#fff';this.style.boxShadow='0 2px 8px rgba(0,0,0,0.12)'" onmouseleave="if(!this.classList.contains('active')){this.style.background='rgba(255,255,255,0.85)';this.style.boxShadow='none'}">
+                                        <svg width="16" height="16" viewBox="0 0 16 16" fill="#6b7280"><circle cx="8" cy="3" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="13" r="1.5"/></svg>
+                                    </button>
+                                </div>
+                                <style>
+                                    #step-size-plot .modebar-container { display: none !important; }
+                                    #step-size-plot.show-modebar .modebar-container {
+                                        display: flex !important;
+                                        right: 44px !important;
+                                    }
+                                </style>
                                 <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
                                 <script>
                                     (function () {
@@ -604,6 +616,16 @@
                                             displaylogo: false
                                         };
                                         Plotly.newPlot('step-size-plot', data, layout, config);
+
+                                        /* 3-dot menu toggle */
+                                        var btn = document.getElementById('plot-menu-btn');
+                                        var plot = document.getElementById('step-size-plot');
+                                        btn.addEventListener('click', function () {
+                                            var open = plot.classList.toggle('show-modebar');
+                                            btn.classList.toggle('active', open);
+                                            btn.style.background = open ? '#fff' : 'rgba(255,255,255,0.85)';
+                                            btn.style.boxShadow = open ? '0 2px 8px rgba(0,0,0,0.12)' : 'none';
+                                        });
                                     })();
                                 </script>
                                 <figcaption>Interactive relative step size surface. Drag to rotate, scroll to zoom. As
@@ -653,9 +675,9 @@
                                         dominates for the largest model of &gt;1B parameters. Our largest model is
                                         actually ~420M parameters large (as we are somewhat compute bound), so it is
                                         still possible for MuonH to outperform MuonW at a larger scale.</span></span>,
-                                while Muon performs better than Adam no matter what. Most research has shown that Muon
-                                performs better than Adam, which is consistent with existing literature<sup><a
-                                        href="#ref-muon">2</a></sup><sup>,</sup><sup><a
+                                while Muon performs better than Adam no matter what. Our finding that Muon
+                                performs better than Adam is consistent with existing literature<sup><a
+                                        href="#ref-muon">2</a><a
                                         href="#ref-hyperball">10</a></sup>.
                                 However, why did Hyperball worsen Muon's
                                 performance?</p>
@@ -832,7 +854,7 @@
                             <p>Indeed, MuonW's (Blue) weight norm grows unboundedly. The update norm
                                 \(\|\Delta W\|\) is roughly constant, but the weight denominator \(\|W\|\) grows
                                 linearly (Top chart). Notably, MuonW <em>never</em> reaches the equilibrium norm
-                                that weight decay should drive it toward<sup><a href="#ref-wdeq">9</a>, <a
+                                that weight decay should drive it toward<sup><a href="#ref-wdeq">9</a><a
                                         href="#ref-hyperball">10</a></sup>; the whitened updates consistently
                                 outpace the decay term throughout the entire training run. This causes the relative
                                 step size to <em>decay inversely with time</em> (Bottom chart), acting as an
@@ -883,7 +905,7 @@
                                 vocabulary of ~100k tokens with genuinely ambiguous contexts where probability mass must
                                 be
                                 spread across many plausible continuations<span class="sidenote-group"><sup
-                                        class="sidenote-ref">16</sup><span class="sidenote-card side-left">
+                                        class="sidenote-ref">13</sup><span class="sidenote-card side-left">
                                         Quantitatively, consider the softmax function \(\sigma(\mathbf{z})_i =
                                         \frac{e^{z_i}}{\sum_{j=1}^K e^{z_j}}\). If we multiply the logits by a large
                                         factor \(k\), the terms become \(e^{k z_i}\). Since the exponential function
@@ -902,8 +924,8 @@
                                 and hurts
                                 generalization.</p>
 
-                            <p>This means that part of MuonW's advantage may be an artifact of the domain. The optimizer
-                                exploiting the low cardinality and low entropy of the DNA vocabulary to "hack" the loss
+                            <p>This means that part of MuonW's advantage may be an artifact of the domain: the optimizer
+                                exploits the low cardinality and low entropy of the DNA vocabulary to "hack" the loss
                                 via
                                 logit scaling, rather than learning richer internal representations. MuonH (Red), with
                                 its
@@ -969,8 +991,7 @@
                                         that even if the norm &lsquo;hovers&rsquo; within just \(0<\varepsilon\ll N\) of
                                             the equilibrium (in \([N-\varepsilon, N+\varepsilon]=[R-2\varepsilon, R]\)),
                                             we still have to consider a relatively large space of values within the
-                                            hyperball of radius \(R\). <a href="#appendix-a">Appendix A</a> demonstrates
-                                            that no matter how small we
+                                            hyperball of radius \(R\). As demonstrated above, no matter how small we
                                             make \(\varepsilon>
                                             0\), we will still have to consider a relatively large space of values near
                                             the
@@ -1191,7 +1212,7 @@
                                     <h4 id="appendix-d" class="blog-subheading">Appendix D: Enforcing scale invariance
                                     </h4>
 
-                                    <p>A key ingredient is RMSNorm, which rescales a vector by its root-mean-square
+                                    <p>A key ingredient is RMSNorm<sup><a href="#ref-rmsnorm">13</a></sup>, which rescales a vector by its root-mean-square
                                         (RMS)
                                         magnitude. Given an activation vector \(x\in\mathbb{R}^d\), RMSNorm computes
                                         \[
