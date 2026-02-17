@@ -84,7 +84,7 @@
                         recent optimizers on DNA sequence modeling in regulatory regions, and evaluate whether
                         optimizer choices that work well for LLMs transfer to this distinct setting.</p>
 
-                    <details class="collapsible-section" open>
+                    <details class="collapsible-section">
                         <summary>
                             <h3>Muon</h3>
                         </summary>
@@ -176,7 +176,7 @@
                                     class="sidenote-ref">5</sup><span
                                     class="sidenote-card side-left">Concretely, if all singular values of
                                     the update equal \(1\), then \(\tilde u_t\) is orthogonal and
-                                    \(\|\tilde u_t\, x\| = \|x\|\) for every input \(x\). More generally,
+                                    \(\|\tilde u_t\, x\| = \|x\|\) for every input \(x\) (provided \(\tilde u_t\) is square). More generally,
                                     \(\|\tilde u_t\, x\| \leq \sigma_1(\tilde u_t)\,\|x\|\), so pushing
                                     \(\sigma_1\) toward \(1\) directly caps the maximum activation
                                     amplification per layer.</span></span>.</li>
@@ -188,7 +188,7 @@
 
                     </details>
 
-                    <details class="collapsible-section" open>
+                    <details class="collapsible-section">
                         <summary>
                             <h3>Why is weight decay necessary?</h3>
                         </summary>
@@ -224,7 +224,7 @@
 
                     </details>
 
-                    <details class="collapsible-section" open>
+                    <details class="collapsible-section">
                         <summary>
                             <h3>The Hyperball update</h3>
                         </summary>
@@ -606,53 +606,34 @@
                         However, why did Hyperball worsen Muon's
                         performance?</p>
 
-                    <p>Crucially, the issue is <em>not</em> with how Hyperball normalizes the
-                        update; that operation is a global scalar rescaling
-                        (\(U_t = -\eta R\,\tilde u_t / \|\tilde u_t\|_F\)), which preserves all relative
-                        singular value ratios and singular vectors exactly. Instead, I hypothesize that the
-                        damage accumulates in the <em>weight matrix itself</em>. Hyperball constrains
-                        \(\|W\|_F = R\) at every step, creating a fixed energy budget: for the optimizer to
-                        grow the dominant, task-critical singular directions, the re-projection onto the
-                        Frobenius sphere must crush the weaker, trailing ones. Over many steps, this zero-sum
-                        dynamic erodes precisely the distributed spectral structure that Muon&rsquo;s whitening
-                        was designed to build.<span class="sidenote-group"><sup class="sidenote-ref">9</sup><span
-                                class="sidenote-card side-left">It is actually possible to be on both the Frobenius and
-                                Spectral sphere at
-                                once as they DO intersect, but our algorithm does not guarantee that we enter
-                                the intersection. As a clarification: There exists an inequality \(\|W\|_2\le
-                                \|W\|_F\le \sqrt{n}\|W\|_2\), so one might believe that
-                                \(\|W\|_F\in[1,\sqrt{n}]\) guarantees that \(W\) lies in the intersection, but
-                                this is a necessary condition, not a sufficient one (think of a rank 1 matrix
-                                within this range)!</span></span></p>
+                    <p>The core issue is that Hyperball&rsquo;s re-projection scales all singular values
+                        by the <em>same</em> multiplicative factor. When Hyperball maps
+                        \(W_{t+1} = R\,(W_t + U_t)/\|W_t + U_t\|_F\), it shrinks every singular direction
+                        equally<span class="sidenote-group"><sup class="sidenote-ref">9</sup><span
+                            class="sidenote-card side-left">It is actually possible to be on both the Frobenius and
+                            Spectral sphere at
+                            once as they DO intersect, but our algorithm does not guarantee that we enter
+                            the intersection. As a clarification: There exists an inequality \(\|W\|_2\le
+                            \|W\|_F\le \sqrt{n}\|W\|_2\), so one might believe that
+                            \(\|W\|_F\in[1,\sqrt{n}]\) guarantees that \(W\) lies in the intersection, but
+                            this is a necessary condition, not a sufficient one (think of a rank 1 matrix
+                            within this range)!</span></span>. The dominant singular values, being large,
+                        survive this downscaling; they remain the dominant share of the fixed energy
+                        budget \(\|W\|_F^2 = \sum_i \sigma_i^2 = R^2\). The smaller singular values, however,
+                        cannot: Muon&rsquo;s whitening tries to grow them step after step, but the uniform
+                        rescaling pulls them back down proportionally each time. Because they never accumulate
+                        enough energy to matter, the small directions effectively die while the large ones
+                        persist. Over many steps, this concentrates the spectrum into fewer and fewer dominant
+                        modes, which is exactly the rank collapse we observe.
+                        The spectral metrics (below) confirm this: MuonH&rsquo;s spectral entropy and participation
+                        ratio collapse over training, showing that the small singular directions Muon was designed
+                        to grow are progressively eroded by the uniform rescaling.</p>
 
-                    <p>To see why, recall that the Frobenius norm decomposes as a sum of squared singular values:
-                        \(\|W\|_F^2 = \sum_i \sigma_i^2 = R^2\). This is a fixed energy budget. Muon&rsquo;s
-                        whitening pushes all singular values of the update toward \(1\), encouraging the weight
-                        matrix to spread energy across many directions, including those that encode rare
-                        motifs, noise, or less task-critical features. When Hyperball re-projects \(W\) onto
-                        the Frobenius sphere, the rescaling
-                        \(W_{t+1} = R\,(W_t + U_t)\,/\,\|W_t + U_t\|_F\) is a <em>uniform</em> contraction:
-                        it shrinks every singular value by the same factor. The useful, dominant directions are
-                        therefore scaled down just as much as the inflated weak ones, draining budget away from
-                        the modes that matter most.</p>
-
-                    <p>Contrast this with Adam under the same Hyperball constraint. Without whitening, Adam
-                        naturally lets the strongest (most task-relevant) modes dominate; the singular value
-                        spectrum is already concentrated in the directions the loss cares about. The uniform
-                        rescaling therefore does comparatively little damage, because the budget is already
-                        allocated where it is needed. In regulatory DNA, where the model must capture a
-                        combinatorial
-                        grammar of short, independent binding motifs rather than a few dominant modes, Muon&rsquo;s
-                        equal-energy allocation under a hard Frobenius cap is especially harmful; the
-                        constraint starves the very directions that whitening was designed to nurture.</p>
-
-                    <p>On the other hand, weight decay does <em>not</em> alter the Muon update, it only decays
-                        the matrix said update is added to! Additionally, weight decay explores a much larger
-                        space of matrices than Hyperball (through an argument similar to <a href="#appendix-c">Appendix
-                            C</a>), which may
-                        also contribute. Perhaps Muon with only the latter Hyperball update would work better,
-                        but we would have to tune the radius of the hypersphere to keep the relative update size
-                        reasonable, so this is not as easily done.</p>
+                    <p>Adam under the same Hyperball constraint does not suffer this fate, because without
+                        whitening the spectrum is already concentrated in the task-relevant directions; the
+                        uniform rescaling therefore does comparatively little damage. Weight decay, on the other
+                        hand, does <em>not</em> alter the Muon update at all, it only decays the matrix
+                        the update is added to, so the whitening and the regularizer rarely conflict.</p>
 
                     <figure class="blog-image">
                         <img src="/blogs/optimizers-for-biology/assets/adam_comparison.png"
@@ -668,7 +649,8 @@
                         large number of step sizes, we only care about the absolute minimum point. For Adam, the
                         lowest point is with Hyperball at \(\eta \approx 5.69 \times 10^{-3}\), and with Muon, the
                         lowest point is with weight decay at \(\eta \approx 2.27 \times 10^{-2}\) (although Hyperball at
-                        \(\eta \approx 5.69 \times 10^{-3}\) is not too far behind).</p>
+                        \(\eta \approx 5.69 \times 10^{-3}\) is not too far behind). It is very interesting to see that
+                    both Hyperball optimizers share the same optimal learning rate, perhaps this has to do with how similar their training dynamics and relative step sizes are.</p>
 
                     <figure class="blog-image">
                         <img src="/blogs/optimizers-for-biology/assets/adam_heatmap.png" alt="Adam sweep summary"
@@ -765,18 +747,19 @@
                         </p>
                     </details>
 
-                    <h4 class="blog-subheading">1. The Zero-Sum Game of Constrained Optimization</h4>
-                    <p>MuonH (Red) strictly constrains the Frobenius norm of the weights. This creates a
-                        zero-sum environment: for the optimizer to grow the dominant, task critical features,
-                        the projection step <em>must</em> crush the weaker, trailing singular values to balance
-                        the energy budget. This leads to the observed rank collapse, effectively erasing the
-                        subtle, distributed biological motifs (like weak regulatory signals) that live in the
-                        tail of the spectrum.</p>
+                    <h4 class="blog-subheading">1. Uniform Rescaling and the Spectral Squeeze</h4>
+                    <p>MuonH (Red) constrains \(\|W\|_F = R\) at every step by multiplying every
+                        singular value by the same factor \(c = R/\|W_t + U_t\|_F\). The large singular
+                        values survive this downscaling; the small ones (which Muon&rsquo;s whitening
+                        tried to grow) cannot, because the uniform rescaling pulls them back down before
+                        they accumulate meaningful energy. Over many steps this concentrates the spectrum into
+                        fewer dominant modes, erasing the weak regulatory signals in the tail.</p>
 
                     <p>In contrast, MuonW (Blue) imposes no hard constraint on the weight norm, so there is
-                        no zero-sum competition among singular values. Dominant features can grow
-                        <em>without</em> cannibalizing the weak ones, and the high entropy we observe reflects
-                        a feature rich, high capacity model that preserves the complex, combinatorial grammar
+                        no uniform rescaling step. Muon&rsquo;s whitened updates can grow the small singular
+                        directions over many steps without them being pulled back, and the dominant features can
+                        grow <em>without</em> cannibalizing the weak ones. The high entropy we observe reflects
+                        a feature-rich, high-capacity model that preserves the complex, combinatorial grammar
                         of the genome.
                     </p>
 
@@ -810,7 +793,10 @@
                         <figcaption>Global training dynamics. Top: Weight Frobenius Norm. Middle: Update Mean Frobenius
                             Norm. Bottom: Relative Step
                             Size. MuonW (Blue) shows monotonically increasing norm and decaying step size, while MuonH
-                            (Red) plateaus.</figcaption>
+                            (Red) plateaus.<span class="sidenote-group"><sup
+                                    class="sidenote-ref">12</sup><span class="sidenote-card side-right">The initial
+                                    ramp-up visible in the relative step size corresponds to our learning rate warmup
+                                    schedule.</span></span></figcaption>
                     </figure>
 
                     <p>Indeed, MuonW's (Blue) weight norm grows monotonically throughout training. The
@@ -820,9 +806,9 @@
                                 href="#ref-wdeq">9</a>,
                             <a href="#ref-hyperball">10</a></sup>, the norm continues to grow long after the nucleotide
                         loss has plateaued. This causes the relative
-                        step size to <em>decay inversely with time</em>, acting as an
+                        step size to <em>decay inversely with the square root of time</em>, acting as an
                         intrinsic learning rate scheduler that naturally "cools" the optimization and allows
-                        the model to settle into a sharp, well generalized minimum.</p>
+                        the model to settle into a well generalized minimum.</p>
 
                     <p>For MuonH (Red), the weight norm \(\|W\|\) is fixed. The relative step size flattens
                         out and never decays. The optimizer perpetually "bounces" around the minimum at a
@@ -869,7 +855,7 @@
                         vocabulary of ~100k tokens with genuinely ambiguous contexts where probability mass must
                         be
                         spread across many plausible continuations<span class="sidenote-group"><sup
-                                class="sidenote-ref">12</sup><span class="sidenote-card side-left">
+                                class="sidenote-ref">13</sup><span class="sidenote-card side-left">
                                 Quantitatively, consider the softmax function \(\sigma(\mathbf{z})_i =
                                 \frac{e^{z_i}}{\sum_{j=1}^K e^{z_j}}\). If we multiply the logits by a large
                                 factor \(k\), the terms become \(e^{k z_i}\). Since the exponential function
@@ -908,7 +894,7 @@
                         squared gradients. In DNA modeling, where batches are dominated by shifting, independent
                         6&ndash;20bp motifs, the gradients fluctuate wildly from step to step. The first moment
                         \(m_t\) suffers <em>destructive</em> interference as positive and negative gradients
-                        cancel, while the second moment \(v_t\) only grows (squared values are always positive).
+                        cancel, while the second moment \(v_t\) only grows (there is a decay term, but it is usually very small).
                         The ratio shrinks, and Adam&rsquo;s steps become tiny. Increasing the learning rate does
                         not help: a larger \(\eta\) amplifies the noisy, unstructured coordinate-wise updates,
                         causing training to destabilize, as the charts above confirm (see how fast losses rise for the largest learning rate).</p>
@@ -929,11 +915,13 @@
                     <p>Next, we plan to:</p>
                     <ul>
                         <li><strong>Run the full sweep with SSO:</strong> repeat the Adam/Muon \(\times\)
-                            Hyperball sweeps using the Spectral Sphere Optimizer (SSO) to test whether
-                            controlling \(\sigma_1\) directly improves stability and performance compared to
+                            Hyperball sweeps using the Spectral Sphere Optimizer (SSO)<sup><a
+                                    href="#ref-sso">18</a></sup> to test whether
+                            controlling \(\sigma_1\) of the weight matrix directly improves stability and performance compared to
                             Frobenius norm control.</li>
                         <li><strong>Explore hybrid optimizers:</strong> evaluate combinations of Muon and Adam
-                            updates (like PRISM variants) and compare against these results.</li>
+                            updates (like PRISM<sup><a href="#ref-prism">19</a></sup> and variants<sup><a href="#ref-shampoo-prism">20</a></sup>) and
+                            compare against these results.</li>
                     </ul>
                     </details>
 
@@ -1021,7 +1009,7 @@
                     <p>Note that \(\sigma_2\) is the maximum stretch induced orthogonal to
                         \(v_1=\arg\max_{\|x\|=1}\|Ax\|\), or \(\sigma_2=\max_{x\perp v_1:\:\|x\|=1}\|Ax\|\), and
                         \(\sigma_3\) has the stretch orthogonal to the first 2, and so on<span
-                            class="sidenote-group"><sup class="sidenote-ref">13</sup><span
+                            class="sidenote-group"><sup class="sidenote-ref">14</sup><span
                                 class="sidenote-card side-right">For completeness, we can generalize this idea
                                 either recursively (where we define \(\sigma_i\) as the max stretch orthogonal to
                                 \(v_j\) \(\forall j \lt i\)), or succinctly using the Min max theorem:
@@ -1034,7 +1022,7 @@
                     <ul>
                         <li><strong>Spectral norm/stability:</strong> The spectral norm is defined as
                             \(\|\cdot\|_2=\sigma_1(\cdot)\) on matrix inputs. It is the operator norm<span
-                                class="sidenote-group"><sup class="sidenote-ref">14</sup><span
+                                class="sidenote-group"><sup class="sidenote-ref">15</sup><span
                                     class="sidenote-card side-left">Formally, the operator norm \(\|\cdot\|_p\) is
                                     defined for \(A\in \mathbb R^{m\times n}\) as \(\|A\|_p=\max\{\|Ax\|_p:x\in
                                     \mathbb R^n, \|x\|_p\le 1\}\), where we apply the \(\ell_p\) norm to the
@@ -1416,6 +1404,16 @@
                         <li id="ref-spectral-fl">Yang, Simon &amp; Bernstein. <a
                                 href="https://arxiv.org/abs/2310.17813" target="_blank">A Spectral Condition
                                 for Feature Learning</a>. arXiv 2023.</li>
+                        <li id="ref-sso">Xie et al. <a href="https://arxiv.org/abs/2601.08393"
+                                target="_blank">Controlled LLM Training on Spectral Sphere</a>. arXiv
+                            2025.</li>
+                        <li id="ref-prism">Yang. <a href="https://arxiv.org/abs/2602.03096"
+                                target="_blank">PRISM: Structured Optimization via Anisotropic Spectral
+                                Shaping</a>. arXiv 2026.</li>
+                        <li id="ref-shampoo-prism">Cesista. <a
+                                href="https://leloykun.github.io/ponder/shampoo-prism/" target="_blank">Shampoo-PRISM:
+                                Kronecker-Factored Optimization via Anisotropic Spectral Shaping</a>.
+                            2026.</li>
                     </ol>
                 </article>
             </div>
