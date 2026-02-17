@@ -576,10 +576,6 @@
                         <summary>
                             <h3>Results</h3>
                         </summary>
-                    <p>In this section, we summarize the sweep results for Adam and Muon, with and without
-                        Hyperball. These figures are necessary to know which optimizer performs best with our
-                        DNA model and data.</p>
-
                     <figure class="blog-image">
                         <img src="/blogs/optimizers-for-biology/assets/loss_curves_nucleotide_loss.png"
                             alt="Learning curves for nucleotide loss" loading="lazy" />
@@ -587,29 +583,24 @@
                             AdamW, AdamH, MuonW, MuonH. Loss axis is nucleotide cross-entropy loss.</figcaption>
                     </figure>
 
-                    <p>The worst optimizer combination is AdamW (Adam + weight decay, where we use independent
-                        weight decay), followed by AdamH (Adam + Hyperball wrapper). Next, interestingly, is
-                        MuonH, followed by MuonW (with independent decay again). The model achieving the best
-                        nucleotide loss is Muon with independent weight decay.</p>
-
-                    <p>Hyperball improves the performance of Adam, but worsens it for Muon<span
+                    <p>We find that Muon achieves a lower train loss than Adam, consistent with existing
+                        literature<sup><a href="#ref-muon">2</a><a href="#ref-hyperball">10</a></sup>.
+                        Interestingly, the Hyperball constraint does not consistently improve both optimizers:
+                        it helps Adam (AdamH &gt; AdamW) but <em>hurts</em> Muon (MuonW &gt; MuonH)<span
                             class="sidenote-group"><sup class="sidenote-ref">8</sup><span
                                 class="sidenote-card side-right">The Hyperball blog<sup><a
                                         href="#ref-hyperball">10</a></sup> actually shows that for Muon, the
                                 losses are comparable for models with &le; 500M parameters, and Hyperball
                                 dominates for the largest model of &gt;1B parameters. Our largest model is
                                 actually ~420M parameters large (as we are somewhat compute bound), so it is
-                                still possible for MuonH to outperform MuonW at a larger scale.</span></span>,
-                        while Muon performs better than Adam no matter what. Our finding that Muon
-                        performs better than Adam is consistent with existing literature<sup><a href="#ref-muon">2</a><a
-                                href="#ref-hyperball">10</a></sup>.
-                        However, why did Hyperball worsen Muon's
-                        performance?</p>
+                                still possible for MuonH to outperform MuonW at a larger scale.</span></span>.
+                        The best overall configuration is Muon with independent weight decay (MuonW).
+                        Why did Hyperball worsen Muon&rsquo;s performance?</p>
 
-                    <p>The core issue is that Hyperball&rsquo;s re-projection scales all singular values
-                        by the <em>same</em> multiplicative factor. When Hyperball maps
-                        \(W_{t+1} = R\,(W_t + U_t)/\|W_t + U_t\|_F\), it shrinks every singular direction
-                        equally<span class="sidenote-group"><sup class="sidenote-ref">9</sup><span
+                    <p>We hypothesize that this is because Hyperball&rsquo;s re-projection scales all
+                        singular values of the weight matrix by the <em>same</em> multiplicative factor. When
+                        Hyperball maps \(W_{t+1} = R\,(W_t + U_t)/\|W_t + U_t\|_F\), it shrinks every singular
+                        direction of \(W\) equally<span class="sidenote-group"><sup class="sidenote-ref">9</sup><span
                             class="sidenote-card side-left">It is actually possible to be on both the Frobenius and
                             Spectral sphere at
                             once as they DO intersect, but our algorithm does not guarantee that we enter
@@ -617,17 +608,18 @@
                             \|W\|_F\le \sqrt{n}\|W\|_2\), so one might believe that
                             \(\|W\|_F\in[1,\sqrt{n}]\) guarantees that \(W\) lies in the intersection, but
                             this is a necessary condition, not a sufficient one (think of a rank 1 matrix
-                            within this range)!</span></span>. The dominant singular values, being large,
-                        survive this downscaling; they remain the dominant share of the fixed energy
-                        budget \(\|W\|_F^2 = \sum_i \sigma_i^2 = R^2\). The smaller singular values, however,
-                        cannot: Muon&rsquo;s whitening tries to grow them step after step, but the uniform
-                        rescaling pulls them back down proportionally each time. Because they never accumulate
-                        enough energy to matter, the small directions effectively die while the large ones
-                        persist. Over many steps, this concentrates the spectrum into fewer and fewer dominant
-                        modes, which is exactly the rank collapse we observe.
-                        The spectral metrics (below) confirm this: MuonH&rsquo;s spectral entropy and participation
-                        ratio collapse over training, showing that the small singular directions Muon was designed
-                        to grow are progressively eroded by the uniform rescaling.</p>
+                            within this range)!</span></span>. The dominant singular values of \(W\), being
+                        large, survive this downscaling, and they remain the dominant share of the fixed energy
+                        budget \(\|W\|_F^2 = \sum_i \sigma_i^2 = R^2\). The smaller singular values of \(W\),
+                        however, cannot: Muon&rsquo;s whitening of the update matrix tries to grow them step
+                        after step by distributing the learning signal equally across all singular directions,
+                        but the uniform rescaling of the weight matrix pulls them back down proportionally each
+                        time. Because they never accumulate enough energy to matter, the small directions
+                        effectively die while the large ones persist, concentrating the spectrum into fewer and
+                        fewer dominant modes.
+                        The <a href="#spectral-analysis">spectral metrics</a> below support this: MuonH&rsquo;s
+                        spectral entropy and participation ratio collapse over training, consistent with the
+                        small singular directions being progressively eroded by the uniform rescaling.</p>
 
                     <p>Adam under the same Hyperball constraint does not suffer this fate, because without
                         whitening the spectrum is already concentrated in the task-relevant directions; the
@@ -660,23 +652,49 @@
                         <figcaption>Heatmap of Top: AdamW vs AdamH, Bottom: MuonW vs MuonH</figcaption>
                     </figure>
 
-                    <p>These heatmaps give us a clearer picture of where Hyperball (green) has the advantage
-                        over weight decay (red). For Adam, the split is surprisingly even, with the exception of
-                        the highest learning rate, where weight decay dominates. I believe this is because the
-                        effective step size grows too large (it grows \(\propto\eta\)), and the training can
-                        never stabilize. For Muon, however, weight decay strictly dominates across nearly the
-                        entire grid; the heatmap is overwhelmingly yellow (0% advantage) and dark red
-                        (weight decay winning by up to 60%), with virtually no green squares at the largest
-                        width. Of course, we are trying to optimize for the lowest loss, not the average loss in
-                        this space, but it is still interesting to see how Hyperball doesn't necessarily
-                        dominate the train loss across our sweeps.</p>
+                    <p>These heatmaps give us a clearer picture of where Hyperball (green) has the
+                        advantage over weight decay (red). For Adam, the advantage is scale-dependent:
+                        at width 512, the heatmap is mostly yellow (roughly even), but at width 2048, AdamH
+                        shows a noticeably stronger advantage, with greener squares across much of the grid.
+                        In particular, the mid learning rate range (\(\sim 10^{-3}\) to \(6\times 10^{-3}\))
+                        is consistently green across widths, suggesting Hyperball&rsquo;s norm control is
+                        most beneficial at moderate step sizes. At the highest learning rate (\(9\times
+                        10^{-2}\)), weight decay dominates, likely because the effective step size
+                        grows too large (it grows \(\propto\eta\)) and training can never stabilize.</p>
 
+                    <p>For Muon, the scale dependence runs in the opposite direction. At width 512,
+                        Hyperball is competitive or slightly ahead across much of the grid, with light
+                        green dominating the mid learning rates. By width 1024, the advantage fades to
+                        mostly yellow, and at width 2048 the picture inverts: the heatmap is overwhelmingly
+                        red, with weight decay winning by up to 60% at the higher learning rates late in
+                        training. This suggests that the spectral squeeze worsens with scale; larger
+                        weight matrices have more trailing singular directions for the uniform rescaling to
+                        erode.</p>
+
+                    <figure class="blog-image">
+                        <img src="/blogs/optimizers-for-biology/assets/mounw_adamh_heatmap.png"
+                        alt="MuonW vs AdamH heatmap across widths" loading="lazy" />
+                        <img src="/blogs/optimizers-for-biology/assets/muonw_adamh_comparison.png"
+                            alt="MuonW vs AdamH loss curves across widths" loading="lazy"
+                            style="margin-bottom: 0.5rem;" />
+                        <figcaption>Top: Loss curves for MuonW (dashed) vs AdamH (solid) across widths.
+                            Bottom: Heatmap of % advantage (green = AdamH better, red = MuonW better).</figcaption>
+                    </figure>
+
+                    <p>Finally, we compare the two best configurations head-to-head: MuonW against AdamH.
+                        At width 512, the two are closely matched across learning rates, but as scale
+                        increases MuonW pulls ahead decisively. By width 2048, MuonW dominates across
+                        nearly every learning rate and training checkpoint, with advantages exceeding 10%
+                        at many points in the grid. The loss curves tell the same story: at the optimal
+                        learning rate for each optimizer, MuonW (dashed) consistently sits below AdamH
+                        (solid) at the larger widths. This confirms that Muon&rsquo;s spectral advantages
+                        over Adam compound with scale.</p>
 
                     </details>
 
                     <details class="collapsible-section" open>
                         <summary>
-                            <h3>Spectral Analysis</h3>
+                            <h3 id="spectral-analysis">Spectral Analysis</h3>
                         </summary>
                     <p>To understand <em>why</em> Muon with independent weight decay (MuonW) outperforms its
                         constrained counterpart (MuonH), we must look at the spectral properties of the learned
@@ -697,7 +715,7 @@
                         <li><strong>Participation Ratio (PR):</strong> The effective rank of the matrix. Higher
                             PR means more active dimensions are used to represent data. We normalize the PR to get the
                             ratio of the effective rank to full rank, which allows us to compare matrices of different
-                            shapes.</li>
+                            shapes (we want to see the training dynamics, exact scale is not important).</li>
                     </ul>
 
                     <figure class="blog-image">
@@ -715,14 +733,21 @@
                         </figcaption>
                     </figure>
 
-                    <p>The plots reveal a striking "Spectral Paradox". Standard theory suggests that rank
-                        compression (low entropy) is desirable for denoising, which is often true for natural
-                        language<sup><a href="#ref-repdeg">16</a></sup> (Zipfian distribution). NerVE<sup><a
-                                href="#ref-nerve">15</a></sup> shows that
-                        FFN nonlinearities reinject and reshape variance across eigenmodes, fundamentally
-                        governing latent dimension utilization, and our results suggest this dynamic plays
-                        out very differently in DNA modeling. Here, <em>MuonW (Blue) dominates by
-                            maintaining high entropy and rank</em>, while MuonH (Red) collapses.</p>
+                    <p>MuonW (Blue) and MuonH (Red) both start with similar spectral entropy, but
+                        their trajectories diverge sharply. MuonW&rsquo;s entropy rises and stabilizes
+                        near \(\approx 0.95\), indicating that the weight matrices maintain a near-uniform
+                        singular value distribution throughout training; Muon&rsquo;s whitening
+                        successfully builds a high-rank, distributed representation. MuonH (Red), by
+                        contrast, peaks early and then steadily collapses, with the participation ratio
+                        falling in tandem: the effective rank of the weight matrices shrinks over training.
+                        The Adam variants (Orange, Green) sit much lower throughout, which is expected
+                        since Adam does not whiten its updates. The critical observation is the
+                        <em>divergence</em> between Blue and Red: both use the same Muon whitening, yet
+                        MuonH&rsquo;s spectrum degrades while MuonW&rsquo;s does not. This points directly
+                        to the Hyperball constraint as the cause, and the \(\Delta W\) entropy tells
+                        the same story; MuonH&rsquo;s updates themselves become progressively less
+                        whitened (dropping from \(\approx 0.95\) to \(\approx 0.7\)), confirming that the
+                        collapse feeds back from the weights into the updates.</p>
 
                     <details class="collapsible-section">
                         <summary>
@@ -755,12 +780,25 @@
                         they accumulate meaningful energy. Over many steps this concentrates the spectrum into
                         fewer dominant modes, erasing the weak regulatory signals in the tail.</p>
 
+                    <p>This effect is compounded on the <em>update</em> side. Recall that Muon&rsquo;s
+                        NS\(_5\) whitening is imperfect: it pushes singular values toward \(1\) but
+                        lands in roughly \([0.7, 1.3]\), not exactly at \(1\). For MuonW (Blue), these
+                        small imperfections are benign; the weight matrix is free to absorb them, and
+                        the \(\Delta W\) spectral entropy stays high (\(\approx 0.95\)) throughout training.
+                        For MuonH (Red), however, the imperfections compound through a feedback loop: the
+                        collapsing weight spectrum biases the gradients computed at \(W_t\), which flow into
+                        the momentum buffer, which NS\(_5\) then tries to whiten. But whitening an
+                        already-biased input cannot fully recover a uniform spectrum, so the update itself
+                        becomes progressively less whitened. In the \(\Delta W\) entropy plot, MuonH (Red)
+                        starts near MuonW (Blue) but steadily diverges, dropping to \(\approx 0.7\) by
+                        the end of training, a clear signature of this self-reinforcing collapse.</p>
+
                     <p>In contrast, MuonW (Blue) imposes no hard constraint on the weight norm, so there is
-                        no uniform rescaling step. Muon&rsquo;s whitened updates can grow the small singular
-                        directions over many steps without them being pulled back, and the dominant features can
-                        grow <em>without</em> cannibalizing the weak ones. The high entropy we observe reflects
-                        a feature-rich, high-capacity model that preserves the complex, combinatorial grammar
-                        of the genome.
+                        no uniform rescaling step and no feedback loop. Muon&rsquo;s whitened updates can
+                        grow the small singular directions over many steps without them being pulled back,
+                        and the dominant features can grow <em>without</em> cannibalizing the weak ones. The
+                        high entropy we observe reflects a feature-rich, high-capacity model that preserves
+                        the complex, combinatorial grammar of the genome.
                     </p>
 
                     <details class="collapsible-section">
