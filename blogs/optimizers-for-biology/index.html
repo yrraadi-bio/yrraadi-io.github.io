@@ -68,25 +68,26 @@
 
                     <p>Optimizers dictate the parameter update rules that govern the convergence trajectory of
                         Stochastic Gradient Descent (SGD). At present, variations of Adam<sup><a
-                                href="#ref-adamw">1</a></sup> dominate DNA modeling (e.g., AlphaGenome<sup><a
+                                href="#ref-adamw">1</a></sup> dominate DNA sequence modeling (e.g., AlphaGenome<sup><a
                                 href="#ref-alphagenome">3</a></sup>, Enformer<sup><a href="#ref-enformer">4</a></sup>,
-                        Evo 2<sup><a href="#ref-evo">5</a></sup>), and Muon<sup><a href="#ref-muon">2</a></sup> has been
-                        shown to be effective for natural language modeling. This raises the question of whether recent
-                        research advancements are merely locally optimal to Adam and Muon in the case of natural
-                        language, and to Adam alone in the case of DNA modeling. <br>
-                        <br>In this blog, I explore the behavior of recent optimizers on DNA sequence modeling in
-                        regulatory regions. This domain differs from natural language in several fundamental ways:
-                        DNA uses a vocabulary of just 4 nucleotides whose token frequencies are far more uniform than
-                        the heavy-tailed Zipfian distribution over ~100k tokens in language, meaning the gradient
-                        statistics across tokens behave very differently numerically. The syntactical rules are
-                        explicit and local (transcription factor binding motifs typically span ~6&ndash;20bp), and at
-                        the
-                        short context lengths we study, the signal is dominated by these independent local motif
-                        grammars rather than the long range dependencies that characterize language modeling. Here, I
-                        evaluate whether optimizer choices that work well for LLMs transfer to this distinct setting.
-                    </p>
+                        Evo 2<sup><a href="#ref-evo">5</a></sup>). In natural language, Muon<sup><a
+                                href="#ref-muon">2</a></sup> has been shown to achieve faster convergence, but it is
+                        unclear whether this advantage transfers to nucleotide modeling.</p>
 
-                    <h3>Muon</h3>
+                    <p>The reason is that these domains differ in several fundamental ways. DNA uses a vocabulary of
+                        just 4 nucleotides whose token frequencies are far more uniform than the heavy-tailed Zipfian
+                        distribution over ~100k tokens in language, meaning the gradient statistics across tokens
+                        behave very differently numerically. The syntactical rules are explicit and local (transcription
+                        factor binding motifs typically span ~6&ndash;20bp), and at the short context lengths we study,
+                        the signal is dominated by these independent local motif grammars rather than the long-range
+                        dependencies that characterize language modeling. In this blog, I explore the behavior of
+                        recent optimizers on DNA sequence modeling in regulatory regions, and evaluate whether
+                        optimizer choices that work well for LLMs transfer to this distinct setting.</p>
+
+                    <details class="collapsible-section" open>
+                        <summary>
+                            <h3>Muon</h3>
+                        </summary>
                     <p>While Adam<sup><a href="#ref-adamw">1</a></sup> (see <a href="#appendix-a">Appendix
                             A</a>) updates can lead to weight stagnation<sup><a href="#ref-lazy">6</a><a
                                 href="#ref-ntk">7</a></sup> and uneven
@@ -97,13 +98,8 @@
                                 href="#ref-ntk">7</a></sup>), Muon forces weights to diverge from their starting points
                         by distributing updates across the matrix space, thereby erasing initial distributions<sup><a
                                 href="#ref-erasure">8</a></sup>. This is achieved by constraining all singular values of
-                        the weight updates to be close to \(1\), effectively &ldquo;whitening&rdquo; the update.</p>
-
-                    <p>Muon<sup><a href="#ref-muon">2</a></sup> is a <em>matrix aware</em> optimizer designed for
-                        weight matrices (whereas Adam treats all weights like vectors, not matrices). The core idea
-                        is to take a gradient update \(g_t=\nabla_W \mathcal{L}(W_t)\) and then <em>reshape</em> it
-                        so that the learning signal is distributed more evenly across the singular directions of the
-                        matrix<sup><a href="#ref-cesista">11</a></sup>.</p>
+                        the weight updates to be close to \(1\), effectively &ldquo;whitening&rdquo; the update
+                        to distribute the learning signal evenly<sup><a href="#ref-cesista">11</a></sup>.</p>
 
                     <p>Just like Adam, we first form a momentum like exponential moving average of gradients,
                         denoted by \(u_t\):</p>
@@ -175,16 +171,31 @@
                             an effectively low rank map.</li>
                         <li><strong>Stability:</strong> bounding the largest singular value (the spectral norm)
                             controls the layer Lipschitz constant, and helps prevent activation and gradient
-                            blowups<sup><a href="#ref-spectral">12</a><a href="#ref-cesista">11</a></sup>.</li>
+                            blowups<sup><a href="#ref-spectral">12</a>, <a
+                                    href="#ref-cesista">11</a></sup><span class="sidenote-group"><sup
+                                    class="sidenote-ref">5</sup><span
+                                    class="sidenote-card side-left">Concretely, if all singular values of
+                                    the update equal \(1\), then \(\tilde u_t\) is orthogonal and
+                                    \(\|\tilde u_t\, x\| = \|x\|\) for every input \(x\). More generally,
+                                    \(\|\tilde u_t\, x\| \leq \sigma_1(\tilde u_t)\,\|x\|\), so pushing
+                                    \(\sigma_1\) toward \(1\) directly caps the maximum activation
+                                    amplification per layer.</span></span>.</li>
                     </ul>
                     <p>This perspective is especially relevant for high dimensional, structured sequence
-                        representations (like DNA), where controlling intrinsic dimensionality can matter a lot.</p>
+                        representations like DNA. The combinatorial grammar of regulatory motifs demands that
+                        many spectral dimensions remain active; a low rank collapse in the update would erase the subtle,
+                        distributed signals that distinguish functional sequences from background.</p>
 
-                    <h3>Why is weight decay necessary?</h3>
+                    </details>
+
+                    <details class="collapsible-section" open>
+                        <summary>
+                            <h3>Why is weight decay necessary?</h3>
+                        </summary>
                     <p>Without weight decay, the norm of the weight matrices grows \(\propto \sqrt{t}\) as training
                         progresses<sup><a href="#ref-hyperball">10</a></sup>. This unchecked growth inflates the
                         parameter scale relative to the step size, effectively shrinking the learning signal and
-                        hindering convergence. Weight decay counteracts this by imposing an \(\ell_2\) bias that drives
+                        hindering convergence<sup><a href="#ref-spectral-fl">17</a></sup>. Weight decay counteracts this by imposing an \(\ell_2\) bias that drives
                         the norm toward an equilibrium value<sup><a href="#ref-wdeq">9</a><a href="#ref-adamw">1</a><a
                                 href="#ref-hyperball">10</a></sup>, and empirically, adding decay improves both Adam and
                         Muon<sup><a href="#ref-hyperball">10</a><a href="#ref-adamw">1</a><a
@@ -211,12 +222,17 @@
                         direction?
                     </p>
 
-                    <h3>The Hyperball update</h3>
+                    </details>
+
+                    <details class="collapsible-section" open>
+                        <summary>
+                            <h3>The Hyperball update</h3>
+                        </summary>
                     <p>The intuition of Hyperball<sup><a href="#ref-hyperball">10</a></sup> is to, for a weight
                         matrix \(W\), simply fix the Frobenius norm of \(W\) to the initial radius \(R :=
                         \|W_0\|_F\), and the norm of update \(U\) to \(\eta R\). Rather confusingly, this confines the
                         weight matrix to a hypersphere of radius \(R\), not a ball<span class="sidenote-group"><sup
-                                class="sidenote-ref">5</sup><span class="sidenote-card side-right">Note that
+                                class="sidenote-ref">6</sup><span class="sidenote-card side-right">Note that
                                 a hypersphere and hyperball are not the same thing. A &lsquo;ball&rsquo;
                                 refers to the entire solid object, but a &lsquo;sphere&rsquo; refers only to
                                 the shell/boundary of said ball.</span></span>, but let us ignore this
@@ -244,7 +260,7 @@
 
                     <p>Now, this <em>is</em> a generous assumption, so we can make better estimates. Let us use
                         the Frobenius norm throughout the next calculation; suppose that we know the expected
-                        normalized dot product<span class="sidenote-group"><sup class="sidenote-ref">6</sup><span
+                        normalized dot product<span class="sidenote-group"><sup class="sidenote-ref">7</sup><span
                                 class="sidenote-card side-right">The Frobenius
                                 inner product \(\langle A, B\rangle_F=\operatorname{Tr}(A^TB)=\langle\vec A,\vec
                                 B\rangle=\sum_{i,j}a_{ij}b_{ij}\) is the sum of the element wise product of the
@@ -269,17 +285,17 @@
                                 style="position:absolute; bottom:12px; left:12px; right:12px; display:flex; gap:24px; align-items:center; background:rgba(255,255,255,0.92); padding:10px 16px; border-radius:6px; font-size:13px; color:#57534e; z-index:2;">
                                 <label style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
                                     <span style="font-style:italic;">η</span>
-                                    <input type="range" id="eta-slider" min="0.05" max="0.50" step="0.01" value="0.25"
+                                    <input type="range" id="eta-slider" min="0.05" max="0.50" step="0.01" value="0.50"
                                         style="flex:1;accent-color:#3b82f6;min-width:0;">
                                     <span id="eta-val"
-                                        style="min-width:36px;text-align:right;font-variant-numeric:tabular-nums;">0.25</span>
+                                        style="min-width:36px;text-align:right;font-variant-numeric:tabular-nums;">0.50</span>
                                 </label>
                                 <label style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
                                     <span style="font-style:italic;">θ</span>
-                                    <input type="range" id="theta-slider" min="0.35" max="2.79" step="0.01" value="1.13"
+                                    <input type="range" id="theta-slider" min="0.35" max="2.79" step="0.01" value="1.57"
                                         style="flex:1;accent-color:#3b82f6;min-width:0;">
                                     <span id="theta-val"
-                                        style="min-width:36px;text-align:right;font-variant-numeric:tabular-nums;">1.13</span>
+                                        style="min-width:36px;text-align:right;font-variant-numeric:tabular-nums;">1.57</span>
                                 </label>
                             </div>
                         </div>
@@ -303,10 +319,10 @@
                             if (!container) return;
 
                             const scene = new THREE.Scene();
+                            const R = 1.8;
                             const W = container.clientWidth, H = container.clientHeight;
                             const camera = new THREE.PerspectiveCamera(42, W / H, 0.1, 100);
-                            camera.position.set(2.4, 1.6, 2.4);
-                            camera.lookAt(0, 0.2, 0);
+                            camera.position.set(1.2, 2.6, 3.8);
 
                             const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
                             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -324,17 +340,18 @@
                             const controls = new OrbitControls(camera, renderer.domElement);
                             controls.enableDamping = true;
                             controls.dampingFactor = 0.08;
-                            controls.minDistance = 1.8;
-                            controls.maxDistance = 6;
+                            controls.target.set(0.5, 0.7, 0.15);
+                            controls.minDistance = 2.0;
+                            controls.maxDistance = 8;
 
                             /* Wireframe sphere */
-                            const sGeo = new THREE.SphereGeometry(1, 32, 20);
+                            const sGeo = new THREE.SphereGeometry(R, 32, 20);
                             scene.add(new THREE.Mesh(sGeo, new THREE.MeshBasicMaterial({ color: 0x93c5fd, wireframe: true, transparent: true, opacity: 0.10 })));
                             /* Equator ring */
-                            const eqPts = []; for (let i = 0; i <= 64; i++) { const a = i / 64 * Math.PI * 2; eqPts.push(new THREE.Vector3(Math.cos(a), 0, Math.sin(a))); }
+                            const eqPts = []; for (let i = 0; i <= 64; i++) { const a = i / 64 * Math.PI * 2; eqPts.push(new THREE.Vector3(R * Math.cos(a), 0, R * Math.sin(a))); }
                             scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(eqPts), new THREE.LineBasicMaterial({ color: 0xd6d3d1, transparent: true, opacity: 0.35 })));
 
-                            let eta = 0.25, theta = 1.13;
+                            let eta = 0.50, theta = Math.PI / 2;
                             const dynGroup = new THREE.Group();
                             scene.add(dynGroup);
 
@@ -342,11 +359,11 @@
                                 const d = new THREE.Vector3().subVectors(to, from);
                                 const len = d.length(); if (len < 1e-4) return new THREE.Group();
                                 d.normalize();
-                                return new THREE.ArrowHelper(d, from, len, color, Math.min(len * 0.18, 0.07), Math.min(len * 0.10, 0.04));
+                                return new THREE.ArrowHelper(d, from, len, color, Math.min(len * 0.18, 0.07 * R), Math.min(len * 0.10, 0.04 * R));
                             }
                             function dashed(from, to, color) {
                                 const g = new THREE.BufferGeometry().setFromPoints([from, to]);
-                                const l = new THREE.Line(g, new THREE.LineDashedMaterial({ color, dashSize: 0.045, gapSize: 0.025 }));
+                                const l = new THREE.Line(g, new THREE.LineDashedMaterial({ color, dashSize: 0.045 * R, gapSize: 0.025 * R }));
                                 l.computeLineDistances(); return l;
                             }
                             function label(html, pos, style) {
@@ -366,17 +383,17 @@
 
                                 /* W_t on sphere */
                                 const elev = 50 * Math.PI / 180, azim = 15 * Math.PI / 180;
-                                const wt = new THREE.Vector3(Math.cos(elev) * Math.cos(azim), Math.sin(elev), Math.cos(elev) * Math.sin(azim));
-                                const wtN = wt.clone().normalize();
+                                const wtN = new THREE.Vector3(Math.cos(elev) * Math.cos(azim), Math.sin(elev), Math.cos(elev) * Math.sin(azim)).normalize();
+                                const wt = wtN.clone().multiplyScalar(R);
 
                                 /* perpendicular for U_t construction */
                                 let perp = new THREE.Vector3(0, 0, 1).cross(wtN).normalize();
                                 if (perp.length() < 0.5) perp = new THREE.Vector3(1, 0, 0).cross(wtN).normalize();
 
                                 const utDir = wtN.clone().multiplyScalar(Math.cos(theta)).add(perp.clone().multiplyScalar(Math.sin(theta))).normalize();
-                                const ut = utDir.clone().multiplyScalar(eta);
+                                const ut = utDir.clone().multiplyScalar(eta * R);
                                 const b = wt.clone().add(ut);          /* W_t + U_t */
-                                const wt1 = b.clone().normalize();      /* W_{t+1} */
+                                const wt1 = b.clone().normalize().multiplyScalar(R);      /* W_{t+1} */
                                 const O = new THREE.Vector3();
 
                                 /* Arrows */
@@ -397,11 +414,11 @@
                                 dynGroup.add(label('\u0394W', dwM, 'color:#9333ea;background:rgba(255,255,255,0.88);'));
 
                                 /* Angle arcs */
-                                dynGroup.add(arc(O, wtN, wt1.clone().normalize(), 0.22, 0x2563eb));
-                                dynGroup.add(label('\u03C6', wtN.clone().add(wt1.clone().normalize()).normalize().multiplyScalar(0.29), 'color:#2563eb;background:rgba(255,255,255,0.8);font-size:13px;'));
+                                dynGroup.add(arc(O, wtN, wt1.clone().normalize(), 0.22 * R, 0x2563eb));
+                                dynGroup.add(label('\u03C6', wtN.clone().add(wt1.clone().normalize()).normalize().multiplyScalar(0.29 * R), 'color:#2563eb;background:rgba(255,255,255,0.8);font-size:13px;'));
                                 const aoDir = O.clone().sub(wt).normalize();
-                                dynGroup.add(arc(wt.clone(), aoDir, utDir, 0.16, 0xea580c));
-                                dynGroup.add(label('\u03C0\u2212\u03B8', wt.clone().add(aoDir.clone().add(utDir).normalize().multiplyScalar(0.22)), 'color:#ea580c;background:rgba(255,255,255,0.8);font-size:11px;'));
+                                dynGroup.add(arc(wt.clone(), aoDir, utDir, 0.16 * R, 0xea580c));
+                                dynGroup.add(label('\u03C0\u2212\u03B8', wt.clone().add(aoDir.clone().add(utDir).normalize().multiplyScalar(0.22 * R)), 'color:#ea580c;background:rgba(255,255,255,0.8);font-size:11px;'));
                             }
                             rebuild();
 
@@ -553,7 +570,12 @@
                         \(\lambda\)<sup><a href="#ref-hyperball">10</a></sup>, which adds another layer of
                         complexity to the solution space.</p>
 
-                    <h3>Results</h3>
+                    </details>
+
+                    <details class="collapsible-section" open>
+                        <summary>
+                            <h3>Results</h3>
+                        </summary>
                     <p>In this section, we summarize the sweep results for Adam and Muon, with and without
                         Hyperball. These figures are necessary to know which optimizer performs best with our
                         DNA model and data.</p>
@@ -571,7 +593,7 @@
                         nucleotide loss is Muon with independent weight decay.</p>
 
                     <p>Hyperball improves the performance of Adam, but worsens it for Muon<span
-                            class="sidenote-group"><sup class="sidenote-ref">7</sup><span
+                            class="sidenote-group"><sup class="sidenote-ref">8</sup><span
                                 class="sidenote-card side-right">The Hyperball blog<sup><a
                                         href="#ref-hyperball">10</a></sup> actually shows that for Muon, the
                                 losses are comparable for models with &le; 500M parameters, and Hyperball
@@ -593,7 +615,7 @@
                         grow the dominant, task-critical singular directions, the re-projection onto the
                         Frobenius sphere must crush the weaker, trailing ones. Over many steps, this zero-sum
                         dynamic erodes precisely the distributed spectral structure that Muon&rsquo;s whitening
-                        was designed to build.<span class="sidenote-group"><sup class="sidenote-ref">8</sup><span
+                        was designed to build.<span class="sidenote-group"><sup class="sidenote-ref">9</sup><span
                                 class="sidenote-card side-left">It is actually possible to be on both the Frobenius and
                                 Spectral sphere at
                                 once as they DO intersect, but our algorithm does not guarantee that we enter
@@ -601,10 +623,28 @@
                                 \|W\|_F\le \sqrt{n}\|W\|_2\), so one might believe that
                                 \(\|W\|_F\in[1,\sqrt{n}]\) guarantees that \(W\) lies in the intersection, but
                                 this is a necessary condition, not a sufficient one (think of a rank 1 matrix
-                                within this range)!</span></span> In regulatory DNA, where the model must capture a
+                                within this range)!</span></span></p>
+
+                    <p>To see why, recall that the Frobenius norm decomposes as a sum of squared singular values:
+                        \(\|W\|_F^2 = \sum_i \sigma_i^2 = R^2\). This is a fixed energy budget. Muon&rsquo;s
+                        whitening pushes all singular values of the update toward \(1\), encouraging the weight
+                        matrix to spread energy across many directions, including those that encode rare
+                        motifs, noise, or less task-critical features. When Hyperball re-projects \(W\) onto
+                        the Frobenius sphere, the rescaling
+                        \(W_{t+1} = R\,(W_t + U_t)\,/\,\|W_t + U_t\|_F\) is a <em>uniform</em> contraction:
+                        it shrinks every singular value by the same factor. The useful, dominant directions are
+                        therefore scaled down just as much as the inflated weak ones, draining budget away from
+                        the modes that matter most.</p>
+
+                    <p>Contrast this with Adam under the same Hyperball constraint. Without whitening, Adam
+                        naturally lets the strongest (most task-relevant) modes dominate; the singular value
+                        spectrum is already concentrated in the directions the loss cares about. The uniform
+                        rescaling therefore does comparatively little damage, because the budget is already
+                        allocated where it is needed. In regulatory DNA, where the model must capture a
                         combinatorial
-                        grammar of short, independent binding motifs rather than a few dominant modes, this
-                        cumulative rank collapse is especially damaging.</p>
+                        grammar of short, independent binding motifs rather than a few dominant modes, Muon&rsquo;s
+                        equal-energy allocation under a hard Frobenius cap is especially harmful; the
+                        constraint starves the very directions that whitening was designed to nurture.</p>
 
                     <p>On the other hand, weight decay does <em>not</em> alter the Muon update, it only decays
                         the matrix said update is added to! Additionally, weight decay explores a much larger
@@ -650,14 +690,19 @@
                         dominate the train loss across our sweeps.</p>
 
 
-                    <h3>Spectral Analysis</h3>
+                    </details>
+
+                    <details class="collapsible-section" open>
+                        <summary>
+                            <h3>Spectral Analysis</h3>
+                        </summary>
                     <p>To understand <em>why</em> Muon with independent weight decay (MuonW) outperforms its
                         constrained counterpart (MuonH), we must look at the spectral properties of the learned
                         representations. Rather than examining the spectral norm itself (since the exact multiplier
                         is less important given scale invariance), we focus on the <em>distribution</em> of singular
                         values. Following the eigenspectral framework of NerVE<sup><a
                                 href="#ref-nerve">15</a></sup><span class="sidenote-group"><sup
-                                class="sidenote-ref">9</sup><span class="sidenote-card side-right">NerVE
+                                class="sidenote-ref">10</sup><span class="sidenote-card side-right">NerVE
                                 originally applies these metrics to track activation dynamics through FFN
                                 layers, but the same spectral measures are equally well defined for weight
                                 matrices.</span></span>, we track two key metrics for the weight
@@ -682,7 +727,7 @@
                             <strong>Red:</strong> MuonH, <strong>Orange:</strong> AdamW,
                             <strong>Green:</strong> AdamH. Note how MuonH (Red) collapses to a low entropy,
                             low-rank state, while MuonW (Blue) maintains high capacity.<span class="sidenote-group"><sup
-                                    class="sidenote-ref">10</sup><span class="sidenote-card side-right">All weight
+                                    class="sidenote-ref">11</sup><span class="sidenote-card side-right">All weight
                                     matrices exhibited similar
                                     patterns; we show only one here for simplicity.</span></span>
                         </figcaption>
@@ -824,7 +869,7 @@
                         vocabulary of ~100k tokens with genuinely ambiguous contexts where probability mass must
                         be
                         spread across many plausible continuations<span class="sidenote-group"><sup
-                                class="sidenote-ref">11</sup><span class="sidenote-card side-left">
+                                class="sidenote-ref">12</sup><span class="sidenote-card side-left">
                                 Quantitatively, consider the softmax function \(\sigma(\mathbf{z})_i =
                                 \frac{e^{z_i}}{\sum_{j=1}^K e^{z_j}}\). If we multiply the logits by a large
                                 factor \(k\), the terms become \(e^{k z_i}\). Since the exponential function
@@ -854,7 +899,33 @@
                         one that
                         a controlled comparison with a fixed norm output head could help resolve.</p>
 
-                    <h3>Next steps</h3>
+                    <details class="collapsible-section" open>
+                        <summary>
+                            <h4>Why don&rsquo;t AdamW&rsquo;s logits grow?</h4>
+                        </summary>
+                    <p>Adam&rsquo;s update for each parameter is proportional to
+                        \(m_t / \sqrt{v_t}\), where \(m_t\) is the gradient EMA and \(v_t\) the EMA of
+                        squared gradients. In DNA modeling, where batches are dominated by shifting, independent
+                        6&ndash;20bp motifs, the gradients fluctuate wildly from step to step. The first moment
+                        \(m_t\) suffers <em>destructive</em> interference as positive and negative gradients
+                        cancel, while the second moment \(v_t\) only grows (squared values are always positive).
+                        The ratio shrinks, and Adam&rsquo;s steps become tiny. Increasing the learning rate does
+                        not help: a larger \(\eta\) amplifies the noisy, unstructured coordinate-wise updates,
+                        causing training to destabilize, as the charts above confirm (see how fast losses rise for the largest learning rate).</p>
+
+                    <p>Muon sidesteps this entirely. Its Newton&ndash;Schulz whitening discards the per-element
+                        scale and forces a fixed-norm update at every step, so temporal noise never suppresses
+                        the step size. The result: MuonW can safely push large updates through the output
+                        projection, bulldozing past weight decay to inflate logits, while AdamW is trapped at
+                        a low norm by its own variance denominator.</p>
+                    </details>
+
+                    </details>
+
+                    <details class="collapsible-section" open>
+                        <summary>
+                            <h3>Next steps</h3>
+                        </summary>
                     <p>Next, we plan to:</p>
                     <ul>
                         <li><strong>Run the full sweep with SSO:</strong> repeat the Adam/Muon \(\times\)
@@ -864,6 +935,7 @@
                         <li><strong>Explore hybrid optimizers:</strong> evaluate combinations of Muon and Adam
                             updates (like PRISM variants) and compare against these results.</li>
                     </ul>
+                    </details>
 
                     <hr style="margin: 3rem 0 2rem; border: none; border-top: 1px solid #ddd;">
                     <h3 id="appendix">Appendices</h3>
@@ -949,7 +1021,7 @@
                     <p>Note that \(\sigma_2\) is the maximum stretch induced orthogonal to
                         \(v_1=\arg\max_{\|x\|=1}\|Ax\|\), or \(\sigma_2=\max_{x\perp v_1:\:\|x\|=1}\|Ax\|\), and
                         \(\sigma_3\) has the stretch orthogonal to the first 2, and so on<span
-                            class="sidenote-group"><sup class="sidenote-ref">12</sup><span
+                            class="sidenote-group"><sup class="sidenote-ref">13</sup><span
                                 class="sidenote-card side-right">For completeness, we can generalize this idea
                                 either recursively (where we define \(\sigma_i\) as the max stretch orthogonal to
                                 \(v_j\) \(\forall j \lt i\)), or succinctly using the Min max theorem:
@@ -962,7 +1034,7 @@
                     <ul>
                         <li><strong>Spectral norm/stability:</strong> The spectral norm is defined as
                             \(\|\cdot\|_2=\sigma_1(\cdot)\) on matrix inputs. It is the operator norm<span
-                                class="sidenote-group"><sup class="sidenote-ref">13</sup><span
+                                class="sidenote-group"><sup class="sidenote-ref">14</sup><span
                                     class="sidenote-card side-left">Formally, the operator norm \(\|\cdot\|_p\) is
                                     defined for \(A\in \mathbb R^{m\times n}\) as \(\|A\|_p=\max\{\|Ax\|_p:x\in
                                     \mathbb R^n, \|x\|_p\le 1\}\), where we apply the \(\ell_p\) norm to the
@@ -1341,6 +1413,9 @@
                         <li id="ref-repdeg">Gao et al. <a href="https://arxiv.org/abs/1907.12009"
                                 target="_blank">Representation Degeneration Problem in Training Natural
                                 Language Generation Models</a>. ICLR 2019.</li>
+                        <li id="ref-spectral-fl">Yang, Simon &amp; Bernstein. <a
+                                href="https://arxiv.org/abs/2310.17813" target="_blank">A Spectral Condition
+                                for Feature Learning</a>. arXiv 2023.</li>
                     </ol>
                 </article>
             </div>
