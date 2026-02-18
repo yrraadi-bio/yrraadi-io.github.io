@@ -581,7 +581,7 @@
 
                     <details class="collapsible-section" open>
                         <summary>
-                            <h3>Results</h3>
+                            <h3>Training Results</h3>
                         </summary>
                     <figure class="blog-image">
                         <img src="/blogs/optimizers-for-biology/assets/loss_curves_nucleotide_loss.png"
@@ -591,10 +591,19 @@
                     </figure>
 
                     <p>We find that Muon achieves a lower train loss than Adam, consistent with existing
-                        literature<sup><a href="#ref-muon">2</a><a href="#ref-hyperball">10</a></sup>.
+                        literature<sup><a href="#ref-muon">2</a><a href="#ref-hyperball">10</a></sup><span
+                            class="sidenote-group"><sup class="sidenote-ref">8</sup><span
+                                class="sidenote-card side-right">The model is a multifunctional architecture
+                                similar to <a href="/introducing-axis/">Axis</a>, trained on a set of
+                                candidate cis-regulatory elements (cCREs) from the ENCODE v4 registry that
+                                are cell-type-specific to one of three cell lines: K562, HepG2, and
+                                SK-N-SH. Training was limited to 10 epochs due to compute constraints;
+                                the loss has not begun to saturate (we have trained to much lower
+                                cross-entropy in prior runs), so these results reflect relative optimizer
+                                comparisons, not absolute model quality.</span></span>.
                         Interestingly, the Hyperball constraint does not consistently improve both optimizers:
                         it helps Adam (AdamH &gt; AdamW) but <em>hurts</em> Muon (MuonW &gt; MuonH)<span
-                            class="sidenote-group"><sup class="sidenote-ref">8</sup><span
+                            class="sidenote-group"><sup class="sidenote-ref">9</sup><span
                                 class="sidenote-card side-right">The Hyperball blog<sup><a
                                         href="#ref-hyperball">10</a></sup> actually shows that for Muon, the
                                 losses are comparable for models with &le; 500M parameters, and Hyperball
@@ -607,7 +616,7 @@
                     <p>We hypothesize that this is because Hyperball&rsquo;s re-projection scales all
                         singular values of the weight matrix by the <em>same</em> multiplicative factor. When
                         Hyperball maps \(W_{t+1} = R\,(W_t + U_t)/\|W_t + U_t\|_F\), it shrinks every singular
-                        direction of \(W\) equally<span class="sidenote-group"><sup class="sidenote-ref">9</sup><span
+                        direction of \(W\) equally<span class="sidenote-group"><sup class="sidenote-ref">10</sup><span
                             class="sidenote-card side-left">It is actually possible to be on both the Frobenius and
                             Spectral sphere at
                             once as they DO intersect, but our algorithm does not guarantee that we enter
@@ -709,7 +718,7 @@
                         is less important given scale invariance), we focus on the <em>distribution</em> of singular
                         values. Following the eigenspectral framework of NerVE<sup><a
                                 href="#ref-nerve">15</a></sup><span class="sidenote-group"><sup
-                                class="sidenote-ref">10</sup><span class="sidenote-card side-right">NerVE
+                                class="sidenote-ref">11</sup><span class="sidenote-card side-right">NerVE
                                 originally applies these metrics to track activation dynamics through FFN
                                 layers, but the same spectral measures are equally well defined for weight
                                 matrices.</span></span>, we track two key metrics for the weight
@@ -734,13 +743,13 @@
                             <strong>Red:</strong> MuonH, <strong>Orange:</strong> AdamW,
                             <strong>Green:</strong> AdamH. Note how MuonH (Red) collapses to a low entropy,
                             low-rank state, while MuonW (Blue) maintains high capacity.<span class="sidenote-group"><sup
-                                    class="sidenote-ref">11</sup><span class="sidenote-card side-right">All weight
+                                    class="sidenote-ref">12</sup><span class="sidenote-card side-right">All weight
                                     matrices exhibited similar
                                     patterns; we show only one here for simplicity.</span></span>
                         </figcaption>
                     </figure>
 
-                    <p>MuonW (Blue) and MuonH (Red) both start with similar spectral entropy, but
+                    <p> The weight updates of MuonW (Blue) and MuonH (Red) both start with similar spectral entropy, but
                         their trajectories diverge sharply. MuonW&rsquo;s entropy rises and stabilizes
                         near \(\approx 0.95\), indicating that the weight matrices maintain a near-uniform
                         singular value distribution throughout training; Muon&rsquo;s whitening
@@ -839,18 +848,18 @@
                             Norm. Bottom: Relative Step
                             Size. MuonW (Blue) shows monotonically increasing norm and decaying step size, while MuonH
                             (Red) plateaus.<span class="sidenote-group"><sup
-                                    class="sidenote-ref">12</sup><span class="sidenote-card side-right">The initial
+                                    class="sidenote-ref">13</sup><span class="sidenote-card side-right">The initial
                                     ramp-up visible in the relative step size corresponds to our learning rate warmup
                                     schedule.</span></span></figcaption>
                     </figure>
 
                     <p>Indeed, MuonW's (Blue) weight norm grows monotonically throughout training. The
-                        update norm \(\|\Delta W\|\) is roughly constant, but the weight denominator
-                        \(\|W\|\) grows. Although independent
+                        update norm \(\|\Delta W\|\) is roughly constant (it increases slightly), but the weight denominator
+                        \(\|W\|\) baloons. Although independent
                         weight decay should theoretically bound the norm at an equilibrium<sup><a
                                 href="#ref-wdeq">9</a>,
                             <a href="#ref-hyperball">10</a></sup>, the norm continues to grow long after the nucleotide
-                        loss has plateaued. This causes the relative
+                        loss has relatively plateaued. This causes the relative
                         step size to <em>decay inversely with the square root of time</em>, acting as an
                         intrinsic learning rate scheduler that naturally "cools" the optimization and allows
                         the model to settle into a well generalized minimum.</p>
@@ -900,7 +909,7 @@
                         vocabulary of ~100k tokens with genuinely ambiguous contexts where probability mass must
                         be
                         spread across many plausible continuations<span class="sidenote-group"><sup
-                                class="sidenote-ref">13</sup><span class="sidenote-card side-left">
+                                class="sidenote-ref">14</sup><span class="sidenote-card side-left">
                                 Quantitatively, consider the softmax function \(\sigma(\mathbf{z})_i =
                                 \frac{e^{z_i}}{\sum_{j=1}^K e^{z_j}}\). If we multiply the logits by a large
                                 factor \(k\), the terms become \(e^{k z_i}\). Since the exponential function
@@ -971,7 +980,8 @@
                     </figure>
 
                     <p>Overall motif preservation follows the order MuonH (~0.53x) &gt; MuonW (~0.47x) &gt;
-                        AdamH &asymp; AdamW (~0.41x). Notably, <em>MuonH outperforms MuonW here despite
+                        AdamH &asymp; AdamW (~0.41x), a ~29% improvement for MuonH over the best Adam
+                        variant, and ~15% for MuonW. Notably, <em>MuonH outperforms MuonW here despite
                         achieving a higher training loss</em>. This is consistent with the logit inflation
                         hypothesis discussed above: MuonW&rsquo;s lower cross-entropy loss is partly
                         driven by inflated logit confidence rather than richer internal representations,
@@ -981,28 +991,29 @@
                         distal enhancers (dELS) are hardest at 0.48x.</p>
 
                     <figure class="blog-image">
-                        <img src="/blogs/optimizers-for-biology/assets/motif_assets/motif_specificity.png"
-                            alt="TF motif cell-type specificity across optimizers" loading="lazy" />
-                        <figcaption>Cell-type specificity of TF motif recovery. Each row is a TF, each column
-                            group is an optimizer. Bars show hit rates for K562, HepG2, and SK-N-SH.</figcaption>
+                        <img src="/blogs/optimizers-for-biology/assets/motif_assets/motif_jsd.png"
+                            alt="Motif JSD analysis: volume vs shape trade-off" loading="lazy" />
+                        <figcaption>Volume vs shape analysis. (A) Motif volume, (B) aggregate JSD,
+                            (C) per-sequence hit overlap, (D&ndash;E) per-sequence JSD,
+                            (F) volume&ndash;shape trade-off, (G&ndash;H) TF distribution and log2 fold
+                            change.</figcaption>
                     </figure>
 
-                    <p>Cell-type specificity tells a more nuanced story. HNF4A shows clear HepG2 enrichment
-                        in originals (13.2% vs 7&ndash;8% in other cell types), but all models lose this
-                        specificity, with bars flattening to ~4&ndash;5% across cell types. KLF1 (K562-enriched)
-                        is partially recovered: Muon variants hit 22&ndash;24% vs Adam&rsquo;s ~12%
-                        (original: 33%). Neuronal TFs like ASCL1 and HAND2 are the hardest to recover; all
-                        models drop from ~19% to ~5%. The one exception is GATA3, where all models match or
-                        exceed original hit rates. In summary: models generate the right motifs at reduced
-                        rates but broadly struggle with cell-type-specific placement.</p>
+                    <p>The JSD analysis reveals an interesting volume&ndash;shape trade-off. At the
+                        <em>aggregate</em> level, summing all hits across 221k sequences, normalizing
+                        to a TF distribution, and comparing proportions, AdamH has the lowest JSD
+                        (0.035), followed by MuonW (0.037), AdamW (0.049), and MuonH (0.061). MuonH&rsquo;s
+                        higher aggregate JSD means its extra hits are concentrated in a few TFs (PRRX1,
+                        FOXC2, KLF1) rather than spread proportionally across all 22 TFs.</p>
 
-                    <figure class="blog-image">
-                        <img src="/blogs/optimizers-for-biology/assets/motif_assets/motif_presentation.png"
-                            alt="Full motif analysis overview" loading="lazy" />
-                        <figcaption>Full motif analysis summary. (A) Overall preservation, (B) by regulatory
-                            type, (C&ndash;E) cell-type-enriched TFs, (F&ndash;G) cell-type &times; TF heatmaps
-                            for originals vs MuonH.</figcaption>
-                    </figure>
+                    <p>At the <em>per-sequence</em> level, pairing each original and model sequence
+                        and comparing which TFs were hit, the rankings flip: MuonH achieves the best
+                        fidelity (0.494), followed by MuonW (0.505), AdamH (0.545), and AdamW (0.561).
+                        Because MuonH produces the most total hits (0.53x original), more individual
+                        sequences have overlapping TF hits with their original, even if the aggregate
+                        distribution is skewed. Only ~48&ndash;52% of sequence pairs have motif hits in
+                        both the original and model version; for ~27&ndash;31%, the original has hits
+                        but the model produces none entirely.</p>
 
                     </details>
 
@@ -1107,7 +1118,7 @@
                     <p>Note that \(\sigma_2\) is the maximum stretch induced orthogonal to
                         \(v_1=\arg\max_{\|x\|=1}\|Ax\|\), or \(\sigma_2=\max_{x\perp v_1:\:\|x\|=1}\|Ax\|\), and
                         \(\sigma_3\) has the stretch orthogonal to the first 2, and so on<span
-                            class="sidenote-group"><sup class="sidenote-ref">14</sup><span
+                            class="sidenote-group"><sup class="sidenote-ref">15</sup><span
                                 class="sidenote-card side-right">For completeness, we can generalize this idea
                                 either recursively (where we define \(\sigma_i\) as the max stretch orthogonal to
                                 \(v_j\) \(\forall j \lt i\)), or succinctly using the Min max theorem:
@@ -1120,7 +1131,7 @@
                     <ul>
                         <li><strong>Spectral norm/stability:</strong> The spectral norm is defined as
                             \(\|\cdot\|_2=\sigma_1(\cdot)\) on matrix inputs. It is the operator norm<span
-                                class="sidenote-group"><sup class="sidenote-ref">15</sup><span
+                                class="sidenote-group"><sup class="sidenote-ref">16</sup><span
                                     class="sidenote-card side-left">Formally, the operator norm \(\|\cdot\|_p\) is
                                     defined for \(A\in \mathbb R^{m\times n}\) as \(\|A\|_p=\max\{\|Ax\|_p:x\in
                                     \mathbb R^n, \|x\|_p\le 1\}\), where we apply the \(\ell_p\) norm to the
