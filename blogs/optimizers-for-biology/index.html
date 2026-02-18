@@ -11,18 +11,18 @@
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Muon improves regulatory DNA learning — Origin Bio</title>
+    <title>Does Muon improve regulatory DNA learning? — Origin Bio</title>
     <meta name="description"
         content="Exploring Adam, Muon, and Hyperball optimizers for DNA and biology-focused AI models. Weight decay, singular values, and scale invariance." />
     <meta property="og:type" content="article" />
     <meta property="og:site_name" content="Origin Bio" />
-    <meta property="og:title" content="Muon improves regulatory DNA learning" />
+    <meta property="og:title" content="Does Muon improve regulatory DNA learning?" />
     <meta property="og:description"
         content="Exploring Adam, Muon, and Hyperball optimizers for DNA and biology-focused AI models." />
     <meta property="og:url" content="https://origin.bio/blogs/optimizers-for-biology/" />
     <meta property="og:image" content="https://origin.bio/assets/thumbnail-og.jpg?v=1" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Muon improves regulatory DNA learning" />
+    <meta name="twitter:title" content="Does Muon improve regulatory DNA learning?" />
     <link rel="canonical" href="https://origin.bio/blogs/optimizers-for-biology/">
     <link rel="stylesheet" href="/css/style.css">
     <link rel="icon" href="/assets/favicon.png" type="image/png">
@@ -70,15 +70,16 @@
                         </video>
                     </figure>
 
-                    <h2>Muon improves regulatory DNA learning</h2>
+                    <h2>Does Muon improve regulatory DNA learning?</h2>
                     <p class="blog-date">February 12, 2026 &middot; Viraj Doshi</p>
 
                     <section class="blog-takeaways" aria-label="Key takeaways">
                         <h3>Highlights</h3>
                         <ul>
                             <li>Muon achieves <b>1.4%</b> lower nucleotide cross-entropy loss than the best Adam configuration, and <b>~29%</b> higher motif preservation.</li>
-                            <li>Hyperball <em>hurts</em> Muon: MuonW outperforms MuonH by <b>1.2%</b> in train loss, though MuonH recovers <b>~13%</b> more motifs&mdash;consistent with a logit inflation hypothesis.</li>
-                            <li>Hyperball <em>helps</em> Adam: AdamH improves over AdamW by <b>1.2%</b> in train loss, with comparable motif recovery.</li>
+                            <li>Muon with Hyperball: MuonW outperforms MuonH by <b>1.2%</b> in train loss, though MuonH recovers <b>~13%</b> more motifs, consistent with a logit inflation hypothesis.</li>
+                            <li>Adam with Hyperball: AdamH improves over AdamW by <b>1.2%</b> in train loss, with comparable motif recovery.</li>
+                            <li>We perform a spectral analysis to show how Muon's whitening promotes feature learning by forcing weights away from initialization.</li>
                         </ul>
                     </section>
 
