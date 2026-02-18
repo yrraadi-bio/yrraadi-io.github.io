@@ -973,7 +973,7 @@
                         squared gradients. In DNA modeling, where batches are dominated by shifting, independent
                         6&ndash;20bp motifs, the gradients fluctuate wildly from step to step. The first moment
                         \(m_t\) suffers <em>destructive</em> interference as positive and negative gradients
-                        cancel, while the second moment \(v_t\) only grows (there is a decay term, but it is usually very small).
+                        cancel, while the second moment \(v_t\), which averages strictly positive squared values, does not suffer from sign cancellation and remains relatively stable and large.
                         The ratio shrinks, and Adam&rsquo;s steps become tiny. Increasing the learning rate does
                         not help: a larger \(\eta\) amplifies the noisy, unstructured coordinate-wise updates,
                         causing training to destabilize, as the charts above confirm (see how fast losses rise for the largest learning rate).</p>
