@@ -63,6 +63,13 @@
         <section class="blog-hero">
             <div class="blog-content">
                 <article class="blog-article">
+                    <figure class="blog-image" style="margin-top: 0;">
+                        <video autoplay muted loop playsinline preload="auto">
+                            <source src="/blogs/optimizers-for-biology/assets/optimizer_gif.mp4" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                    </figure>
+
                     <h2>Rotating Optimizers about the Axis: From NLP to DNA Models</h2>
                     <p class="blog-date">February 12, 2026 &middot; Viraj Doshi</p>
 
@@ -923,7 +930,7 @@
                         one that
                         a controlled comparison with a fixed norm output head could help resolve.</p>
 
-                    <details class="collapsible-section" open>
+                    <details class="collapsible-section">
                         <summary>
                             <h4>Why don&rsquo;t AdamW&rsquo;s logits grow?</h4>
                         </summary>
@@ -943,6 +950,59 @@
                         projection, bulldozing past weight decay to inflate logits, while AdamW is trapped at
                         a low norm by its own variance denominator.</p>
                     </details>
+
+                    </details>
+
+                    <details class="collapsible-section" open>
+                        <summary>
+                            <h3>Motif Recovery</h3>
+                        </summary>
+
+                    <p>To test whether lower loss translates into biologically meaningful predictions, we
+                        ran a 15% nucleotide masking experiment on ~221k cCRE sequences active in &ge;2
+                        cell types (K562, HepG2, SK-N-SH) and measured how well each model recovers the
+                        original sequences' transcription factor binding motifs.</p>
+
+                    <figure class="blog-image">
+                        <img src="/blogs/optimizers-for-biology/assets/motif_assets/motif_preservation.png"
+                            alt="Motif preservation by regulatory type" loading="lazy" />
+                        <figcaption>Motif preservation ratio (model hits / original hits) by regulatory element
+                            type. MuonH leads across all categories.</figcaption>
+                    </figure>
+
+                    <p>Overall motif preservation follows the order MuonH (~0.53x) &gt; MuonW (~0.47x) &gt;
+                        AdamH &asymp; AdamW (~0.41x). Notably, <em>MuonH outperforms MuonW here despite
+                        achieving a higher training loss</em>. This is consistent with the logit inflation
+                        hypothesis discussed above: MuonW&rsquo;s lower cross-entropy loss is partly
+                        driven by inflated logit confidence rather than richer internal representations,
+                        while MuonH&rsquo;s norm-constrained weights, though spectrally compressed,
+                        learn cleaner features that better preserve real biological motifs. Preservation
+                        also varies by regulatory type: promoters (PLS) are best preserved at 0.65x, while
+                        distal enhancers (dELS) are hardest at 0.48x.</p>
+
+                    <figure class="blog-image">
+                        <img src="/blogs/optimizers-for-biology/assets/motif_assets/motif_specificity.png"
+                            alt="TF motif cell-type specificity across optimizers" loading="lazy" />
+                        <figcaption>Cell-type specificity of TF motif recovery. Each row is a TF, each column
+                            group is an optimizer. Bars show hit rates for K562, HepG2, and SK-N-SH.</figcaption>
+                    </figure>
+
+                    <p>Cell-type specificity tells a more nuanced story. HNF4A shows clear HepG2 enrichment
+                        in originals (13.2% vs 7&ndash;8% in other cell types), but all models lose this
+                        specificity, with bars flattening to ~4&ndash;5% across cell types. KLF1 (K562-enriched)
+                        is partially recovered: Muon variants hit 22&ndash;24% vs Adam&rsquo;s ~12%
+                        (original: 33%). Neuronal TFs like ASCL1 and HAND2 are the hardest to recover; all
+                        models drop from ~19% to ~5%. The one exception is GATA3, where all models match or
+                        exceed original hit rates. In summary: models generate the right motifs at reduced
+                        rates but broadly struggle with cell-type-specific placement.</p>
+
+                    <figure class="blog-image">
+                        <img src="/blogs/optimizers-for-biology/assets/motif_assets/motif_presentation.png"
+                            alt="Full motif analysis overview" loading="lazy" />
+                        <figcaption>Full motif analysis summary. (A) Overall preservation, (B) by regulatory
+                            type, (C&ndash;E) cell-type-enriched TFs, (F&ndash;G) cell-type &times; TF heatmaps
+                            for originals vs MuonH.</figcaption>
+                    </figure>
 
                     </details>
 
