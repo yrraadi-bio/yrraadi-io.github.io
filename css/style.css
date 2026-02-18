@@ -2807,3 +2807,33 @@ footer {
         transform: translateY(-50%);
     }
 }
+/* Author Social Links */
+.author-socials {
+    display: inline-flex;
+    align-items: center;
+    gap: 1.2rem;
+    margin-left: 0.6rem;
+    vertical-align: middle;
+    font-style: normal;
+}
+
+.author-social-link {
+    color: #8899a6;
+    display: inline-flex;
+    align-items: center;
+    transition: all 0.2s ease;
+    border-bottom: none !important;
+    opacity: 0.8;
+}
+
+.author-social-link:hover {
+    color: #4A9EFF;
+    opacity: 1;
+    transform: translateY(-1px);
+    background-color: transparent !important;
+}
+
+.author-social-link svg {
+    width: 15px;
+    height: 15px;
+}
