@@ -659,7 +659,7 @@
                             style="margin-bottom: 0.5rem;" />
                         <img src="/blogs/optimizers-for-biology/assets/muon_comparison.png"
                             alt="Comparison of Muon and MuonH diagnostics" loading="lazy" />
-                        <figcaption>Training dynamics for Top: AdamW vs AdamH, Bottom: MuonW vs MuonH
+                        <figcaption>Sweep losses for Top: AdamW vs AdamH, Bottom: MuonW vs MuonH
                         </figcaption>
                     </figure>
 
@@ -703,8 +703,8 @@
                         <img src="/blogs/optimizers-for-biology/assets/muonw_adamh_comparison.png"
                             alt="MuonW vs AdamH loss curves across widths" loading="lazy"
                             style="margin-bottom: 0.5rem;" />
-                        <figcaption>Top: Loss curves for MuonW (dashed) vs AdamH (solid) across widths.
-                            Bottom: Heatmap of % advantage (green = AdamH better, red = MuonW better).</figcaption>
+                        <figcaption>Top: Heatmap of % advantage (green = AdamH better, red = MuonW better).
+                            Bottom: Loss curves for MuonW (dashed) vs AdamH (solid) across widths.</figcaption>
                     </figure>
 
                     <p>Finally, we compare the two best configurations head-to-head: MuonW against AdamH.
@@ -759,21 +759,23 @@
                         </figcaption>
                     </figure>
 
-                    <p> The weight updates of MuonW (Blue) and MuonH (Red) both start with similar spectral entropy, but
-                        their trajectories diverge sharply. MuonW&rsquo;s entropy rises and stabilizes
-                        near \(\approx 0.95\), indicating that the weight matrices maintain a near-uniform
-                        singular value distribution throughout training; Muon&rsquo;s whitening
-                        successfully builds a high-rank, distributed representation. MuonH (Red), by
-                        contrast, peaks early and then steadily collapses, with the participation ratio
-                        falling in tandem: the effective rank of the weight matrices shrinks over training.
-                        The Adam variants (Orange, Green) sit much lower throughout, which is expected
-                        since Adam does not whiten its updates. The critical observation is the
-                        <em>divergence</em> between Blue and Red: both use the same Muon whitening, yet
-                        MuonH&rsquo;s spectrum degrades while MuonW&rsquo;s does not. This points directly
-                        to the Hyperball constraint as the cause, and the \(\Delta W\) entropy tells
-                        the same story; MuonH&rsquo;s updates themselves become progressively less
-                        whitened (dropping from \(\approx 0.95\) to \(\approx 0.7\)), confirming that the
-                        collapse feeds back from the weights into the updates.</p>
+                    <p> The weights of MuonW (Blue) and MuonH (Red) both start with high spectral entropy
+                        (\(\approx 0.98\)), but their trajectories diverge sharply. MuonW&rsquo;s entropy
+                        decreases only slightly and stabilizes near \(\approx 0.93\), indicating that the
+                        weight matrices maintain a near-uniform singular value distribution throughout
+                        training; Muon&rsquo;s whitening successfully builds a high-rank, distributed
+                        representation. MuonH (Red), by contrast, steadily collapses from \(\approx 0.98\)
+                        to \(\approx 0.68\), with the participation ratio falling in tandem: the effective
+                        rank of the weight matrices shrinks over training. The Adam variants (Orange, Green)
+                        sit much lower throughout, which is expected since Adam does not whiten its updates.
+                        The critical observation is the <em>divergence</em> between Blue and Red: both use
+                        the same Muon whitening, yet MuonH&rsquo;s spectrum degrades while MuonW&rsquo;s
+                        does not. This points directly to the Hyperball constraint as the cause. The
+                        \(\Delta W\) entropy tells a consistent story: MuonW&rsquo;s updates rise and
+                        stabilize near \(\approx 0.95\), while MuonH&rsquo;s updates peak early and then
+                        become progressively less whitened (dropping from \(\approx 0.95\) to
+                        \(\approx 0.7\)), confirming that the collapse feeds back from the weights into
+                        the updates.</p>
 
                     <details class="collapsible-section">
                         <summary>
