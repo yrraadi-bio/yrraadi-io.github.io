@@ -11,18 +11,18 @@
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rotating Optimizers about the Axis: From NLP to DNA Models — Origin Bio</title>
+    <title>Muon improves regulatory DNA learning — Origin Bio</title>
     <meta name="description"
         content="Exploring Adam, Muon, and Hyperball optimizers for DNA and biology-focused AI models. Weight decay, singular values, and scale invariance." />
     <meta property="og:type" content="article" />
     <meta property="og:site_name" content="Origin Bio" />
-    <meta property="og:title" content="Rotating Optimizers about the Axis: From NLP to DNA Models" />
+    <meta property="og:title" content="Muon improves regulatory DNA learning" />
     <meta property="og:description"
         content="Exploring Adam, Muon, and Hyperball optimizers for DNA and biology-focused AI models." />
     <meta property="og:url" content="https://origin.bio/blogs/optimizers-for-biology/" />
     <meta property="og:image" content="https://origin.bio/assets/thumbnail-og.jpg?v=1" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Rotating Optimizers about the Axis: From NLP to DNA Models" />
+    <meta name="twitter:title" content="Muon improves regulatory DNA learning" />
     <link rel="canonical" href="https://origin.bio/blogs/optimizers-for-biology/">
     <link rel="stylesheet" href="/css/style.css">
     <link rel="icon" href="/assets/favicon.png" type="image/png">
@@ -70,8 +70,17 @@
                         </video>
                     </figure>
 
-                    <h2>Rotating Optimizers about the Axis: From NLP to DNA Models</h2>
+                    <h2>Muon improves regulatory DNA learning</h2>
                     <p class="blog-date">February 12, 2026 &middot; Viraj Doshi</p>
+
+                    <section class="blog-takeaways" aria-label="Key takeaways">
+                        <h3>Highlights</h3>
+                        <ul>
+                            <li>Muon achieves <b>1.4%</b> lower nucleotide cross-entropy loss than the best Adam configuration, and <b>~29%</b> higher motif preservation.</li>
+                            <li>Hyperball <em>hurts</em> Muon: MuonW outperforms MuonH by <b>1.2%</b> in train loss, though MuonH recovers <b>~13%</b> more motifs&mdash;consistent with a logit inflation hypothesis.</li>
+                            <li>Hyperball <em>helps</em> Adam: AdamH improves over AdamW by <b>1.2%</b> in train loss, with comparable motif recovery.</li>
+                        </ul>
+                    </section>
 
                     <p>Optimizers dictate the parameter update rules that govern the convergence trajectory of
                         Stochastic Gradient Descent (SGD). At present, variations of Adam<sup><a
@@ -87,7 +96,7 @@
                         behave very differently numerically. The syntactical rules are explicit and local (transcription
                         factor binding motifs typically span ~6&ndash;20bp), and at the short context lengths we study,
                         the signal is dominated by these independent local motif grammars rather than the long-range
-                        dependencies that characterize language modeling. In this blog, I explore the behavior of
+                        dependencies that characterize language modeling. In this blog, we explore the behavior of
                         recent optimizers on DNA sequence modeling in regulatory regions, and evaluate whether
                         optimizer choices that work well for LLMs transfer to this distinct setting.</p>
 
@@ -170,7 +179,7 @@
                                 has them merged into one column.</span></span><span class="sidenote-group"><sup
                                 class="sidenote-ref">4</sup><span class="sidenote-card side-left">It also happens to
                                 be the case that \(\|W\|_F=\sqrt{\sum_i \sigma_i^2}\), but this is a bit of a
-                                digression and I will not prove this here.</span></span>), but in a matrix aware
+                                digression and we will not prove this here.</span></span>), but in a matrix aware
                         setting one can instead target properties tied to singular values:</p>
                     <ul>
                         <li><strong>Rank / intrinsic dimension:</strong> shaping the smaller singular values can
@@ -993,27 +1002,14 @@
                     <figure class="blog-image">
                         <img src="/blogs/optimizers-for-biology/assets/motif_assets/motif_jsd.png"
                             alt="Motif JSD analysis: volume vs shape trade-off" loading="lazy" />
-                        <figcaption>Volume vs shape analysis. (A) Motif volume, (B) aggregate JSD,
-                            (C) per-sequence hit overlap, (D&ndash;E) per-sequence JSD,
-                            (F) volume&ndash;shape trade-off, (G&ndash;H) TF distribution and log2 fold
-                            change.</figcaption>
+                        <figcaption>Per-Sequence JSD by Cell Type. MuonH consistently achieves the lowest (best) JSD across all cell lines.</figcaption>
                     </figure>
 
-                    <p>The JSD analysis reveals an interesting volume&ndash;shape trade-off. At the
-                        <em>aggregate</em> level, summing all hits across 221k sequences, normalizing
-                        to a TF distribution, and comparing proportions, AdamH has the lowest JSD
-                        (0.035), followed by MuonW (0.037), AdamW (0.049), and MuonH (0.061). MuonH&rsquo;s
-                        higher aggregate JSD means its extra hits are concentrated in a few TFs (PRRX1,
-                        FOXC2, KLF1) rather than spread proportionally across all 22 TFs.</p>
-
                     <p>At the <em>per-sequence</em> level, pairing each original and model sequence
-                        and comparing which TFs were hit, the rankings flip: MuonH achieves the best
-                        fidelity (0.494), followed by MuonW (0.505), AdamH (0.545), and AdamW (0.561).
-                        Because MuonH produces the most total hits (0.53x original), more individual
-                        sequences have overlapping TF hits with their original, even if the aggregate
-                        distribution is skewed. Only ~48&ndash;52% of sequence pairs have motif hits in
-                        both the original and model version; for ~27&ndash;31%, the original has hits
-                        but the model produces none entirely.</p>
+                        and comparing which TFs were hit, MuonH achieves the best fidelity (0.494),
+                        followed by MuonW (0.505), AdamH (0.545), and AdamW (0.561). This ranking holds
+                        consistently across K562, HepG2, and SK-N-SH cell lines, with MuonH showing the
+                        strongest advantage in SK-N-SH (0.393 vs 0.422 for MuonW).</p>
 
                     </details>
 
@@ -1439,7 +1435,7 @@
                     <p>In Axis, our original model architecture, we used MuP initialization and layer
                         pre-normalization, but that wasn't enough to enforce scale invariance in our
                         model. To
-                        further enforce it, I added a layer post-norm and then QK-norm (like Gemma 3's
+                        further enforce it, we added a layer post-norm and then QK-norm (like Gemma 3's
                         architecture<sup><a href="#ref-gemma">14</a></sup>), which seemed to be enough
                         to
                         enforce scale invariance (although, it seems like only adding the post-norm was
