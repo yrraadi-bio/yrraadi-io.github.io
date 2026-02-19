@@ -682,7 +682,7 @@
                         lowest point is with Hyperball at \(\eta \approx 5.69 \times 10^{-3}\), and with Muon, the
                         lowest point is with weight decay at \(\eta \approx 2.27 \times 10^{-2}\) (although Hyperball at
                         \(\eta \approx 5.69 \times 10^{-3}\) is not too far behind). It is very interesting to see that
-                    both Hyperball optimizers share the same optimal learning rate, perhaps this has to do with how similar their training dynamics and relative step sizes are.</p>
+                     AdamH and MuonW share the same optimal learning rate, perhaps this has to do with how similar their training dynamics and relative step sizes are.</p>
 
                     <figure class="blog-image">
                         <img src="/blogs/muon/assets/adam_heatmap.png" alt="Adam sweep summary"
@@ -781,13 +781,13 @@
                         representation. MuonH (Red), by contrast, steadily collapses from \(\approx 0.98\)
                         to \(\approx 0.68\), with the participation ratio falling in tandem: the effective
                         rank of the weight matrices shrinks over training. The Adam variants (Orange, Green)
-                        sit much lower throughout, which is expected since Adam does not whiten its updates.
+                        sit relatively lower throughout, which is expected since Adam does not whiten its updates.
                         The critical observation is the <em>divergence</em> between Blue and Red: both use
                         the same Muon whitening, yet MuonH&rsquo;s spectrum degrades while MuonW&rsquo;s
                         does not. This points directly to the Hyperball constraint as the cause. The
                         \(\Delta W\) entropy tells a consistent story: MuonW&rsquo;s updates rise and
                         stabilize near \(\approx 0.95\), while MuonH&rsquo;s updates peak early and then
-                        become progressively less whitened (dropping from \(\approx 0.95\) to
+                        become progressively less whitened (dropping from \(\approx 0.92\) to
                         \(\approx 0.7\)), confirming that the collapse feeds back from the weights into
                         the updates.</p>
 
@@ -880,8 +880,8 @@
                     </figure>
 
                     <p>Indeed, MuonW's (Blue) weight norm grows monotonically throughout training. The
-                        update norm \(\|\Delta W\|\) is roughly constant (it increases slightly), but the weight denominator
-                        \(\|W\|\) baloons. Although independent
+                        update norm \(\|\Delta W\|\) is roughly constant post-warmup (it increases very slightly), but the weight denominator
+                        \(\|W\|\) balloons. Although independent
                         weight decay should theoretically bound the norm at an equilibrium<sup><a
                                 href="#ref-wdeq">9</a>,
                             <a href="#ref-hyperball">10</a></sup>, the norm continues to grow long after the nucleotide
@@ -1024,7 +1024,15 @@
 
                     <p>At the <em>per-sequence</em> level, pairing each original and model sequence
                         and comparing which TFs were hit, MuonH achieves the best fidelity (0.494),
-                        followed by MuonW (0.505), AdamH (0.545), and AdamW (0.561). This ranking holds
+                        followed by MuonW (0.505), AdamH (0.545), and AdamW (0.561)<span class="sidenote-group">
+                            <sup class="sidenote-ref">15</sup><span class="sidenote-card side-right">
+                                Simpson's Paradox Anomaly: The "All" JSD (e.g., AdamW 0.561) is strictly 
+                                higher than its worst constituent part (HepG2 0.557). This occurs because 
+                                sequences active in multiple cell types are counted once in the "All" 
+                                aggregate but appear in each individual cell type's average. These 
+                                multi-functional sequences are harder to model (higher JSD), so they 
+                                disproportionately drag down the overall average when deduplicated.
+                            </span></span>. This ranking holds
                         consistently across K562, HepG2, and SK-N-SH cell lines, with MuonH showing the
                         strongest advantage in SK-N-SH (0.393 vs 0.422 for MuonW).</p>
 
@@ -1131,7 +1139,7 @@
                     <p>Note that \(\sigma_2\) is the maximum stretch induced orthogonal to
                         \(v_1=\arg\max_{\|x\|=1}\|Ax\|\), or \(\sigma_2=\max_{x\perp v_1:\:\|x\|=1}\|Ax\|\), and
                         \(\sigma_3\) has the stretch orthogonal to the first 2, and so on<span
-                            class="sidenote-group"><sup class="sidenote-ref">15</sup><span
+                            class="sidenote-group"><sup class="sidenote-ref">16</sup><span
                                 class="sidenote-card side-right">For completeness, we can generalize this idea
                                 either recursively (where we define \(\sigma_i\) as the max stretch orthogonal to
                                 \(v_j\) \(\forall j \lt i\)), or succinctly using the Min max theorem:
@@ -1144,7 +1152,7 @@
                     <ul>
                         <li><strong>Spectral norm/stability:</strong> The spectral norm is defined as
                             \(\|\cdot\|_2=\sigma_1(\cdot)\) on matrix inputs. It is the operator norm<span
-                                class="sidenote-group"><sup class="sidenote-ref">16</sup><span
+                                class="sidenote-group"><sup class="sidenote-ref">17</sup><span
                                     class="sidenote-card side-left">Formally, the operator norm \(\|\cdot\|_p\) is
                                     defined for \(A\in \mathbb R^{m\times n}\) as \(\|A\|_p=\max\{\|Ax\|_p:x\in
                                     \mathbb R^n, \|x\|_p\le 1\}\), where we apply the \(\ell_p\) norm to the
