@@ -1071,7 +1071,148 @@ main {
     padding: 2rem 0;
 }
 
-/* Table of Contents styles removed */
+.blog-toc,
+.blog-toc-open {
+    display: none;
+}
+
+@media (min-width: 1300px) {
+    .blog-with-sidebar .blog-content {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 0 2rem 0 18rem;
+        transition: padding-left 0.3s ease;
+    }
+
+    .blog-with-sidebar.sidebar-collapsed .blog-content {
+        padding-left: 2rem;
+    }
+
+    .blog-with-sidebar .blog-toc {
+        display: flex;
+        flex-direction: column;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 16rem;
+        height: 100vh;
+        overflow-y: auto;
+        padding: 1.5rem 1.25rem 1.5rem;
+        background: #ffffff;
+        border-right: 1px solid #ebebeb;
+        z-index: 50;
+        transform: translateX(0);
+        transition: transform 0.3s ease;
+    }
+
+    .blog-with-sidebar.sidebar-collapsed .blog-toc {
+        transform: translateX(-100%);
+    }
+
+    .blog-toc-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1.25rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid #ebebeb;
+    }
+
+    .blog-toc-title {
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #9ca3af;
+    }
+
+    .blog-toc-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border: none;
+        background: transparent;
+        color: #9ca3af;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    .blog-toc-toggle:hover {
+        background: #f3f4f6;
+        color: #374151;
+    }
+
+    .blog-with-sidebar .blog-toc-open {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: fixed;
+        top: 1rem;
+        left: 1rem;
+        width: 34px;
+        height: 34px;
+        border: 1px solid #ebebeb;
+        background: #ffffff;
+        color: #9ca3af;
+        border-radius: 8px;
+        cursor: pointer;
+        z-index: 49;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s ease, color 0.15s ease, background 0.15s ease;
+    }
+
+    .blog-with-sidebar.sidebar-collapsed .blog-toc-open {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .blog-toc-open:hover {
+        background: #f9fafb;
+        color: #374151;
+    }
+
+    .blog-with-sidebar .blog-toc ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    .blog-with-sidebar .blog-toc li {
+        margin: 0;
+    }
+
+    .blog-with-sidebar .blog-toc a {
+        display: block;
+        padding: 0.4rem 0.75rem;
+        font-size: 0.82rem;
+        color: #6b7280;
+        text-decoration: none;
+        border-radius: 6px;
+        transition: background 0.15s ease, color 0.15s ease;
+        line-height: 1.4;
+    }
+
+    .blog-with-sidebar .blog-toc a:hover {
+        background: #f3f4f6;
+        color: #1f2937;
+    }
+
+    .blog-with-sidebar .blog-toc a.active {
+        background: #eff6ff;
+        color: #1e40af;
+        font-weight: 600;
+    }
+
+    .blog-with-sidebar .blog-article {
+        padding: 2rem 0;
+        min-width: 0;
+    }
+}
 
 .blog-article h2 {
     font-size: 2rem;
@@ -1354,7 +1495,7 @@ main {
     line-height: 1.5;
     max-height: 180px;
     overflow-y: auto;
-    overscroll-behavior: contain;
+    overscroll-behavior: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
     transition: border-color 0.2s, box-shadow 0.2s;
@@ -1393,11 +1534,6 @@ main {
 }
 
 @media (min-width: 1300px) {
-    .blog-content {
-        max-width: 1400px;
-        padding: 0 2rem;
-    }
-
     /* Create positioning context for sidenotes on desktop */
     .blog-article p,
     .blog-article li,
@@ -1405,6 +1541,7 @@ main {
     .blog-article h3,
     .blog-article h4,
     .blog-article h4.blog-subheading,
+    .blog-article .blog-takeaways,
     .blog-article ul,
     .blog-article ol,
     .blog-article blockquote,
@@ -1442,13 +1579,14 @@ main {
         text-align: left;
         top: auto;
         margin-top: -0.2rem;
-        max-height: none; /* No scroll cap on desktop */
+        max-height: none;
         overflow-x: auto;
         overflow-y: visible;
         scrollbar-width: thin; /* Firefox */
+        cursor: pointer;
     }
 
-    /* Hide crowded sidenotes when desktop overlap is detected */
+    /* Legacy hidden state (kept for compatibility) */
     .sidenote-card.sidenote-hidden-desktop {
         display: none !important;
     }
@@ -2816,8 +2954,8 @@ footer {
 .author-socials {
     display: inline-flex;
     align-items: center;
-    gap: 1.2rem;
-    margin-left: 0.6rem;
+    gap: 0.4rem;
+    margin-left: 0.25rem;
     vertical-align: middle;
     font-style: normal;
 }

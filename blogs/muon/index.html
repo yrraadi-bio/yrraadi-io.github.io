@@ -46,7 +46,7 @@
     </script>
 </head>
 
-<body class="blog-page">
+<body class="blog-page blog-with-sidebar">
     <div class="dna-background">
         <div class="dna-strand"></div>
         <div class="dna-strand"></div>
@@ -62,6 +62,34 @@
     <main>
         <section class="blog-hero">
             <div class="blog-content">
+                <nav class="blog-toc" aria-label="Table of contents">
+                    <div class="blog-toc-header">
+                        <span class="blog-toc-title">Contents</span>
+                        <button class="blog-toc-toggle" aria-label="Toggle sidebar" title="Toggle sidebar">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="11 17 6 12 11 7"></polyline>
+                                <polyline points="18 17 13 12 18 7"></polyline>
+                            </svg>
+                        </button>
+                    </div>
+                    <ul>
+                        <li><a href="#page-title">Title</a></li>
+                        <li><a href="#sec-muon">Muon</a></li>
+                        <li><a href="#sec-weight-decay">Weight decay</a></li>
+                        <li><a href="#sec-hyperball">Hyperball update</a></li>
+                        <li><a href="#sec-training-results">Training Results</a></li>
+                        <li><a href="#spectral-analysis">Spectral Analysis</a></li>
+                        <li><a href="#sec-motif-recovery">Motif Recovery</a></li>
+                        <li><a href="#sec-next-steps">Next steps</a></li>
+                        <li><a href="#appendix">Appendices</a></li>
+                    </ul>
+                </nav>
+                <button class="blog-toc-open" aria-label="Open sidebar" title="Open sidebar">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="13 7 18 12 13 17"></polyline>
+                        <polyline points="6 7 11 12 6 17"></polyline>
+                    </svg>
+                </button>
                 <article class="blog-article">
                     <figure class="blog-image" style="margin-top: 0;">
                         <video autoplay muted loop playsinline preload="auto">
@@ -70,8 +98,8 @@
                         </video>
                     </figure>
 
-                    <h2>Does Muon improve regulatory DNA learning?</h2>
-                    <p class="blog-date">February 12, 2026 &middot; Viraj Doshi
+                    <h2 id="page-title">Does Muon improve regulatory DNA learning?</h2>
+                    <p class="blog-date">February 12, 2026 &middot; Viraj Doshi*
                         <span class="author-socials">
                             <a href="https://x.com/viraj9451" target="_blank" class="author-social-link" aria-label="Twitter">
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
@@ -84,15 +112,32 @@
                                 </svg>
                             </a>
                         </span>
+                        , Akshat Singh
+                        <span class="author-socials">
+                            <a href="https://x.com/Akshxat" target="_blank" class="author-social-link" aria-label="Twitter">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                                </svg>
+                            </a>
+                            <a href="https://www.linkedin.com/in/akshat-singh-u1uc/" target="_blank" class="author-social-link" aria-label="LinkedIn">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+                                </svg>
+                            </a>
+                        </span>
+                        <br><small>* core contributor</small>
                     </p>
 
                     <section class="blog-takeaways" aria-label="Key takeaways">
                         <h3>Highlights</h3>
                         <ul>
-                            <li>After training over 10 epochs:</li>
-                            <li>Muon achieves <b>1.4%</b> lower nucleotide cross-entropy loss than the best Adam configuration, and <b>~29%</b> higher motif preservation.</li>
-                            <li>Muon with Hyperball: MuonW outperforms MuonH by <b>1.2%</b> in train loss, though MuonH recovers <b>~13%</b> more motifs, consistent with a logit inflation hypothesis.</li>
-                            <li>Adam with Hyperball: AdamH lowers train loss over AdamW by <b>1.2%</b> in train loss, with comparable motif recovery.</li>
+                            <li>After training over 10 epochs:
+                                <ul>
+                                    <li>Muon achieves <b>1.4%</b> lower nucleotide cross-entropy loss than the best Adam configuration, and <b>~41%</b> higher motif preservation (up to <b>1.18x</b> in promoters vs <b>0.66x</b> for AdamH).</li>
+                                    <li>MuonW leads on both train loss and motif recovery (<b>~7%</b> lower JSD than AdamH, <b>~3%</b> lower than MuonH), though MuonH holds a slight edge in distal enhancers.</li>
+                                    <li>Adam with Hyperball: AdamH lowers train loss by <b>1.2%</b> over AdamW, with moderately higher motif preservation.</li>
+                                </ul>
+                            </li>
                             <li>We perform a spectral analysis to show how Muon's whitening promotes feature learning by forcing weights away from initialization.</li>
                         </ul>
                     </section>
@@ -117,7 +162,7 @@
 
                     <details class="collapsible-section">
                         <summary>
-                            <h3>Muon</h3>
+                            <h3 id="sec-muon">Muon</h3>
                         </summary>
                     <p>While Adam<sup><a href="#ref-adamw">1</a></sup> (see <a href="#appendix-a">Appendix
                             A</a>) updates can lead to weight stagnation<sup><a href="#ref-lazy">6</a><a
@@ -221,7 +266,7 @@
 
                     <details class="collapsible-section">
                         <summary>
-                            <h3>Why is weight decay necessary?</h3>
+                            <h3 id="sec-weight-decay">Why is weight decay necessary?</h3>
                         </summary>
                     <p>Without weight decay, the norm of the weight matrices grows \(\propto \sqrt{t}\) as training
                         progresses<sup><a href="#ref-hyperball">10</a></sup>. This unchecked growth inflates the
@@ -257,7 +302,7 @@
 
                     <details class="collapsible-section">
                         <summary>
-                            <h3>The Hyperball update</h3>
+                            <h3 id="sec-hyperball">The Hyperball update</h3>
                         </summary>
                     <p>The intuition of Hyperball<sup><a href="#ref-hyperball">10</a></sup> is to, for a weight
                         matrix \(W\), simply fix the Frobenius norm of \(W\) to the initial radius \(R :=
@@ -605,7 +650,7 @@
 
                     <details class="collapsible-section" open>
                         <summary>
-                            <h3>Training Results</h3>
+                            <h3 id="sec-training-results">Training Results</h3>
                         </summary>
                     <figure class="blog-image">
                         <img src="/blogs/muon/assets/loss_curves_nucleotide_loss.png"
@@ -634,10 +679,9 @@
                                 dominates for the largest model of &gt;1B parameters. Our largest model is
                                 actually ~420M parameters large (as we are somewhat compute bound), so it is
                                 still possible for MuonH to outperform MuonW at a larger scale.</span></span>.
-                        The best overall configuration is Muon with independent weight decay (MuonW).
-                        Why did Hyperball worsen Muon&rsquo;s performance?</p>
-
-                    <p>We hypothesize that this is because Hyperball&rsquo;s re-projection scales all
+                        The best overall configuration is Muon with independent weight decay (MuonW).</p>
+                        <p>Why did Hyperball worsen Muon&rsquo;s performance? We hypothesize that this is
+                        because Hyperball&rsquo;s re-projection scales all
                         singular values of the weight matrix by the <em>same</em> multiplicative factor. When
                         Hyperball maps \(W_{t+1} = R\,(W_t + U_t)/\|W_t + U_t\|_F\), it shrinks every singular
                         direction of \(W\) equally<span class="sidenote-group"><sup class="sidenote-ref">10</sup><span
@@ -677,12 +721,24 @@
                         </figcaption>
                     </figure>
 
-                    <p>These figures illustrate how our sweeps trained. Although Hyperball performs worse for a
-                        large number of step sizes, we only care about the absolute minimum point. For Adam, the
-                        lowest point is with Hyperball at \(\eta \approx 5.69 \times 10^{-3}\), and with Muon, the
-                        lowest point is with weight decay at \(\eta \approx 2.27 \times 10^{-2}\) (although Hyperball at
-                        \(\eta \approx 5.69 \times 10^{-3}\) is not too far behind). It is very interesting to see that
-                     AdamH and MuonW share the same optimal learning rate, perhaps this has to do with how similar their training dynamics and relative step sizes are.</p>
+                    <p>What is striking about these sweep curves is how consistent their structure is
+                        across scales. For Adam, Hyperball (green) carves out a partial convex basin in
+                        the mid learning rate range (\(\sim 10^{-3}\) to \(10^{-2}\)), dipping below
+                        weight decay (orange) in that region and rising above it at both extremes. This
+                        shape persists across widths, suggesting that Hyperball&rsquo;s norm control is
+                        genuinely helpful in Adam&rsquo;s optimal operating range. For Muon, the pattern
+                        is different: MuonH&rsquo;s (green) loss decreases roughly linearly with
+                        increasing step size, while MuonW (orange) curves downward more sharply and
+                        reaches a lower minimum at a higher learning rate. This near-linear response
+                        for MuonH also holds across scales, hinting that Hyperball&rsquo;s fixed-norm
+                        constraint limits how much Muon can exploit larger step sizes.</p>
+
+                    <p>For Adam, the lowest point is with Hyperball at \(\eta \approx 5.69 \times
+                        10^{-3}\), and with Muon, the lowest point is with weight decay at \(\eta \approx
+                        2.27 \times 10^{-2}\) (although Hyperball at \(\eta \approx 5.69 \times 10^{-3}\)
+                        is not too far behind). It is very interesting to see that AdamH and MuonW share
+                        the same optimal learning rate, perhaps this has to do with how similar their
+                        training dynamics and relative step sizes are.</p>
 
                     <figure class="blog-image">
                         <img src="/blogs/muon/assets/adam_heatmap.png" alt="Adam sweep summary"
@@ -722,13 +778,14 @@
                     </figure>
 
                     <p>Finally, we compare the two best configurations head-to-head: MuonW against AdamH.
-                        At width 512, the two are closely matched across learning rates, but as scale
-                        increases MuonW pulls ahead decisively. By width 2048, MuonW dominates across
-                        nearly every learning rate and training checkpoint, with advantages exceeding 10%
-                        at many points in the grid. The loss curves tell the same story: at the optimal
-                        learning rate for each optimizer, MuonW (dashed) consistently sits below AdamH
-                        (solid) at the larger widths. This confirms that Muon&rsquo;s spectral advantages
-                        over Adam compound with scale.</p>
+                        Even at width 512, MuonW eventually pulls away; the loss curves track each
+                        other early in training, but MuonW (dashed) finishes below AdamH (solid) by the
+                        end. What changes with scale is <em>consistency</em>: at width 1024 and especially
+                        2048, MuonW leads across a wider range of learning rates and across more training
+                        steps, with advantages exceeding 10% at many points in the grid. The loss curves
+                        reinforce this: the gap between dashed and solid widens earlier and persists more
+                        uniformly at larger widths, confirming that Muon&rsquo;s spectral advantages over
+                        Adam compound with scale.</p>
 
                     </details>
 
@@ -990,7 +1047,7 @@
 
                     <details class="collapsible-section" open>
                         <summary>
-                            <h3>Motif Recovery</h3>
+                            <h3 id="sec-motif-recovery">Motif Recovery</h3>
                         </summary>
 
                     <p>To test whether lower loss translates into biologically meaningful predictions, we
@@ -1002,45 +1059,43 @@
                         <img src="/blogs/muon/assets/motif_assets/motif_preservation.png"
                             alt="Motif preservation by regulatory type" loading="lazy" />
                         <figcaption>Motif preservation ratio (model hits / original hits) by regulatory element
-                            type. MuonH leads across all categories.</figcaption>
+                            type. MuonW leads in pELS and PLS; MuonH leads in dELS.</figcaption>
                     </figure>
 
-                    <p>Overall motif preservation follows the order MuonH (~0.53x) &gt; MuonW (~0.47x) &gt;
-                        AdamH &asymp; AdamW (~0.41x), a ~29% improvement for MuonH over the best Adam
-                        variant, and ~15% for MuonW. Notably, <em>MuonH outperforms MuonW here despite
-                        achieving a higher training loss</em>. This is consistent with the logit inflation
-                        hypothesis discussed above: MuonW&rsquo;s lower cross-entropy loss is partly
-                        driven by inflated logit confidence rather than richer internal representations,
-                        while MuonH&rsquo;s norm-constrained weights, though spectrally compressed,
-                        learn cleaner features that better preserve real biological motifs. Preservation
-                        also varies by regulatory type: promoters (PLS) are best preserved at 0.65x, while
-                        distal enhancers (dELS) are hardest at 0.48x.</p>
+                    <p>Motif preservation varies substantially by regulatory element type, but the
+                        overall ranking is clear: Muon variants dominate Adam variants across the board.
+                        MuonW leads in pELS (0.94x vs 0.85x for MuonH) and PLS (1.18x vs 1.04x),
+                        while MuonH holds a slight edge in dELS (0.65x vs 0.62x). Notably, MuonW
+                        exceeds 1.0x in promoters (PLS), meaning it recovers <em>more</em> motif hits
+                        than the original sequences. Both Adam variants lag considerably, with AdamH
+                        reaching 0.50&ndash;0.66x and AdamW 0.49&ndash;0.57x across categories. Distal
+                        enhancers (dELS) remain the hardest category for all optimizers.</p>
 
                     <figure class="blog-image">
                         <img src="/blogs/muon/assets/motif_assets/motif_jsd.png"
                             alt="Motif JSD analysis: volume vs shape trade-off" loading="lazy" />
-                        <figcaption>Per-Sequence JSD by Cell Type. MuonH consistently achieves the lowest (best) JSD across all cell lines.</figcaption>
+                        <figcaption>Per-Sequence JSD of TF motif distribution by cell type. MuonW achieves the lowest (best) JSD across K562 and HepG2, and ties MuonH in SK-N-SH.</figcaption>
                     </figure>
 
                     <p>At the <em>per-sequence</em> level, pairing each original and model sequence
-                        and comparing which TFs were hit, MuonH achieves the best fidelity (0.494),
-                        followed by MuonW (0.505), AdamH (0.545), and AdamW (0.561)<span class="sidenote-group">
+                        and comparing which TFs were hit, MuonW achieves the best fidelity (0.444),
+                        followed by MuonH (0.457), AdamH (0.477), and AdamW (0.510)<span class="sidenote-group">
                             <sup class="sidenote-ref">15</sup><span class="sidenote-card side-right">
-                                Simpson's Paradox Anomaly: The "All" JSD (e.g., AdamW 0.561) is strictly 
-                                higher than its worst constituent part (HepG2 0.557). This occurs because 
-                                sequences active in multiple cell types are counted once in the "All" 
-                                aggregate but appear in each individual cell type's average. These 
-                                multi-functional sequences are harder to model (higher JSD), so they 
+                                Simpson's Paradox Anomaly: The "All" JSD (e.g., AdamW 0.510) is strictly
+                                higher than its worst constituent part (HepG2 0.509). This occurs because
+                                sequences active in multiple cell types are counted once in the "All"
+                                aggregate but appear in each individual cell type's average. These
+                                multi-functional sequences are harder to model (higher JSD), so they
                                 disproportionately drag down the overall average when deduplicated.
                             </span></span>. This ranking holds
-                        consistently across K562, HepG2, and SK-N-SH cell lines, with MuonH showing the
-                        strongest advantage in SK-N-SH (0.393 vs 0.422 for MuonW).</p>
+                        consistently across K562, HepG2, and SK-N-SH, with the largest gap in K562
+                        (MuonW 0.410 vs MuonH 0.423). In SK-N-SH, MuonW and MuonH tie at 0.347.</p>
 
                     </details>
 
                     <details class="collapsible-section" open>
                         <summary>
-                            <h3>Next steps</h3>
+                            <h3 id="sec-next-steps">Next steps</h3>
                         </summary>
                     <p>Next, we plan to:</p>
                     <ul>
@@ -1598,10 +1653,13 @@
                     var group = card.closest('.sidenote-group');
                     var container = card.offsetParent;
                     if (!group || !container) return;
+                    var ref = group.querySelector('.sidenote-ref');
+                    if (!ref) return;
 
-                    var groupRect = group.getBoundingClientRect();
+                    var refRect = ref.getBoundingClientRect();
                     var containerRect = container.getBoundingClientRect();
-                    var topPx = Math.max(0, groupRect.top - containerRect.top - 8);
+                    /* Anchor each sidenote to its footnote marker line */
+                    var topPx = Math.max(0, refRect.top - containerRect.top - 2);
                     card.style.top = topPx + 'px';
                     positionedCards.push(card);
                 });
@@ -1619,17 +1677,17 @@
                     }
 
                     sideCards.forEach(function (card) {
-                            var rect = card.getBoundingClientRect();
-                            var overlaps = placed.some(function (prev) {
-                                var prevRect = prev.getBoundingClientRect();
-                                return rect.top < (prevRect.bottom + 8) && rect.bottom > (prevRect.top - 8);
-                            });
-                            if (overlaps) {
-                                card.classList.add('sidenote-hidden-desktop');
-                            } else {
-                                placed.push(card);
-                            }
+                        var rect = card.getBoundingClientRect();
+                        var overlaps = placed.some(function (prev) {
+                            var prevRect = prev.getBoundingClientRect();
+                            return rect.top < (prevRect.bottom + 8) && rect.bottom > (prevRect.top - 8);
                         });
+                        if (overlaps) {
+                            card.classList.add('sidenote-hidden-desktop');
+                        } else {
+                            placed.push(card);
+                        }
+                    });
                 });
             }
 
@@ -1638,6 +1696,18 @@
             }
 
             function wire() {
+                function setPinnedCard(card) {
+                    var isPinned = pinnedCard === card;
+                    var shouldPin = !isPinned;
+
+                    pinnedCard = shouldPin ? card : null;
+                    document.querySelectorAll('.sidenote-card.glowing').forEach(function (c) {
+                        c.classList.remove('glowing');
+                    });
+                    if (shouldPin) card.classList.add('glowing');
+                    scheduleSidenoteLayout();
+                }
+
                 document.querySelectorAll('.sidenote-ref').forEach(function (ref) {
                     ref.addEventListener('click', function (e) {
                         e.preventDefault();
@@ -1651,17 +1721,17 @@
                             });
                             card.classList.toggle('open');
                         } else {
-                            /* desktop: pin clicked note so it is never permanently hidden */
-                            var isPinned = pinnedCard === card;
-                            var shouldPin = !isPinned;
-
-                            pinnedCard = shouldPin ? card : null;
-                            document.querySelectorAll('.sidenote-card.glowing').forEach(function (c) {
-                                c.classList.remove('glowing');
-                            });
-                            if (shouldPin) card.classList.add('glowing');
-                            scheduleSidenoteLayout();
+                            /* desktop: pin/unpin clicked note */
+                            setPinnedCard(card);
                         }
+                    });
+                });
+
+                document.querySelectorAll('.sidenote-card').forEach(function (card) {
+                    card.addEventListener('click', function (e) {
+                        if (mq.matches) return;
+                        e.stopPropagation();
+                        setPinnedCard(card);
                     });
                 });
 
@@ -1675,6 +1745,107 @@
             }
             if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire);
             else wire();
+        })();
+    </script>
+    <script>
+        (function () {
+            var tocLinks = document.querySelectorAll('.blog-toc a');
+            if (!tocLinks.length) return;
+
+            var sectionIds = Array.prototype.map.call(tocLinks, function (a) {
+                return a.getAttribute('href').slice(1);
+            });
+
+            var currentActive = null;
+            var suppressObserverUpdates = false;
+
+            function setActiveLink(link) {
+                if (!link) return;
+                if (currentActive) currentActive.classList.remove('active');
+                link.classList.add('active');
+                currentActive = link;
+            }
+
+            function resumeObserverOnUserScroll(e) {
+                if (!suppressObserverUpdates) return;
+
+                if (e.type === 'keydown') {
+                    var key = e.key;
+                    var isScrollKey = key === 'ArrowDown' || key === 'ArrowUp' || key === 'PageDown' ||
+                        key === 'PageUp' || key === 'Home' || key === 'End' || key === ' ' ||
+                        key === 'Spacebar';
+                    if (!isScrollKey) return;
+                }
+
+                suppressObserverUpdates = false;
+            }
+
+            window.addEventListener('wheel', resumeObserverOnUserScroll, { passive: true });
+            window.addEventListener('touchmove', resumeObserverOnUserScroll, { passive: true });
+            window.addEventListener('keydown', resumeObserverOnUserScroll);
+            window.addEventListener('mousedown', resumeObserverOnUserScroll, { passive: true });
+
+            var observer = new IntersectionObserver(function (entries) {
+                if (suppressObserverUpdates) return;
+                entries.forEach(function (entry) {
+                    if (entry.isIntersecting) {
+                        var id = entry.target.id;
+                        var link = document.querySelector('.blog-toc a[href="#' + id + '"]');
+                        if (link) setActiveLink(link);
+                    }
+                });
+            }, { rootMargin: '-20% 0px -60% 0px' });
+
+            tocLinks.forEach(function (link) {
+                link.addEventListener('click', function (e) {
+                    var href = link.getAttribute('href');
+                    if (!href || href.charAt(0) !== '#') return;
+
+                    e.preventDefault();
+                    setActiveLink(link);
+                    suppressObserverUpdates = true;
+
+                    var target = document.getElementById(href.slice(1));
+                    if (!target) return;
+
+                    var collapsible = target.closest('details.collapsible-section');
+                    if (collapsible && !collapsible.open) collapsible.open = true;
+
+                    requestAnimationFrame(function () {
+                        target.scrollIntoView({ behavior: 'auto', block: 'start' });
+                        if (history.replaceState) history.replaceState(null, '', href);
+                        else window.location.hash = href;
+                    });
+                });
+            });
+
+            sectionIds.forEach(function (id) {
+                var el = document.getElementById(id);
+                if (el) observer.observe(el);
+            });
+
+            if (window.location.hash) {
+                var initial = document.querySelector('.blog-toc a[href="' + window.location.hash + '"]');
+                if (initial) setActiveLink(initial);
+            }
+        })();
+    </script>
+    <script>
+        (function () {
+            var body = document.body;
+            var closeBtn = document.querySelector('.blog-toc-toggle');
+            var openBtn = document.querySelector('.blog-toc-open');
+            if (!closeBtn || !openBtn) return;
+
+            function collapse() {
+                body.classList.add('sidebar-collapsed');
+            }
+            function expand() {
+                body.classList.remove('sidebar-collapsed');
+            }
+
+            closeBtn.addEventListener('click', collapse);
+            openBtn.addEventListener('click', expand);
         })();
     </script>
 </body>
