@@ -1448,6 +1448,11 @@ main {
         scrollbar-width: thin; /* Firefox */
     }
 
+    /* Hide crowded sidenotes when desktop overlap is detected */
+    .sidenote-card.sidenote-hidden-desktop {
+        display: none !important;
+    }
+
     /* Webkit scrollbar styling for sidenotes */
     .sidenote-card::-webkit-scrollbar {
         height: 4px;
