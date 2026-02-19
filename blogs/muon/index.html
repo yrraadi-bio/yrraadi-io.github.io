@@ -1,0 +1,1673 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-4DGX45FJCJ"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-4DGX45FJCJ');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Does Muon improve regulatory DNA learning? — Origin Bio</title>
+    <meta name="description"
+        content="Exploring Adam, Muon, and Hyperball optimizers for DNA and biology-focused AI models. Weight decay, singular values, and scale invariance." />
+    <meta property="og:type" content="article" />
+    <meta property="og:site_name" content="Origin Bio" />
+    <meta property="og:title" content="Does Muon improve regulatory DNA learning?" />
+    <meta property="og:description"
+        content="Exploring Adam, Muon, and Hyperball optimizers for DNA and biology-focused AI models." />
+    <meta property="og:url" content="https://origin.bio/blogs/muon/" />
+    <meta property="og:image" content="https://origin.bio/assets/thumbnail-og.jpg?v=1" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Does Muon improve regulatory DNA learning?" />
+    <link rel="canonical" href="https://origin.bio/blogs/muon/">
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="icon" href="/assets/favicon.png" type="image/png">
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['\\(', '\\)']],
+                displayMath: [['\\[', '\\]']],
+                processEscapes: true
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"
+        }
+    }
+    </script>
+</head>
+
+<body class="blog-page">
+    <div class="dna-background">
+        <div class="dna-strand"></div>
+        <div class="dna-strand"></div>
+        <div class="dna-strand"></div>
+    </div>
+
+    <header>
+        <a href="/" class="logo-link">
+            <img src="/assets/Origin%20logo+text%20(blue%20on%20transparent).png" alt="Origin Logo" class="header-logo">
+        </a>
+    </header>
+
+    <main>
+        <section class="blog-hero">
+            <div class="blog-content">
+                <article class="blog-article">
+                    <figure class="blog-image" style="margin-top: 0;">
+                        <video autoplay muted loop playsinline preload="auto">
+                            <source src="/blogs/muon/assets/optimizer_gif.mp4" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                    </figure>
+
+                    <h2>Does Muon improve regulatory DNA learning?</h2>
+                    <p class="blog-date">February 12, 2026 &middot; Viraj Doshi
+                        <span class="author-socials">
+                            <a href="https://x.com/viraj9451" target="_blank" class="author-social-link" aria-label="Twitter">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                                </svg>
+                            </a>
+                            <a href="https://linkedin.com/in/viraj-doshi-2b96a125b/" target="_blank" class="author-social-link" aria-label="LinkedIn">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+                                </svg>
+                            </a>
+                        </span>
+                    </p>
+
+                    <section class="blog-takeaways" aria-label="Key takeaways">
+                        <h3>Highlights</h3>
+                        <ul>
+                            <li>Muon achieves <b>1.4%</b> lower nucleotide cross-entropy loss than the best Adam configuration, and <b>~29%</b> higher motif preservation.</li>
+                            <li>Muon with Hyperball: MuonW outperforms MuonH by <b>1.2%</b> in train loss, though MuonH recovers <b>~13%</b> more motifs, consistent with a logit inflation hypothesis.</li>
+                            <li>Adam with Hyperball: AdamH improves over AdamW by <b>1.2%</b> in train loss, with comparable motif recovery.</li>
+                            <li>We perform a spectral analysis to show how Muon's whitening promotes feature learning by forcing weights away from initialization.</li>
+                        </ul>
+                    </section>
+
+                    <p>Optimizers dictate the parameter update rules that govern the convergence trajectory of
+                        Stochastic Gradient Descent (SGD). At present, variations of Adam<sup><a
+                                href="#ref-adamw">1</a></sup> dominate DNA sequence modeling (e.g., AlphaGenome<sup><a
+                                href="#ref-alphagenome">3</a></sup>, Enformer<sup><a href="#ref-enformer">4</a></sup>,
+                        Evo 2<sup><a href="#ref-evo">5</a></sup>). In natural language, Muon<sup><a
+                                href="#ref-muon">2</a></sup> has been shown to achieve faster convergence, but it is
+                        unclear whether this advantage transfers to nucleotide modeling.</p>
+
+                    <p>The reason is that these domains differ in several fundamental ways. DNA uses a vocabulary of
+                        just 4 nucleotides whose token frequencies are far more uniform than the heavy-tailed Zipfian
+                        distribution over ~100k tokens in language, meaning the gradient statistics across tokens
+                        behave very differently numerically. The syntactical rules are explicit and local (transcription
+                        factor binding motifs typically span ~6&ndash;20bp), and at the short context lengths we study,
+                        the signal is dominated by these independent local motif grammars rather than the long-range
+                        dependencies that characterize language modeling. In this blog, we explore the behavior of
+                        recent optimizers on DNA sequence modeling in regulatory regions, and evaluate whether
+                        optimizer choices that work well for LLMs transfer to this distinct setting.</p>
+
+                    <details class="collapsible-section">
+                        <summary>
+                            <h3>Muon</h3>
+                        </summary>
+                    <p>While Adam<sup><a href="#ref-adamw">1</a></sup> (see <a href="#appendix-a">Appendix
+                            A</a>) updates can lead to weight stagnation<sup><a href="#ref-lazy">6</a><a
+                                href="#ref-ntk">7</a></sup> and uneven
+                        signal propagation, Muon mitigates this by treating layers as matrices and
+                        &ldquo;whitening&rdquo;, or spreading out updates across singular dimensions to ensure all
+                        directions are learned with equal priority. Unlike Adam, which treats weights as flat vectors
+                        and risks remaining within the initialization neighborhood (closer to the NTK regime<sup><a
+                                href="#ref-ntk">7</a></sup>), Muon forces weights to diverge from their starting points
+                        by distributing updates across the matrix space, thereby erasing initial distributions<sup><a
+                                href="#ref-erasure">8</a></sup>. This is achieved by constraining all singular values of
+                        the weight updates to be close to \(1\), effectively &ldquo;whitening&rdquo; the update
+                        to distribute the learning signal evenly<sup><a href="#ref-cesista">11</a></sup>.</p>
+
+                    <p>Just like Adam, we first form a momentum like exponential moving average of gradients,
+                        denoted by \(u_t\):</p>
+                    \[
+                    u_t = \beta\,u_{t-1} + (1-\beta)\,g_t,
+                    \]
+                    <p>(with \(u_0=0\)). This plays the same role as Adam's first moment
+                        estimate \(m_t\), but is then processed using matrix structure. In our implementation we use
+                        Nesterov momentum<span class="sidenote-group"><sup class="sidenote-ref">1</sup><span
+                                class="sidenote-card side-right">Concretely, the input fed into the NS\(_5\)
+                                orthogonalization is not the raw gradient \(g_t\) but the lerp
+                                \((1-\beta)\,g_t + \beta\,u_{t}\). This Nesterov interpolation means the
+                                matrix that NS\(_5\) whitens is already a lookahead blend of the current
+                                gradient and the previous momentum buffer, not the gradient at \(W_t\)
+                                alone.</span></span>, so the input to the NS\(_5\) normalization is a
+                        lookahead lerp between the gradient and the momentum buffer, rather than
+                        the gradient at \(W_t\) alone.</p>
+
+                    <p>We apply the SVD (see <a href="#appendix-b">Appendix B</a>) to the (momentum) update
+                        matrix \(u_t\):
+                        \[
+                        u_t = U\Sigma V^\top.
+                        \]
+                        Muon constructs an update whose singular vectors match those of \(u_t\), but whose singular
+                        values are pushed toward \(1\):
+                        \[
+                        \tilde u_t = U\,\tilde\Sigma\,V^\top,
+                        \]
+                        where \(\tilde\Sigma\) is a diagonal matrix with entries close to \(1\) (typically in
+                        \([0.7, 1.3]\)), projecting the update toward the Stiefel manifold<sup><a
+                                href="#ref-muon">2</a></sup><span class="sidenote-group"><sup
+                                class="sidenote-ref">2</sup><span class="sidenote-card side-right">The Stiefel
+                                manifold is the set of matrices with orthonormal columns (all singular
+                                values exactly equal to \(1\)). In practice, finite Newton-Schulz iterations only
+                                push singular values <em>toward</em> \(1\), not exactly to it. This is a stricter
+                                constraint
+                                than the Spectral Sphere, where only \(\sigma_1=1\) is
+                                constrained.</span></span> &ldquo;whitening&rdquo; or &ldquo;equalizing&rdquo;
+                        the update across singular dimensions.</p>
+
+                    <p>Intuitively, this prevents a few directions from dominating the step, and encourages motion
+                        in many independent directions of the layer's matrix space. In contrast to optimizers that
+                        treat parameters as a flat vector, Muon explicitly uses matrix structure, which can help
+                        avoid updates that remain concentrated near the initialization subspace.</p>
+
+                    <p>In practice, the resulting parameter update has the form
+                        \[
+                        W_{t+1} = W_t + U_t, \qquad U_t = -\eta\,\tilde u_t,
+                        \]
+                        (with optional weight decay applied as described in <a href="#appendix-a">Appendix A</a>).</p>
+
+                    <h4 class="blog-subheading">Connecting Muon to norm control</h4>
+                    <p>Muon already manipulates singular values of the <em>update</em> (by pushing those of \(\tilde
+                        u_t\) toward \(1\)), which suggests a different view of regularization than standard weight
+                        decay. Classical weight decay controls the \(\ell_2\) or Frobenius norm of the weight
+                        matrices (defined as \(\|W\|_F =\|\vec W\|_2= \sqrt{\sum_{i}\sum_jw_{ij}^2}\)<span
+                            class="sidenote-group"><sup class="sidenote-ref">3</sup><span
+                                class="sidenote-card side-right">\(\vec W\) denotes the vectorized form of matrix
+                                \(W\); more specifically, if \(W=[c_1, c_2, \dots, c_n]\) where \(c_i\) is the \(i\)th
+                                column of \(W\), then \(\vec W=\begin{bmatrix} c_1\\c_2\\\vdots\\c_n \end{bmatrix}\)
+                                has them merged into one column.</span></span><span class="sidenote-group"><sup
+                                class="sidenote-ref">4</sup><span class="sidenote-card side-left">It also happens to
+                                be the case that \(\|W\|_F=\sqrt{\sum_i \sigma_i^2}\), but this is a bit of a
+                                digression and we will not prove this here.</span></span>), but in a matrix aware
+                        setting one can instead target properties tied to singular values:</p>
+                    <ul>
+                        <li><strong>Rank / intrinsic dimension:</strong> shaping the smaller singular values can
+                            encourage using many subspaces of the hidden stream, rather than collapsing the layer to
+                            an effectively low rank map.</li>
+                        <li><strong>Stability:</strong> bounding the largest singular value (the spectral norm)
+                            controls the layer Lipschitz constant, and helps prevent activation and gradient
+                            blowups<sup><a href="#ref-spectral">12</a>, <a
+                                    href="#ref-cesista">11</a></sup><span class="sidenote-group"><sup
+                                    class="sidenote-ref">5</sup><span
+                                    class="sidenote-card side-left">Concretely, if all singular values of
+                                    the update equal \(1\), then \(\tilde u_t\) is orthogonal and
+                                    \(\|\tilde u_t\, x\| = \|x\|\) for every input \(x\) (provided \(\tilde u_t\) is square). More generally,
+                                    \(\|\tilde u_t\, x\| \leq \sigma_1(\tilde u_t)\,\|x\|\), so pushing
+                                    \(\sigma_1\) toward \(1\) directly caps the maximum activation
+                                    amplification per layer.</span></span>.</li>
+                    </ul>
+                    <p>This perspective is especially relevant for high dimensional, structured sequence
+                        representations like DNA. The combinatorial grammar of regulatory motifs demands that
+                        many spectral dimensions remain active; a low rank collapse in the update would erase the subtle,
+                        distributed signals that distinguish functional sequences from background.</p>
+
+                    </details>
+
+                    <details class="collapsible-section">
+                        <summary>
+                            <h3>Why is weight decay necessary?</h3>
+                        </summary>
+                    <p>Without weight decay, the norm of the weight matrices grows \(\propto \sqrt{t}\) as training
+                        progresses<sup><a href="#ref-hyperball">10</a></sup>. This unchecked growth inflates the
+                        parameter scale relative to the step size, effectively shrinking the learning signal and
+                        hindering convergence<sup><a href="#ref-spectral-fl">17</a></sup>. Weight decay counteracts this by imposing an \(\ell_2\) bias that drives
+                        the norm toward an equilibrium value<sup><a href="#ref-wdeq">9</a><a href="#ref-adamw">1</a><a
+                                href="#ref-hyperball">10</a></sup>, and empirically, adding decay improves both Adam and
+                        Muon<sup><a href="#ref-hyperball">10</a><a href="#ref-adamw">1</a><a
+                                href="#ref-wdeq">9</a></sup>. The reason is a clean separation of concerns: the
+                        optimizer determines <em>directional</em> update structure (moments for Adam, singular direction
+                        shaping for Muon), while decay provides a control knob on overall parameter scale<sup><a
+                                href="#ref-wdeq">9</a></sup>.</p>
+
+                    <p>Although weight decay drives the norm toward an equilibrium, the weights only &ldquo;hover&rdquo;
+                        near it, and the optimizer must still search the space created by these fluctuations. Even if
+                        the
+                        norm &lsquo;hovers&rsquo; within just \(0\lt\varepsilon\ll N\) of the equilibrium \(N\) (or in
+                        the
+                        range \([N-\varepsilon, N+\varepsilon]\)), we still have to consider a relatively large
+                        space of values within the hyperball. By <a href="#appendix-c">Appendix C</a>, nearly all of
+                        this
+                        volume lies in a thin shell at the boundary.</p>
+                    <p>
+                        Crucially, with correctly placed RMSNorms, these matrices become <em>scale
+                            invariant</em>
+                        (<a href="#appendix-f">Appendix F</a>); their scale does not impact capacity, only
+                        direction. Since scale is irrelevant, wouldn't it be more
+                        efficient to fix the norm (set \(\varepsilon=0\)) and let the update focus solely on
+                        direction?
+                    </p>
+
+                    </details>
+
+                    <details class="collapsible-section">
+                        <summary>
+                            <h3>The Hyperball update</h3>
+                        </summary>
+                    <p>The intuition of Hyperball<sup><a href="#ref-hyperball">10</a></sup> is to, for a weight
+                        matrix \(W\), simply fix the Frobenius norm of \(W\) to the initial radius \(R :=
+                        \|W_0\|_F\), and the norm of update \(U\) to \(\eta R\). Rather confusingly, this confines the
+                        weight matrix to a hypersphere of radius \(R\), not a ball<span class="sidenote-group"><sup
+                                class="sidenote-ref">6</sup><span class="sidenote-card side-right">Note that
+                                a hypersphere and hyperball are not the same thing. A &lsquo;ball&rsquo;
+                                refers to the entire solid object, but a &lsquo;sphere&rsquo; refers only to
+                                the shell/boundary of said ball.</span></span>, but let us ignore this
+                        superficial detail. Suppose \(\mathrm{Normalize}(A):=A/\|{A}\|_F\). Given an optimizer&rsquo;s
+                        proposed update step \(\tilde u_t\), let the actual update be:
+                        \[
+                        U_t = -\eta R\,\mathrm{Normalize}(\tilde u_t),
+                        \]
+                        then let
+                        \[
+                        W_{t+1} = R\,\mathrm{Normalize}(W_t + U_t).
+                        \]
+                        What makes this optimization special is that it can be wrapped around any optimizer
+                        update, so it works with Adam and Muon (using it alongside weight decay would be
+                        useless, as we hard-set the weight norms in the wrapper function).</p>
+
+                    <p>Note that not only do we set the weight norm to be \(R\), but the update vector norm is
+                        set to \(\eta R\). Let \(\Delta W = W_{t+1}-W_t\), if we make the generous assumption
+                        that \(\|\Delta W\|_F = O(\|U_t\|_F)\), we can see that we have a relative step
+                        size of:
+                        \[
+                        \frac{\|\Delta W\|_F}{\|W_t\|_F}=\frac{O(\|U_t\|_F)}{\|W_t\|_F}=O(\eta)
+                        \]
+                        which is an easily adjustable hyperparameter.</p>
+
+                    <p>Now, this <em>is</em> a generous assumption, so we can make better estimates. Let us use
+                        the Frobenius norm throughout the next calculation; suppose that we know the expected
+                        normalized dot product<span class="sidenote-group"><sup class="sidenote-ref">7</sup><span
+                                class="sidenote-card side-right">The Frobenius
+                                inner product \(\langle A, B\rangle_F=\operatorname{Tr}(A^TB)=\langle\vec A,\vec
+                                B\rangle=\sum_{i,j}a_{ij}b_{ij}\) is the sum of the element wise product of the
+                                matrices \(A\) and \(B\).</span></span> \(\gamma=\frac{\langle W_t, U_t\rangle_F
+                        }{\|U_t\|_F\|W_t\|_F}=\frac{\langle W_t, U_t\rangle_F}{\eta R^2}=\cos\theta\), where
+                        \(\theta:=\angle(\vec W_t, \vec U_t)\). By applying the cosine and sine rules to the
+                        triangle formed by the origin, \(W_t\), and \(W_t+U_t\) (see the interactive
+                        visualization below and <a href="#appendix-d">Appendix D</a> for the full derivation),
+                        we obtain the exact step size:</p>
+
+                    \[
+                    x := \|\Delta W\| = R\sqrt{2}\sqrt{1 - \cos\phi}, \quad\text{where}\quad \cos\phi =
+                    \sqrt{1-\frac{\eta^2(1-\gamma^2)}{1+\eta^2+2\eta\gamma}}.
+                    \]
+
+                    <!-- Interactive 3D Sphere -->
+                    <figure class="blog-image">
+                        <div id="sphere-3d-wrap"
+                            style="position:relative; width:100%; height:520px; border:1px solid #e7e5e4; border-radius:8px; overflow:hidden; background:#fafaf9;">
+                            <div id="sphere-3d" style="width:100%; height:100%; position:relative;"></div>
+                            <div
+                                style="position:absolute; bottom:12px; left:12px; right:12px; display:flex; gap:24px; align-items:center; background:rgba(255,255,255,0.92); padding:10px 16px; border-radius:6px; font-size:13px; color:#57534e; z-index:2;">
+                                <label style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
+                                    <span style="font-style:italic;">η</span>
+                                    <input type="range" id="eta-slider" min="0.05" max="0.50" step="0.01" value="0.50"
+                                        style="flex:1;accent-color:#3b82f6;min-width:0;">
+                                    <span id="eta-val"
+                                        style="min-width:36px;text-align:right;font-variant-numeric:tabular-nums;">0.50</span>
+                                </label>
+                                <label style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
+                                    <span style="font-style:italic;">θ</span>
+                                    <input type="range" id="theta-slider" min="0.35" max="2.79" step="0.01" value="1.57"
+                                        style="flex:1;accent-color:#3b82f6;min-width:0;">
+                                    <span id="theta-val"
+                                        style="min-width:36px;text-align:right;font-variant-numeric:tabular-nums;">1.57</span>
+                                </label>
+                            </div>
+                        </div>
+                        <figcaption>Interactive 3D visualization of the hyperball retraction. <strong
+                                style="color:#2563eb;">Blue:</strong> \(W_t\), <strong
+                                style="color:#ea580c;">Orange:</strong> \(U_t\), <strong
+                                style="color:#16a34a;">Green:</strong> \(W_{t+1}\), <strong
+                                style="color:#9333ea;">Purple dashed:</strong> \(\Delta W\). The gray dashed
+                            lines show \(W_t+U_t\) and the retraction projection. Drag to orbit; scroll to zoom.
+                        </figcaption>
+                    </figure>
+
+                    <script type="module">
+                        import * as THREE from 'three';
+                        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+                        import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+                        (function () {
+                            const wrap = document.getElementById('sphere-3d-wrap');
+                            const container = document.getElementById('sphere-3d');
+                            if (!container) return;
+
+                            const scene = new THREE.Scene();
+                            const R = 1.8;
+                            const W = container.clientWidth, H = container.clientHeight;
+                            const camera = new THREE.PerspectiveCamera(42, W / H, 0.1, 100);
+                            camera.position.set(1.2, 2.6, 3.8);
+
+                            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                            renderer.setSize(W, H);
+                            container.appendChild(renderer.domElement);
+
+                            const labelRenderer = new CSS2DRenderer();
+                            labelRenderer.setSize(W, H);
+                            labelRenderer.domElement.style.position = 'absolute';
+                            labelRenderer.domElement.style.top = '0';
+                            labelRenderer.domElement.style.left = '0';
+                            labelRenderer.domElement.style.pointerEvents = 'none';
+                            container.appendChild(labelRenderer.domElement);
+
+                            const controls = new OrbitControls(camera, renderer.domElement);
+                            controls.enableDamping = true;
+                            controls.dampingFactor = 0.08;
+                            controls.target.set(0.5, 0.7, 0.15);
+                            controls.minDistance = 2.0;
+                            controls.maxDistance = 8;
+
+                            /* Wireframe sphere */
+                            const sGeo = new THREE.SphereGeometry(R, 32, 20);
+                            scene.add(new THREE.Mesh(sGeo, new THREE.MeshBasicMaterial({ color: 0x93c5fd, wireframe: true, transparent: true, opacity: 0.10 })));
+                            /* Equator ring */
+                            const eqPts = []; for (let i = 0; i <= 64; i++) { const a = i / 64 * Math.PI * 2; eqPts.push(new THREE.Vector3(R * Math.cos(a), 0, R * Math.sin(a))); }
+                            scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(eqPts), new THREE.LineBasicMaterial({ color: 0xd6d3d1, transparent: true, opacity: 0.35 })));
+
+                            let eta = 0.50, theta = Math.PI / 2;
+                            const dynGroup = new THREE.Group();
+                            scene.add(dynGroup);
+
+                            function arrow(from, to, color) {
+                                const d = new THREE.Vector3().subVectors(to, from);
+                                const len = d.length(); if (len < 1e-4) return new THREE.Group();
+                                d.normalize();
+                                return new THREE.ArrowHelper(d, from, len, color, Math.min(len * 0.18, 0.07 * R), Math.min(len * 0.10, 0.04 * R));
+                            }
+                            function dashed(from, to, color) {
+                                const g = new THREE.BufferGeometry().setFromPoints([from, to]);
+                                const l = new THREE.Line(g, new THREE.LineDashedMaterial({ color, dashSize: 0.045 * R, gapSize: 0.025 * R }));
+                                l.computeLineDistances(); return l;
+                            }
+                            function label(html, pos, style) {
+                                const d = document.createElement('div');
+                                d.innerHTML = html;
+                                d.style.cssText = 'font:600 12px/1 -apple-system,BlinkMacSystemFont,sans-serif;padding:2px 5px;border-radius:3px;white-space:nowrap;pointer-events:none;' + (style || '');
+                                const o = new CSS2DObject(d); o.position.copy(pos); return o;
+                            }
+                            function arc(center, d1, d2, r, color, n) {
+                                n = n || 28; const pts = [];
+                                for (let i = 0; i <= n; i++) { const t = i / n; pts.push(new THREE.Vector3().lerpVectors(d1, d2, t).normalize().multiplyScalar(r).add(center)); }
+                                return new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color, linewidth: 2 }));
+                            }
+
+                            function rebuild() {
+                                dynGroup.clear();
+
+                                /* W_t on sphere */
+                                const elev = 50 * Math.PI / 180, azim = 15 * Math.PI / 180;
+                                const wtN = new THREE.Vector3(Math.cos(elev) * Math.cos(azim), Math.sin(elev), Math.cos(elev) * Math.sin(azim)).normalize();
+                                const wt = wtN.clone().multiplyScalar(R);
+
+                                /* perpendicular for U_t construction */
+                                let perp = new THREE.Vector3(0, 0, 1).cross(wtN).normalize();
+                                if (perp.length() < 0.5) perp = new THREE.Vector3(1, 0, 0).cross(wtN).normalize();
+
+                                const utDir = wtN.clone().multiplyScalar(Math.cos(theta)).add(perp.clone().multiplyScalar(Math.sin(theta))).normalize();
+                                const ut = utDir.clone().multiplyScalar(eta * R);
+                                const b = wt.clone().add(ut);          /* W_t + U_t */
+                                const wt1 = b.clone().normalize().multiplyScalar(R);      /* W_{t+1} */
+                                const O = new THREE.Vector3();
+
+                                /* Arrows */
+                                dynGroup.add(arrow(O, wt, 0x2563eb));
+                                dynGroup.add(arrow(wt.clone(), b, 0xea580c));
+                                dynGroup.add(dashed(O, b, 0x9ca3af));
+                                dynGroup.add(arrow(O, wt1, 0x16a34a));
+                                dynGroup.add(dashed(wt.clone(), wt1.clone(), 0x9333ea));
+                                dynGroup.add(dashed(b.clone(), wt1.clone(), 0x78716c));
+
+                                /* Labels */
+                                dynGroup.add(label('W<sub>t</sub>', wt.clone().multiplyScalar(1.10), 'color:#2563eb;background:rgba(255,255,255,0.88);'));
+                                const utMid = wt.clone().add(ut.clone().multiplyScalar(0.55)).add(perp.clone().multiplyScalar(0.06));
+                                dynGroup.add(label('U<sub>t</sub>', utMid, 'color:#ea580c;background:rgba(255,255,255,0.88);'));
+
+                                dynGroup.add(label('W<sub>t+1</sub>', wt1.clone().multiplyScalar(1.12), 'color:#16a34a;background:rgba(255,255,255,0.88);'));
+                                const dwM = wt.clone().add(wt1).multiplyScalar(0.5).add(new THREE.Vector3(-0.06, -0.04, 0.04));
+                                dynGroup.add(label('\u0394W', dwM, 'color:#9333ea;background:rgba(255,255,255,0.88);'));
+
+                                /* Angle arcs */
+                                dynGroup.add(arc(O, wtN, wt1.clone().normalize(), 0.22 * R, 0x2563eb));
+                                dynGroup.add(label('\u03C6', wtN.clone().add(wt1.clone().normalize()).normalize().multiplyScalar(0.29 * R), 'color:#2563eb;background:rgba(255,255,255,0.8);font-size:13px;'));
+                                const aoDir = O.clone().sub(wt).normalize();
+                                dynGroup.add(arc(wt.clone(), aoDir, utDir, 0.16 * R, 0xea580c));
+                                dynGroup.add(label('\u03C0\u2212\u03B8', wt.clone().add(aoDir.clone().add(utDir).normalize().multiplyScalar(0.22 * R)), 'color:#ea580c;background:rgba(255,255,255,0.8);font-size:11px;'));
+                            }
+                            rebuild();
+
+                            /* Slider wiring */
+                            const etaSl = document.getElementById('eta-slider'), thSl = document.getElementById('theta-slider');
+                            const etaV = document.getElementById('eta-val'), thV = document.getElementById('theta-val');
+                            etaSl.addEventListener('input', () => { eta = +etaSl.value; etaV.textContent = eta.toFixed(2); rebuild(); });
+                            thSl.addEventListener('input', () => { theta = +thSl.value; thV.textContent = (+thSl.value).toFixed(2); rebuild(); });
+
+                            /* Render loop */
+                            (function anim() { requestAnimationFrame(anim); controls.update(); renderer.render(scene, camera); labelRenderer.render(scene, camera); })();
+
+                            /* Resize */
+                            const ro = new ResizeObserver(() => {
+                                const w = container.clientWidth, h = container.clientHeight;
+                                camera.aspect = w / h; camera.updateProjectionMatrix();
+                                renderer.setSize(w, h); labelRenderer.setSize(w, h);
+                            });
+                            ro.observe(container);
+                        })();
+                    </script>
+
+                    <p>When \(\gamma,\eta\in(0,1)\), a careful bounding argument (<a href="#appendix-e">Appendix
+                            E</a>) shows that the relative step size lies in \(\frac{x}{\|W_t\|}\in
+                        (0,\sqrt{2-\sqrt{2}})\approx (0, 0.765)\). This is quite loose without knowing
+                        \(\gamma\); as an example, for practical learning rates \(\eta\in(10^{-4},10^{-1})\) with an
+                        ideal \(\gamma=0\),
+                        the bound tightens to roughly \((0.0001, 0.0996)\).</p>
+
+                    <figure class="blog-image">
+                        <div style="position:relative;">
+                            <div id="step-size-plot" style="width: 100%; height: 550px;"></div>
+                            <button id="plot-menu-btn" aria-label="Plot tools"
+                                style="position:absolute;top:8px;right:8px;z-index:10;background:rgba(255,255,255,0.85);border:1px solid #e5e7eb;border-radius:6px;width:32px;height:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:background 0.15s,box-shadow 0.15s;"
+                                onmouseenter="this.style.background='#fff';this.style.boxShadow='0 2px 8px rgba(0,0,0,0.12)'"
+                                onmouseleave="if(!this.classList.contains('active')){this.style.background='rgba(255,255,255,0.85)';this.style.boxShadow='none'}">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="#6b7280">
+                                    <circle cx="8" cy="3" r="1.5" />
+                                    <circle cx="8" cy="8" r="1.5" />
+                                    <circle cx="8" cy="13" r="1.5" />
+                                </svg>
+                            </button>
+                        </div>
+                        <style>
+                            #step-size-plot .modebar-container {
+                                display: none !important;
+                            }
+
+                            #step-size-plot.show-modebar .modebar-container {
+                                display: flex !important;
+                                right: 44px !important;
+                            }
+                        </style>
+                        <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+                        <script>
+                            (function () {
+                                var N = 80;
+                                var etaVals = [], gammaVals = [];
+                                for (var i = 0; i <= N; i++) {
+                                    etaVals.push(0.01 + (i / N) * 0.98);
+                                    gammaVals.push(0.01 + (i / N) * 0.98);
+                                }
+                                var zData = [];
+                                for (var j = 0; j <= N; j++) {
+                                    var row = [];
+                                    for (var i = 0; i <= N; i++) {
+                                        var eta = etaVals[i];
+                                        var gamma = gammaVals[j];
+                                        var inner = (eta * eta * (1 - gamma * gamma)) / (1 + eta * eta + 2 * eta * gamma);
+                                        var val = Math.sqrt(2) * Math.sqrt(1 - Math.sqrt(1 - inner));
+                                        row.push(val);
+                                    }
+                                    zData.push(row);
+                                }
+                                var data = [{
+                                    type: 'surface',
+                                    x: etaVals,
+                                    y: gammaVals,
+                                    z: zData,
+                                    colorscale: [
+                                        [0, '#dbeafe'],
+                                        [0.25, '#93c5fd'],
+                                        [0.5, '#3b82f6'],
+                                        [0.75, '#1d4ed8'],
+                                        [1, '#1e3a5f']
+                                    ],
+                                    colorbar: {
+                                        title: { text: 'x / ||W||', font: { size: 13 } },
+                                        thickness: 15,
+                                        len: 0.6
+                                    },
+                                    contours: {
+                                        z: { show: true, usecolormap: true, highlightcolor: "#fff", project: { z: false } }
+                                    },
+                                    hovertemplate: '\u03B7 = %{x:.3f}<br>\u03B3 = %{y:.3f}<br>x/||W|| = %{z:.4f}<extra></extra>'
+                                }];
+                                var layout = {
+                                    title: { text: 'Relative step size for \u03B7, \u03B3 \u2208 (0, 1)', font: { size: 15 } },
+                                    margin: { l: 10, r: 10, t: 50, b: 10 },
+                                    scene: {
+                                        xaxis: { title: { text: '\u03B7 (learning rate)', font: { size: 13 } }, range: [0, 1] },
+                                        yaxis: { title: { text: '\u03B3 (cos \u03B8)', font: { size: 13 } }, range: [0, 1] },
+                                        zaxis: { title: { text: 'Relative step size', font: { size: 13 } }, range: [0, 0.8] },
+                                        camera: { eye: { x: 1.6, y: -1.8, z: 0.9 } },
+                                        aspectratio: { x: 1, y: 1, z: 0.8 }
+                                    },
+                                    paper_bgcolor: 'rgba(0,0,0,0)',
+                                    plot_bgcolor: 'rgba(0,0,0,0)',
+                                    font: { family: 'Roboto, sans-serif', color: '#333' }
+                                };
+                                var config = {
+                                    responsive: true,
+                                    displayModeBar: true,
+                                    modeBarButtonsToRemove: ['toImage', 'sendDataToCloud'],
+                                    displaylogo: false
+                                };
+                                Plotly.newPlot('step-size-plot', data, layout, config);
+
+                                /* 3-dot menu toggle */
+                                var btn = document.getElementById('plot-menu-btn');
+                                var plot = document.getElementById('step-size-plot');
+                                btn.addEventListener('click', function () {
+                                    var open = plot.classList.toggle('show-modebar');
+                                    btn.classList.toggle('active', open);
+                                    btn.style.background = open ? '#fff' : 'rgba(255,255,255,0.85)';
+                                    btn.style.boxShadow = open ? '0 2px 8px rgba(0,0,0,0.12)' : 'none';
+                                });
+                            })();
+                        </script>
+                        <figcaption>Interactive relative step size surface. Drag to rotate, scroll to zoom. As
+                            \(\eta\) increases and \(\gamma\) decreases, the relative step size increases.
+                        </figcaption>
+                    </figure>
+
+                    <h4 class="blog-subheading">Estimations for low \(\eta\)</h4>
+                    <p>Knowing that our practical learning rates are such that \(\eta^2\ll1\) and
+                        \(\gamma\eta\ll 1\), we can make some estimations, like
+                        \(1+\eta^2+2\eta\gamma\approx1\), so we get \(x\approx
+                        R\sqrt{2}\sqrt{1-\sqrt{1-(\eta^2-\gamma^2\eta^2)}}\). Using \(\sqrt{1-z}\approx 1-z/2\)
+                        we can see \(x\approx
+                        R\sqrt2\sqrt{1-(1-(\eta^2-\gamma^2\eta^2)/2)}=R\eta\sqrt{1-\gamma^2}=R\eta\sin\theta\),
+                        which is just a tangent space approximation of the step size! This would make the relative
+                        step size \(\frac{x}{\|W_t\|}\approx\eta\sqrt{1-\gamma^2}\), and we get something very
+                        similar to our initial estimate of \(O(\eta)\). In fact, for \(\gamma=0\), we get
+                        \(\frac{x}{\|W_t\|}\approx \eta\)!</p>
+
+                    <p>It is very &lsquo;nice&rsquo; that \(\frac{x}{\|W_t\|}\propto\eta\), because when we have
+                        a weight decay instead, the effective step size is a nonlinear function of \(\eta\) and
+                        \(\lambda\)<sup><a href="#ref-hyperball">10</a></sup>, which adds another layer of
+                        complexity to the solution space.</p>
+
+                    </details>
+
+                    <details class="collapsible-section" open>
+                        <summary>
+                            <h3>Training Results</h3>
+                        </summary>
+                    <figure class="blog-image">
+                        <img src="/blogs/muon/assets/loss_curves_nucleotide_loss.png"
+                            alt="Learning curves for nucleotide loss" loading="lazy" />
+                        <figcaption>Learning curves for the most optimal runs for all 4 optimizer combinations:
+                            AdamW, AdamH, MuonW, MuonH. Loss axis is nucleotide cross-entropy loss.</figcaption>
+                    </figure>
+
+                    <p>We find that Muon achieves a lower train loss than Adam, consistent with existing
+                        literature<sup><a href="#ref-muon">2</a><a href="#ref-hyperball">10</a></sup><span
+                            class="sidenote-group"><sup class="sidenote-ref">8</sup><span
+                                class="sidenote-card side-right">The model is a multifunctional architecture
+                                similar to <a href="/introducing-axis/">Axis</a>, trained on a set of
+                                candidate cis-regulatory elements (cCREs) from the ENCODE v4 registry that
+                                are cell-type-specific to one of three cell lines: K562, HepG2, and
+                                SK-N-SH. Training was limited to 10 epochs due to compute constraints;
+                                the loss has not begun to saturate (we have trained to much lower
+                                cross-entropy in prior runs), so these results reflect relative optimizer
+                                comparisons, not absolute model quality.</span></span>.
+                        Interestingly, the Hyperball constraint does not consistently improve both optimizers:
+                        it helps Adam (AdamH &gt; AdamW) but <em>hurts</em> Muon (MuonW &gt; MuonH)<span
+                            class="sidenote-group"><sup class="sidenote-ref">9</sup><span
+                                class="sidenote-card side-right">The Hyperball blog<sup><a
+                                        href="#ref-hyperball">10</a></sup> actually shows that for Muon, the
+                                losses are comparable for models with &le; 500M parameters, and Hyperball
+                                dominates for the largest model of &gt;1B parameters. Our largest model is
+                                actually ~420M parameters large (as we are somewhat compute bound), so it is
+                                still possible for MuonH to outperform MuonW at a larger scale.</span></span>.
+                        The best overall configuration is Muon with independent weight decay (MuonW).
+                        Why did Hyperball worsen Muon&rsquo;s performance?</p>
+
+                    <p>We hypothesize that this is because Hyperball&rsquo;s re-projection scales all
+                        singular values of the weight matrix by the <em>same</em> multiplicative factor. When
+                        Hyperball maps \(W_{t+1} = R\,(W_t + U_t)/\|W_t + U_t\|_F\), it shrinks every singular
+                        direction of \(W\) equally<span class="sidenote-group"><sup class="sidenote-ref">10</sup><span
+                            class="sidenote-card side-left">It is actually possible to be on both the Frobenius and
+                            Spectral sphere at
+                            once as they DO intersect, but our algorithm does not guarantee that we enter
+                            the intersection. As a clarification: There exists an inequality \(\|W\|_2\le
+                            \|W\|_F\le \sqrt{n}\|W\|_2\), so one might believe that
+                            \(\|W\|_F\in[1,\sqrt{n}]\) guarantees that \(W\) lies in the intersection, but
+                            this is a necessary condition, not a sufficient one (think of a rank 1 matrix
+                            within this range)!</span></span>. The dominant singular values of \(W\), being
+                        large, survive this downscaling, and they remain the dominant share of the fixed energy
+                        budget \(\|W\|_F^2 = \sum_i \sigma_i^2 = R^2\). The smaller singular values of \(W\),
+                        however, cannot: Muon&rsquo;s whitening of the update matrix tries to grow them step
+                        after step by distributing the learning signal equally across all singular directions,
+                        but the uniform rescaling of the weight matrix pulls them back down proportionally each
+                        time. Because they never accumulate enough energy to matter, the small directions
+                        effectively die while the large ones persist, concentrating the spectrum into fewer and
+                        fewer dominant modes.
+                        The <a href="#spectral-analysis">spectral metrics</a> below support this: MuonH&rsquo;s
+                        spectral entropy and participation ratio collapse over training, consistent with the
+                        small singular directions being progressively eroded by the uniform rescaling.</p>
+
+                    <p>Adam under the same Hyperball constraint does not suffer this fate, because without
+                        whitening the spectrum is already concentrated in the task-relevant directions; the
+                        uniform rescaling therefore does comparatively little damage. Weight decay, on the other
+                        hand, does <em>not</em> alter the Muon update at all, it only decays the matrix
+                        the update is added to, so the whitening and the regularizer rarely conflict.</p>
+
+                    <figure class="blog-image">
+                        <img src="/blogs/muon/assets/adam_comparison.png"
+                            alt="Comparison of Adam and AdamH diagnostics" loading="lazy"
+                            style="margin-bottom: 0.5rem;" />
+                        <img src="/blogs/muon/assets/muon_comparison.png"
+                            alt="Comparison of Muon and MuonH diagnostics" loading="lazy" />
+                        <figcaption>Sweep losses for Top: AdamW vs AdamH, Bottom: MuonW vs MuonH
+                        </figcaption>
+                    </figure>
+
+                    <p>These figures illustrate how our sweeps trained. Although Hyperball performs worse for a
+                        large number of step sizes, we only care about the absolute minimum point. For Adam, the
+                        lowest point is with Hyperball at \(\eta \approx 5.69 \times 10^{-3}\), and with Muon, the
+                        lowest point is with weight decay at \(\eta \approx 2.27 \times 10^{-2}\) (although Hyperball at
+                        \(\eta \approx 5.69 \times 10^{-3}\) is not too far behind). It is very interesting to see that
+                    both Hyperball optimizers share the same optimal learning rate, perhaps this has to do with how similar their training dynamics and relative step sizes are.</p>
+
+                    <figure class="blog-image">
+                        <img src="/blogs/muon/assets/adam_heatmap.png" alt="Adam sweep summary"
+                            loading="lazy" style="margin-bottom: 0.5rem;" />
+                        <img src="/blogs/muon/assets/muon_heatmap.png" alt="Muon sweep summary"
+                            loading="lazy" />
+                        <figcaption>Heatmap of Top: AdamW vs AdamH, Bottom: MuonW vs MuonH</figcaption>
+                    </figure>
+
+                    <p>These heatmaps give us a clearer picture of where Hyperball (green) has the
+                        advantage over weight decay (red). For Adam, the advantage is scale-dependent:
+                        at width 512, the heatmap is mostly yellow (roughly even), but at width 2048, AdamH
+                        shows a noticeably stronger advantage, with greener squares across much of the grid.
+                        In particular, the mid learning rate range (\(\sim 10^{-3}\) to \(6\times 10^{-3}\))
+                        is consistently green across widths, suggesting Hyperball&rsquo;s norm control is
+                        most beneficial at moderate step sizes. At the highest learning rate (\(9\times
+                        10^{-2}\)), weight decay dominates, likely because the effective step size
+                        grows too large (it grows \(\propto\eta\)) and training can never stabilize.</p>
+
+                    <p>For Muon, the scale dependence runs in the opposite direction. At width 512,
+                        Hyperball is competitive or slightly ahead across much of the grid, with light
+                        green dominating the mid learning rates. By width 1024, the advantage fades to
+                        mostly yellow, and at width 2048 the picture inverts: the heatmap is overwhelmingly
+                        red, with weight decay winning by up to 60% at the higher learning rates late in
+                        training. This suggests that the spectral squeeze worsens with scale; larger
+                        weight matrices have more trailing singular directions for the uniform rescaling to
+                        erode.</p>
+
+                    <figure class="blog-image">
+                        <img src="/blogs/muon/assets/mounw_adamh_heatmap.png"
+                        alt="MuonW vs AdamH heatmap across widths" loading="lazy" />
+                        <img src="/blogs/muon/assets/muonw_adamh_comparison.png"
+                            alt="MuonW vs AdamH loss curves across widths" loading="lazy"
+                            style="margin-bottom: 0.5rem;" />
+                        <figcaption>Top: Heatmap of % advantage (green = AdamH better, red = MuonW better).
+                            Bottom: Loss curves for MuonW (dashed) vs AdamH (solid) across widths.</figcaption>
+                    </figure>
+
+                    <p>Finally, we compare the two best configurations head-to-head: MuonW against AdamH.
+                        At width 512, the two are closely matched across learning rates, but as scale
+                        increases MuonW pulls ahead decisively. By width 2048, MuonW dominates across
+                        nearly every learning rate and training checkpoint, with advantages exceeding 10%
+                        at many points in the grid. The loss curves tell the same story: at the optimal
+                        learning rate for each optimizer, MuonW (dashed) consistently sits below AdamH
+                        (solid) at the larger widths. This confirms that Muon&rsquo;s spectral advantages
+                        over Adam compound with scale.</p>
+
+                    </details>
+
+                    <details class="collapsible-section" open>
+                        <summary>
+                            <h3 id="spectral-analysis">Spectral Analysis</h3>
+                        </summary>
+                    <p>To understand <em>why</em> Muon with independent weight decay (MuonW) outperforms its
+                        constrained counterpart (MuonH), we must look at the spectral properties of the learned
+                        representations. Rather than examining the spectral norm itself (since the exact multiplier
+                        is less important given scale invariance), we focus on the <em>distribution</em> of singular
+                        values. Following the eigenspectral framework of NerVE<sup><a
+                                href="#ref-nerve">15</a></sup><span class="sidenote-group"><sup
+                                class="sidenote-ref">11</sup><span class="sidenote-card side-right">NerVE
+                                originally applies these metrics to track activation dynamics through FFN
+                                layers, but the same spectral measures are equally well defined for weight
+                                matrices.</span></span>, we track two key metrics for the weight
+                        matrices:</p>
+                    <ul>
+                        <li><strong>Spectral Entropy:</strong> A measure of how uniformly variance is distributed
+                            across singular values. Values near \(1.0\) indicate a "full rank", diverse
+                            representation, while values near \(0\) indicate rank collapse (variance
+                            concentrated in a few dimensions).</li>
+                        <li><strong>Participation Ratio (PR):</strong> The effective rank of the matrix. Higher
+                            PR means more active dimensions are used to represent data. We normalize the PR to get the
+                            ratio of the effective rank to full rank, which allows us to compare matrices of different
+                            shapes (we want to see the training dynamics, exact scale is not important).</li>
+                    </ul>
+
+                    <figure class="blog-image">
+                        <img src="/blogs/muon/assets/svd_entropy_mean_ffn_L3.png"
+                            alt="SVD Entropy Mean for FFN Layer 3" loading="lazy" style="margin-bottom: 0.5rem;" />
+                        <img src="/blogs/muon/assets/pr_mean_ffn_L3.png"
+                            alt="Participation Ratio Mean for FFN Layer 3" loading="lazy" />
+                        <figcaption>Spectral metrics for FFN Layer 3. <strong>Blue:</strong> MuonW,
+                            <strong>Red:</strong> MuonH, <strong>Orange:</strong> AdamW,
+                            <strong>Green:</strong> AdamH. Note how MuonH (Red) collapses to a low entropy,
+                            low-rank state, while MuonW (Blue) maintains high capacity.<span class="sidenote-group"><sup
+                                    class="sidenote-ref">12</sup><span class="sidenote-card side-right">All weight
+                                    matrices exhibited similar
+                                    patterns; we show only one here for simplicity.</span></span>
+                        </figcaption>
+                    </figure>
+
+                    <p> The weights of MuonW (Blue) and MuonH (Red) both start with high spectral entropy
+                        (\(\approx 0.98\)), but their trajectories diverge sharply. MuonW&rsquo;s entropy
+                        decreases only slightly and stabilizes near \(\approx 0.93\), indicating that the
+                        weight matrices maintain a near-uniform singular value distribution throughout
+                        training; Muon&rsquo;s whitening successfully builds a high-rank, distributed
+                        representation. MuonH (Red), by contrast, steadily collapses from \(\approx 0.98\)
+                        to \(\approx 0.68\), with the participation ratio falling in tandem: the effective
+                        rank of the weight matrices shrinks over training. The Adam variants (Orange, Green)
+                        sit much lower throughout, which is expected since Adam does not whiten its updates.
+                        The critical observation is the <em>divergence</em> between Blue and Red: both use
+                        the same Muon whitening, yet MuonH&rsquo;s spectrum degrades while MuonW&rsquo;s
+                        does not. This points directly to the Hyperball constraint as the cause. The
+                        \(\Delta W\) entropy tells a consistent story: MuonW&rsquo;s updates rise and
+                        stabilize near \(\approx 0.95\), while MuonH&rsquo;s updates peak early and then
+                        become progressively less whitened (dropping from \(\approx 0.95\) to
+                        \(\approx 0.7\)), confirming that the collapse feeds back from the weights into
+                        the updates.</p>
+
+                    <details class="collapsible-section">
+                        <summary>
+                            <h4>Why isn't Muon's \(\Delta W\) always full-rank with entropy 1?</h4>
+                        </summary>
+                        <p>One might expect Muon's whitening step to produce a perfectly uniform spectrum,
+                            but in practice the Newton-Schulz iterations used to approximate the polar
+                            factor are finite (typically 5 iterations), pushing singular values only
+                            <em>toward</em> 1 rather than exactly to 1 (roughly into \([0.7, 1.3]\)). More
+                            importantly, if the underlying momentum matrix has near-zero singular
+                            values (which is common when the batch gradient signal lies in a
+                            low-dimensional subspace), finite iterations cannot lift those values
+                            appreciably. Additionally, our Nesterov momentum means NS\(_5\)
+                            whitens a lookahead lerp of the gradient and the momentum buffer, not the
+                            gradient at \(W_t\) itself, so the spectral structure of \(U_t\) already
+                            reflects a blended signal. Finally, note that \(\Delta W \neq U_t\): with
+                            independent weight decay, \(\Delta W = W_{t+1} - W_t = U_t - \lambda W_t\),
+                            so the actual weight change includes a decay term \(-\lambda W_t\) whose
+                            spectral structure is that of the current weights, not the whitened update.
+                            Even if \(U_t\) were perfectly whitened, \(\Delta W\) would still inherit the
+                            spectral bias of \(W_t\).
+                        </p>
+                    </details>
+
+                    <h4 class="blog-subheading">1. Uniform Rescaling and the Spectral Squeeze</h4>
+                    <p>MuonH (Red) constrains \(\|W\|_F = R\) at every step by multiplying every
+                        singular value by the same factor \(c = R/\|W_t + U_t\|_F\). The large singular
+                        values survive this downscaling; the small ones (which Muon&rsquo;s whitening
+                        tried to grow) cannot, because the uniform rescaling pulls them back down before
+                        they accumulate meaningful energy. Over many steps this concentrates the spectrum into
+                        fewer dominant modes, erasing the weak regulatory signals in the tail.</p>
+
+                    <p>This effect is compounded on the <em>update</em> side. Recall that Muon&rsquo;s
+                        NS\(_5\) whitening is imperfect: it pushes singular values toward \(1\) but
+                        lands in roughly \([0.7, 1.3]\), not exactly at \(1\). For MuonW (Blue), these
+                        small imperfections are benign; the weight matrix is free to absorb them, and
+                        the \(\Delta W\) spectral entropy stays high (\(\approx 0.95\)) throughout training.
+                        For MuonH (Red), however, the imperfections compound through a feedback loop: the
+                        collapsing weight spectrum biases the gradients computed at \(W_t\), which flow into
+                        the momentum buffer, which NS\(_5\) then tries to whiten. But whitening an
+                        already-biased input cannot fully recover a uniform spectrum, so the update itself
+                        becomes progressively less whitened. In the \(\Delta W\) entropy plot, MuonH (Red)
+                        starts near MuonW (Blue) but steadily diverges, dropping to \(\approx 0.7\) by
+                        the end of training, a clear signature of this self-reinforcing collapse.</p>
+
+                    <p>In contrast, MuonW (Blue) imposes no hard constraint on the weight norm, so there is
+                        no uniform rescaling step and no feedback loop. Muon&rsquo;s whitened updates can
+                        grow the small singular directions over many steps without them being pulled back,
+                        and the dominant features can grow <em>without</em> cannibalizing the weak ones. The
+                        high entropy we observe reflects a feature-rich, high-capacity model that preserves
+                        the complex, combinatorial grammar of the genome.
+                    </p>
+
+                    <details class="collapsible-section">
+                        <summary>
+                            <h4>Note on Adam</h4>
+                        </summary>
+                        <p>AdamW (Orange) maintains high entropy (relative to AdamH and MuonH), but for a different
+                            reason. Adam's
+                            coordinate wise updates inject unstructured noise into trailing dimensions,
+                            artificially propping up their singular values. MuonW achieves high entropy
+                            through "clean" whitening updates that amplify rare directions, not through
+                            noise. This distinction aligns with NerVE's<sup><a href="#ref-nerve">15</a></sup>
+                            finding that stable spectral signatures
+                            correlate with generalization ability and respond predictably to optimizer design choices.
+                        </p>
+                    </details>
+
+                    <h4 class="blog-subheading">2. Implicit Annealing & Relative Step Size</h4>
+                    <p>The second piece of the puzzle lies in the relative step size. We define the
+                        <em>relative step size</em> as \(\frac{\|\Delta W\|}{\|W\|}\).
+                    </p>
+
+                    <figure class="blog-image">
+                        <img src="/blogs/muon/assets/weight_frobenius_norm.png"
+                            alt="Global Weight Frobenius Norm" loading="lazy" style="margin-bottom: 0.5rem;" />
+                        <img src="/blogs/muon/assets/delta_W_mean_frobenius_norm.png"
+                            alt="Global Update Mean Frobenius Norm" loading="lazy" style="margin-bottom: 0.5rem;" />
+                        <img src="/blogs/muon/assets/relative_step_size.png"
+                            alt="Global Relative Step Size" loading="lazy" />
+                        <figcaption>Global training dynamics. Top: Weight Frobenius Norm. Middle: Update Mean Frobenius
+                            Norm. Bottom: Relative Step
+                            Size. MuonW (Blue) shows monotonically increasing norm and decaying step size, while MuonH
+                            (Red) plateaus.<span class="sidenote-group"><sup
+                                    class="sidenote-ref">13</sup><span class="sidenote-card side-right">The initial
+                                    ramp-up visible in the relative step size corresponds to our learning rate warmup
+                                    schedule.</span></span></figcaption>
+                    </figure>
+
+                    <p>Indeed, MuonW's (Blue) weight norm grows monotonically throughout training. The
+                        update norm \(\|\Delta W\|\) is roughly constant (it increases slightly), but the weight denominator
+                        \(\|W\|\) baloons. Although independent
+                        weight decay should theoretically bound the norm at an equilibrium<sup><a
+                                href="#ref-wdeq">9</a>,
+                            <a href="#ref-hyperball">10</a></sup>, the norm continues to grow long after the nucleotide
+                        loss has relatively plateaued. This causes the relative
+                        step size to <em>decay inversely with the square root of time</em>, acting as an
+                        intrinsic learning rate scheduler that naturally "cools" the optimization and allows
+                        the model to settle into a well generalized minimum.</p>
+
+                    <p>For MuonH (Red), the weight norm \(\|W\|\) is fixed. The relative step size flattens
+                        out and never decays. The optimizer perpetually "bounces" around the minimum at a
+                        constant temperature, preventing the fine grained convergence needed for optimal
+                        performance.</p>
+
+                    <h4 class="blog-subheading">3. Activation Hacking: The Logit Inflation "Cheat"</h4>
+                    <p>There is an alternative, less flattering interpretation of MuonW's success: fit the
+                        cross-entropy
+                        loss by simply inflating the logits. In classification tasks, the cross-entropy loss can
+                        be
+                        decreased by sharpening the probability distribution (making the model more
+                        "confident"), even
+                        if the ranking of classes doesn't change.</p>
+
+                    <figure class="blog-image">
+                        <img src="/blogs/muon/assets/OutputLogits.png"
+                            alt="Output Logits Distribution" loading="lazy" />
+                        <figcaption>Distribution of output logits during training. MuonW (Blue) logits grow
+                            significantly larger than MuonH (Red), leading to sharper softmax distributions.
+                        </figcaption>
+                    </figure>
+
+                    <p>As noted above, MuonW's weight norm grows monotonically throughout training. While the
+                        RMSNorm-sandwiched
+                        hidden layers
+                        are scale invariant (<a href="#appendix-f">Appendix F</a>), the final output projection
+                        is
+                        <em>not</em>. There is no normalization between the last linear layer and the softmax.
+                        This
+                        means the runaway norm growth could potentially inflate the magnitude of the output
+                        logits,
+                        sharpening the softmax distribution and pushing the model toward higher confidence
+                        predictions.
+                    </p>
+
+                    <p>This acts exactly like <em>lowering the softmax temperature</em>. Whether this
+                        "activation
+                        hacking" helps or hurts depends on the task. DNA has a vocabulary of just 4 bases, and
+                        in
+                        regulatory regions the correct nucleotide often dominates its context window. Sharper
+                        predictions on a tiny, low entropy vocabulary are frequently correct, so inflated logits
+                        translate directly into lower cross-entropy loss. Natural language, by contrast, has a
+                        vocabulary of ~100k tokens with genuinely ambiguous contexts where probability mass must
+                        be
+                        spread across many plausible continuations<span class="sidenote-group"><sup
+                                class="sidenote-ref">14</sup><span class="sidenote-card side-left">
+                                Quantitatively, consider the softmax function \(\sigma(\mathbf{z})_i =
+                                \frac{e^{z_i}}{\sum_{j=1}^K e^{z_j}}\). If we multiply the logits by a large
+                                factor \(k\), the terms become \(e^{k z_i}\). Since the exponential function
+                                grows incredibly fast, even a small difference in raw logits becomes a massive
+                                difference after exponentiation. The largest logit \(z_i\) will dominate the sum
+                                in the denominator, pushing the probability \(\sigma(\mathbf{z})_i\) towards
+                                1 (provided \(k\) is large enough).<br><br>
+                                For DNA (\(K=4\)), there are only 3 other terms in the denominator to compete
+                                with. Even a small lead for the correct nucleotide allows it to overwhelm the
+                                others; let \(k_{DNA}\) be the minimal such multiplier. For NLP (\(K \approx
+                                100,000\)), the denominator sums over 100,000 other
+                                terms. Even if each is small, their total mass is significant, acting as a
+                                "drag" that prevents the correct token from dominating the distribution purely
+                                through scaling by \(k_{DNA}\).
+                            </span></span>.</p>
+
+                    <p>This means that part of MuonW's advantage may be an artifact of the domain: the optimizer
+                        exploits the low cardinality and low entropy of the DNA vocabulary to "hack" the loss
+                        via
+                        logit scaling, rather than learning richer internal representations. MuonH (Red), with
+                        its
+                        strict norm constraint, is mathematically forbidden from using this trick, which may
+                        explain its
+                        higher loss despite learning a "cleaner" low-rank representation. Disentangling this
+                        effect from
+                        the genuine spectral capacity gains discussed above is an important open question, and
+                        one that
+                        a controlled comparison with a fixed norm output head could help resolve.</p>
+
+                    <details class="collapsible-section">
+                        <summary>
+                            <h4>Why don&rsquo;t AdamW&rsquo;s logits grow?</h4>
+                        </summary>
+                    <p>Adam&rsquo;s update for each parameter is proportional to
+                        \(m_t / \sqrt{v_t}\), where \(m_t\) is the gradient EMA and \(v_t\) the EMA of
+                        squared gradients. In DNA modeling, where batches are dominated by shifting, independent
+                        6&ndash;20bp motifs, the gradients fluctuate wildly from step to step. The first moment
+                        \(m_t\) suffers <em>destructive</em> interference as positive and negative gradients
+                        cancel, while the second moment \(v_t\), which averages strictly positive squared values, does not suffer from sign cancellation and remains relatively stable and large.
+                        The ratio shrinks, and Adam&rsquo;s steps become tiny. Increasing the learning rate does
+                        not help: a larger \(\eta\) amplifies the noisy, unstructured coordinate-wise updates,
+                        causing training to destabilize, as the charts above confirm (see how fast losses rise for the largest learning rate).</p>
+
+                    <p>Muon sidesteps this entirely. Its Newton&ndash;Schulz whitening discards the per-element
+                        scale and forces a fixed-norm update at every step, so temporal noise never suppresses
+                        the step size. The result: MuonW can safely push large updates through the output
+                        projection, bulldozing past weight decay to inflate logits, while AdamW is trapped at
+                        a low norm by its own variance denominator.</p>
+                    </details>
+
+                    </details>
+
+                    <details class="collapsible-section" open>
+                        <summary>
+                            <h3>Motif Recovery</h3>
+                        </summary>
+
+                    <p>To test whether lower loss translates into biologically meaningful predictions, we
+                        ran a 15% nucleotide masking experiment on ~221k cCRE sequences active in &ge;2
+                        cell types (K562, HepG2, SK-N-SH) and measured how well each model recovers the
+                        original sequences' transcription factor binding motifs.</p>
+
+                    <figure class="blog-image">
+                        <img src="/blogs/muon/assets/motif_assets/motif_preservation.png"
+                            alt="Motif preservation by regulatory type" loading="lazy" />
+                        <figcaption>Motif preservation ratio (model hits / original hits) by regulatory element
+                            type. MuonH leads across all categories.</figcaption>
+                    </figure>
+
+                    <p>Overall motif preservation follows the order MuonH (~0.53x) &gt; MuonW (~0.47x) &gt;
+                        AdamH &asymp; AdamW (~0.41x), a ~29% improvement for MuonH over the best Adam
+                        variant, and ~15% for MuonW. Notably, <em>MuonH outperforms MuonW here despite
+                        achieving a higher training loss</em>. This is consistent with the logit inflation
+                        hypothesis discussed above: MuonW&rsquo;s lower cross-entropy loss is partly
+                        driven by inflated logit confidence rather than richer internal representations,
+                        while MuonH&rsquo;s norm-constrained weights, though spectrally compressed,
+                        learn cleaner features that better preserve real biological motifs. Preservation
+                        also varies by regulatory type: promoters (PLS) are best preserved at 0.65x, while
+                        distal enhancers (dELS) are hardest at 0.48x.</p>
+
+                    <figure class="blog-image">
+                        <img src="/blogs/muon/assets/motif_assets/motif_jsd.png"
+                            alt="Motif JSD analysis: volume vs shape trade-off" loading="lazy" />
+                        <figcaption>Per-Sequence JSD by Cell Type. MuonH consistently achieves the lowest (best) JSD across all cell lines.</figcaption>
+                    </figure>
+
+                    <p>At the <em>per-sequence</em> level, pairing each original and model sequence
+                        and comparing which TFs were hit, MuonH achieves the best fidelity (0.494),
+                        followed by MuonW (0.505), AdamH (0.545), and AdamW (0.561). This ranking holds
+                        consistently across K562, HepG2, and SK-N-SH cell lines, with MuonH showing the
+                        strongest advantage in SK-N-SH (0.393 vs 0.422 for MuonW).</p>
+
+                    </details>
+
+                    <details class="collapsible-section" open>
+                        <summary>
+                            <h3>Next steps</h3>
+                        </summary>
+                    <p>Next, we plan to:</p>
+                    <ul>
+                        <li><strong>Run the full sweep with SSO:</strong> repeat the Adam/Muon \(\times\)
+                            Hyperball sweeps using the Spectral Sphere Optimizer (SSO)<sup><a
+                                    href="#ref-sso">18</a></sup> to test whether
+                            controlling \(\sigma_1\) of the weight matrix directly improves stability and performance compared to
+                            Frobenius norm control.</li>
+                        <li><strong>Explore hybrid optimizers:</strong> evaluate combinations of Muon and Adam
+                            updates (like PRISM<sup><a href="#ref-prism">19</a></sup> and variants<sup><a href="#ref-shampoo-prism">20</a></sup>) and
+                            compare against these results.</li>
+                    </ul>
+                    </details>
+
+                    <hr style="margin: 3rem 0 2rem; border: none; border-top: 1px solid #ddd;">
+                    <h3 id="appendix">Appendices</h3>
+
+                    <h4 id="appendix-a" class="blog-subheading">Appendix A: Adam Overview</h4>
+                    <p>Let \(g_t = \nabla_W \mathcal{L}(W_t)\) denote the gradient at step \(t\). Adam maintains two
+                        exponential moving averages (EMAs):</p>
+                    <ul>
+                        <li>a <em>first moment</em> estimate (mean) \(m_t\),</li>
+                        <li>a <em>second moment</em> estimate (uncentered variance) \(v_t\).</li>
+                    </ul>
+                    <p>Specifically, with hyperparameters \(\beta_1,\beta_2 \in [0,1)\) and initialization \(m_0 =
+                        0\), \(v_0 = 0\):</p>
+                    \[
+                    m_t = \beta_1 m_{t-1} + (1-\beta_1) g_t,
+                    \qquad
+                    v_t = \beta_2 v_{t-1} + (1-\beta_2) g_t^2,
+                    \]
+                    <p>where \(g_t^2\) denotes elementwise squaring.</p>
+
+                    <p>Because both EMAs start at zero, they are biased toward \(0\) early in training. Adam,
+                        therefore, uses bias corrected estimates</p>
+                    \[
+                    \hat m_t = \frac{m_t}{1-\beta_1^t},
+                    \qquad
+                    \hat v_t = \frac{v_t}{1-\beta_2^t}.
+                    \]
+                    <p>The vanilla Adam update is then,</p>
+                    \[
+                    W_{t+1} = W_t - \eta\, \frac{\hat m_t}{\sqrt{\hat v_t}+\varepsilon},
+                    \]
+                    <p>with learning rate \(\eta\) and small \(\varepsilon > 0\) for numerical stability.</p>
+
+                    <p><strong>Weight decay (AdamW)</strong><br>
+                        Soft L2 regularization can be implemented by adding \(\lambda W_t\) to the gradient, but
+                        AdamW instead <em>decouples</em> weight decay from the adaptive gradient step. In its common
+                        form:</p>
+                    \[
+                    W_{t+1} = (1-\eta\lambda)\,W_t \; - \; \eta\, \frac{\hat m_t}{\sqrt{\hat v_t}+\varepsilon},
+                    \]
+                    <p>so weight decay shrinks parameters directly (multiplicatively), while the Adam step uses the
+                        adaptive per parameter scaling.</p>
+
+                    <p><strong>Independent weight decay</strong><br>
+                        In our setting, we use <em>independent</em> weight decay: the shrinkage is applied as a
+                        separate step, not through the gradient, and is not tied to the learning rate.</p>
+                    <p>Concretely, if \(U_t\) denotes the optimizer's proposed parameter update (e.g., the Adam step
+                        \(U_t=-\eta\, \hat m_t/(\sqrt{\hat v_t}+\varepsilon)\)), then independent weight decay
+                        applies</p>
+                    \[
+                    W_{t+1} = (1-\lambda)\,W_t + U_t.
+                    \]
+                    <p>So the decay rate \(\lambda\) is not multiplied by the learning rate and can be scheduled
+                        separately.</p>
+
+                    <h4 id="appendix-b" class="blog-subheading">Appendix B: SVD Overview</h4>
+
+                    <p><strong>Singular value decomposition (SVD)</strong><br>
+                        For any real matrix \(A \in \mathbb{R}^{m\times n}\), the SVD factorizes \(A\) into</p>
+                    \[
+                    A = U\Sigma V^\top,
+                    \]
+                    <p>where \(U\in\mathbb{R}^{m\times m}\) and \(V\in\mathbb{R}^{n\times n}\) are orthogonal
+                        matrices (their columns form orthonormal bases), and \(\Sigma\in\mathbb{R}^{m\times n}\) is
+                        diagonal (rectangular) with nonnegative entries \(\sigma_1\ge \sigma_2\ge \cdots \ge 0\)
+                        called the <em>singular values</em>. Geometrically, \(V^\top\) rotates (or reflects) the
+                        input space, \(\Sigma\) scales along the orthogonal axes, and \(U\) rotates (or reflects)
+                        the output space.</p>
+
+                    <p><strong>What are singular values?</strong><br>
+                        The singular values of matrix \(A\) are the square roots of the eigenvalues of \(A^\top A\)
+                        (or equivalently, of \(AA^\top\)). Concretely, for eigenpairs \((\lambda_i, v_i)\) of
+                        \(A^\top A\),
+                        \[
+                        A^\top A v_i = \lambda_i v_i, \qquad \sigma_i = \sqrt{\lambda_i}.
+                        \]
+                        They quantify how much \(A\) <em>stretches</em> vectors: along the right singular direction
+                        \(v_i\), the mapping scales by exactly \(\sigma_i\). Geometrically, the largest singular
+                        value is the <em>maximum stretch</em> induced by \(A\) on any unit vector:
+                        \[
+                        \sigma_1 = \max_{\|x\|=1}\|Ax\|.
+                        \]</p>
+                    <p>Note that \(\sigma_2\) is the maximum stretch induced orthogonal to
+                        \(v_1=\arg\max_{\|x\|=1}\|Ax\|\), or \(\sigma_2=\max_{x\perp v_1:\:\|x\|=1}\|Ax\|\), and
+                        \(\sigma_3\) has the stretch orthogonal to the first 2, and so on<span
+                            class="sidenote-group"><sup class="sidenote-ref">15</sup><span
+                                class="sidenote-card side-right">For completeness, we can generalize this idea
+                                either recursively (where we define \(\sigma_i\) as the max stretch orthogonal to
+                                \(v_j\) \(\forall j \lt i\)), or succinctly using the Min max theorem:
+                                \(\sigma_i=\min_{U\le \mathbb R^n:\:\dim (U)=n-i+1}\max_{x\in
+                                U:\:\|x\|=1}\|Ax\|\), where \(n\) is the dimension of the domain (number of
+                                columns).</span></span>.</p>
+
+                    <p><strong>Why are they special?</strong><br>
+                        They control several important properties at once:</p>
+                    <ul>
+                        <li><strong>Spectral norm/stability:</strong> The spectral norm is defined as
+                            \(\|\cdot\|_2=\sigma_1(\cdot)\) on matrix inputs. It is the operator norm<span
+                                class="sidenote-group"><sup class="sidenote-ref">16</sup><span
+                                    class="sidenote-card side-left">Formally, the operator norm \(\|\cdot\|_p\) is
+                                    defined for \(A\in \mathbb R^{m\times n}\) as \(\|A\|_p=\max\{\|Ax\|_p:x\in
+                                    \mathbb R^n, \|x\|_p\le 1\}\), where we apply the \(\ell_p\) norm to the
+                                    vectors.</span></span> induced by the vector \(\ell_2\) norm. As previously
+                            mentioned, \(\sigma_1(A) = \|A\|_2\) is the maximum amplification (or stretch) of \(A\);
+                            this is important for Lipschitz bounds, which are a common assumption behind stability
+                            and generalization arguments in ML<sup><a href="#ref-spectral">12</a></sup>.</li>
+                        <li><strong>Rank / effective dimension:</strong> the number of nonzero \(\sigma_i\) equals
+                            \(\mathrm{rank}(A)\); many tiny \(\sigma_i\) indicates a nearly low rank map.</li>
+                        <li><strong>Conditioning:</strong> the ratio \(\sigma_1/\sigma_r\) (for \(\sigma_r =
+                            \min_{\neq 0}\sigma_i\)) measures how unevenly \(A\) scales different directions; large
+                            ratios typically mean some directions learn/propagate signal much more strongly than
+                            others, which can hurt optimization and numerical stability.</li>
+                    </ul>
+
+                    <h4 id="appendix-c" class="blog-subheading">Appendix C: Concentration of measure in the
+                        hyperball</h4>
+                    <p>Let \(B_n(R)=\{x\in\mathbb{R}^n:\|x\|\le R\}\) be the Euclidean \(n\)-ball of radius
+                        \(R\), and let \(0 \lt \varepsilon \lt R/2\). Define the outer shell
+                        \[
+                        S_{n}(R,\varepsilon)=\{x\in\mathbb{R}^n: R-\varepsilon \le \|x\|\le R\}.
+                        \]
+                        Then the fraction of volume in the shell satisfies
+                        \[
+                        \frac{\mathrm{Vol}(S_{n}(R,2\varepsilon))}{\mathrm{Vol}(B_n(R))}
+                        = 1 - \left(1-\frac{2\varepsilon}{R}\right)^{n}
+                        \xrightarrow[n\to\infty]{} 1.
+                        \]
+                        Equivalently, the &ldquo;interior&rdquo; ball \(B_n(R-2\varepsilon)\) contains an
+                        asymptotically negligible fraction of the total volume.</p>
+                    <p> <strong>Proof.</strong> The volume of an \(n\)-ball scales like \(R^n\): there is a
+                        constant
+                        \(c_n=\mathrm{Vol}(B_n(1))\) such that
+                        \[
+                        \mathrm{Vol}(B_n(R)) = c_n R^n.
+                        \]
+                        Therefore, the shell volume is
+                        \[
+                        \mathrm{Vol}(S_n(R,2\varepsilon))
+                        = \mathrm{Vol}(B_n(R)) - \mathrm{Vol}(B_n(R-2\varepsilon))
+                        = c_n(R^n-(R-2\varepsilon)^n).
+                        \]
+                        Dividing by \(\mathrm{Vol}(B_n(R))=c_nR^n\) gives
+                        \[
+                        \frac{\mathrm{Vol}(S_n(R,2\varepsilon))}{\mathrm{Vol}(B_n(R))}
+                        = 1-\left(\frac{R-2\varepsilon}{R}\right)^n
+                        = 1-\left(1-\frac{2\varepsilon}{R}\right)^n.
+                        \]
+                        Since \(0\lt 1-2\varepsilon /R\lt 1\), the term \((1-2\varepsilon/R)^n\to 0\) as
+                        \(n\to\infty\), so the ratio tends to \(1\).</p>
+
+                    <p>Suppose the equilibrium norm is \(N=R-\varepsilon\); we can see
+                        that even if the norm &lsquo;hovers&rsquo; within just \(0\lt\varepsilon\ll N\) of
+                        the equilibrium (in \([N-\varepsilon, N+\varepsilon]=[R-2\varepsilon, R]\)),
+                        we still have to consider a relatively large space of values within the
+                        hyperball of radius \(R\). As demonstrated above, no matter how small we
+                        make \(\varepsilon>
+                        0\), we will still have to consider a relatively large space of values near
+                        the
+                        equilibrium hypersphere of radius \(N\) (especially
+                        as the matrix dimension is roughly \(O(d^2)\) where \(d\) is the hidden size
+                        of the
+                        model).</p>
+
+                    <h4 id="appendix-d" class="blog-subheading">Appendix D: Full derivation of the
+                        relative step
+                        size</h4>
+
+                    <p>The Hyperball retraction maps \(W_t + U_t\) back onto the hypersphere of radius
+                        \(R\).
+                        The geometry is captured by two triangles in the vectorized matrix space:</p>
+                    <ol>
+                        <li><strong>Triangle \(O\text{-}A\text{-}B\):</strong> where \(O\) is the
+                            origin, \(A =
+                            W_t\) lies on the sphere, and \(B = W_t + U_t\) is the pre-retraction sum
+                            (generally
+                            off the sphere). Sides: \(\|OA\|=R\), \(\|AB\|=\eta R\), \(\|OB\|=c\).
+                            Interior
+                            angle at \(A\): \(\pi-\theta\).</li>
+                        <li><strong>Triangle \(O\text{-}A\text{-}C\):</strong> where \(C = W_{t+1} =
+                            R\,\mathrm{Normalize}(W_t+U_t)\) is the retracted weight, also on the
+                            sphere. This
+                            is an isosceles triangle with \(\|OA\|=\|OC\|=R\), chord \(\|AC\|=x=\|\Delta
+                            W\|\),
+                            and apex angle \(\phi\).</li>
+                    </ol>
+                    <p>The 2D diagram below labels all lengths and angles used in the derivation that
+                        follows.
+                    </p>
+
+                    <!-- 2D Geometry Diagram -->
+                    <figure class="blog-image">
+                        <svg viewBox="0 0 560 440" xmlns="http://www.w3.org/2000/svg"
+                            style="width:100%;max-width:560px;display:block;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+                            <defs>
+                                <marker id="ah-blue" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                                    <path d="M0,0.5 L7,3 L0,5.5" fill="#2563eb" />
+                                </marker>
+                                <marker id="ah-orange" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                                    <path d="M0,0.5 L7,3 L0,5.5" fill="#ea580c" />
+                                </marker>
+                                <marker id="ah-green" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                                    <path d="M0,0.5 L7,3 L0,5.5" fill="#16a34a" />
+                                </marker>
+                            </defs>
+                            <!-- Sphere arc (partial circle centered at O) -->
+                            <path d="M 343,274 A 280,280 0 0,0 152,100" fill="none" stroke="#d6d3d1" stroke-width="1.5"
+                                stroke-dasharray="8,5" />
+                            <!-- O -> A : W_t (blue) -->
+                            <line x1="80" y1="370" x2="236" y2="139" stroke="#2563eb" stroke-width="2.2"
+                                marker-end="url(#ah-blue)" />
+                            <!-- A -> B : U_t (orange) -->
+                            <line x1="241" y1="141" x2="319" y2="155" stroke="#ea580c" stroke-width="2.2"
+                                marker-end="url(#ah-orange)" />
+                            <!-- O -> B : c (gray dashed) -->
+                            <line x1="80" y1="370" x2="323" y2="155" stroke="#9ca3af" stroke-width="1.5"
+                                stroke-dasharray="7,4" />
+                            <!-- O -> C : W_{t+1} (green) -->
+                            <line x1="80" y1="370" x2="286" y2="183" stroke="#16a34a" stroke-width="2.2"
+                                marker-end="url(#ah-green)" />
+                            <!-- A -> C : ΔW (purple dashed) -->
+                            <line x1="241" y1="141" x2="290" y2="185" stroke="#9333ea" stroke-width="2"
+                                stroke-dasharray="6,3" />
+                            <!-- B -> C : retraction (gray dotted) -->
+                            <line x1="323" y1="155" x2="290" y2="185" stroke="#78716c" stroke-width="1.2"
+                                stroke-dasharray="3,3" />
+                            <!-- Angle arc: φ at O (between OA and OC) -->
+                            <path d="M 112,326 A 55,55 0 0,1 121,335" fill="none" stroke="#2563eb" stroke-width="1.8" />
+                            <!-- Angle arc: π−θ at A (interior angle) -->
+                            <path d="M 218,174 A 42,42 0 0,0 282,148" fill="none" stroke="#ea580c" stroke-width="1.8" />
+                            <!-- Points -->
+                            <circle cx="80" cy="370" r="4.5" fill="#1c1917" />
+                            <circle cx="241" cy="141" r="4" fill="#2563eb" />
+                            <circle cx="323" cy="155" r="4" fill="#ea580c" />
+                            <circle cx="290" cy="185" r="4" fill="#16a34a" />
+                            <!-- Point labels -->
+                            <text x="62" y="393" font-size="14" font-weight="600" fill="#1c1917">O</text>
+                            <text x="213" y="127" font-size="13" font-weight="600" fill="#2563eb">A =
+                                W&#x209C;</text>
+                            <text x="332" y="155" font-size="13" font-weight="600" fill="#ea580c">B =
+                                W&#x209C;+U&#x209C;</text>
+                            <text x="296" y="200" font-size="13" font-weight="600" fill="#16a34a">C =
+                                W&#x209C;&#x208A;&#x2081;</text>
+                            <!-- Side labels -->
+                            <text x="128" y="248" font-size="13" font-weight="500" fill="#2563eb" font-style="italic"
+                                transform="rotate(-55,128,248)">R =
+                                &#x2016;W&#x209C;&#x2016;</text>
+                            <text x="270" y="133" font-size="12" font-weight="500" fill="#ea580c"
+                                font-style="italic">&#x03B7;R = &#x2016;U&#x209C;&#x2016;</text>
+                            <text x="210" y="275" font-size="12" font-weight="500" fill="#9ca3af" font-style="italic"
+                                transform="rotate(-47,210,275)">c =
+                                &#x2016;W&#x209C;+U&#x209C;&#x2016;</text>
+                            <text x="155" y="290" font-size="13" font-weight="500" fill="#16a34a" font-style="italic"
+                                transform="rotate(-42,155,290)">R =
+                                &#x2016;W&#x209C;&#x208A;&#x2081;&#x2016;</text>
+                            <text x="274" y="168" font-size="12" font-weight="500" fill="#9333ea" font-style="italic">x
+                                = &#x2016;&#x0394;W&#x2016;</text>
+                            <!-- Angle labels -->
+                            <text x="117" y="320" font-size="14" font-weight="600" fill="#2563eb"
+                                font-style="italic">&#x03C6;</text>
+                            <text x="243" y="182" font-size="12" font-weight="600"
+                                fill="#ea580c">&#x03C0;&#x2212;&#x03B8;</text>
+                            <!-- Retraction annotation -->
+                            <text x="318" y="183" font-size="10" fill="#78716c" font-style="italic">retract</text>
+                        </svg>
+                        <figcaption>2D cross-section of the hyperball retraction geometry. The origin
+                            \(O\),
+                            weight \(W_t\) (point \(A\)), pre-retraction sum \(W_t+U_t\) (point \(B\)),
+                            and
+                            retracted weight \(W_{t+1}\) (point \(C\)) are shown. All lengths and angles
+                            used in
+                            the derivation below are labeled.</figcaption>
+                    </figure>
+
+                    <p>We now derive the exact step size. Using the cosine rule on triangle
+                        \(O\text{-}A\text{-}B\) (where \(O\) is the origin, \(A = W_t\), and \(B = W_t +
+                        U_t\)),
+                        noting that the interior angle at \(A\) is \(\pi - \theta\):</p>
+
+                    \[
+                    \begin{aligned}
+                    \text{Cosine rule on } \triangle OAB\!: \quad \|W_t+U_t\|^2
+                    &= R^2 + \eta^2 R^2 - 2\eta R^2\cos(\pi-\theta) \\
+                    &= R^2 + \eta^2 R^2 + 2\eta R^2\cos(\theta),\\
+                    \text{Pre-retraction length: } c &:= \|W_t+U_t\| = R \sqrt{1 + \eta^2+ 2\eta
+                    \cos\theta}.\\
+                    \end{aligned}
+                    \]
+
+                    <p>Since \(W_{t+1}\) lies on the ray from \(O\) through \(B\), the angular change
+                        \(\phi :=
+                        \angle(\vec W_t, \vec W_{t+1})\) equals \(\angle AOB\). Applying the sine rule
+                        to
+                        \(\triangle OAB\):</p>
+
+                    \[
+                    \begin{aligned}
+                    \text{Sine rule:
+                    }\frac{\sin\phi}{\|U_t\|}&=\frac{\sin(\pi-\theta)}{\|W_t+U_t\|}\implies
+                    \sin\phi=\frac{\eta R}{c}\sin\theta=\frac{\eta R}{c}\sqrt{1-\gamma^2},\\
+                    \implies \cos\phi&=\sqrt{1-\sin^2\phi}=\sqrt{1-\frac{\eta^2R^2(1-\gamma^2)}{c^2}} =
+                    \sqrt{1-\frac{\eta^2(1-\gamma^2)}{1+\eta^2+2\eta\gamma}}.\\
+                    \end{aligned}
+                    \]
+
+                    <p>Finally, \(W_t\) and \(W_{t+1}\) both lie on the sphere of radius \(R\), so we
+                        apply the
+                        cosine rule to the isosceles triangle \(\triangle OAC\):</p>
+
+                    \[
+                    \begin{aligned}
+                    \text{Cosine rule on } \triangle OAC\!: \quad \|\Delta
+                    W\|^2&=R^2+R^2-2R^2\cos\phi,\\
+                    \text{Exact step size: } \quad x&:=\|\Delta
+                    W\|=R\sqrt{2}\sqrt{1-\cos\phi}=R\sqrt{2}\sqrt{1-\sqrt{1-\frac{\eta^2(1-\gamma^2)}{1+\eta^2+2\eta\gamma}}}.
+                    \end{aligned}
+                    \]
+
+                    <h4 id="appendix-e" class="blog-subheading">Appendix E: Bounds on the relative step
+                        size
+                    </h4>
+
+                    <p>Now, suppose we know that \(\gamma,\eta\in(0,1)\). We can infer from this (using
+                        the
+                        interactive surface plot) that:</p>
+
+                    \[
+                    \begin{aligned}
+                    &\min_{\gamma,\eta\in[0,1]} \frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma} = 0
+                    \implies
+                    \inf_{\gamma,\eta\in(0,1)} \frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma} = 0 \\
+                    &\arg\max_{\gamma,\eta\in[0,1]} \frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma} =
+                    (0,1)\implies
+                    \sup_{\gamma,\eta\in(0,1)}\frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}=1/2\\
+                    &\implies \frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}\in (0,1/2)\\
+                    &\implies 1-\frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}\in (1/2,1)\\
+                    &\implies \sqrt{1-\frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}}\in
+                    (1/\sqrt2,1)\\
+                    &\implies 1-\sqrt{1-\frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}}\in
+                    (0,1-1/\sqrt2)\\
+                    &\implies \sqrt{1-\sqrt{1-\frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}}}\in
+                    (0,\sqrt{1-1/\sqrt2})\\
+                    &\implies x\in (0, R\sqrt2\sqrt{1-1/\sqrt2})=(0,R\sqrt{2-\sqrt2})\approx(0,
+                    0.765R)\\
+                    &\implies \frac{x}{\|W_t\|}\in (0,\sqrt{2-\sqrt 2})\approx (0, 0.765)
+                    \end{aligned}
+                    \]
+
+                    <p>This is the tightest bound on the relative step size obtainable without knowledge
+                        of
+                        \(\gamma\). Computing \(\gamma\) analytically remains an open question, as the
+                        repeated
+                        retractions onto the hypersphere make it difficult to translate previous
+                        arguments
+                        involving momentum and weight decay<sup><a href="#ref-hyperball">10</a></sup>.
+                        Unfortunately, this bound is not particularly informative: the lower bound is
+                        vacuous,
+                        and the upper bound is substantially looser than the ideal \(O(\eta)\). Now, if,
+                        for
+                        instance, we input our tried and tested range ~\(\eta\in (10^{-4},10^{-1})\) and
+                        fix
+                        \(\gamma=0\), we get a slightly tighter bound of \((0.0001, 0.0996)\), where a
+                        higher
+                        learning rate corresponds to a higher step size. For a higher dot product like
+                        \(\gamma=0.5\), we get a bound of \((0.0000866, 0.0823)\), which is lower.</p>
+
+                    <h4 id="appendix-f" class="blog-subheading">Appendix F: Enforcing scale invariance
+                    </h4>
+
+                    <p>A key ingredient is RMSNorm<sup><a href="#ref-rmsnorm">13</a></sup>, which rescales a vector by
+                        its root-mean-square
+                        (RMS)
+                        magnitude. Given an activation vector \(x\in\mathbb{R}^d\), RMSNorm computes
+                        \[
+                        \mathrm{RMSNorm}(x) = g\odot \frac{x}{\sqrt{\frac{1}{d}\sum_{i=1}^d x_i^2 +
+                        \varepsilon}},
+                        \]
+                        where \(g\in\mathbb{R}^d\) is a learned per coordinate gain, \(\varepsilon>0\)
+                        is for
+                        numerical stability, and \(\odot\) is the Hadamard product (element wise
+                        multiplication).</p>
+
+                    <p><strong>Rescaling property</strong><br>
+                        Ignoring \(\varepsilon\) (or when \(\|x\|\) is not tiny), RMSNorm is <em>scale
+                            invariant</em>: for any scalar \(\alpha>0\),
+                        \[
+                        \mathrm{RMSNorm}(\alpha x)= \mathrm{RMSNorm}(x).
+                        \]
+                        Intuitively, scaling the input by \(\alpha\) scales the denominator by the same
+                        \(\alpha\), so the normalized direction stays the same.</p>
+
+                    <p><strong>Why this makes weight matrices scale invariant</strong><br>
+                        Consider a linear map \(y = Wx\). If the model applies RMSNorm before the next
+                        computation (pre-norm, post-norm, or both), then multiplying the weight matrix
+                        by a
+                        scalar often has little effect on the downstream activations:
+                        \[
+                        \mathrm{RMSNorm}((\alpha W)x) = \mathrm{RMSNorm}(\alpha (Wx)) =
+                        \mathrm{RMSNorm}(Wx).
+                        \]
+                        So for these &ldquo;RMSNorm sandwiched&rdquo; layers, scale doesn't matter as
+                        the
+                        RMSNorm layer itself learns the scaling factor necessary for the output.</p>
+
+                    <p>In Axis, our original model architecture, we used MuP initialization and layer
+                        pre-normalization, but that wasn't enough to enforce scale invariance in our
+                        model. To
+                        further enforce it, we added a layer post-norm and then QK-norm (like Gemma 3's
+                        architecture<sup><a href="#ref-gemma">14</a></sup>), which seemed to be enough
+                        to
+                        enforce scale invariance (although, it seems like only adding the post-norm was
+                        sufficient for our model; the QK-norm was added for completeness).</p>
+
+                    <hr style="margin: 3rem 0 2rem; border: none; border-top: 1px solid #ddd;">
+                    <h3>References</h3>
+                    <ol class="blog-references">
+                        <li id="ref-adamw">Loshchilov &amp; Hutter. <a href="https://arxiv.org/abs/1711.05101"
+                                target="_blank">Fixing Weight
+                                Decay Regularization in Adam</a>. arXiv 2017.</li>
+                        <li id="ref-muon">Jordan et al. <a href="https://kellerjordan.github.io/posts/muon/"
+                                target="_blank">Muon:
+                                An optimizer for hidden layers in neural networks</a>.
+                            2024.</li>
+                        <li id="ref-alphagenome">Avsec et al. <a
+                                href="https://www.biorxiv.org/content/early/2025/06/27/2025.06.25.661532"
+                                target="_blank">AlphaGenome: advancing regulatory variant effect
+                                prediction</a>.
+                            bioRxiv 2025.</li>
+                        <li id="ref-enformer">Avsec et al. <a href="https://doi.org/10.1038/s41592-021-01252-x"
+                                target="_blank">Effective gene expression prediction from sequence by
+                                integrating long range interactions</a>. Nature Methods 2021.</li>
+                        <li id="ref-evo">Brixi et al. <a
+                                href="https://www.biorxiv.org/content/early/2025/02/21/2025.02.18.638918"
+                                target="_blank">Genome modeling and design across all domains of life
+                                with Evo
+                                2</a>. bioRxiv 2025.</li>
+                        <li id="ref-lazy">Chizat et al. <a href="https://arxiv.org/abs/1812.07956" target="_blank">On
+                                Lazy Training in Differentiable Programming</a>.
+                            NeurIPS
+                            2019.</li>
+                        <li id="ref-ntk">Jacot et al. <a href="https://arxiv.org/abs/1806.07572" target="_blank">Neural
+                                Tangent Kernel: Convergence and Generalization in
+                                Neural
+                                Networks</a>. NeurIPS 2018.</li>
+                        <li id="ref-erasure">Jeremy Bernstein. <a
+                                href="https://docs.modula.systems/examples/weight-erasure" target="_blank">The
+                                Modula Docs - Weight Erasure</a>. 2025.</li>
+                        <li id="ref-wdeq">Kosson et al. <a href="https://arxiv.org/abs/2305.17212"
+                                target="_blank">Rotational Equilibrium: How Weight Decay Balances
+                                Learning
+                                Across Neural Networks</a>. ICML 2024.</li>
+                        <li id="ref-hyperball">Wen et al. <a
+                                href="https://whenwen.github.io/wd_blog/public/hyperball-part-1.html"
+                                target="_blank">Fantastic Pretraining Optimizers and Where to Find Them
+                                II: From
+                                Weight Decay to Hyperball Optimization</a>. 2025.</li>
+                        <li id="ref-cesista">Cesista. <a
+                                href="https://leloykun.github.io/ponder/steepest-descent-non-riemannian/"
+                                target="_blank">Muon and a Selective Survey on Steepest Descent in
+                                Riemannian
+                                and Non-Riemannian Manifolds</a>. 2025.</li>
+                        <li id="ref-spectral">Bartlett et al. <a
+                                href="https://arxiv.org/abs/1706.08498"
+                                target="_blank">Spectrally-normalized margin bounds for neural
+                                networks</a>.
+                            NeurIPS 2017.</li>
+                        <li id="ref-rmsnorm">Zhang &amp; Sennrich. <a href="https://arxiv.org/abs/1910.07467"
+                                target="_blank">Root Mean Square
+                                Layer Normalization</a>. NeurIPS 2019.</li>
+                        <li id="ref-gemma">Gemma Team. <a href="https://arxiv.org/abs/2503.19786" target="_blank">Gemma
+                                3 Technical Report</a>. arXiv 2025.</li>
+                        <li id="ref-nerve">Jha &amp; Reagen. <a href="https://openreview.net/forum?id=W5BPGXR9jf"
+                                target="_blank">NerVE:
+                                Nonlinear Eigenspectrum Dynamics in LLM Feed-Forward
+                                Networks</a>. ICLR 2026.</li>
+                        <li id="ref-repdeg">Gao et al. <a href="https://arxiv.org/abs/1907.12009"
+                                target="_blank">Representation Degeneration Problem in Training Natural
+                                Language Generation Models</a>. ICLR 2019.</li>
+                        <li id="ref-spectral-fl">Yang, Simon &amp; Bernstein. <a
+                                href="https://arxiv.org/abs/2310.17813" target="_blank">A Spectral Condition
+                                for Feature Learning</a>. arXiv 2023.</li>
+                        <li id="ref-sso">Xie et al. <a href="https://arxiv.org/abs/2601.08393"
+                                target="_blank">Controlled LLM Training on Spectral Sphere</a>. arXiv
+                            2025.</li>
+                        <li id="ref-prism">Yang. <a href="https://arxiv.org/abs/2602.03096"
+                                target="_blank">PRISM: Structured Optimization via Anisotropic Spectral
+                                Shaping</a>. arXiv 2026.</li>
+                        <li id="ref-shampoo-prism">Cesista. <a
+                                href="https://leloykun.github.io/ponder/shampoo-prism/" target="_blank">Shampoo-PRISM:
+                                Kronecker-Factored Optimization via Anisotropic Spectral Shaping</a>.
+                            2026.</li>
+                    </ol>
+                </article>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="social-links">
+            <a href="https://x.com/origin_bio" target="_blank" class="social-link" aria-label="Twitter">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path
+                        d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                </svg>
+            </a>
+            <a href="https://linkedin.com/company/origin-bio-inc" target="_blank" class="social-link"
+                aria-label="LinkedIn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path
+                        d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+                </svg>
+            </a>
+        </div>
+        <div class="copyright">© 2026 Origin Bio</div>
+    </footer>
+
+    <script src="/js/script.js"></script>
+    <script>
+        /* Sidenote behavior:
+           - mobile/tablet: tap footnote to toggle
+           - desktop: auto-hide overlapping sidenotes to reduce clutter */
+        (function () {
+            var mq = window.matchMedia('(max-width: 1299px)');
+            var desktopMq = window.matchMedia('(min-width: 1300px)');
+            var pinnedCard = null;
+
+            function placeDesktopSidenotes() {
+                var cards = Array.prototype.slice.call(document.querySelectorAll('.sidenote-card'));
+
+                if (pinnedCard && cards.indexOf(pinnedCard) === -1) {
+                    pinnedCard = null;
+                }
+
+                cards.forEach(function (card) {
+                    card.classList.remove('sidenote-hidden-desktop');
+                    card.style.top = '';
+                });
+
+                if (!desktopMq.matches) return;
+
+                var positionedCards = [];
+                cards.forEach(function (card) {
+                    var group = card.closest('.sidenote-group');
+                    var container = card.offsetParent;
+                    if (!group || !container) return;
+
+                    var groupRect = group.getBoundingClientRect();
+                    var containerRect = container.getBoundingClientRect();
+                    var topPx = Math.max(0, groupRect.top - containerRect.top - 8);
+                    card.style.top = topPx + 'px';
+                    positionedCards.push(card);
+                });
+
+                ['side-left', 'side-right'].forEach(function (sideClass) {
+                    var placed = [];
+                    var sideCards = positionedCards
+                        .filter(function (card) { return card.classList.contains(sideClass); })
+                        .sort(function (a, b) {
+                            return a.getBoundingClientRect().top - b.getBoundingClientRect().top;
+                        });
+
+                    if (pinnedCard && pinnedCard.classList.contains(sideClass) && sideCards.indexOf(pinnedCard) !== -1) {
+                        sideCards = [pinnedCard].concat(sideCards.filter(function (card) { return card !== pinnedCard; }));
+                    }
+
+                    sideCards.forEach(function (card) {
+                            var rect = card.getBoundingClientRect();
+                            var overlaps = placed.some(function (prev) {
+                                var prevRect = prev.getBoundingClientRect();
+                                return rect.top < (prevRect.bottom + 8) && rect.bottom > (prevRect.top - 8);
+                            });
+                            if (overlaps) {
+                                card.classList.add('sidenote-hidden-desktop');
+                            } else {
+                                placed.push(card);
+                            }
+                        });
+                });
+            }
+
+            function scheduleSidenoteLayout() {
+                window.requestAnimationFrame(placeDesktopSidenotes);
+            }
+
+            function wire() {
+                document.querySelectorAll('.sidenote-ref').forEach(function (ref) {
+                    ref.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        var card = ref.closest('.sidenote-group').querySelector('.sidenote-card');
+                        if (!card) return;
+
+                        if (mq.matches) {
+                            /* mobile: toggle open/close */
+                            document.querySelectorAll('.sidenote-card.open').forEach(function (c) {
+                                if (c !== card) c.classList.remove('open');
+                            });
+                            card.classList.toggle('open');
+                        } else {
+                            /* desktop: pin clicked note so it is never permanently hidden */
+                            var isPinned = pinnedCard === card;
+                            var shouldPin = !isPinned;
+
+                            pinnedCard = shouldPin ? card : null;
+                            document.querySelectorAll('.sidenote-card.glowing').forEach(function (c) {
+                                c.classList.remove('glowing');
+                            });
+                            if (shouldPin) card.classList.add('glowing');
+                            scheduleSidenoteLayout();
+                        }
+                    });
+                });
+
+                scheduleSidenoteLayout();
+                window.addEventListener('resize', scheduleSidenoteLayout);
+                window.addEventListener('load', scheduleSidenoteLayout);
+                if (desktopMq.addEventListener) desktopMq.addEventListener('change', scheduleSidenoteLayout);
+                else if (desktopMq.addListener) desktopMq.addListener(scheduleSidenoteLayout);
+                setTimeout(scheduleSidenoteLayout, 250);
+                setTimeout(scheduleSidenoteLayout, 1000);
+            }
+            if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire);
+            else wire();
+        })();
+    </script>
+</body>
+
+</html>
