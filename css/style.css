@@ -1591,6 +1591,41 @@ main {
         display: none !important;
     }
 
+    /* Indicator appended to a visible card when another note is hidden behind it */
+    .sidenote-overflow-indicator {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        margin-top: 8px;
+        padding-top: 6px;
+        border-top: 1px dashed #e0e0e0;
+        color: #bbb;
+        font-size: 0.68rem;
+        line-height: 1;
+        user-select: none;
+        cursor: pointer;
+        transition: color 0.15s;
+    }
+
+    .sidenote-overflow-indicator:hover {
+        color: #555;
+    }
+
+    .sidenote-overflow-indicator:hover .sidenote-overflow-num {
+        opacity: 1;
+    }
+
+    .sidenote-overflow-dots {
+        letter-spacing: 2px;
+    }
+
+    .sidenote-overflow-num {
+        color: #0066cc;
+        font-weight: 600;
+        opacity: 0.6;
+        transition: opacity 0.15s;
+    }
+
     /* Webkit scrollbar styling for sidenotes */
     .sidenote-card::-webkit-scrollbar {
         height: 4px;

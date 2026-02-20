@@ -748,7 +748,9 @@
                         <figcaption>Heatmap of Top: AdamW vs AdamH, Bottom: MuonW vs MuonH</figcaption>
                     </figure>
 
-                    <p>These heatmaps give us a clearer picture of where Hyperball (green) has the
+                    <p>These heatmaps<span class="sidenote-group"><sup
+                                class="sidenote-ref">11</sup><span
+                                class="sidenote-card side-right">Each heatmap uses its own color scale, so the same shade of green or red can represent different magnitudes across panels. Pay attention to the individual legends.</span></span> give us a clearer picture of where Hyperball (green) has the
                         advantage over weight decay (red). For Adam, the advantage is scale-dependent:
                         at width 512, the heatmap is mostly yellow (roughly even), but at width 2048, AdamH
                         shows a noticeably stronger advantage, with greener squares across much of the grid.
@@ -799,7 +801,7 @@
                         is less important given scale invariance), we focus on the <em>distribution</em> of singular
                         values. Following the eigenspectral framework of NerVE<sup><a
                                 href="#ref-nerve">15</a></sup><span class="sidenote-group"><sup
-                                class="sidenote-ref">11</sup><span class="sidenote-card side-right">NerVE
+                                class="sidenote-ref">12</sup><span class="sidenote-card side-right">NerVE
                                 originally applies these metrics to track activation dynamics through FFN
                                 layers, but the same spectral measures are equally well defined for weight
                                 matrices.</span></span>, we track two key metrics for the weight
@@ -824,7 +826,7 @@
                             <strong>Red:</strong> MuonH, <strong>Orange:</strong> AdamW,
                             <strong>Green:</strong> AdamH. Note how MuonH (Red) collapses to a low entropy,
                             low-rank state, while MuonW (Blue) maintains high capacity.<span class="sidenote-group"><sup
-                                    class="sidenote-ref">12</sup><span class="sidenote-card side-right">All weight
+                                    class="sidenote-ref">13</sup><span class="sidenote-card side-right">All weight
                                     matrices exhibited similar
                                     patterns; we show only one here for simplicity.</span></span>
                         </figcaption>
@@ -931,7 +933,7 @@
                             Norm. Bottom: Relative Step
                             Size. MuonW (Blue) shows monotonically increasing norm and decaying step size, while MuonH
                             (Red) plateaus.<span class="sidenote-group"><sup
-                                    class="sidenote-ref">13</sup><span class="sidenote-card side-right">The initial
+                                    class="sidenote-ref">14</sup><span class="sidenote-card side-right">The initial
                                     ramp-up visible in the relative step size corresponds to our learning rate warmup
                                     schedule.</span></span></figcaption>
                     </figure>
@@ -992,7 +994,7 @@
                         vocabulary of ~100k tokens with genuinely ambiguous contexts where probability mass must
                         be
                         spread across many plausible continuations<span class="sidenote-group"><sup
-                                class="sidenote-ref">14</sup><span class="sidenote-card side-left">
+                                class="sidenote-ref">15</sup><span class="sidenote-card side-left">
                                 Quantitatively, consider the softmax function \(\sigma(\mathbf{z})_i =
                                 \frac{e^{z_i}}{\sum_{j=1}^K e^{z_j}}\). If we multiply the logits by a large
                                 factor \(k\), the terms become \(e^{k z_i}\). Since the exponential function
@@ -1080,7 +1082,7 @@
                     <p>At the <em>per-sequence</em> level, pairing each original and model sequence
                         and comparing which TFs were hit, MuonW achieves the best fidelity (0.444),
                         followed by MuonH (0.457), AdamH (0.477), and AdamW (0.510)<span class="sidenote-group">
-                            <sup class="sidenote-ref">15</sup><span class="sidenote-card side-right">
+                            <sup class="sidenote-ref">16</sup><span class="sidenote-card side-right">
                                 Simpson's Paradox Anomaly: The "All" JSD (e.g., AdamW 0.510) is strictly
                                 higher than its worst constituent part (HepG2 0.509). This occurs because
                                 sequences active in multiple cell types are counted once in the "All"
@@ -1194,7 +1196,7 @@
                     <p>Note that \(\sigma_2\) is the maximum stretch induced orthogonal to
                         \(v_1=\arg\max_{\|x\|=1}\|Ax\|\), or \(\sigma_2=\max_{x\perp v_1:\:\|x\|=1}\|Ax\|\), and
                         \(\sigma_3\) has the stretch orthogonal to the first 2, and so on<span
-                            class="sidenote-group"><sup class="sidenote-ref">16</sup><span
+                            class="sidenote-group"><sup class="sidenote-ref">17</sup><span
                                 class="sidenote-card side-right">For completeness, we can generalize this idea
                                 either recursively (where we define \(\sigma_i\) as the max stretch orthogonal to
                                 \(v_j\) \(\forall j \lt i\)), or succinctly using the Min max theorem:
@@ -1207,7 +1209,7 @@
                     <ul>
                         <li><strong>Spectral norm/stability:</strong> The spectral norm is defined as
                             \(\|\cdot\|_2=\sigma_1(\cdot)\) on matrix inputs. It is the operator norm<span
-                                class="sidenote-group"><sup class="sidenote-ref">17</sup><span
+                                class="sidenote-group"><sup class="sidenote-ref">18</sup><span
                                     class="sidenote-card side-left">Formally, the operator norm \(\|\cdot\|_p\) is
                                     defined for \(A\in \mathbb R^{m\times n}\) as \(\|A\|_p=\max\{\|Ax\|_p:x\in
                                     \mathbb R^n, \|x\|_p\le 1\}\), where we apply the \(\ell_p\) norm to the
@@ -1646,6 +1648,9 @@
                     card.style.top = '';
                 });
 
+                /* Remove indicators from previous layout pass */
+                document.querySelectorAll('.sidenote-overflow-indicator').forEach(function (el) { el.remove(); });
+
                 if (!desktopMq.matches) return;
 
                 var positionedCards = [];
@@ -1664,6 +1669,10 @@
                     positionedCards.push(card);
                 });
 
+                /* Collect indicator requests after overlap decisions so indicator height
+                   doesn't affect subsequent overlap checks. */
+                var pendingIndicators = [];
+
                 ['side-left', 'side-right'].forEach(function (sideClass) {
                     var placed = [];
                     var sideCards = positionedCards
@@ -1678,16 +1687,43 @@
 
                     sideCards.forEach(function (card) {
                         var rect = card.getBoundingClientRect();
-                        var overlaps = placed.some(function (prev) {
+                        var overlappingWith = placed.filter(function (prev) {
                             var prevRect = prev.getBoundingClientRect();
                             return rect.top < (prevRect.bottom + 8) && rect.bottom > (prevRect.top - 8);
                         });
-                        if (overlaps) {
+                        if (overlappingWith.length > 0) {
                             card.classList.add('sidenote-hidden-desktop');
+                            overlappingWith.forEach(function (visibleCard) {
+                                pendingIndicators.push({ visibleCard: visibleCard, hiddenCard: card });
+                            });
                         } else {
                             placed.push(card);
                         }
                     });
+                });
+
+                /* Inject indicators — one per visible card, clicking reveals the hidden note */
+                pendingIndicators.forEach(function (item) {
+                    if (item.visibleCard.querySelector('.sidenote-overflow-indicator')) return;
+                    var hiddenGroup = item.hiddenCard.closest
+                        ? item.hiddenCard.closest('.sidenote-group')
+                        : item.hiddenCard.parentElement;
+                    var hiddenRef = hiddenGroup ? hiddenGroup.querySelector('.sidenote-ref') : null;
+                    var num = hiddenRef ? hiddenRef.textContent.trim() : '';
+                    var indicator = document.createElement('div');
+                    indicator.className = 'sidenote-overflow-indicator';
+                    if (num) {
+                        indicator.title = 'Note \u2039' + num + '\u203a is also anchored here \u2014 click to read it';
+                    }
+                    indicator.innerHTML =
+                        '<span class="sidenote-overflow-dots">\u00b7\u00b7\u00b7</span>' +
+                        (num ? '<span class="sidenote-overflow-num">(' + num + ')</span>' : '');
+                    /* Clicking the indicator pins the hidden card (same as clicking its ref) */
+                    indicator.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        item.hiddenCard.dispatchEvent(new MouseEvent('click', { bubbles: false }));
+                    });
+                    item.visibleCard.appendChild(indicator);
                 });
             }
 
@@ -1721,8 +1757,11 @@
                             });
                             card.classList.toggle('open');
                         } else {
-                            /* desktop: pin/unpin clicked note */
-                            setPinnedCard(card);
+                            /* desktop: always pin the clicked note (ref click never unpins,
+                               so clicking a number always surfaces that note) */
+                            if (pinnedCard !== card) {
+                                setPinnedCard(card);
+                            }
                         }
                     });
                 });
@@ -1734,6 +1773,38 @@
                         setPinnedCard(card);
                     });
                 });
+
+                var article = document.querySelector('.blog-article');
+                if (article) {
+                    article.querySelectorAll('img').forEach(function (img) {
+                        if (!img.complete) {
+                            img.addEventListener('load', scheduleSidenoteLayout, { passive: true });
+                            img.addEventListener('error', scheduleSidenoteLayout, { passive: true });
+                        }
+                    });
+
+                    article.querySelectorAll('video').forEach(function (video) {
+                        if (video.readyState < 1) {
+                            video.addEventListener('loadedmetadata', scheduleSidenoteLayout, { passive: true });
+                            video.addEventListener('loadeddata', scheduleSidenoteLayout, { passive: true });
+                            video.addEventListener('error', scheduleSidenoteLayout, { passive: true });
+                        }
+                    });
+
+                    article.querySelectorAll('details.collapsible-section').forEach(function (detailsEl) {
+                        detailsEl.addEventListener('toggle', scheduleSidenoteLayout, { passive: true });
+                    });
+
+                    if ('ResizeObserver' in window) {
+                        var ro = new ResizeObserver(function () {
+                            scheduleSidenoteLayout();
+                        });
+                        ro.observe(article);
+                        article.querySelectorAll('figure, img, video').forEach(function (el) {
+                            ro.observe(el);
+                        });
+                    }
+                }
 
                 scheduleSidenoteLayout();
                 window.addEventListener('resize', scheduleSidenoteLayout);
