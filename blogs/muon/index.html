@@ -80,7 +80,6 @@
                         <li><a href="#sec-training-results">Training Results</a></li>
                         <li><a href="#spectral-analysis">Spectral Analysis</a></li>
                         <li><a href="#sec-motif-recovery">Motif Recovery</a></li>
-                        <li><a href="#sec-training-longer">Training for Longer</a></li>
                         <li><a href="#sec-next-steps">Next steps</a></li>
                         <li><a href="#appendix">Appendices</a></li>
                     </ul>
@@ -134,9 +133,9 @@
                         <ul>
                             <li>After training over 10 epochs:
                                 <ul>
-                                    <li>Muon achieves <b>1.4%</b> lower nucleotide cross-entropy loss than the best Adam configuration, with substantially higher motif preservation (<b>74%</b> vs <b>54%</b> for Adam).</li>
-                                    <li>MuonW leads on both train loss and motif recovery (<b>0.160</b> JSD vs <b>0.169</b> for MuonH), though MuonH is not too far behind.</li>
-                                    <li>Adam with Hyperball: AdamH lowers train loss by <b>1.2%</b> over AdamW, with moderately higher motif preservation.</li>
+                                    <li>Muon achieves a <b>~1.69%</b> higher geometric-mean probability on the correct nucleotide than the best Adam configuration (or a perplexity ratio of <b>~1.0169</b>), with higher motif preservation (<b>56%</b> vs <b>53&ndash;54%</b> for Adam).</li>
+                                    <li>MuonW leads on both train loss and motif recovery (<b>0.152</b> JSD vs <b>0.157</b> for MuonH), though MuonH is not too far behind.</li>
+                                    <li>Adam with Hyperball: AdamH achieves a perplexity ratio of <b>~1.015</b> over AdamW, with moderately lower JSD.</li>
                                 </ul>
                             </li>
                             <li>We perform a spectral analysis to show how Muon's whitening promotes feature learning by forcing weights away from initialization.</li>
@@ -723,13 +722,13 @@
                     </figure>
 
                     <p>What is striking about these sweep curves is how consistent their structure is
-                        across scales. For Adam, Hyperball (green) carves out a partial convex basin in
+                        across scales. For Adam, Hyperball (blue) carves out a partial convex basin in
                         the mid learning rate range (\(\sim 10^{-3}\) to \(10^{-2}\)), dipping below
-                        weight decay (orange) in that region and rising above it at both extremes. This
+                        weight decay (green) in that region and rising above it at both extremes. This
                         shape persists across widths, suggesting that Hyperball&rsquo;s norm control is
                         genuinely helpful in Adam&rsquo;s optimal operating range. For Muon, the pattern
-                        is different: MuonH&rsquo;s (green) loss decreases roughly linearly with
-                        increasing step size, while MuonW (orange) curves downward more sharply and
+                        is different: MuonW&rsquo;s (green) loss decreases roughly linearly with
+                        increasing step size, while MuonH (blue) curves downward then upward more sharply. MuonW
                         reaches a lower minimum at a higher learning rate. This near-linear response
                         for MuonH also holds across scales, hinting that Hyperball&rsquo;s fixed-norm
                         constraint limits how much Muon can exploit larger step sizes.</p>
@@ -752,8 +751,11 @@
 
                     <p>These heatmaps<span class="sidenote-group"><sup
                                 class="sidenote-ref">11</sup><span
-                                class="sidenote-card side-right">Each heatmap uses its own color scale, so the same shade of green or red can represent different magnitudes across panels. Pay attention to the individual legends.</span></span> give us a clearer picture of where Hyperball (green) has the
-                        advantage over weight decay (red). For Adam, the advantage is scale-dependent:
+                                class="sidenote-card side-right">Each heatmap uses its own color scale, so the 
+                                same shade of green or red can represent different magnitudes across panels. 
+                                Pay attention to the individual legends.</span></span> 
+                            give us a clearer picture of where Hyperball (blue) has the
+                        advantage over weight decay (green). For Adam, the advantage is scale-dependent:
                         at width 512, the heatmap is mostly yellow (roughly even), but at width 2048, AdamH
                         shows a noticeably stronger advantage, with greener squares across much of the grid.
                         In particular, the mid learning rate range (\(\sim 10^{-3}\) to \(6\times 10^{-3}\))
@@ -765,8 +767,8 @@
                     <p>For Muon, the scale dependence runs in the opposite direction. At width 512,
                         Hyperball is competitive or slightly ahead across much of the grid, with light
                         green dominating the mid learning rates. By width 1024, the advantage fades to
-                        mostly yellow, and at width 2048 the picture inverts: the heatmap is overwhelmingly
-                        red, with weight decay winning by up to 60% at the higher learning rates late in
+                        mostly yellow, and at width 2048 the picture inverts: the heatmap is mostly warm,
+                         with weight decay winning by up to 60% at the higher learning rates late in
                         training. This suggests that the spectral squeeze worsens with scale; larger
                         weight matrices have more trailing singular directions for the uniform rescaling to
                         erode.</p>
@@ -778,18 +780,31 @@
                             alt="MuonW vs AdamH loss curves across widths" loading="lazy"
                             style="margin-bottom: 0.5rem;" />
                         <figcaption>Top: Heatmap of % advantage (green = AdamH better, red = MuonW better).
-                            Bottom: Loss curves for MuonW (dashed) vs AdamH (solid) across widths.</figcaption>
+                            Bottom: Sweep losses for MuonW vs AdamH across widths.</figcaption>
                     </figure>
 
                     <p>Finally, we compare the two best configurations head-to-head: MuonW against AdamH.
                         Even at width 512, MuonW eventually pulls away; the loss curves track each
-                        other early in training, but MuonW (dashed) finishes below AdamH (solid) by the
+                        other early in training, but MuonW (green) finishes below AdamH (blue) by the
                         end. What changes with scale is <em>consistency</em>: at width 1024 and especially
                         2048, MuonW leads across a wider range of learning rates and across more training
                         steps, with advantages exceeding 10% at many points in the grid. The loss curves
-                        reinforce this: the gap between dashed and solid widens earlier and persists more
+                        reinforce this: the gap between blue and green widens earlier and persists more
                         uniformly at larger widths, confirming that Muon&rsquo;s spectral advantages over
                         Adam compound with scale.</p>
+
+                    <p>The heatmaps above report percentage differences in cross-entropy loss, which are
+                        visually intuitive but can be misleading: cross-entropy is already a log-scale
+                        quantity, so a fixed percentage change means different things depending on the
+                        baseline. A more interpretable measure is the <em>perplexity ratio</em>. Because
+                        \(\mathrm{PPL} = e^{\mathrm{CE}}\) (for CE in nats), a difference in cross-entropy
+                        corresponds to a <em>ratio</em> of perplexities:
+                        \[
+                        \frac{\mathrm{PPL}_A}{\mathrm{PPL}_B} = e^{\,\Delta\mathrm{CE}},
+                        \]
+                        which directly reflects the multiplicative improvement in geometric-mean probability
+                        on the correct token. Although we retain % CE in the heatmaps for visual clarity, we
+                        use PPL ratios when discussing optimizer comparisons in the text.</p>
 
                     </details>
 
@@ -842,7 +857,7 @@
                         representation. MuonH (Red), by contrast, steadily collapses from \(\approx 0.98\)
                         to \(\approx 0.68\), with the participation ratio falling in tandem: the effective
                         rank of the weight matrices shrinks over training. The Adam variants (Orange, Green)
-                        sit relatively lower throughout, which is expected since Adam does not whiten its updates.
+                        sit relatively lower for delta_W, which is expected since Adam does not whiten its updates.
                         The critical observation is the <em>divergence</em> between Blue and Red: both use
                         the same Muon whitening, yet MuonH&rsquo;s spectrum degrades while MuonW&rsquo;s
                         does not. This points directly to the Hyperball constraint as the cause. The
@@ -1056,67 +1071,56 @@
 
                     <p>To evaluate how well each optimizer regenerates biologically meaningful sequence
                         content, we designed a masked motif recovery framework. Starting from 100,000
-                        generated sequences across 823 regulatory element prompts, we filtered to those
-                        with at least 2 high-activity cell types, leaving 13,054 sequences the
-                        model never observed during training (it was trained on single-cell high-activity
-                        regions), and had to reconstruct from context alone. Each sequence
-                        contains an average of 42 nucleotide positions that were masked. We scanned all original and regenerated sequences against 22 human
+                        generated sequences spanning 823 cis-regulatory elements with varying levels of 
+                        activity across different cell types, we filtered to those exhibiting high activity
+                        in at least 2 cell types, yielding 13,054 sequences. Each sequence contains an
+                        average of 42 nucleotide positions that were masked during generation; positions
+                        the model never observed and was required to reconstruct from surrounding context
+                        alone. All original and regenerated sequences were scanned against 22 human
                         transcription factor binding motifs from the JASPAR 2024 database using MOODS,
-                        identifying 50,377 motif instances that overlapped masked positions across 9,505
-                        sequences. These masked-region hits form the basis of our evaluation: if the model
-                        truly learns regulatory grammar, it should recover these binding sites even at
-                        positions it never saw.</p>
+                        identifying motif instances overlapping masked positions across 9,050 sequences.</p>
+
+                    <p>Not all masked-region motif hits are equally informative. Certain motifs are
+                        sufficiently robust that even the lowest-scoring nucleotide at the masked positions
+                        would still produce a match above the detection threshold, effectively
+                        constituting trivial recoveries that any model would achieve regardless of learned
+                        representation quality. To account for this, we applied a stringent filter: for each
+                        motif hit overlapping a masked region, we recomputed the motif score after
+                        substituting the worst-scoring nucleotide at every masked position within the hit
+                        window. Hits whose recalculated scores still exceeded the detection threshold were
+                        discarded as trivial. This procedure removed 16.5% of masked-region hits, retaining
+                        40,286 non-trivial motif instances in which the masked positions are essential to the
+                        binding site match.</p>
 
                     <figure class="blog-image">
                         <img src="/blogs/muon/assets/motif_assets/motif_preservation.png"
-                            alt="Motif preservation by regulatory type" loading="lazy" />
-                        <figcaption>Motif preservation ratio (model hits / original hits) by optimizer over dataset.</figcaption>
+                            alt="Aggregate motif recovery by optimizer" loading="lazy" />
+                        <figcaption>Aggregate motif recovery (stringent): ratio of model hits to original
+                            hits after removing trivial masked-region matches.</figcaption>
                     </figure>
 
-                    <p>Motif preservation varies by regulatory element type, but the overall ranking is clear:
-                        Muon variants dominate Adam variants across the board. MuonW leads, while MuonH is slightly behind.
-                         Both Adam variants lag considerably across all categories. Importantly, the
-                        marginal biological performance gain of MuonW over MuonH contrasts with its significantly
-                        lower training loss, reinforcing the hypothesis that MuonW's loss advantage is partly
-                        due to logit inflation rather than a fundamental improvement in regulatory grammar
-                        learning.</p>
+                    <p>We measured aggregate motif preservation as the ratio of total motif hits in
+                        generated sequences to those in the originals. Muon-family optimizers retained
+                        56% of all binding sites compared to 53&ndash;54% for Adam-family optimizers,
+                        with Muon variants consistently outperforming. The marginal biological performance
+                        gain of MuonW over MuonH contrasts with its significantly lower training loss,
+                        reinforcing the hypothesis that MuonW's loss advantage is partly due to logit
+                        inflation rather than a fundamental improvement in regulatory grammar learning.</p>
 
                     <figure class="blog-image">
                         <img src="/blogs/muon/assets/motif_assets/motif_jsd.png"
-                            alt="Motif JSD analysis: volume vs shape trade-off" loading="lazy" />
-                        <figcaption>Per-Sequence JSD of TF motif distribution by cell type. MuonW achieves the lowest (best) JSD across K562 and HepG2, and ties MuonH in SK-N-SH.</figcaption>
+                            alt="Masked-only mean JSD by optimizer" loading="lazy" />
+                        <figcaption>Per-sequence JSD of TF motif distribution (stringent). MuonW achieves the
+                            lowest (best) JSD (0.152), followed by MuonH (0.157).</figcaption>
                     </figure>
 
-                    <p>We quantified recovery in two ways. First, for each sequence we built TF count
-                        vectors restricted to masked-region hits and computed the Jensen&ndash;Shannon
-                        Divergence between the original and generated distributions; lower means the
-                        model better preserves the relative mix of binding sites at masked positions. Muon
-                        achieved the lowest divergence (0.160), followed by MuonH (0.169), with both Adam
-                        variants trailing above 0.18. Second, we measured aggregate motif preservation:
-                        the total number of motif hits in generated sequences as a fraction of the
-                        original. Here the gap was even starker; Muon-family optimizers retained
-                        around 74% of all binding sites, while Adam-family optimizers retained only about
-                        54%, suggesting Muon learns a substantially richer representation of regulatory
-                        sequence structure.</p>
+                    <p>We also constructed per-sequence transcription factor count vectors restricted to the
+                        stringent masked-region hits and computed the Jensen&ndash;Shannon Divergence (JSD)
+                        between original and generated distributions&mdash;lower values indicate better
+                        preservation of the relative composition of binding sites at masked positions.
+                        Muon achieved the lowest divergence (0.152), followed by MuonH (0.157), with both
+                        Adam variants at 0.165.</p>
 
-                    </details>
-
-                    <details class="collapsible-section" open>
-                        <summary>
-                            <h3 id="sec-training-longer">Training for Longer</h3>
-                        </summary>
-                    <p>These models have not been trained to saturation. We extended the runs to ~30 epochs
-                        and observed that losses continued to decrease, reaching values approximately 5.2% lower
-                        than the 10-epoch results. The trends held consistent: MuonW achieved the lowest loss
-                        (1.150), followed by MuonH (1.170), AdamH (1.176), and AdamW (1.185). The performance
-                        gap between MuonW and AdamW was maintained at ~2.9%. Notably, MuonH seems to approach
-                        the performance of the Adam models over this longer run.</p>
-
-                    <figure class="blog-image">
-                        <img src="/blogs/muon/assets/loss_curves_nucleotide_loss_28_epoch.png"
-                            alt="Learning curves extended to ~30 epochs" loading="lazy" />
-                        <figcaption>Extended learning curves (~30 epochs). MuonW maintains its lead, while MuonH converges toward the Adam baselines.</figcaption>
-                    </figure>
                     </details>
 
                     <details class="collapsible-section" open>
@@ -1128,8 +1132,21 @@
                     <ul>
                         <li><strong>Scale up compute:</strong> repeat this experiment with significantly
                             more compute at larger scale to determine whether the optimizer rankings
-                            hold, and whether the gaps widen or narrow, as models approach
-                            saturation.</li>
+                            hold as models approach saturation. We have already extended the runs to ~30 epochs
+                            and observed that losses continued to decrease, with perplexity improving by
+                            a ratio of ~1.066 compared to the 10-epoch results. The trends held consistent:
+                            MuonW achieved the lowest loss (1.150), followed by MuonH (1.170), AdamH (1.176),
+                            and AdamW (1.185). The perplexity ratio between MuonW and AdamW was maintained
+                            at ~1.036. Notably, MuonH seems to approach
+                            the performance of the Adam models over this longer run. For later epochs, we probably require
+                            a smaller relative step size as we are getting closer to the saturation point (and MuonH has the largest
+                            relative step size), so applying a learning rate decay could help mitigate this problem.
+                            <figure class="blog-image" style="margin-top: 1rem;">
+                                <img src="/blogs/muon/assets/loss_curves_nucleotide_loss_28_epoch.png"
+                                    alt="Learning curves extended to ~30 epochs" loading="lazy" />
+                                <figcaption>Extended learning curves (~30 epochs). MuonW maintains its lead, while MuonH converges toward the Adam baselines.</figcaption>
+                            </figure>
+                        </li>
                         <li><strong>Motif recovery at scale:</strong> extend the masked motif recovery
                             evaluation to larger-scale models. Motif recovery is an especially compelling
                             metric for model evaluation in regulatory genomics: it directly measures
@@ -1217,7 +1234,7 @@
 
                     <p><strong>What are singular values?</strong><br>
                         The singular values of matrix \(A\) are the square roots of the eigenvalues of \(A^\top A\)
-                        (or equivalently, of \(AA^\top\)). Concretely, for eigenpairs \((\lambda_i, v_i)\) of
+                        (or equivalently, of \(AA^\top\) if \(A\) is square). Concretely, for eigenpairs \((\lambda_i, v_i)\) of
                         \(A^\top A\),
                         \[
                         A^\top A v_i = \lambda_i v_i, \qquad \sigma_i = \sqrt{\lambda_i}.
