@@ -134,7 +134,7 @@
                             <li>After training over 10 epochs:
                                 <ul>
                                     <li>Muon achieves <b>1.4%</b> lower nucleotide cross-entropy loss than the best Adam configuration, with substantially higher motif preservation (<b>74%</b> vs <b>54%</b> for Adam).</li>
-                                    <li>MuonW leads on both train loss and motif recovery (<b>0.160</b> JSD vs <b>0.169</b> for MuonH), though MuonH holds a slight edge in distal enhancers.</li>
+                                    <li>MuonW leads on both train loss and motif recovery (<b>0.160</b> JSD vs <b>0.169</b> for MuonH), though MuonH is not too far behind.</li>
                                     <li>Adam with Hyperball: AdamH lowers train loss by <b>1.2%</b> over AdamW, with moderately higher motif preservation.</li>
                                 </ul>
                             </li>
@@ -945,7 +945,7 @@
                         weight decay should theoretically bound the norm at an equilibrium<sup><a
                                 href="#ref-wdeq">9</a>,
                             <a href="#ref-hyperball">10</a></sup>, the norm continues to grow long after the nucleotide
-                        loss has relatively plateaued. This causes the relative
+                        loss has begun to plateau. This causes the relative
                         step size to <em>decay inversely with the square root of time</em>, acting as an
                         intrinsic learning rate scheduler that naturally "cools" the optimization and allows
                         the model to settle into a well generalized minimum.</p>
@@ -1069,8 +1069,7 @@
                     <figure class="blog-image">
                         <img src="/blogs/muon/assets/motif_assets/motif_preservation.png"
                             alt="Motif preservation by regulatory type" loading="lazy" />
-                        <figcaption>Motif preservation ratio (model hits / original hits) by regulatory element
-                            type. MuonW leads in pELS and PLS; MuonH leads in dELS.</figcaption>
+                        <figcaption>Motif preservation ratio (model hits / original hits) by optimizer over dataset.</figcaption>
                     </figure>
 
                     <p>Motif preservation varies by regulatory element type, but the overall ranking is clear:
@@ -1105,9 +1104,13 @@
                         <summary>
                             <h3 id="sec-next-steps">Next steps</h3>
                         </summary>
-                    <p>These models have not been trained to saturation, we have achieved
-                        substantially lower losses in prior runs. The results presented here reflect relative optimizer comparisons
-                        at a fixed compute budget, not the absolute frontier of model quality.</p>
+                    <p>These models have not been trained to saturation. We extended the runs to ~30 epochs
+                        and observed that losses continued to decrease, reaching values approximately 5.2% lower
+                        than the 10-epoch results. The trends held consistent: MuonW achieved the lowest loss
+                        (1.150), followed by MuonH (1.170), AdamH (1.176), and AdamW (1.185). The performance
+                        gap between MuonW and AdamW was maintained at ~2.9%. Thus, the results presented here
+                        reflect relative optimizer comparisons at a fixed compute budget, not the absolute frontier
+                        of model quality.</p>
 
                     <p>Next, we plan to:</p>
                     <ul>
