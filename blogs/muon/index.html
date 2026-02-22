@@ -671,7 +671,7 @@
                                 cross-entropy in prior runs), so these results reflect relative optimizer
                                 comparisons, not absolute model quality.</span></span>.
                         Interestingly, the Hyperball constraint does not consistently improve both optimizers:
-                        it helps Adam (AdamH &gt; AdamW) but <em>hurts</em> Muon (MuonW &gt; MuonH)<span
+                        it helps Adam (AdamH better than AdamW) but <em>hurts</em> Muon (MuonW better than MuonH)<span
                             class="sidenote-group"><sup class="sidenote-ref">9</sup><span
                                 class="sidenote-card side-right">The Hyperball blog<sup><a
                                         href="#ref-hyperball">10</a></sup> actually shows that for Muon, the
@@ -734,11 +734,12 @@
                         constraint limits how much Muon can exploit larger step sizes.</p>
 
                     <p>For Adam, the lowest point is with Hyperball at \(\eta \approx 5.69 \times
-                        10^{-3}\), and with Muon, the lowest point is with weight decay at \(\eta \approx
-                        2.27 \times 10^{-2}\) (although Hyperball at \(\eta \approx 5.69 \times 10^{-3}\)
-                        is not too far behind). It is very interesting to see that AdamH and MuonW share
-                        the same optimal learning rate, perhaps this has to do with how similar their
-                        training dynamics and relative step sizes are.</p>
+                        10^{-3}\) (compared to AdamW at \(\approx 3.59 \times 10^{-4}\)), and with Muon,
+                        the lowest point is with weight decay at \(\eta \approx 5.69 \times 10^{-3}\)
+                        (although Hyperball at \(\eta \approx 1.43 \times 10^{-3}\) is not too far behind).
+                        It is very interesting to see that AdamH and MuonW share the same optimal learning
+                        rate, perhaps this has to do with how similar their training dynamics and relative
+                        step sizes are.</p>
 
                     <figure class="blog-image">
                         <img src="/blogs/muon/assets/adam_heatmap.png" alt="Adam sweep summary"
