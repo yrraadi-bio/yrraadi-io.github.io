@@ -1084,6 +1084,11 @@ main {
         transition: padding-left 0.3s ease;
     }
 
+    .blog-with-sidebar:not(.sidebar-collapsed) header {
+        padding-left: 16rem;
+        transition: padding-left 0.3s ease;
+    }
+
     .blog-with-sidebar.sidebar-collapsed .blog-content {
         padding-left: 2rem;
     }

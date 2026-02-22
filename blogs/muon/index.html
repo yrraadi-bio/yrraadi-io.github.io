@@ -133,8 +133,8 @@
                         <ul>
                             <li>After training over 10 epochs:
                                 <ul>
-                                    <li>Muon achieves <b>1.4%</b> lower nucleotide cross-entropy loss than the best Adam configuration, and <b>~41%</b> higher motif preservation (up to <b>1.18x</b> in promoters vs <b>0.66x</b> for AdamH).</li>
-                                    <li>MuonW leads on both train loss and motif recovery (<b>~7%</b> lower JSD than AdamH, <b>~3%</b> lower than MuonH), though MuonH holds a slight edge in distal enhancers.</li>
+                                    <li>Muon achieves <b>1.4%</b> lower nucleotide cross-entropy loss than the best Adam configuration, with substantially higher motif preservation (<b>74%</b> vs <b>54%</b> for Adam).</li>
+                                    <li>MuonW leads on both train loss and motif recovery (<b>0.160</b> JSD vs <b>0.169</b> for MuonH), though MuonH holds a slight edge in distal enhancers.</li>
                                     <li>Adam with Hyperball: AdamH lowers train loss by <b>1.2%</b> over AdamW, with moderately higher motif preservation.</li>
                                 </ul>
                             </li>
@@ -1052,10 +1052,18 @@
                             <h3 id="sec-motif-recovery">Motif Recovery</h3>
                         </summary>
 
-                    <p>To test whether lower loss translates into biologically meaningful predictions, we
-                        ran a 15% nucleotide masking experiment on ~221k cCRE sequences active in &ge;2
-                        cell types (K562, HepG2, SK-N-SH) and measured how well each model recovers the
-                        original sequences' transcription factor binding motifs.</p>
+                    <p>To evaluate how well each optimizer regenerates biologically meaningful sequence
+                        content, we designed a masked motif recovery framework. Starting from 100,000
+                        generated sequences across 823 regulatory element prompts, we filtered to those
+                        with at least 2 high-activity cell types, leaving 13,054 sequences the
+                        model never observed during training (it was trained on single-cell high-activity
+                        regions), and had to reconstruct from context alone. Each sequence
+                        contains an average of 42 nucleotide positions that were masked. We scanned all original and regenerated sequences against 22 human
+                        transcription factor binding motifs from the JASPAR 2024 database using MOODS,
+                        identifying 50,377 motif instances that overlapped masked positions across 9,505
+                        sequences. These masked-region hits form the basis of our evaluation: if the model
+                        truly learns regulatory grammar, it should recover these binding sites even at
+                        positions it never saw.</p>
 
                     <figure class="blog-image">
                         <img src="/blogs/muon/assets/motif_assets/motif_preservation.png"
@@ -1064,14 +1072,13 @@
                             type. MuonW leads in pELS and PLS; MuonH leads in dELS.</figcaption>
                     </figure>
 
-                    <p>Motif preservation varies substantially by regulatory element type, but the
-                        overall ranking is clear: Muon variants dominate Adam variants across the board.
-                        MuonW leads in pELS (0.94x vs 0.85x for MuonH) and PLS (1.18x vs 1.04x),
-                        while MuonH holds a slight edge in dELS (0.65x vs 0.62x). Notably, MuonW
-                        exceeds 1.0x in promoters (PLS), meaning it recovers <em>more</em> motif hits
-                        than the original sequences. Both Adam variants lag considerably, with AdamH
-                        reaching 0.50&ndash;0.66x and AdamW 0.49&ndash;0.57x across categories. Distal
-                        enhancers (dELS) remain the hardest category for all optimizers.</p>
+                    <p>Motif preservation varies by regulatory element type, but the overall ranking is clear:
+                        Muon variants dominate Adam variants across the board. MuonW leads, while MuonH is slightly behind.
+                         Both Adam variants lag considerably across all categories. Importantly, the
+                        marginal biological performance gain of MuonW over MuonH contrasts with its significantly
+                        lower training loss, reinforcing the hypothesis that MuonW's loss advantage is partly
+                        due to logit inflation rather than a fundamental improvement in regulatory grammar
+                        learning.</p>
 
                     <figure class="blog-image">
                         <img src="/blogs/muon/assets/motif_assets/motif_jsd.png"
@@ -1079,19 +1086,17 @@
                         <figcaption>Per-Sequence JSD of TF motif distribution by cell type. MuonW achieves the lowest (best) JSD across K562 and HepG2, and ties MuonH in SK-N-SH.</figcaption>
                     </figure>
 
-                    <p>At the <em>per-sequence</em> level, pairing each original and model sequence
-                        and comparing which TFs were hit, MuonW achieves the best fidelity (0.444),
-                        followed by MuonH (0.457), AdamH (0.477), and AdamW (0.510)<span class="sidenote-group">
-                            <sup class="sidenote-ref">16</sup><span class="sidenote-card side-right">
-                                Simpson's Paradox Anomaly: The "All" JSD (e.g., AdamW 0.510) is strictly
-                                higher than its worst constituent part (HepG2 0.509). This occurs because
-                                sequences active in multiple cell types are counted once in the "All"
-                                aggregate but appear in each individual cell type's average. These
-                                multi-functional sequences are harder to model (higher JSD), so they
-                                disproportionately drag down the overall average when deduplicated.
-                            </span></span>. This ranking holds
-                        consistently across K562, HepG2, and SK-N-SH, with the largest gap in K562
-                        (MuonW 0.410 vs MuonH 0.423). In SK-N-SH, MuonW and MuonH tie at 0.347.</p>
+                    <p>We quantified recovery in two ways. First, for each sequence we built TF count
+                        vectors restricted to masked-region hits and computed the Jensen&ndash;Shannon
+                        Divergence between the original and generated distributions; lower means the
+                        model better preserves the relative mix of binding sites at masked positions. Muon
+                        achieved the lowest divergence (0.160), followed by MuonH (0.169), with both Adam
+                        variants trailing above 0.18. Second, we measured aggregate motif preservation:
+                        the total number of motif hits in generated sequences as a fraction of the
+                        original. Here the gap was even starker; Muon-family optimizers retained
+                        around 74% of all binding sites, while Adam-family optimizers retained only about
+                        54%, suggesting Muon learns a substantially richer representation of regulatory
+                        sequence structure.</p>
 
                     </details>
 
@@ -1099,8 +1104,22 @@
                         <summary>
                             <h3 id="sec-next-steps">Next steps</h3>
                         </summary>
+                    <p>These models have not been trained to saturation, we have achieved
+                        substantially lower losses in prior runs. The results presented here reflect relative optimizer comparisons
+                        at a fixed compute budget, not the absolute frontier of model quality.</p>
+
                     <p>Next, we plan to:</p>
                     <ul>
+                        <li><strong>Scale up compute:</strong> repeat this experiment with significantly
+                            more compute at larger scale to determine whether the optimizer rankings
+                            hold, and whether the gaps widen or narrow, as models approach
+                            saturation.</li>
+                        <li><strong>Motif recovery at scale:</strong> extend the masked motif recovery
+                            evaluation to larger-scale models. Motif recovery is an especially compelling
+                            metric for model evaluation in regulatory genomics: it directly measures
+                            whether a model has internalized the combinatorial grammar of transcription
+                            factor binding, rather than simply memorizing surface-level nucleotide
+                            statistics. We expect this to become a core evaluation axis as we scale.</li>
                         <li><strong>Run the full sweep with SSO:</strong> repeat the Adam/Muon \(\times\)
                             Hyperball sweeps using the Spectral Sphere Optimizer (SSO)<sup><a
                                     href="#ref-sso">18</a></sup> to test whether
