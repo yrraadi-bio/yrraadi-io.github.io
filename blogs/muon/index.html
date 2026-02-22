@@ -80,6 +80,7 @@
                         <li><a href="#sec-training-results">Training Results</a></li>
                         <li><a href="#spectral-analysis">Spectral Analysis</a></li>
                         <li><a href="#sec-motif-recovery">Motif Recovery</a></li>
+                        <li><a href="#sec-training-longer">Training for Longer</a></li>
                         <li><a href="#sec-next-steps">Next steps</a></li>
                         <li><a href="#appendix">Appendices</a></li>
                     </ul>
@@ -1102,17 +1103,28 @@
 
                     <details class="collapsible-section" open>
                         <summary>
-                            <h3 id="sec-next-steps">Next steps</h3>
+                            <h3 id="sec-training-longer">Training for Longer</h3>
                         </summary>
                     <p>These models have not been trained to saturation. We extended the runs to ~30 epochs
                         and observed that losses continued to decrease, reaching values approximately 5.2% lower
                         than the 10-epoch results. The trends held consistent: MuonW achieved the lowest loss
                         (1.150), followed by MuonH (1.170), AdamH (1.176), and AdamW (1.185). The performance
-                        gap between MuonW and AdamW was maintained at ~2.9%. Thus, the results presented here
-                        reflect relative optimizer comparisons at a fixed compute budget, not the absolute frontier
-                        of model quality.</p>
+                        gap between MuonW and AdamW was maintained at ~2.9%. Notably, MuonH seems to approach
+                        the performance of the Adam models over this longer run.</p>
 
-                    <p>Next, we plan to:</p>
+                    <figure class="blog-image">
+                        <img src="/blogs/muon/assets/loss_curves_nucleotide_loss_28_epoch.png"
+                            alt="Learning curves extended to ~30 epochs" loading="lazy" />
+                        <figcaption>Extended learning curves (~30 epochs). MuonW maintains its lead, while MuonH converges toward the Adam baselines.</figcaption>
+                    </figure>
+                    </details>
+
+                    <details class="collapsible-section" open>
+                        <summary>
+                            <h3 id="sec-next-steps">Next steps</h3>
+                        </summary>
+                    <p>Thus, the results presented here reflect relative optimizer comparisons at a fixed compute
+                        budget, not the absolute frontier of model quality. Next, we plan to:</p>
                     <ul>
                         <li><strong>Scale up compute:</strong> repeat this experiment with significantly
                             more compute at larger scale to determine whether the optimizer rankings
