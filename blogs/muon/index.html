@@ -11,7 +11,7 @@
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Does Muon improve regulatory DNA learning? — Origin Bio</title>
+    <title>Does Muon improve regulatory DNA learning? Part 1. Training Dynamics — Origin Bio</title>
     <meta name="description"
         content="Exploring Adam, Muon, and Hyperball optimizers for DNA and biology-focused AI models. Weight decay, singular values, and scale invariance." />
     <meta property="og:type" content="article" />
@@ -22,7 +22,7 @@
     <meta property="og:url" content="https://origin.bio/blogs/muon/" />
     <meta property="og:image" content="https://origin.bio/assets/thumbnail-og.jpg?v=1" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Does Muon improve regulatory DNA learning?" />
+    <meta name="twitter:title" content="Does Muon improve regulatory DNA learning? Part 1. Training Dynamics" />
     <link rel="canonical" href="https://origin.bio/blogs/muon/">
     <link rel="stylesheet" href="/css/style.css">
     <link rel="icon" href="/assets/favicon.png" type="image/png">
@@ -79,7 +79,6 @@
                         <li><a href="#sec-hyperball">Hyperball update</a></li>
                         <li><a href="#sec-training-results">Training Results</a></li>
                         <li><a href="#spectral-analysis">Spectral Analysis</a></li>
-                        <li><a href="#sec-motif-recovery">Motif Recovery</a></li>
                         <li><a href="#sec-next-steps">Next steps</a></li>
                         <li><a href="#appendix">Appendices</a></li>
                     </ul>
@@ -133,9 +132,9 @@
                         <ul>
                             <li>After training over 10 epochs:
                                 <ul>
-                                    <li>Muon achieves a <b>~1.69%</b> higher geometric-mean probability on the correct nucleotide than the best Adam configuration (or a perplexity ratio of <b>~1.0169</b>), with higher motif preservation (<b>56%</b> vs <b>53&ndash;54%</b> for Adam).</li>
-                                    <li>MuonW leads on both train loss and motif recovery (<b>0.152</b> JSD vs <b>0.157</b> for MuonH), though MuonH is not too far behind.</li>
-                                    <li>Adam with Hyperball: AdamH achieves a perplexity ratio of <b>~1.015</b> over AdamW, with moderately lower JSD.</li>
+                                    <li>Muon achieves a <b>~1.69%</b> higher geometric-mean probability on the correct nucleotide than the best Adam configuration (or a perplexity ratio of <b>~1.0169</b>).</li>
+                                    <li>MuonW leads on train loss, though MuonH is not too far behind.</li>
+                                    <li>Adam with Hyperball: AdamH achieves a perplexity ratio of <b>~1.015</b> over AdamW.</li>
                                 </ul>
                             </li>
                             <li>We perform a spectral analysis to show how Muon's whitening promotes feature learning by forcing weights away from initialization.</li>
@@ -1066,65 +1065,6 @@
 
                     <details class="collapsible-section" open>
                         <summary>
-                            <h3 id="sec-motif-recovery">Motif Recovery</h3>
-                        </summary>
-
-                    <p>To evaluate how well each optimizer regenerates biologically meaningful sequence
-                        content, we designed a masked motif recovery framework. Starting from 100,000
-                        generated sequences spanning 823 cis-regulatory elements with varying levels of 
-                        activity across different cell types, we filtered to those exhibiting high activity
-                        in at least 2 cell types, yielding 13,054 sequences. Each sequence contains an
-                        average of 42 nucleotide positions that were masked during generation; positions
-                        the model never observed and was required to reconstruct from surrounding context
-                        alone. All original and regenerated sequences were scanned against 22 human
-                        transcription factor binding motifs from the JASPAR 2024 database using MOODS,
-                        identifying motif instances overlapping masked positions across 9,050 sequences.</p>
-
-                    <p>Not all masked-region motif hits are equally informative. Certain motifs are
-                        sufficiently robust that even the lowest-scoring nucleotide at the masked positions
-                        would still produce a match above the detection threshold, effectively
-                        constituting trivial recoveries that any model would achieve regardless of learned
-                        representation quality. To account for this, we applied a stringent filter: for each
-                        motif hit overlapping a masked region, we recomputed the motif score after
-                        substituting the worst-scoring nucleotide at every masked position within the hit
-                        window. Hits whose recalculated scores still exceeded the detection threshold were
-                        discarded as trivial. This procedure removed 16.5% of masked-region hits, retaining
-                        40,286 non-trivial motif instances in which the masked positions are essential to the
-                        binding site match.</p>
-
-                    <figure class="blog-image">
-                        <img src="/blogs/muon/assets/motif_assets/motif_preservation.png"
-                            alt="Aggregate motif recovery by optimizer" loading="lazy" />
-                        <figcaption>Aggregate motif recovery (stringent): ratio of model hits to original
-                            hits after removing trivial masked-region matches.</figcaption>
-                    </figure>
-
-                    <p>We measured aggregate motif preservation as the ratio of total motif hits in
-                        generated sequences to those in the originals. Muon-family optimizers retained
-                        56% of all binding sites compared to 53&ndash;54% for Adam-family optimizers,
-                        with Muon variants consistently outperforming. The marginal biological performance
-                        gain of MuonW over MuonH contrasts with its significantly lower training loss,
-                        reinforcing the hypothesis that MuonW's loss advantage is partly due to logit
-                        inflation rather than a fundamental improvement in regulatory grammar learning.</p>
-
-                    <figure class="blog-image">
-                        <img src="/blogs/muon/assets/motif_assets/motif_jsd.png"
-                            alt="Masked-only mean JSD by optimizer" loading="lazy" />
-                        <figcaption>Per-sequence JSD of TF motif distribution (stringent). MuonW achieves the
-                            lowest (best) JSD (0.152), followed by MuonH (0.157).</figcaption>
-                    </figure>
-
-                    <p>We also constructed per-sequence transcription factor count vectors restricted to the
-                        stringent masked-region hits and computed the Jensen&ndash;Shannon Divergence (JSD)
-                        between original and generated distributions&mdash;lower values indicate better
-                        preservation of the relative composition of binding sites at masked positions.
-                        Muon achieved the lowest divergence (0.152), followed by MuonH (0.157), with both
-                        Adam variants at 0.165.</p>
-
-                    </details>
-
-                    <details class="collapsible-section" open>
-                        <summary>
                             <h3 id="sec-next-steps">Next steps</h3>
                         </summary>
                     <p>Thus, the results presented here reflect relative optimizer comparisons at a fixed compute
@@ -1147,12 +1087,6 @@
                                 <figcaption>Extended learning curves (~30 epochs). MuonW maintains its lead, while MuonH converges toward the Adam baselines.</figcaption>
                             </figure>
                         </li>
-                        <li><strong>Motif recovery at scale:</strong> extend the masked motif recovery
-                            evaluation to larger-scale models. Motif recovery is an especially compelling
-                            metric for model evaluation in regulatory genomics: it directly measures
-                            whether a model has internalized the combinatorial grammar of transcription
-                            factor binding, rather than simply memorizing surface-level nucleotide
-                            statistics. We expect this to become a core evaluation axis as we scale.</li>
                         <li><strong>Run the full sweep with SSO:</strong> repeat the Adam/Muon \(\times\)
                             Hyperball sweeps using the Spectral Sphere Optimizer (SSO)<sup><a
                                     href="#ref-sso">18</a></sup> to test whether
