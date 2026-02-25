@@ -111,59 +111,60 @@ function renderSequence() {
 // --- 3D Generation Logic (S3 Fetch) ---
 
 const S3_BASE = 'https://origin-workbench-public-3dstructures.s3.us-east-2.amazonaws.com/protenix-dsdna-3dstructures';
+const LIB_URL = 'https://3Dmol.org/build/3Dmol-min.js';
+
+function load3DmolScript() {
+    if (typeof $3Dmol !== 'undefined') return Promise.resolve();
+    return new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = LIB_URL;
+        s.async = true;
+        s.onload = resolve;
+        s.onerror = () => reject(new Error('Failed to load 3Dmol.js'));
+        document.head.appendChild(s);
+    });
+}
 
 async function initStructureViewer(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    if (typeof $3Dmol === 'undefined') {
-        container.innerHTML = '<p style="color:red">Error: 3Dmol.js not loaded</p>';
-        return;
-    }
-
-    // Show loading state
     container.innerHTML = '<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #a8a29e; font-size: 14px; font-weight: 500;">Loading 3D Structure...</div>';
 
     const sequenceId = SEQUENCE_DATA.id;
     const cifUrl = `${S3_BASE}/${encodeURIComponent(sequenceId)}.cif`;
 
     try {
-        const response = await fetch(cifUrl);
-        if (!response.ok) {
-            throw new Error(`Failed to load structure: ${response.statusText}`);
-        }
-        const cifData = await response.text();
+        const [cifData] = await Promise.all([
+            fetch(cifUrl).then(r => {
+                if (!r.ok) throw new Error(`Structure fetch failed: ${r.statusText}`);
+                return r.text();
+            }),
+            load3DmolScript(),
+        ]);
 
-        // Clear loading
         container.innerHTML = '';
 
-        // Create Viewer
         const viewer = $3Dmol.createViewer(container, {
             backgroundColor: '#ffffff',
-            antialias: true,
+            antialias: false,
         });
 
         viewer.addModel(cifData, 'cif');
 
-        // pLDDT confidence coloring (Chai-1 stores pLDDT in B-factor column)
         const plddtColor = (atom) => {
             const bfactor = atom.b || 0;
-            if (bfactor > 90) return '#1e40af';  // Very high confidence - dark blue
-            if (bfactor > 70) return '#60a5fa';  // Confident - light blue
-            if (bfactor > 50) return '#fbbf24';  // Low confidence - yellow
-            return '#f97316';                     // Very low confidence - orange
+            if (bfactor > 90) return '#1e40af';
+            if (bfactor > 70) return '#60a5fa';
+            if (bfactor > 50) return '#fbbf24';
+            return '#f97316';
         };
 
-        // DNA-optimized rendering: cartoon backbone + stick atoms, colored by pLDDT
         viewer.setStyle({}, {
             cartoon: {
                 colorfunc: plddtColor,
                 thickness: 0.4,
                 opacity: 0.9,
-            },
-            stick: {
-                radius: 0.15,
-                colorfunc: plddtColor,
             },
         });
 
@@ -171,11 +172,10 @@ async function initStructureViewer(containerId) {
         viewer.zoom(1.05);
         viewer.spin('y', 0.4);
         viewer.render();
-        
+
         window.structureViewer = viewer;
         window.structureViewer.isSpinning = true;
 
-        // Block 3Dmol zoom but still scroll the page
         function passScrollThrough(e) {
             e.stopPropagation();
             e.stopImmediatePropagation();
@@ -190,7 +190,7 @@ async function initStructureViewer(containerId) {
 
     } catch (err) {
         console.error(err);
-        container.innerHTML = `<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #dc2626; font-size: 14px; font-weight: 500;">Error loading structure</div>`;
+        container.innerHTML = '<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #dc2626; font-size: 14px; font-weight: 500;">Error loading structure</div>';
     }
 }
 
@@ -217,8 +217,14 @@ function resetView() {
     window.structureViewer.zoom(0.9);
 }
 
-// Initialize when DOM is ready
+// Initialize: render sequence immediately, defer heavy 3D work
 document.addEventListener('DOMContentLoaded', () => {
     renderSequence();
-    initStructureViewer('structure-canvas');
+
+    const startViewer = () => initStructureViewer('structure-canvas');
+    if ('requestIdleCallback' in window) {
+        requestIdleCallback(startViewer, { timeout: 1500 });
+    } else {
+        setTimeout(startViewer, 0);
+    }
 });
