@@ -78,6 +78,7 @@
                         <li><a href="#sec-weight-decay">Weight decay</a></li>
                         <li><a href="#sec-hyperball">Hyperball update</a></li>
                         <li><a href="#sec-training-results">Training Results</a></li>
+                        <li><a href="#sec-perplexity-validation">Perplexity Validation</a></li>
                         <li><a href="#spectral-analysis">Spectral Analysis</a></li>
                         <li><a href="#sec-next-steps">Next steps</a></li>
                         <li><a href="#appendix">Appendices</a></li>
@@ -98,7 +99,7 @@
                     </figure>
 
                     <h2 id="page-title">Does Muon improve regulatory DNA learning?</h2>
-                    <p class="blog-date">February 12, 2026 &middot; Viraj Doshi*
+                    <p class="blog-date">February 12, 2026 &middot; Viraj Doshi
                         <span class="author-socials">
                             <a href="https://x.com/viraj9451" target="_blank" class="author-social-link" aria-label="Twitter">
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
@@ -111,20 +112,6 @@
                                 </svg>
                             </a>
                         </span>
-                        , Akshat Singh
-                        <span class="author-socials">
-                            <a href="https://x.com/Akshxat" target="_blank" class="author-social-link" aria-label="Twitter">
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                                </svg>
-                            </a>
-                            <a href="https://www.linkedin.com/in/akshat-singh-u1uc/" target="_blank" class="author-social-link" aria-label="LinkedIn">
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
-                                </svg>
-                            </a>
-                        </span>
-                        <br><small>* core contributor</small>
                     </p>
 
                     <section class="blog-takeaways" aria-label="Key takeaways">
@@ -132,9 +119,9 @@
                         <ul>
                             <li>After training over 10 epochs:
                                 <ul>
-                                    <li>Muon achieves a <b>~1.69%</b> higher geometric-mean probability on the correct nucleotide than the best Adam configuration (or a perplexity ratio of <b>~1.0169</b>).</li>
-                                    <li>MuonW leads on train loss, though MuonH is not too far behind.</li>
-                                    <li>Adam with Hyperball: AdamH achieves a perplexity ratio of <b>~1.015</b> over AdamW.</li>
+                                    <li>MuonW achieves an <b>&sim;0.87%</b> higher geometric-mean probability on the correct nucleotide than the best Adam configuration (a perplexity ratio of <b>&sim;1.009</b>).</li>
+                                    <li>MuonW reaches the lowest overall validation perplexity at high learning rates, though MuonH is highly effective at lower learning rates.</li>
+                                    <li>Adam with Hyperball (AdamH) achieves a perplexity ratio of <b>&sim;1.010</b> over AdamW at their respective optimal learning rates.</li>
                                 </ul>
                             </li>
                             <li>We perform a spectral analysis to show how Muon's whitening promotes feature learning by forcing weights away from initialization.</li>
@@ -351,7 +338,6 @@
                     \sqrt{1-\frac{\eta^2(1-\gamma^2)}{1+\eta^2+2\eta\gamma}}.
                     \]
 
-                    <!-- Interactive 3D Sphere -->
                     <figure class="blog-image">
                         <div id="sphere-3d-wrap"
                             style="position:relative; width:100%; height:520px; border:1px solid #e7e5e4; border-radius:8px; overflow:hidden; background:#fafaf9;">
@@ -805,6 +791,89 @@
                         on the correct token. Although we retain % CE in the heatmaps for visual clarity, we
                         use PPL ratios when discussing optimizer comparisons in the text.</p>
 
+                    </details>
+
+                    <details class="collapsible-section" open>
+                        <summary>
+                            <h3 id="sec-perplexity-validation">Perplexity Validation</h3>
+                        </summary>
+                        <p>Beyond raw cross-entropy loss, we track validation perplexity throughout training as a more interpretable measure of model capacity. Because perplexity directly reflects the geometric-mean inverse probability assigned to the correct token, it provides a highly sensitive metric for evaluating optimizer configurations across both learning rates and temporal checkpoints. We evaluate performance on a held-out validation split at regular intervals, reporting both the absolute final test perplexity (evaluated on sequences masked at the training rate) and the percentage advantage of one optimizer variant over another across the entire training trajectory.</p>
+
+                        <h4 class="blog-subheading">Final test perplexity by learning rate</h4>
+
+                        <p>The line plots below show the final validation perplexity (at the last checkpoint) for each optimizer pair as a function of the learning rate (log scale). Lower perplexity indicates better performance.</p>
+
+                        <figure class="blog-image">
+                            <img src="/blogs/muon/assets/comparison_AdamH_vs_AdamW.png"
+                                alt="Final test perplexity: AdamH vs AdamW" loading="lazy" />
+                            <figcaption>Final test perplexity for AdamH (blue) and AdamW (red) across learning rates.</figcaption>
+                        </figure>
+
+                        <p>Hyperball improves Adam's best-case performance but narrows its stable operating window. AdamH achieves the lowest overall perplexity for the Adam family (&sim;2.485) at a learning rate of &sim;\(5.69 \times 10^{-3}\), establishing a clear advantage over AdamW (&sim;2.529) at this same rate. However, AdamW proves more resilient at the extremes. At the lowest learning rate (&sim;\(9.00 \times 10^{-5}\)), AdamW maintains a lead (&sim;2.534 vs. &sim;2.566). Conversely, at the highest rate (&sim;\(2.27 \times 10^{-2}\)), AdamH degrades sharply (&sim;2.574) while AdamW remains relatively stable (&sim;2.526). Ultimately, while Hyperball unlocks Adam's peak performance, standard weight decay provides broader hyperparameter robustness.</p>
+
+                        <figure class="blog-image">
+                            <img src="/blogs/muon/assets/comparison_MuonH_vs_MuonW.png"
+                                alt="Final test perplexity: MuonH vs MuonW" loading="lazy" />
+                            <figcaption>Final test perplexity for MuonH (blue) and MuonW (red) across learning rates.</figcaption>
+                        </figure>
+
+                        <p>The dynamic between Muon variants is perfectly inverted: Hyperball dominates at low learning rates, while independent weight decay scales far better to higher rates. At &sim;\(9.00 \times 10^{-5}\), MuonH cleanly outperforms MuonW (&sim;2.555 vs. &sim;2.611), maintaining its edge through the &sim;\(1.43 \times 10^{-3}\) regime with a minimum perplexity of &sim;2.481. However, as the learning rate increases, MuonW closes the gap and eventually dominates. By &sim;\(5.69 \times 10^{-3}\), MuonW takes the lead (&sim;2.468 vs. &sim;2.484), and at the highest learning rate (&sim;\(2.27 \times 10^{-2}\)), it achieves the absolute best test perplexity across all sweeps (&sim;2.464), whereas MuonH destabilizes and rises to &sim;2.565.</p>
+
+                        <h4 class="blog-subheading">Perplexity advantage over training</h4>
+
+                        <p>The heatmaps below visualize the percentage advantage of one variant over the other at each checkpoint and learning rate. Green indicates the first-named variant (AdamH or MuonH) is outperforming; red indicates the second (AdamW or MuonW) holds the lead.</p>
+
+                        <figure class="blog-image">
+                            <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-start;">
+                                <div style="flex: 1; min-width: 280px;">
+                                    <img src="/blogs/muon/assets/advantage_AdamH_vs_AdamW.png"
+                                        alt="Perplexity advantage: AdamH vs AdamW" loading="lazy" style="width: 100%;" />
+                                </div>
+                                <div style="flex: 1; min-width: 280px;">
+                                    <img src="/blogs/muon/assets/advantage_MuonH_vs_MuonW.png"
+                                        alt="Perplexity advantage: MuonH vs MuonW" loading="lazy" style="width: 100%;" />
+                                </div>
+                            </div>
+                            <figcaption>Left: AdamH vs AdamW. Right: MuonH vs MuonW. Positive (green) = first-named variant better.</figcaption>
+                        </figure>
+
+                        <p>The heatmap confirms the temporal consistency of AdamH's mid-range superiority. At learning rates of &sim;\(1.43 \times 10^{-3}\) and &sim;\(5.69 \times 10^{-3}\), AdamH maintains a persistent advantage of roughly +1% to +2% (green) across nearly all checkpoints. Outside this optimal band, the advantage safely inverts. At the lowest learning rate, AdamH trails by &sim;&minus;1.2% during the middle phase of training. At the highest learning rate, AdamW establishes a consistent lead across all steps, with AdamH trailing by approximately &minus;1.9% by the final checkpoints.</p>
+
+                        <p>The heatmap for Muon reveals a sharp phase transition in optimizer dominance based on the learning rate scale. At &sim;\(9.00 \times 10^{-5}\), MuonH holds a commanding &sim;+2.2% advantage (dark green) throughout the entire training process. At &sim;\(5.69 \times 10^{-3}\), early checkpoints remain competitive before MuonW decisively takes over after checkpoint 6. By the maximum learning rate of &sim;\(2.27 \times 10^{-2}\), MuonW sustains a massive and expanding advantage (dark red), ultimately outperforming MuonH by nearly 4% (&approx;&minus;3.9%) by the end of training.</p>
+
+                        <h4 class="blog-subheading">Perplexity progression by checkpoint</h4>
+
+                        <p>The plots below show mean validation perplexity over the 20 checkpoints for each optimizer and learning rate. They make the temporal story behind the heatmaps explicit: how quickly each configuration improves and where it stabilizes.</p>
+
+                        <figure class="blog-image">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; max-width: 100%;">
+                                <div>
+                                    <img src="/blogs/muon/assets/perplexity_progression_AdamH.png"
+                                        alt="Perplexity progression — AdamH" loading="lazy" style="width: 100%;" />
+                                    <p style="margin: 0.25rem 0 0; font-size: 0.9em; color: #57534e;">AdamH</p>
+                                </div>
+                                <div>
+                                    <img src="/blogs/muon/assets/perplexity_progression_AdamW.png"
+                                        alt="Perplexity progression — AdamW" loading="lazy" style="width: 100%;" />
+                                    <p style="margin: 0.25rem 0 0; font-size: 0.9em; color: #57534e;">AdamW</p>
+                                </div>
+                                <div>
+                                    <img src="/blogs/muon/assets/perplexity_progression_MuonH.png"
+                                        alt="Perplexity progression — MuonH" loading="lazy" style="width: 100%;" />
+                                    <p style="margin: 0.25rem 0 0; font-size: 0.9em; color: #57534e;">MuonH</p>
+                                </div>
+                                <div>
+                                    <img src="/blogs/muon/assets/perplexity_progression_MuonW.png"
+                                        alt="Perplexity progression — MuonW" loading="lazy" style="width: 100%;" />
+                                    <p style="margin: 0.25rem 0 0; font-size: 0.9em; color: #57534e;">MuonW</p>
+                                </div>
+                            </div>
+                            <figcaption>Mean validation perplexity over training checkpoints for each optimizer, across five learning rates. Lower is better.</figcaption>
+                        </figure>
+
+                        <p>For AdamH, the intermediate learning rate &sim;\(5.69 \times 10^{-3}\) (green) gives the steepest drop and the lowest final perplexity (&sim;2.48); the lowest LR (\(9\times10^{-5}\)) improves slowly and stays highest, while the highest LR (&sim;\(2.27\times10^{-2}\)) is unstable and ends near 2.57. AdamW behaves differently: the smallest learning rate (\(9\times10^{-5}\)) reaches the best final perplexity (&sim;2.51) by the end, with a steady decline and little oscillation; higher LRs converge faster initially but plateau at slightly higher values. MuonH is strongest at mid-range LRs (&sim;\(1.43\times10^{-3}\) and &sim;\(5.69\times10^{-3}\)), which reach the lowest perplexity (&sim;2.48); the highest LR again shows more fluctuation and a worse final value. MuonW favors higher learning rates: the highest LR (&sim;\(2.27\times10^{-2}\)) achieves the best final perplexity (&sim;2.47) with a fast initial drop, while the lowest LR stays worst throughout. These progression curves align with the final-perplexity curves and heatmaps: AdamH and MuonH excel in a mid-LR band; AdamW and MuonW extend their best performance to low and high LRs respectively, with MuonW at high LR giving the best overall validation perplexity.</p>
+
+                        <p>Collectively, the final-perplexity curves and temporal advantage heatmaps demonstrate that the efficacy of Hyperball (constrained weight decay) versus independent weight decay is highly contingent on the learning rate regime. At lower learning rates, the strict norm constraints of Hyperball successfully accelerate convergence and improve final perplexity. At higher learning rates, however, independent weight decay provides the flexibility necessary to reach the lowest global perplexity, with MuonW emerging as the most performant configuration overall.</p>
                     </details>
 
                     <details class="collapsible-section" open>
@@ -1286,7 +1355,6 @@
                         follows.
                     </p>
 
-                    <!-- 2D Geometry Diagram -->
                     <figure class="blog-image">
                         <svg viewBox="0 0 560 440" xmlns="http://www.w3.org/2000/svg"
                             style="width:100%;max-width:560px;display:block;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
@@ -1301,37 +1369,26 @@
                                     <path d="M0,0.5 L7,3 L0,5.5" fill="#16a34a" />
                                 </marker>
                             </defs>
-                            <!-- Sphere arc (partial circle centered at O) -->
                             <path d="M 343,274 A 280,280 0 0,0 152,100" fill="none" stroke="#d6d3d1" stroke-width="1.5"
                                 stroke-dasharray="8,5" />
-                            <!-- O -> A : W_t (blue) -->
                             <line x1="80" y1="370" x2="236" y2="139" stroke="#2563eb" stroke-width="2.2"
                                 marker-end="url(#ah-blue)" />
-                            <!-- A -> B : U_t (orange) -->
                             <line x1="241" y1="141" x2="319" y2="155" stroke="#ea580c" stroke-width="2.2"
                                 marker-end="url(#ah-orange)" />
-                            <!-- O -> B : c (gray dashed) -->
                             <line x1="80" y1="370" x2="323" y2="155" stroke="#9ca3af" stroke-width="1.5"
                                 stroke-dasharray="7,4" />
-                            <!-- O -> C : W_{t+1} (green) -->
                             <line x1="80" y1="370" x2="286" y2="183" stroke="#16a34a" stroke-width="2.2"
                                 marker-end="url(#ah-green)" />
-                            <!-- A -> C : ΔW (purple dashed) -->
                             <line x1="241" y1="141" x2="290" y2="185" stroke="#9333ea" stroke-width="2"
                                 stroke-dasharray="6,3" />
-                            <!-- B -> C : retraction (gray dotted) -->
                             <line x1="323" y1="155" x2="290" y2="185" stroke="#78716c" stroke-width="1.2"
                                 stroke-dasharray="3,3" />
-                            <!-- Angle arc: φ at O (between OA and OC) -->
                             <path d="M 112,326 A 55,55 0 0,1 121,335" fill="none" stroke="#2563eb" stroke-width="1.8" />
-                            <!-- Angle arc: π−θ at A (interior angle) -->
                             <path d="M 218,174 A 42,42 0 0,0 282,148" fill="none" stroke="#ea580c" stroke-width="1.8" />
-                            <!-- Points -->
                             <circle cx="80" cy="370" r="4.5" fill="#1c1917" />
                             <circle cx="241" cy="141" r="4" fill="#2563eb" />
                             <circle cx="323" cy="155" r="4" fill="#ea580c" />
                             <circle cx="290" cy="185" r="4" fill="#16a34a" />
-                            <!-- Point labels -->
                             <text x="62" y="393" font-size="14" font-weight="600" fill="#1c1917">O</text>
                             <text x="213" y="127" font-size="13" font-weight="600" fill="#2563eb">A =
                                 W&#x209C;</text>
@@ -1339,7 +1396,6 @@
                                 W&#x209C;+U&#x209C;</text>
                             <text x="296" y="200" font-size="13" font-weight="600" fill="#16a34a">C =
                                 W&#x209C;&#x208A;&#x2081;</text>
-                            <!-- Side labels -->
                             <text x="128" y="248" font-size="13" font-weight="500" fill="#2563eb" font-style="italic"
                                 transform="rotate(-55,128,248)">R =
                                 &#x2016;W&#x209C;&#x2016;</text>
@@ -1353,12 +1409,10 @@
                                 &#x2016;W&#x209C;&#x208A;&#x2081;&#x2016;</text>
                             <text x="274" y="168" font-size="12" font-weight="500" fill="#9333ea" font-style="italic">x
                                 = &#x2016;&#x0394;W&#x2016;</text>
-                            <!-- Angle labels -->
                             <text x="117" y="320" font-size="14" font-weight="600" fill="#2563eb"
                                 font-style="italic">&#x03C6;</text>
                             <text x="243" y="182" font-size="12" font-weight="600"
                                 fill="#ea580c">&#x03C0;&#x2212;&#x03B8;</text>
-                            <!-- Retraction annotation -->
                             <text x="318" y="183" font-size="10" fill="#78716c" font-style="italic">retract</text>
                         </svg>
                         <figcaption>2D cross-section of the hyperball retraction geometry. The origin
@@ -1409,7 +1463,7 @@
                     \begin{aligned}
                     \text{Cosine rule on } \triangle OAC\!: \quad \|\Delta
                     W\|^2&=R^2+R^2-2R^2\cos\phi,\\
-                    \text{Exact step size: } \quad x&:=\|\Delta
+                    \text{Exact step size: } \quad x&:=\\|\Delta
                     W\|=R\sqrt{2}\sqrt{1-\cos\phi}=R\sqrt{2}\sqrt{1-\sqrt{1-\frac{\eta^2(1-\gamma^2)}{1+\eta^2+2\eta\gamma}}}.
                     \end{aligned}
                     \]
