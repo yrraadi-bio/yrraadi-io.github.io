@@ -75,10 +75,14 @@
                     <ul>
                         <li><a href="#page-title">Title</a></li>
                         <li><a href="#sec-muon">Muon</a></li>
-                        <li><a href="#sec-weight-decay">Weight decay</a></li>
-                        <li><a href="#sec-hyperball">Hyperball update</a></li>
-                        <li><a href="#sec-training-results">Training Results</a></li>
-                        <li><a href="#sec-perplexity-validation">Perplexity Validation</a></li>
+                        <li><a href="#sec-weight-regularization">Weight regularization</a>
+                            <ul>
+                                <li><a href="#sec-weight-decay">Weight decay</a></li>
+                                <li><a href="#sec-hyperball">Hyperball update</a></li>
+                            </ul>
+                        </li>
+                        <li><a href="#sec-perplexity-validation">Results</a></li>
+                        <li><a href="#sec-training-results">Training Dynamics</a></li>
                         <li><a href="#spectral-analysis">Spectral Analysis</a></li>
                         <li><a href="#sec-next-steps">Next steps</a></li>
                         <li><a href="#appendix">Appendices</a></li>
@@ -117,11 +121,12 @@
                     <section class="blog-takeaways" aria-label="Key takeaways">
                         <h3>Highlights</h3>
                         <ul>
-                            <li>After training over 10 epochs:
+                            <li>After training over 20 epochs:
                                 <ul>
                                     <li>MuonW achieves an <b>&sim;0.87%</b> higher geometric-mean probability on the correct nucleotide than the best Adam configuration (a perplexity ratio of <b>&sim;1.009</b>).</li>
-                                    <li>MuonW reaches the lowest overall validation perplexity at high learning rates, though MuonH is highly effective at lower learning rates.</li>
-                                    <li>Adam with Hyperball (AdamH) achieves a perplexity ratio of <b>&sim;1.010</b> over AdamW at their respective optimal learning rates.</li>
+                                    <li>To reach a validation perplexity target of 2.50, MuonW requires <b>&sim;47% fewer steps</b> (checkpoint 10 vs. 19) compared to the optimal AdamH configuration, resulting in a <b>1.9&times; speedup</b>.</li>
+                                    <li>There is a distinct phase change across the learning rate spectrum: MuonW at larger learning rates significantly outperforms its Hyperball counterpart (MuonH), whereas MuonH remains highly effective at lower learning rates.</li>
+                                    <li>Adam with Hyperball (AdamH) achieves a perplexity ratio of <b>&sim;1.010</b> over AdamW at their respective optimal learning rates. While the stable learning rate window is lower for AdamH, its absolute lowest perplexity is better.</li>
                                 </ul>
                             </li>
                             <li>We perform a spectral analysis to show how Muon's whitening promotes feature learning by forcing weights away from initialization.</li>
@@ -249,6 +254,11 @@
                         distributed signals that distinguish functional sequences from background.</p>
 
                     </details>
+
+                    <details class="collapsible-section">
+                        <summary>
+                            <h3 id="sec-weight-regularization">Weight regularization</h3>
+                        </summary>
 
                     <details class="collapsible-section">
                         <summary>
@@ -633,9 +643,142 @@
 
                     </details>
 
+                    </details>
+
                     <details class="collapsible-section" open>
                         <summary>
-                            <h3 id="sec-training-results">Training Results</h3>
+                            <h3 id="sec-perplexity-validation">Results</h3>
+                        </summary>
+                        <p> We track validation perplexity throughout training as a more interpretable measure of model capacity<span
+                            class="sidenote-group"><sup class="sidenote-ref">8</sup><span
+                            class="sidenote-card side-right">The model is a multifunctional architecture
+                            similar to <a href="/introducing-axis/">Axis</a>, trained on a set of
+                            candidate cis-regulatory elements (cCREs) from the ENCODE v4 registry that
+                            are cell-type-specific to one of three cell lines: K562, HepG2, and
+                            SK-N-SH. Training was limited to 20 epochs due to compute constraints;
+                            the loss has not begun to saturate (we have trained to much lower
+                            cross-entropy in prior runs), so these results reflect relative optimizer
+                            comparisons, not absolute model quality.</span></span>. Because perplexity directly reflects the geometric-mean inverse probability assigned to the correct token, it provides a highly sensitive metric for evaluating optimizer configurations across both learning rates and temporal checkpoints. We evaluate performance on a held-out validation split at regular intervals, reporting both the absolute final test perplexity (evaluated on sequences masked at the training rate) and the percentage advantage of one optimizer variant over another across the entire training trajectory.</p>
+                           
+                            <h4 class="blog-subheading">Time-to-target speedup</h4>
+                           
+                            <p>We can quantify optimization efficiency by measuring the training steps required to reach a specific validation target. To reach a validation perplexity of 2.50, MuonW at its optimal learning rate (&sim;\(2.27 \times 10^{-2}\)) effectively crosses this threshold by checkpoint 10. In contrast, AdamH at its optimal learning rate (&sim;\(5.69 \times 10^{-3}\)) only reaches 2.50 around checkpoint 19. This demonstrates that MuonW achieves the target perplexity in roughly <strong>47% fewer steps</strong>, translating to a <strong>1.9&times; speedup</strong> over the best Adam configuration.</p>
+
+                            <h4 class="blog-subheading">Final test perplexity by learning rate</h4>
+
+                        <p>The line plots below show the final validation perplexity (at the last checkpoint) for each optimizer pair as a function of the learning rate (log scale). Lower perplexity indicates better performance.</p>
+
+                        <figure class="blog-image">
+                            <img src="/blogs/muon/assets/comparison_AdamH_vs_AdamW.png"
+                                alt="Final test perplexity: AdamH vs AdamW" loading="lazy" />
+                            <figcaption>Final test perplexity for AdamH (blue) and AdamW (red) across learning rates.</figcaption>
+                        </figure>
+
+                        <p>Hyperball improves Adam's best-case performance but narrows its stable operating window. While the stable learning rate window is noticeably narrower for AdamH, its absolute lowest point is better: AdamH achieves the lowest overall perplexity for the Adam family (&sim;2.485) at a learning rate of &sim;\(5.69 \times 10^{-3}\), establishing a clear advantage over AdamW (&sim;2.529) at this same rate. However, AdamW proves more resilient at the extremes. At the lowest learning rate (&sim;\(9.00 \times 10^{-5}\)), AdamW maintains a lead (&sim;2.534 vs. &sim;2.566). Conversely, at the highest rate (&sim;\(2.27 \times 10^{-2}\)), AdamH degrades sharply (&sim;2.574) while AdamW remains relatively stable (&sim;2.526). Ultimately, while Hyperball unlocks Adam's peak performance, standard weight decay provides broader hyperparameter robustness.</p>
+                        
+                        <figure class="blog-image">
+                            <img src="/blogs/muon/assets/comparison_MuonH_vs_MuonW.png"
+                                alt="Final test perplexity: MuonH vs MuonW" loading="lazy" />
+                            <figcaption>Final test perplexity for MuonH (blue) and MuonW (red) across learning rates.</figcaption>
+                        </figure>
+
+                        <p>The dynamic between Muon variants is perfectly inverted: Hyperball dominates at low learning rates, while independent weight decay scales far better to higher rates. At &sim;\(9.00 \times 10^{-5}\), MuonH cleanly outperforms MuonW (&sim;2.555 vs. &sim;2.611), maintaining its edge through the &sim;\(1.43 \times 10^{-3}\) regime with a minimum perplexity of &sim;2.481. However, as the learning rate increases, MuonW closes the gap and eventually dominates. By &sim;\(5.69 \times 10^{-3}\), MuonW takes the lead (&sim;2.468 vs. &sim;2.484), and at the highest learning rate (&sim;\(2.27 \times 10^{-2}\)), it achieves the absolute best test perplexity across all sweeps (&sim;2.464), whereas MuonH destabilizes and rises to &sim;2.565.</p>
+
+                        <h4 class="blog-subheading">Perplexity advantage over training</h4>
+
+                        <p>The heatmaps below visualize the percentage advantage of one variant over the other at each checkpoint and learning rate. Green indicates the first-named variant (AdamH or MuonH) is outperforming; red indicates the second (AdamW or MuonW) holds the lead.</p>
+
+                        <figure class="blog-image">
+                            <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-start;">
+                                <div style="flex: 1; min-width: 280px;">
+                                    <img src="/blogs/muon/assets/advantage_AdamH_vs_AdamW.png"
+                                        alt="Perplexity advantage: AdamH vs AdamW" loading="lazy" style="width: 100%;" />
+                                </div>
+                                <div style="flex: 1; min-width: 280px;">
+                                    <img src="/blogs/muon/assets/advantage_MuonH_vs_MuonW.png"
+                                        alt="Perplexity advantage: MuonH vs MuonW" loading="lazy" style="width: 100%;" />
+                                </div>
+                            </div>
+                            <figcaption>Left: AdamH vs AdamW. Right: MuonH vs MuonW. Positive (green) = first-named variant better.</figcaption>
+                        </figure>
+
+                        <p>The heatmap confirms the temporal consistency of AdamH's mid-range superiority. At learning rates of &sim;\(1.43 \times 10^{-3}\) and &sim;\(5.69 \times 10^{-3}\), AdamH maintains a persistent advantage of roughly +1% to +2% (green) across nearly all checkpoints. Outside this optimal band, the advantage safely inverts. At the lowest learning rate, AdamH trails by &sim;&minus;1.2% during the middle phase of training. At the highest learning rate, AdamW establishes a consistent lead across all steps, with AdamH trailing by approximately &minus;1.9% by the final checkpoints.</p>
+
+                        <p>The heatmap for Muon reveals a sharp phase transition in optimizer dominance based on the learning rate scale. At &sim;\(9.00 \times 10^{-5}\), MuonH holds a commanding &sim;+2.2% advantage (dark green) throughout the entire training process. At &sim;\(5.69 \times 10^{-3}\), early checkpoints remain competitive before MuonW decisively takes over after checkpoint 6. By the maximum learning rate of &sim;\(2.27 \times 10^{-2}\), MuonW sustains a massive and expanding advantage (dark red), ultimately outperforming MuonH by nearly 4% (&approx;&minus;3.9%) by the end of training.</p>
+
+                        <h4 class="blog-subheading">Perplexity progression by checkpoint</h4>
+
+                        <p>The plots below show mean validation perplexity over the 20 checkpoints for each optimizer and learning rate. They make the temporal story behind the heatmaps explicit: how quickly each configuration improves and where it stabilizes.</p>
+
+                        <figure class="blog-image">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; max-width: 100%;">
+                                <div>
+                                    <img src="/blogs/muon/assets/perplexity_progression_AdamH.png"
+                                        alt="Perplexity progression — AdamH" loading="lazy" style="width: 100%;" />
+                                    <p style="margin: 0.25rem 0 0; font-size: 0.9em; color: #57534e;">AdamH</p>
+                                </div>
+                                <div>
+                                    <img src="/blogs/muon/assets/perplexity_progression_AdamW.png"
+                                        alt="Perplexity progression — AdamW" loading="lazy" style="width: 100%;" />
+                                    <p style="margin: 0.25rem 0 0; font-size: 0.9em; color: #57534e;">AdamW</p>
+                                </div>
+                                <div>
+                                    <img src="/blogs/muon/assets/perplexity_progression_MuonH.png"
+                                        alt="Perplexity progression — MuonH" loading="lazy" style="width: 100%;" />
+                                    <p style="margin: 0.25rem 0 0; font-size: 0.9em; color: #57534e;">MuonH</p>
+                                </div>
+                                <div>
+                                    <img src="/blogs/muon/assets/perplexity_progression_MuonW.png"
+                                        alt="Perplexity progression — MuonW" loading="lazy" style="width: 100%;" />
+                                    <p style="margin: 0.25rem 0 0; font-size: 0.9em; color: #57534e;">MuonW</p>
+                                </div>
+                            </div>
+                            <figcaption>Mean validation perplexity over training checkpoints for each optimizer, across five learning rates. Lower is better.</figcaption>
+                        </figure>
+
+                        <p>For AdamH, the intermediate learning rate &sim;\(5.69 \times 10^{-3}\) (green) gives the steepest drop and the lowest final perplexity (&sim;2.48); the lowest LR (\(9\times10^{-5}\)) improves slowly and stays highest, while the highest LR (&sim;\(2.27\times10^{-2}\)) is unstable and ends near 2.57. AdamW behaves differently: the smallest learning rate (\(9\times10^{-5}\)) reaches the best final perplexity (&sim;2.51) by the end, with a steady decline and little oscillation; higher LRs converge faster initially but plateau at slightly higher values. MuonH is strongest at mid-range LRs (&sim;\(1.43\times10^{-3}\) and &sim;\(5.69\times10^{-3}\)), which reach the lowest perplexity (&sim;2.48); the highest LR again shows more fluctuation and a worse final value. MuonW favors higher learning rates: the highest LR (&sim;\(2.27\times10^{-2}\)) achieves the best final perplexity (&sim;2.47) with a fast initial drop, while the lowest LR stays worst throughout. These progression curves align with the final-perplexity curves and heatmaps: AdamH and MuonH excel in a mid-LR band; AdamW and MuonW extend their best performance to low and high LRs respectively, with MuonW at high LR giving the best overall validation perplexity.</p>
+
+                        <p>First, progression at each learning rate (all four optimizers on one plot):</p>
+
+                        <figure class="blog-image">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; max-width: 100%;">
+                                <div>
+                                    <img src="/blogs/muon/assets/perplexity_progression_lr_9em05.png"
+                                        alt="Perplexity progression — lr=9×10⁻⁵" loading="lazy" style="width: 100%;" />
+                                    <p style="margin: 0.25rem 0 0; font-size: 0.9em; color: #57534e;">lr ≈ 9×10⁻⁵</p>
+                                </div>
+                                <div>
+                                    <img src="/blogs/muon/assets/perplexity_progression_lr_0p00035857.png"
+                                        alt="Perplexity progression — lr≈3.59×10⁻⁴" loading="lazy" style="width: 100%;" />
+                                    <p style="margin: 0.25rem 0 0; font-size: 0.9em; color: #57534e;">lr ≈ 3.59×10⁻⁴</p>
+                                </div>
+                                <div>
+                                    <img src="/blogs/muon/assets/perplexity_progression_lr_0p0014287.png"
+                                        alt="Perplexity progression — lr≈1.43×10⁻³" loading="lazy" style="width: 100%;" />
+                                    <p style="margin: 0.25rem 0 0; font-size: 0.9em; color: #57534e;">lr ≈ 1.43×10⁻³</p>
+                                </div>
+                                <div>
+                                    <img src="/blogs/muon/assets/perplexity_progression_lr_0p0056924.png"
+                                        alt="Perplexity progression — lr≈5.69×10⁻³" loading="lazy" style="width: 100%;" />
+                                    <p style="margin: 0.25rem 0 0; font-size: 0.9em; color: #57534e;">lr ≈ 5.69×10⁻³</p>
+                                </div>
+                                <div style="grid-column: 1 / -1; max-width: 50%;">
+                                    <img src="/blogs/muon/assets/perplexity_progression_lr_0p022681.png"
+                                        alt="Perplexity progression — lr≈2.27×10⁻²" loading="lazy" style="width: 100%;" />
+                                    <p style="margin: 0.25rem 0 0; font-size: 0.9em; color: #57534e;">lr ≈ 2.27×10⁻²</p>
+                                </div>
+                            </div>
+                            <figcaption>Mean validation perplexity over training checkpoints at each learning rate (AdamH, AdamW, MuonH, MuonW). Lower is better.</figcaption>
+                        </figure>
+
+                        <p>Below, the same data grouped by optimizer across the five learning rates:</p>
+
+                        <p>Collectively, the final-perplexity curves and temporal advantage heatmaps demonstrate that the efficacy of Hyperball (constrained weight decay) versus independent weight decay is highly contingent on the learning rate regime. At lower learning rates, the strict norm constraints of Hyperball successfully accelerate convergence and improve final perplexity. At higher learning rates, however, independent weight decay provides the flexibility necessary to reach the lowest global perplexity, with MuonW emerging as the most performant configuration overall.</p>
+                    </details>
+
+                    <details class="collapsible-section" open>
+                        <summary>
+                            <h3 id="sec-training-results">Training Dynamics</h3>
                         </summary>
                     <figure class="blog-image">
                         <img src="/blogs/muon/assets/loss_curves_nucleotide_loss.png"
@@ -645,25 +788,16 @@
                     </figure>
 
                     <p>We find that Muon achieves a lower train loss than Adam, consistent with existing
-                        literature<sup><a href="#ref-muon">2</a><a href="#ref-hyperball">10</a></sup><span
-                            class="sidenote-group"><sup class="sidenote-ref">8</sup><span
-                                class="sidenote-card side-right">The model is a multifunctional architecture
-                                similar to <a href="/introducing-axis/">Axis</a>, trained on a set of
-                                candidate cis-regulatory elements (cCREs) from the ENCODE v4 registry that
-                                are cell-type-specific to one of three cell lines: K562, HepG2, and
-                                SK-N-SH. Training was limited to 10 epochs due to compute constraints;
-                                the loss has not begun to saturate (we have trained to much lower
-                                cross-entropy in prior runs), so these results reflect relative optimizer
-                                comparisons, not absolute model quality.</span></span>.
+                        literature<sup><a href="#ref-muon">2</a><a href="#ref-hyperball">10</a></sup>.
                         Interestingly, the Hyperball constraint does not consistently improve both optimizers:
                         it helps Adam (AdamH better than AdamW) but <em>hurts</em> Muon (MuonW better than MuonH)<span
-                            class="sidenote-group"><sup class="sidenote-ref">9</sup><span
-                                class="sidenote-card side-right">The Hyperball blog<sup><a
-                                        href="#ref-hyperball">10</a></sup> actually shows that for Muon, the
-                                losses are comparable for models with &le; 500M parameters, and Hyperball
-                                dominates for the largest model of &gt;1B parameters. Our largest model is
-                                actually ~420M parameters large (as we are somewhat compute bound), so it is
-                                still possible for MuonH to outperform MuonW at a larger scale.</span></span>.
+                        class="sidenote-group"><sup class="sidenote-ref">9</sup><span
+                        class="sidenote-card side-right">The Hyperball blog<sup><a
+                        href="#ref-hyperball">10</a></sup> actually shows that for Muon, the
+                        losses are comparable for models with &le; 500M parameters, and Hyperball
+                        dominates for the largest model of &gt;1B parameters. Our largest model is
+                        actually ~420M parameters large (as we are somewhat compute bound), so it is
+                        still possible for MuonH to outperform MuonW at a larger scale.</span></span>.
                         The best overall configuration is Muon with independent weight decay (MuonW).</p>
                         <p>Why did Hyperball worsen Muon&rsquo;s performance? We hypothesize that this is
                         because Hyperball&rsquo;s re-projection scales all
@@ -791,89 +925,6 @@
                         on the correct token. Although we retain % CE in the heatmaps for visual clarity, we
                         use PPL ratios when discussing optimizer comparisons in the text.</p>
 
-                    </details>
-
-                    <details class="collapsible-section" open>
-                        <summary>
-                            <h3 id="sec-perplexity-validation">Perplexity Validation</h3>
-                        </summary>
-                        <p>Beyond raw cross-entropy loss, we track validation perplexity throughout training as a more interpretable measure of model capacity. Because perplexity directly reflects the geometric-mean inverse probability assigned to the correct token, it provides a highly sensitive metric for evaluating optimizer configurations across both learning rates and temporal checkpoints. We evaluate performance on a held-out validation split at regular intervals, reporting both the absolute final test perplexity (evaluated on sequences masked at the training rate) and the percentage advantage of one optimizer variant over another across the entire training trajectory.</p>
-
-                        <h4 class="blog-subheading">Final test perplexity by learning rate</h4>
-
-                        <p>The line plots below show the final validation perplexity (at the last checkpoint) for each optimizer pair as a function of the learning rate (log scale). Lower perplexity indicates better performance.</p>
-
-                        <figure class="blog-image">
-                            <img src="/blogs/muon/assets/comparison_AdamH_vs_AdamW.png"
-                                alt="Final test perplexity: AdamH vs AdamW" loading="lazy" />
-                            <figcaption>Final test perplexity for AdamH (blue) and AdamW (red) across learning rates.</figcaption>
-                        </figure>
-
-                        <p>Hyperball improves Adam's best-case performance but narrows its stable operating window. AdamH achieves the lowest overall perplexity for the Adam family (&sim;2.485) at a learning rate of &sim;\(5.69 \times 10^{-3}\), establishing a clear advantage over AdamW (&sim;2.529) at this same rate. However, AdamW proves more resilient at the extremes. At the lowest learning rate (&sim;\(9.00 \times 10^{-5}\)), AdamW maintains a lead (&sim;2.534 vs. &sim;2.566). Conversely, at the highest rate (&sim;\(2.27 \times 10^{-2}\)), AdamH degrades sharply (&sim;2.574) while AdamW remains relatively stable (&sim;2.526). Ultimately, while Hyperball unlocks Adam's peak performance, standard weight decay provides broader hyperparameter robustness.</p>
-
-                        <figure class="blog-image">
-                            <img src="/blogs/muon/assets/comparison_MuonH_vs_MuonW.png"
-                                alt="Final test perplexity: MuonH vs MuonW" loading="lazy" />
-                            <figcaption>Final test perplexity for MuonH (blue) and MuonW (red) across learning rates.</figcaption>
-                        </figure>
-
-                        <p>The dynamic between Muon variants is perfectly inverted: Hyperball dominates at low learning rates, while independent weight decay scales far better to higher rates. At &sim;\(9.00 \times 10^{-5}\), MuonH cleanly outperforms MuonW (&sim;2.555 vs. &sim;2.611), maintaining its edge through the &sim;\(1.43 \times 10^{-3}\) regime with a minimum perplexity of &sim;2.481. However, as the learning rate increases, MuonW closes the gap and eventually dominates. By &sim;\(5.69 \times 10^{-3}\), MuonW takes the lead (&sim;2.468 vs. &sim;2.484), and at the highest learning rate (&sim;\(2.27 \times 10^{-2}\)), it achieves the absolute best test perplexity across all sweeps (&sim;2.464), whereas MuonH destabilizes and rises to &sim;2.565.</p>
-
-                        <h4 class="blog-subheading">Perplexity advantage over training</h4>
-
-                        <p>The heatmaps below visualize the percentage advantage of one variant over the other at each checkpoint and learning rate. Green indicates the first-named variant (AdamH or MuonH) is outperforming; red indicates the second (AdamW or MuonW) holds the lead.</p>
-
-                        <figure class="blog-image">
-                            <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-start;">
-                                <div style="flex: 1; min-width: 280px;">
-                                    <img src="/blogs/muon/assets/advantage_AdamH_vs_AdamW.png"
-                                        alt="Perplexity advantage: AdamH vs AdamW" loading="lazy" style="width: 100%;" />
-                                </div>
-                                <div style="flex: 1; min-width: 280px;">
-                                    <img src="/blogs/muon/assets/advantage_MuonH_vs_MuonW.png"
-                                        alt="Perplexity advantage: MuonH vs MuonW" loading="lazy" style="width: 100%;" />
-                                </div>
-                            </div>
-                            <figcaption>Left: AdamH vs AdamW. Right: MuonH vs MuonW. Positive (green) = first-named variant better.</figcaption>
-                        </figure>
-
-                        <p>The heatmap confirms the temporal consistency of AdamH's mid-range superiority. At learning rates of &sim;\(1.43 \times 10^{-3}\) and &sim;\(5.69 \times 10^{-3}\), AdamH maintains a persistent advantage of roughly +1% to +2% (green) across nearly all checkpoints. Outside this optimal band, the advantage safely inverts. At the lowest learning rate, AdamH trails by &sim;&minus;1.2% during the middle phase of training. At the highest learning rate, AdamW establishes a consistent lead across all steps, with AdamH trailing by approximately &minus;1.9% by the final checkpoints.</p>
-
-                        <p>The heatmap for Muon reveals a sharp phase transition in optimizer dominance based on the learning rate scale. At &sim;\(9.00 \times 10^{-5}\), MuonH holds a commanding &sim;+2.2% advantage (dark green) throughout the entire training process. At &sim;\(5.69 \times 10^{-3}\), early checkpoints remain competitive before MuonW decisively takes over after checkpoint 6. By the maximum learning rate of &sim;\(2.27 \times 10^{-2}\), MuonW sustains a massive and expanding advantage (dark red), ultimately outperforming MuonH by nearly 4% (&approx;&minus;3.9%) by the end of training.</p>
-
-                        <h4 class="blog-subheading">Perplexity progression by checkpoint</h4>
-
-                        <p>The plots below show mean validation perplexity over the 20 checkpoints for each optimizer and learning rate. They make the temporal story behind the heatmaps explicit: how quickly each configuration improves and where it stabilizes.</p>
-
-                        <figure class="blog-image">
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; max-width: 100%;">
-                                <div>
-                                    <img src="/blogs/muon/assets/perplexity_progression_AdamH.png"
-                                        alt="Perplexity progression — AdamH" loading="lazy" style="width: 100%;" />
-                                    <p style="margin: 0.25rem 0 0; font-size: 0.9em; color: #57534e;">AdamH</p>
-                                </div>
-                                <div>
-                                    <img src="/blogs/muon/assets/perplexity_progression_AdamW.png"
-                                        alt="Perplexity progression — AdamW" loading="lazy" style="width: 100%;" />
-                                    <p style="margin: 0.25rem 0 0; font-size: 0.9em; color: #57534e;">AdamW</p>
-                                </div>
-                                <div>
-                                    <img src="/blogs/muon/assets/perplexity_progression_MuonH.png"
-                                        alt="Perplexity progression — MuonH" loading="lazy" style="width: 100%;" />
-                                    <p style="margin: 0.25rem 0 0; font-size: 0.9em; color: #57534e;">MuonH</p>
-                                </div>
-                                <div>
-                                    <img src="/blogs/muon/assets/perplexity_progression_MuonW.png"
-                                        alt="Perplexity progression — MuonW" loading="lazy" style="width: 100%;" />
-                                    <p style="margin: 0.25rem 0 0; font-size: 0.9em; color: #57534e;">MuonW</p>
-                                </div>
-                            </div>
-                            <figcaption>Mean validation perplexity over training checkpoints for each optimizer, across five learning rates. Lower is better.</figcaption>
-                        </figure>
-
-                        <p>For AdamH, the intermediate learning rate &sim;\(5.69 \times 10^{-3}\) (green) gives the steepest drop and the lowest final perplexity (&sim;2.48); the lowest LR (\(9\times10^{-5}\)) improves slowly and stays highest, while the highest LR (&sim;\(2.27\times10^{-2}\)) is unstable and ends near 2.57. AdamW behaves differently: the smallest learning rate (\(9\times10^{-5}\)) reaches the best final perplexity (&sim;2.51) by the end, with a steady decline and little oscillation; higher LRs converge faster initially but plateau at slightly higher values. MuonH is strongest at mid-range LRs (&sim;\(1.43\times10^{-3}\) and &sim;\(5.69\times10^{-3}\)), which reach the lowest perplexity (&sim;2.48); the highest LR again shows more fluctuation and a worse final value. MuonW favors higher learning rates: the highest LR (&sim;\(2.27\times10^{-2}\)) achieves the best final perplexity (&sim;2.47) with a fast initial drop, while the lowest LR stays worst throughout. These progression curves align with the final-perplexity curves and heatmaps: AdamH and MuonH excel in a mid-LR band; AdamW and MuonW extend their best performance to low and high LRs respectively, with MuonW at high LR giving the best overall validation perplexity.</p>
-
-                        <p>Collectively, the final-perplexity curves and temporal advantage heatmaps demonstrate that the efficacy of Hyperball (constrained weight decay) versus independent weight decay is highly contingent on the learning rate regime. At lower learning rates, the strict norm constraints of Hyperball successfully accelerate convergence and improve final perplexity. At higher learning rates, however, independent weight decay provides the flexibility necessary to reach the lowest global perplexity, with MuonW emerging as the most performant configuration overall.</p>
                     </details>
 
                     <details class="collapsible-section" open>
@@ -1251,7 +1302,7 @@
                     <p>Note that \(\sigma_2\) is the maximum stretch induced orthogonal to
                         \(v_1=\arg\max_{\|x\|=1}\|Ax\|\), or \(\sigma_2=\max_{x\perp v_1:\:\|x\|=1}\|Ax\|\), and
                         \(\sigma_3\) has the stretch orthogonal to the first 2, and so on<span
-                            class="sidenote-group"><sup class="sidenote-ref">17</sup><span
+                            class="sidenote-group"><sup class="sidenote-ref">16</sup><span
                                 class="sidenote-card side-right">For completeness, we can generalize this idea
                                 either recursively (where we define \(\sigma_i\) as the max stretch orthogonal to
                                 \(v_j\) \(\forall j \lt i\)), or succinctly using the Min max theorem:
@@ -1264,7 +1315,7 @@
                     <ul>
                         <li><strong>Spectral norm/stability:</strong> The spectral norm is defined as
                             \(\|\cdot\|_2=\sigma_1(\cdot)\) on matrix inputs. It is the operator norm<span
-                                class="sidenote-group"><sup class="sidenote-ref">18</sup><span
+                                class="sidenote-group"><sup class="sidenote-ref">17</sup><span
                                     class="sidenote-card side-left">Formally, the operator norm \(\|\cdot\|_p\) is
                                     defined for \(A\in \mathbb R^{m\times n}\) as \(\|A\|_p=\max\{\|Ax\|_p:x\in
                                     \mathbb R^n, \|x\|_p\le 1\}\), where we apply the \(\ell_p\) norm to the
@@ -1698,6 +1749,10 @@
                     var group = card.closest('.sidenote-group');
                     var container = card.offsetParent;
                     if (!group || !container) return;
+                    /* Skip sidenotes inside collapsed sections — they shouldn't
+                       participate in overlap detection at all. */
+                    var closedDetails = card.closest('details.collapsible-section:not([open])');
+                    if (closedDetails) return;
                     var ref = group.querySelector('.sidenote-ref');
                     if (!ref) return;
 

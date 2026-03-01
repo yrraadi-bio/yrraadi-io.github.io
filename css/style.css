@@ -1191,6 +1191,10 @@ main {
         margin: 0;
     }
 
+    .blog-with-sidebar .blog-toc ul ul {
+        padding-left: 0.75rem;
+    }
+
     .blog-with-sidebar .blog-toc a {
         display: block;
         padding: 0.4rem 0.75rem;
@@ -1293,6 +1297,10 @@ main {
     margin: 0;
     display: inline;
     line-height: 1;
+}
+
+.blog-article details.collapsible-section details.collapsible-section > summary h3 {
+    font-size: 1.3rem;
 }
 
 .blog-article p {
@@ -1596,7 +1604,7 @@ main {
         display: none !important;
     }
 
-    /* Indicator appended to a visible card when another note is hidden behind it */
+    Indicator appended to a visible card when another note is hidden behind it
     .sidenote-overflow-indicator {
         display: flex;
         align-items: center;
