@@ -11,18 +11,18 @@
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Does Muon improve regulatory DNA learning? Part 1. Training Dynamics — Origin Bio</title>
+    <title>Does Muon improve regulatory DNA learning? Part 1. Training Results — Origin Bio</title>
     <meta name="description"
         content="Exploring Adam, Muon, and Hyperball optimizers for DNA and biology-focused AI models. Weight decay, singular values, and scale invariance." />
     <meta property="og:type" content="article" />
     <meta property="og:site_name" content="Origin Bio" />
-    <meta property="og:title" content="Does Muon improve regulatory DNA learning?" />
+    <meta property="og:title" content="Does Muon improve regulatory DNA learning? Part 1. Training Results" />
     <meta property="og:description"
         content="Exploring Adam, Muon, and Hyperball optimizers for DNA and biology-focused AI models." />
     <meta property="og:url" content="https://origin.bio/blogs/muon/" />
     <meta property="og:image" content="https://origin.bio/assets/thumbnail-og.jpg?v=1" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Does Muon improve regulatory DNA learning? Part 1. Training Dynamics" />
+    <meta name="twitter:title" content="Does Muon improve regulatory DNA learning? Part 1. Training Results" />
     <link rel="canonical" href="https://origin.bio/blogs/muon/">
     <link rel="stylesheet" href="/css/style.css">
     <link rel="icon" href="/assets/favicon.png" type="image/png">
@@ -47,6 +47,7 @@
 </head>
 
 <body class="blog-page blog-with-sidebar">
+    <div class="reading-progress-bar"></div>
     <div class="dna-background">
         <div class="dna-strand"></div>
         <div class="dna-strand"></div>
@@ -74,6 +75,7 @@
                     </div>
                     <ul>
                         <li><a href="#page-title">Title</a></li>
+                        <li><a href="#sec-distribution">Distribution Differences</a></li>
                         <li><a href="#sec-muon">Muon</a></li>
                         <li><a href="#sec-weight-regularization">Weight Regularization</a>
                             <ul>
@@ -102,7 +104,7 @@
                         </video>
                     </figure>
 
-                    <h2 id="page-title">Does Muon improve regulatory DNA learning?</h2>
+                    <h2 id="page-title">Does Muon improve regulatory DNA learning? Part 1. Training Results</h2>
                     <p class="blog-date">March 4, 2026 &middot; Viraj Doshi
                         <span class="author-socials">
                             <a href="https://x.com/viraj9451" target="_blank" class="author-social-link" aria-label="Twitter">
@@ -147,6 +149,123 @@
                         dependencies that characterize language modeling. In this blog, we explore the behavior of
                         recent optimizers on DNA sequence modeling in regulatory regions, and evaluate whether
                         optimizer choices that work well for LLMs transfer to this distinct setting.</p>
+
+                    <details class="collapsible-section">
+                        <summary>
+                            <h3 id="sec-distribution">Distribution Differences</h3>
+                        </summary>
+
+                    <h4 class="blog-subheading">Zipf&rsquo;s law in natural language</h4>
+                    <p>Nearly all modern optimizer benchmarks are run on natural language data, where
+                        token frequencies follow Zipf&rsquo;s law<sup><a href="#ref-zipf">21</a></sup>:
+                        the \(k\)-th most common token appears with frequency
+                        \(f(k)\propto 1/k^{\alpha}\) (\(\alpha\approx 1\)). A handful of tokens (&ldquo;the&rdquo;,
+                        &ldquo;a&rdquo;, &ldquo;is&rdquo;) dominate, while the vast majority of the
+                        ~100k vocabulary is rarely seen.</p>
+
+                    <figure class="blog-image">
+                        <img src="/blogs/muon/assets/zipf's law.png"
+                            alt="Zipf's law: token frequency vs rank on linear and log-log scales" loading="lazy" />
+                        <figcaption>Zipf&rsquo;s law on a linear (left) and log-log (right) scale. The
+                            straight line on the log-log plot is the signature of a power-law
+                            distribution. Source: <a href="https://www.statology.org/the-concise-guide-to-zipfs-law/" target="_blank">Statology</a>.</figcaption>
+                    </figure>
+
+                    <h4 class="blog-subheading">DNA is near-uniform</h4>
+                    <p>DNA, by contrast, has a vocabulary of just 4 nucleotides. In our training data (candidate cis-regulatory elements (cCREs) from ENCODE cell
+                        lines) the marginal nucleotide frequencies are strikingly close to
+                        uniform:</p>
+
+                    <figure class="blog-image">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; max-width: 100%;">
+                            <div>
+                                <img src="/blogs/muon/assets/nucleotide_K562.png"
+                                    alt="Nucleotide distribution — K562" loading="lazy" style="width: 100%;" />
+                            </div>
+                            <div>
+                                <img src="/blogs/muon/assets/nucleotide_HepG2.png"
+                                    alt="Nucleotide distribution — HepG2" loading="lazy" style="width: 100%;" />
+                            </div>
+                            <div>
+                                <img src="/blogs/muon/assets/nucleotide_SKNSH.png"
+                                    alt="Nucleotide distribution — SK-N-SH" loading="lazy" style="width: 100%;" />
+                            </div>
+                        </div>
+                        <figcaption>Nucleotide frequencies at position 1 across the three cell lines in
+                            our training set. K562 and HepG2 are nearly uniform; SK-N-SH shows a
+                            moderate GC bias (28.3% each vs 21.7% for A/T).</figcaption>
+                    </figure>
+
+                    <p>The entropy of DNA&rsquo;s token distribution sits near its theoretical
+                        maximum: \(H_{\text{DNA}}\approx\log_2 4=2\) bits. Natural language, despite
+                        its vastly larger vocabulary, has <em>lower</em> effective entropy because
+                        Zipf&rsquo;s heavy tail concentrates probability mass on a small fraction of
+                        tokens. This distinction has concrete consequences for how optimizers see
+                        gradients, meaning the gradient statistics across tokens behave very
+                        differently numerically.</p>
+
+                    <details class="collapsible-section">
+                        <summary>
+                            <h4>Why gradient statistics differ: a sketch</h4>
+                        </summary>
+                        <p>Consider a vocabulary of \(K\) tokens with marginal frequencies
+                            \(p_1\ge p_2\ge\cdots\ge p_K\). In a mini-batch of \(B\) tokens drawn
+                            i.i.d. from \(p\), the expected count of token \(k\) is
+                            \(n_k=B\,p_k\). The gradient of the loss decomposes as</p>
+                        \[
+                        g = \frac{1}{B}\sum_{k=1}^{K} n_k\,\bar g_k
+                          = \sum_{k=1}^{K} p_k\,\bar g_k,
+                        \]
+                        <p>where \(\bar g_k\) is the mean gradient contribution conditioned on
+                            token \(k\). Adam&rsquo;s running second moment for parameters
+                            associated with token \(k\) accumulates as
+                            \(v_k\propto p_k\,\mathbb{E}[\|\bar g_k\|^2]\). The ratio of the
+                            largest to smallest second moment therefore scales with the frequency
+                            ratio of the most to least common token:</p>
+                        \[
+                        \frac{v_1}{v_K}\;\propto\;\frac{p_1}{p_K}.
+                        \]
+
+                        <p><strong>Zipf (NLP):</strong> With \(p_k\propto 1/k\) and
+                            \(K\approx 100{,}000\), the dynamic range is
+                            \(p_1/p_K\approx K\approx 10^5\). Adam&rsquo;s per-coordinate
+                            \(1/\sqrt{v_k}\) scaling spans <em>orders of magnitude</em>,
+                            providing substantial per-direction adaptation that compensates for
+                            the wildly uneven gradient contributions of frequent vs. rare
+                            tokens.</p>
+
+                        <p><strong>DNA:</strong> With \(K=4\) and
+                            \(p_k\approx 1/4\), the dynamic range is
+                            \(p_1/p_K\approx 4\). Adam&rsquo;s adaptive denominator
+                            \(\sqrt{v_k}\) is nearly identical across all tokens, reducing
+                            the coordinate-wise scaling to an approximately uniform scalar.
+                            The per-direction adaptation that makes Adam powerful in NLP
+                            provides <em>negligible benefit</em> here, while Muon&rsquo;s
+                            whitened, scale-free updates are naturally suited to this
+                            near-isotropic landscape.</p>
+                    </details>
+
+                    <h4 class="blog-subheading">Optimizer performance is distribution-dependent</h4>
+                    <p>Wilson et al.<sup><a href="#ref-wilson">22</a></sup> demonstrated empirically
+                        that the relative ranking of optimizers changes across domains: adaptive
+                        methods (Adam, AdaGrad, RMSProp) find solutions that generalize
+                        <em>worse</em> than SGD on image classification tasks, despite converging
+                        faster. Yet these same adaptive methods dominate in NLP, where the Zipfian
+                        gradient landscape demands per-coordinate scaling. This is consistent with
+                        the classical No Free Lunch theorems<sup><a
+                        href="#ref-nfl">23</a></sup>, which prove that no single
+                        optimization algorithm is universally superior, and performance is always
+                        relative to the structure of the problem.</p>
+
+                    <p>Our results extend this observation to genomics. The near-uniform token
+                        distribution of DNA removes the statistical asymmetry that adaptive methods
+                        exploit in NLP, while the low cardinality (\(K=4\)) and positional grammar
+                        of regulatory sequences create a loss landscape with fundamentally different
+                        curvature. This is precisely why benchmarking optimizers
+                        <em>on DNA data directly</em> (as we do here) is essential:
+                        rankings established on language corpora do not transfer.</p>
+
+                    </details>
 
                     <details class="collapsible-section">
                         <summary>
@@ -1643,6 +1762,18 @@
                                 href="https://leloykun.github.io/ponder/shampoo-prism/" target="_blank">Shampoo-PRISM:
                                 Kronecker-Factored Optimization via Anisotropic Spectral Shaping</a>.
                             2026.</li>
+                        <li id="ref-zipf">Zach. <a
+                                href="https://www.statology.org/the-concise-guide-to-zipfs-law/"
+                                target="_blank">The Concise Guide to Zipf&rsquo;s Law</a>.
+                            Statology.</li>
+                        <li id="ref-wilson">Wilson et al. <a
+                                href="https://arxiv.org/abs/1705.08292"
+                                target="_blank">The Marginal Value of Adaptive Gradient Methods in
+                                Machine Learning</a>. NeurIPS 2017.</li>
+                        <li id="ref-nfl">Wolpert &amp; Macready. <a
+                                href="https://ieeexplore.ieee.org/document/585893"
+                                target="_blank">No Free Lunch Theorems for Optimization</a>.
+                            IEEE Trans. Evolutionary Computation 1997.</li>
                     </ol>
                 </article>
             </div>
@@ -1966,6 +2097,22 @@
 
             closeBtn.addEventListener('click', collapse);
             openBtn.addEventListener('click', expand);
+        })();
+    </script>
+    <script>
+        (function () {
+            var bar = document.querySelector('.reading-progress-bar');
+            var target = document.getElementById('appendix');
+            if (!bar || !target) return;
+
+            function update() {
+                var targetTop = target.getBoundingClientRect().top + window.pageYOffset;
+                var progress = Math.min(1, Math.max(0, window.pageYOffset / (targetTop - window.innerHeight * 0.5)));
+                bar.style.transform = 'scaleX(' + progress + ')';
+            }
+
+            window.addEventListener('scroll', update, { passive: true });
+            update();
         })();
     </script>
 </body>

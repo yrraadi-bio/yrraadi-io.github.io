@@ -1071,6 +1071,20 @@ main {
     padding: 2rem 0;
 }
 
+.reading-progress-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: linear-gradient(90deg, #3b82f6, #1e40af);
+    transform-origin: left;
+    transform: scaleX(0);
+    z-index: 9999;
+    pointer-events: none;
+    will-change: transform;
+}
+
 .blog-toc,
 .blog-toc-open {
     display: none;
@@ -1080,12 +1094,12 @@ main {
     .blog-with-sidebar .blog-content {
         max-width: 1400px;
         margin: 0 auto;
-        padding: 0 2rem 0 18rem;
+        padding: 0 2rem 0 11rem;
         transition: padding-left 0.3s ease;
     }
 
     .blog-with-sidebar:not(.sidebar-collapsed) header {
-        padding-left: 16rem;
+        padding-left: 9rem;
         transition: padding-left 0.3s ease;
     }
 
@@ -1099,10 +1113,10 @@ main {
         position: fixed;
         top: 0;
         left: 0;
-        width: 16rem;
+        width: 9rem;
         height: 100vh;
         overflow-y: auto;
-        padding: 1.5rem 1.25rem 1.5rem;
+        padding: 1.5rem 0.5rem 1.5rem;
         background: #ffffff;
         border-right: 1px solid #ebebeb;
         z-index: 50;
