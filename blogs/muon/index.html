@@ -77,8 +77,8 @@
                         <li><a href="#sec-muon">Muon</a></li>
                         <li><a href="#sec-weight-regularization">Weight Regularization</a>
                             <ul>
-                                <li><a href="#sec-weight-decay">Weight decay</a></li>
-                                <li><a href="#sec-hyperball">Hyperball update</a></li>
+                                <li><a href="#sec-weight-decay">Weight Decay</a></li>
+                                <li><a href="#sec-hyperball">Hyperball Update</a></li>
                             </ul>
                         </li>
                         <li><a href="#sec-perplexity-validation">Results</a></li>
@@ -103,7 +103,7 @@
                     </figure>
 
                     <h2 id="page-title">Does Muon improve regulatory DNA learning?</h2>
-                    <p class="blog-date">February 12, 2026 &middot; Viraj Doshi
+                    <p class="blog-date">March 4, 2026 &middot; Viraj Doshi
                         <span class="author-socials">
                             <a href="https://x.com/viraj9451" target="_blank" class="author-social-link" aria-label="Twitter">
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
@@ -118,16 +118,17 @@
                         </span>
                     </p>
 
+                    <!-- ========== TLDR / Highlights box – edit below ========== -->
                     <section class="blog-takeaways" aria-label="Key takeaways">
                         <h3>Highlights</h3>
                         <ul>
-                            <li>MuonW achieves an <b>&sim;0.87%</b> higher mean probability on the correct nucleotide than the best Adam configuration (a perplexity ratio of <b>&sim;1.009</b>).</li>
-                            <li>To reach a validation perplexity target of 2.50, MuonW requires <b>&sim;47% fewer steps</b> (checkpoint 10 vs. 19) compared to the optimal AdamH configuration, resulting in a <b>1.9&times; speedup</b>.</li>
-                            <li>There is a distinct phase change across the learning rate spectrum: MuonW at larger learning rates significantly outperforms its Hyperball counterpart (MuonH), whereas MuonH remains highly effective at lower learning rates.</li>
-                            <li>Adam with Hyperball (AdamH) achieves a perplexity ratio of <b>&sim;1.010</b> over AdamW at their respective optimal learning rates. While the stable learning rate window is narrower for AdamH, its absolute lowest perplexity is better.</li>
+                            <li>To reach a validation perplexity target of 2.50, Muon requires <b>&sim;32% fewer steps</b> than Adam (both with their most optimal weight regularization method), resulting in a <b>&sim;1.5&times; speedup</b>.</li>
+                            <li>For Muon, there is a distinct phase change across the learning rate spectrum: Muon with Hyperball reaches better validation perplexities at lower learning rates, but at higher rates Muon with Weight Decay starts outperforming its Hyperball counterpart, reaching the best validation perplexity overall.</li>
+                            <li>For Adam, the stable learning rate window where Adam with Hyperball outperforms is narrower than for Adam with Weight Decay, but the lowest perplexity is achieved with Adam with Hyperball.</li>
                             <li>We perform a spectral analysis to show how Muon's whitening promotes feature learning by forcing weights away from initialization.</li>
                         </ul>
                     </section>
+                    <!-- ========== End TLDR / Highlights box ========== -->
 
                     <p>Optimizers dictate the parameter update rules that govern the convergence trajectory of
                         Stochastic Gradient Descent (SGD). At present, variations of Adam<sup><a
@@ -256,7 +257,7 @@
                             <h3 id="sec-weight-regularization">Weight Regularization</h3>
                         </summary>
 
-                    <details class="collapsible-section">
+                    <details class="collapsible-section" open>
                         <summary>
                             <h3 id="sec-weight-decay">Why is weight decay necessary?</h3>
                         </summary>
@@ -292,7 +293,7 @@
 
                     </details>
 
-                    <details class="collapsible-section">
+                    <details class="collapsible-section" open>
                         <summary>
                             <h3 id="sec-hyperball">The Hyperball update</h3>
                         </summary>
@@ -752,7 +753,7 @@
                         
                         <h4 class="blog-subheading">Time-to-target speedup</h4>
                            
-                        <p>Ultimately, these performance differentials translate directly into computational efficiency. We can quantify optimization speed by measuring the training steps required to cross a specific validation target. To achieve a validation perplexity of 2.50, MuonW at its optimal learning rate effectively crosses the threshold by checkpoint 10. In contrast, AdamH at its optimal configuration only reaches 2.50 around checkpoint 19. This demonstrates that MuonW achieves the target perplexity in roughly 47% fewer steps, delivering a highly pragmatic 1.9&times; compute speedup over the best performing Adam baseline.</p>
+                        <p>Ultimately, these performance differentials translate directly into computational efficiency. We can quantify optimization speed by measuring the training steps required to cross a specific validation target. To achieve a validation perplexity of 2.50, MuonW at its optimal learning rate effectively crosses the threshold by checkpoint 13. In contrast, AdamH at its optimal configuration only reaches 2.50 around checkpoint 19. This demonstrates that MuonW achieves the target perplexity in roughly 32% fewer steps, delivering a ~1.5&times; compute speedup over the best performing Adam baseline.</p>
 
                     </details>
 
@@ -1168,23 +1169,6 @@
                     <p>Thus, the results presented here reflect relative optimizer comparisons at a fixed compute
                         budget, not the absolute frontier of model quality. Next, we plan to:</p>
                     <ul>
-                        <li><strong>Scale up compute:</strong> repeat this experiment with significantly
-                            more compute at larger scale to determine whether the optimizer rankings
-                            hold as models approach saturation. We have already extended the runs to ~30 epochs
-                            and observed that losses continued to decrease, with perplexity improving by
-                            a ratio of ~1.066 compared to the 10-epoch results. The trends held consistent:
-                            MuonW achieved the lowest loss (1.150), followed by MuonH (1.170), AdamH (1.176),
-                            and AdamW (1.185). The perplexity ratio between MuonW and AdamW was maintained
-                            at ~1.036. Notably, MuonH seems to approach
-                            the performance of the Adam models over this longer run. For later epochs, we probably require
-                            a smaller relative step size as we are getting closer to the saturation point (and MuonH has the largest
-                            relative step size), so applying a learning rate decay could help mitigate this problem.
-                            <figure class="blog-image" style="margin-top: 1rem;">
-                                <img src="/blogs/muon/assets/loss_curves_nucleotide_loss_28_epoch.png"
-                                    alt="Learning curves extended to ~30 epochs" loading="lazy" />
-                                <figcaption>Extended learning curves (~30 epochs). MuonW maintains its lead, while MuonH converges toward the Adam baselines.</figcaption>
-                            </figure>
-                        </li>
                         <li><strong>Run the full sweep with SSO:</strong> repeat the Adam/Muon \(\times\)
                             Hyperball sweeps using the Spectral Sphere Optimizer (SSO)<sup><a
                                     href="#ref-sso">18</a></sup> to test whether
