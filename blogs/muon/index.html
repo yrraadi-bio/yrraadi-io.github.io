@@ -1925,8 +1925,11 @@
                     var target = document.getElementById(href.slice(1));
                     if (!target) return;
 
-                    var collapsible = target.closest('details.collapsible-section');
-                    if (collapsible && !collapsible.open) collapsible.open = true;
+                    var el = target.closest('details.collapsible-section');
+                    while (el) {
+                        if (!el.open) el.open = true;
+                        el = el.parentElement.closest('details.collapsible-section');
+                    }
 
                     requestAnimationFrame(function () {
                         target.scrollIntoView({ behavior: 'auto', block: 'start' });
