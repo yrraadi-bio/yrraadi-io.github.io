@@ -75,7 +75,7 @@
                     <ul>
                         <li><a href="#page-title">Title</a></li>
                         <li><a href="#sec-muon">Muon</a></li>
-                        <li><a href="#sec-weight-regularization">Weight regularization</a>
+                        <li><a href="#sec-weight-regularization">Weight Regularization</a>
                             <ul>
                                 <li><a href="#sec-weight-decay">Weight decay</a></li>
                                 <li><a href="#sec-hyperball">Hyperball update</a></li>
@@ -84,7 +84,7 @@
                         <li><a href="#sec-perplexity-validation">Results</a></li>
                         <li><a href="#sec-training-results">Training Dynamics</a></li>
                         <li><a href="#spectral-analysis">Spectral Analysis</a></li>
-                        <li><a href="#sec-next-steps">Next steps</a></li>
+                        <li><a href="#sec-next-steps">Next Steps</a></li>
                         <li><a href="#appendix">Appendices</a></li>
                     </ul>
                 </nav>
@@ -121,14 +121,10 @@
                     <section class="blog-takeaways" aria-label="Key takeaways">
                         <h3>Highlights</h3>
                         <ul>
-                            <li>After training over 20 epochs:
-                                <ul>
-                                    <li>MuonW achieves an <b>&sim;0.87%</b> higher geometric-mean probability on the correct nucleotide than the best Adam configuration (a perplexity ratio of <b>&sim;1.009</b>).</li>
-                                    <li>To reach a validation perplexity target of 2.50, MuonW requires <b>&sim;47% fewer steps</b> (checkpoint 10 vs. 19) compared to the optimal AdamH configuration, resulting in a <b>1.9&times; speedup</b>.</li>
-                                    <li>There is a distinct phase change across the learning rate spectrum: MuonW at larger learning rates significantly outperforms its Hyperball counterpart (MuonH), whereas MuonH remains highly effective at lower learning rates.</li>
-                                    <li>Adam with Hyperball (AdamH) achieves a perplexity ratio of <b>&sim;1.010</b> over AdamW at their respective optimal learning rates. While the stable learning rate window is narrower for AdamH, its absolute lowest perplexity is better.</li>
-                                </ul>
-                            </li>
+                            <li>MuonW achieves an <b>&sim;0.87%</b> higher mean probability on the correct nucleotide than the best Adam configuration (a perplexity ratio of <b>&sim;1.009</b>).</li>
+                            <li>To reach a validation perplexity target of 2.50, MuonW requires <b>&sim;47% fewer steps</b> (checkpoint 10 vs. 19) compared to the optimal AdamH configuration, resulting in a <b>1.9&times; speedup</b>.</li>
+                            <li>There is a distinct phase change across the learning rate spectrum: MuonW at larger learning rates significantly outperforms its Hyperball counterpart (MuonH), whereas MuonH remains highly effective at lower learning rates.</li>
+                            <li>Adam with Hyperball (AdamH) achieves a perplexity ratio of <b>&sim;1.010</b> over AdamW at their respective optimal learning rates. While the stable learning rate window is narrower for AdamH, its absolute lowest perplexity is better.</li>
                             <li>We perform a spectral analysis to show how Muon's whitening promotes feature learning by forcing weights away from initialization.</li>
                         </ul>
                     </section>
@@ -257,7 +253,7 @@
 
                     <details class="collapsible-section">
                         <summary>
-                            <h3 id="sec-weight-regularization">Weight regularization</h3>
+                            <h3 id="sec-weight-regularization">Weight Regularization</h3>
                         </summary>
 
                     <details class="collapsible-section">
@@ -658,7 +654,7 @@
                             SK-N-SH. Training was limited to 20 epochs due to compute constraints;
                             the loss has not begun to saturate (we have trained to much lower
                             cross-entropy in prior runs), so these results reflect relative optimizer
-                            comparisons, not absolute model quality.</span></span>. Because perplexity directly reflects the geometric-mean inverse probability assigned to the correct nucleotide, even fractional improvements map directly to a significantly higher likelihood of accurately resolving functional regulatory motifs. By evaluating against a held-out validation split, we extract a clear empirical picture of optimizer performance across varying learning rates and temporal training checkpoints.</p>
+                            comparisons, not absolute model quality.</span></span>. Because perplexity directly reflects the mean inverse probability assigned to the correct nucleotide, even fractional improvements map directly to a significantly higher likelihood of accurately resolving functional regulatory motifs. By evaluating against a held-out validation split, we extract a clear empirical picture of optimizer performance across varying learning rates and temporal training checkpoints.</p>
 
                         <h4 class="blog-subheading">Final test perplexity by learning rate</h4>
 
@@ -903,7 +899,7 @@
                         \[
                         \frac{\mathrm{PPL}_A}{\mathrm{PPL}_B} = e^{\,\Delta\mathrm{CE}},
                         \]
-                        which directly reflects the multiplicative improvement in geometric-mean probability
+                        which directly reflects the multiplicative improvement in mean probability
                         on the correct token. Although we retain % CE in the heatmaps for visual clarity, we
                         use PPL ratios when discussing optimizer comparisons in the text.</p>
 
@@ -1167,7 +1163,7 @@
 
                     <details class="collapsible-section" open>
                         <summary>
-                            <h3 id="sec-next-steps">Next steps</h3>
+                            <h3 id="sec-next-steps">Next Steps</h3>
                         </summary>
                     <p>Thus, the results presented here reflect relative optimizer comparisons at a fixed compute
                         budget, not the absolute frontier of model quality. Next, we plan to:</p>
