@@ -137,7 +137,7 @@
 
                     <p>The reason is that these domains differ in several fundamental ways. DNA uses a vocabulary of
                         just 4 nucleotides whose token frequencies are far more uniform than the heavy-tailed Zipfian
-                        distribution over ~100k tokens in language<sup><a href="#ref-zipf">21</a></sup>. The syntactical rules are explicit and local (transcription
+                        distribution over ~100k tokens in language<sup><a href="#ref-zipf-review">22</a></sup>. The syntactical rules are explicit and local (transcription
                         factor binding motifs typically span ~6&ndash;20bp), and at the short context lengths we study,
                         the signal is dominated by these independent local motif grammars rather than the long-range
                         dependencies that characterize language modeling. In this blog, we explore the behavior of
@@ -151,7 +151,7 @@
 
                     <h4 class="blog-subheading">Zipf&rsquo;s law in natural language</h4>
                     <p>Nearly all modern optimizer benchmarks are run on natural language data, where
-                        token frequencies follow Zipf&rsquo;s law<sup><a href="#ref-zipf">21</a></sup>:
+                        token frequencies follow Zipf&rsquo;s law<sup><a href="#ref-zipf-review">22</a>, <a href="#ref-zipf">21</a></sup>:
                         the \(k\)-th most common token appears with frequency
                         \(f(k)\propto 1/k^{\alpha}\) (\(\alpha\approx 1\)). A handful of tokens (&ldquo;the&rdquo;,
                         &ldquo;a&rdquo;, &ldquo;is&rdquo;) dominate, while the vast majority of the
@@ -245,13 +245,13 @@
                     </details>
 
                     <h4 class="blog-subheading">Optimizer performance is distribution-dependent</h4>
-                    <p>Wilson et al.<sup><a href="#ref-wilson">22</a></sup> demonstrated empirically
+                    <p>Wilson et al.<sup><a href="#ref-wilson">23</a></sup> demonstrated empirically
                         that the relative ranking of optimizers changes across domains: adaptive
                         methods (Adam, AdaGrad, RMSProp) find solutions that generalize
                         <em>worse</em> than SGD on image classification tasks, despite converging
                         faster. Yet these same adaptive methods dominate SGD, consistent with
                         the classical No Free Lunch theorems<sup><a
-                        href="#ref-nfl">23</a></sup>, which prove that no single
+                        href="#ref-nfl">24</a></sup>, which prove that no single
                         optimization algorithm is universally superior, and performance is always
                         relative to the structure of the problem.</p>
 
@@ -772,7 +772,13 @@
                             SK-N-SH. Training was limited to 20 epochs due to compute constraints;
                             the loss has not begun to saturate (we have trained to much lower
                             cross-entropy in prior runs), so these results reflect relative optimizer
-                            comparisons, not absolute model quality.</span></span>. Because perplexity directly reflects the mean inverse probability assigned to the correct nucleotide, even fractional improvements map directly to a significantly higher likelihood of accurately resolving functional regulatory motifs. By evaluating against a held-out validation split, we extract a clear empirical picture of optimizer performance across varying learning rates and temporal training checkpoints.</p>
+                            comparisons, not absolute model quality.</span></span>. 
+                            We use perplexity as a sensitive proxy for sequence modeling quality; 
+                            in practice we expect improvements to correlate with better motif and 
+                            grammar modeling, and we plan to validate this directly with motif-centric 
+                            downstream tasks. By evaluating against a held-out validation split, 
+                            we extract a clear empirical picture of optimizer performance across 
+                            varying learning rates and temporal training checkpoints.</p>
 
                         <h4 class="blog-subheading">Final test perplexity by learning rate</h4>
 
@@ -882,7 +888,7 @@
                         <ul>
                             <li>Low Learning Rates (&sim;\(9.00 \times 10^{-5}\) to &sim;\(3.59 \times 10^{-4}\)): Training is slow but highly stable. Here, the strict norm constraints of Hyperball provide a massive early acceleration. MuonH drops aggressively in the first few epochs, cleanly outperforming MuonW, which converges much more deliberately. AdamH, strangely, struggles at the absolute lowest rate compared to AdamW, but tightens the gap as the LR increases.</li>
                             <li>Mid-Range (&sim;\(1.43 \times 10^{-3}\) to &sim;\(5.69 \times 10^{-3}\)): We enter the optimal operating window for most models. At &sim;\(5.69 \times 10^{-3}\), AdamH finally hits its stride, overtaking AdamW to reach the lowest perplexity in the Adam family. Concurrently, MuonW overtakes MuonH. MuonW leverages the larger step size perfectly, free from the norm bound that begins to bottleneck MuonH's performance.</li>
-                            <li>High Learning Rate (&sim;\(2.27 \times 10^{-2}\)): A sharp phase transition occurs. Optimizers confined by fixed-norm hyperspheres (AdamH, MuonH) completely destabilize; their trajectories bounce erratically and plateau at suboptimal levels because their constrained manifolds cannot cleanly absorb the high variance updates. In stark contrast, MuonW thrives, plunging rapidly to achieve the absolute lowest validation perplexity (&sim;2.464) across all runs. AdamW remains remarkably resilient but lacks the representational capacity of MuonW.</li>
+                            <li>High Learning Rate (&sim;\(2.27 \times 10^{-2}\)): We observe sharp destabilization for fixed-norm constraints (AdamH, MuonH); their trajectories bounce erratically and plateau at suboptimal levels, likely due to how hard constraints interact with high-variance updates. In stark contrast, MuonW thrives, plunging rapidly to achieve the absolute lowest validation perplexity (&sim;2.464) across all runs. AdamW remains remarkably resilient but reaches higher validation perplexity than MuonW, indicating that it lacks the representational capacity of MuonW.</li>
                         </ul>
 
                         <p>Next, we transpose the axes to view the same data grouped by optimizer, illustrating their individual hyperparameter sensitivities:</p>
@@ -1011,8 +1017,8 @@
                         What changes with scale is <em>consistency</em>: at width 1024 and especially
                         2048, AdamH holds the advantage across the broader low/mid range, while MuonW dominates the high learning rate extremes by a massive margin. The loss curves
                         reinforce this: the gap between blue and yellow widens at higher learning rates and persists more
-                        uniformly at larger widths, confirming that Muon&rsquo;s spectral advantages over
-                        Adam compound with scale.</p>
+                        uniformly at larger widths, suggesting that the performance gap increases with width, 
+                        consistent with a spectral mechanism discussed below.</p>
 
                     </details>
 
@@ -1021,7 +1027,7 @@
                             <h3 id="spectral-analysis">Spectral Analysis</h3>
                         </summary>
                     <p>To understand <em>why</em> Muon with independent weight decay (MuonW) outperforms its
-                        constrained counterpart (MuonH), we must look at the spectral properties of the learned
+                        constrained counterpart (MuonH), we can gain insight by examining the spectral properties of the learned
                         representations. Rather than examining the spectral norm itself (since the exact multiplier
                         is less important given scale invariance), we focus on the <em>distribution</em> of singular
                         values. Following the eigenspectral framework of NerVE<sup><a
@@ -1061,11 +1067,11 @@
                         (\(\approx 0.98\)), but their trajectories diverge sharply. MuonW&rsquo;s entropy
                         decreases only slightly and stabilizes near \(\approx 0.93\), indicating that the
                         weight matrices maintain a near-uniform singular value distribution throughout
-                        training; Muon&rsquo;s whitening successfully builds a high-rank, distributed
-                        representation. MuonH (Red), by contrast, steadily collapses from \(\approx 0.98\)
+                        training; this is consistent with whitened updates supporting a more distributed
+                        spectral structure. MuonH (Red), by contrast, steadily collapses from \(\approx 0.98\)
                         to \(\approx 0.68\), with the participation ratio falling in tandem: the effective
-                        rank of the weight matrices shrinks over training, a manifestation of representation
-                        degeneration<sup><a href="#ref-repdeg">16</a></sup>. The Adam variants (Orange, Green)
+                        rank of the weight matrices shrinks over training, a strong rank/entropy collapse signature that could indicate
+                        representational degeneration<sup><a href="#ref-repdeg">16</a></sup>. The Adam variants (Orange, Green)
                         sit relatively lower for delta_W, which is expected since Adam does not whiten its updates.
                         The critical observation is the <em>divergence</em> between Blue and Red: both use
                         the same Muon whitening, yet MuonH&rsquo;s spectrum degrades while MuonW&rsquo;s
@@ -1112,32 +1118,32 @@
                         lands in roughly \([0.7, 1.3]\), not exactly at \(1\). For MuonW (Blue), these
                         small imperfections are benign; the weight matrix is free to absorb them, and
                         the \(\Delta W\) spectral entropy stays high (\(\approx 0.95\)) throughout training.
-                        For MuonH (Red), however, the imperfections compound through a feedback loop: the
-                        collapsing weight spectrum biases the gradients computed at \(W_t\), which flow into
-                        the momentum buffer, which NS\(_5\) then tries to whiten. But whitening an
-                        already-biased input cannot fully recover a uniform spectrum, so the update itself
+                        For MuonH (Red), one plausible mechanism is a feedback loop: as the weight spectrum
+                        collapses, the gradients computed at \(W_t\) become increasingly anisotropic, which
+                        flows into the momentum buffer. Imperfect NS\(_5\) whitening may be insufficient
+                        to fully recover a uniform spectrum from this biased input, so the update itself
                         becomes progressively less whitened. In the \(\Delta W\) entropy plot, MuonH (Red)
                         starts near MuonW (Blue) but steadily diverges, dropping to \(\approx 0.7\) by
-                        the end of training, a clear signature of this self-reinforcing collapse.</p>
+                        the end of training, consistent with this hypothesized mechanism.</p>
 
                     <p>In contrast, MuonW (Blue) imposes no hard constraint on the weight norm, so there is
                         no uniform rescaling step and no feedback loop. Muon&rsquo;s whitened updates can
                         grow the small singular directions over many steps without them being pulled back,
-                        and the dominant features can grow <em>without</em> cannibalizing the weak ones. The
-                        high entropy we observe reflects a feature-rich, high-capacity model that preserves
-                        the complex, combinatorial grammar of the genome.
+                        and the dominant singular directions can grow without suppressing the smaller ones.
+                        MuonW shows sustained higher spectral entropy and participation ratio, suggesting
+                        a more distributed use of singular directions; we hypothesize this helps increase capacity and
+                         retain combinatorial regulatory structure.
                     </p>
 
                     <details class="collapsible-section">
                         <summary>
                             <h4>Note on Adam</h4>
                         </summary>
-                        <p>AdamW (Orange) maintains high entropy (relative to AdamH and MuonH), but for a different
-                            reason. Adam's
-                            coordinate wise updates inject unstructured noise into trailing dimensions,
-                            artificially propping up their singular values. MuonW achieves high entropy
-                            through "clean" whitening updates that amplify rare directions, not through
-                            noise. This distinction aligns with NerVE's<sup><a href="#ref-nerve">15</a></sup>
+                        <p>AdamW (Orange) maintains high entropy (relative to AdamH and MuonH), potentially
+                            because coordinate-wise updates can sustain activity in smaller singular
+                            directions by injecting noise.
+                            MuonW achieves high entropy through 'clean' whitened updates that amplify rare directions.
+                            This distinction aligns with NerVE's<sup><a href="#ref-nerve">15</a></sup>
                             finding that stable spectral signatures
                             correlate with generalization ability and respond predictably to optimizer design choices.
                         </p>
@@ -1171,14 +1177,13 @@
                                 href="#ref-wdeq">9</a>,
                             <a href="#ref-hyperball">10</a></sup>, the norm continues to grow long after the nucleotide
                         loss has begun to plateau. This causes the relative
-                        step size to <em>decay inversely with the square root of time</em>, acting as an
-                        intrinsic learning rate scheduler that naturally "cools" the optimization and allows
-                        the model to settle into a well generalized minimum.</p>
+                        step size to decrease over training (driven mainly by weight norm growth),
+                        which may act like an implicit annealing schedule that helps
+                        the model refine its solution in later stages.</p>
 
                     <p>For MuonH (Red), the weight norm \(\|W\|\) is fixed. The relative step size flattens
-                        out and never decays. The optimizer perpetually "bounces" around the minimum at a
-                        constant temperature, preventing the fine grained convergence needed for optimal
-                        performance.</p>
+                        out and never decays. MuonH&rsquo;s relative step size stays roughly constant;
+                        we suspect this limits fine-grained convergence by preventing late-stage refinement.</p>
 
                     <h4 class="blog-subheading">Activation Hacking: The Logit Inflation "Cheat"</h4>
                     <p>There is an alternative, less flattering interpretation of MuonW's success: fit the
@@ -1762,6 +1767,10 @@
                                 href="https://www.statology.org/the-concise-guide-to-zipfs-law/"
                                 target="_blank">The Concise Guide to Zipf&rsquo;s Law</a>.
                             Statology.</li>
+                        <li id="ref-zipf-review">Piantadosi. <a
+                                href="https://pmc.ncbi.nlm.nih.gov/articles/PMC4176592/"
+                                target="_blank">Zipf&rsquo;s word frequency law in natural language: A critical
+                                review and future directions</a>. Psychonomic Bulletin &amp; Review 2014.</li>
                         <li id="ref-wilson">Wilson et al. <a
                                 href="https://arxiv.org/abs/1705.08292"
                                 target="_blank">The Marginal Value of Adaptive Gradient Methods in
