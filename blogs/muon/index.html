@@ -164,7 +164,7 @@
                         ~100k vocabulary is rarely seen.</p>
 
                     <figure class="blog-image">
-                        <img src="/blogs/muon/assets/zipf's law.png"
+                        <img src="/blogs/muon/assets/zipfs_law.png"
                             alt="Zipf's law: token frequency vs rank on linear and log-log scales" loading="lazy" />
                         <figcaption>Zipf&rsquo;s law on a linear (left) and log-log (right) scale. The
                             straight line on the log-log plot is the signature of a power-law
@@ -961,7 +961,7 @@
                         for MuonH also holds across scales, hinting that Hyperball&rsquo;s fixed-norm
                         constraint limits how much Muon can exploit larger step sizes.</p>
 
-                    <p>For Adam, the lowest point is with Hyperball at \(\eta \approx 5.69 \times 10^{-3}\) (compared to AdamW at \(\approx 3.59 \times 10^{-4}\)). For Muon, the lowest point is achieved with weight decay at the highest tested learning rate, \(\eta \approx 2.27 \times 10^{-2}\) (although Hyperball reaches its optimum earlier at \(\eta \approx 1.43 \times 10^{-3}\)). This disparity highlights a key distinction: while Adam's coordinate-wise updates become highly unstable at large learning rates, Muon's whitened updates, when unconstrained by a fixed norm, can safely exploit much larger step sizes to drive down the loss.</p>
+                    <p>For Adam, the lowest point is with Hyperball at \(\eta \approx 5.69 \times 10^{-3}\) (compared to AdamW at \(\approx 3.59 \times 10^{-4}\)). For Muon, the lowest point is generally achieved with weight decay at the second-highest tested learning rate, \(\eta \approx 5.69 \times 10^{-3}\) (although Hyperball reaches its optimum earlier at \(\eta \approx 1.43 \times 10^{-3}\)). This disparity highlights a key distinction: while Adam's coordinate-wise updates become highly unstable at large learning rates, Muon's whitened updates, when unconstrained by a fixed norm, can safely exploit much larger step sizes to drive down the loss.</p>
 
                     <figure class="blog-image">
                         <img src="/blogs/muon/assets/adam_heatmap.png" alt="Adam sweep summary"
@@ -982,7 +982,7 @@
                         shows a noticeably stronger advantage, with greener squares across much of the grid.
                         In particular, the mid learning rate range (\(\sim 10^{-3}\) to \(6\times 10^{-3}\))
                         is consistently green across widths, suggesting Hyperball&rsquo;s norm control is
-                        most beneficial at moderate step sizes. At the highest learning rate (\(9\times
+                        most beneficial at moderate step sizes. At the highest learning rate (\(2.27	imes
                         10^{-2}\)), weight decay dominates, likely because the effective step size
                         grows too large (it grows \(\propto\eta\)) and training can never stabilize.</p>
 
@@ -990,7 +990,7 @@
                         Hyperball is competitive or slightly ahead across much of the grid, with light
                         green dominating the mid learning rates. By width 1024, the advantage fades to
                         mostly yellow, and at width 2048 the picture inverts: the heatmap is mostly warm,
-                         with weight decay winning by up to 60% at the higher learning rates late in
+                         with weight decay winning by up to ~4.5% at the higher learning rates late in
                         training. This suggests that the spectral squeeze (described in the 
                         <a href="#spectral-analysis">Spectral Analysis</a>) worsens with scale; larger
                         weight matrices have more trailing singular directions for the uniform rescaling to
@@ -999,7 +999,7 @@
                     <h4 class="blog-subheading">Cross-optimizer comparison</h4>
 
                     <figure class="blog-image">
-                        <img src="/blogs/muon/assets/mounw_adamh_heatmap.png"
+                        <img src="/blogs/muon/assets/muonw_adamh_heatmap.png"
                         alt="MuonW vs AdamH heatmap across widths" loading="lazy" />
                         <img src="/blogs/muon/assets/muonw_adamh_comparison.png"
                             alt="MuonW vs AdamH loss curves across widths" loading="lazy"
@@ -1013,7 +1013,7 @@
                         other early in training, but MuonW (green) finishes below AdamH (blue) by the
                         end. What changes with scale is <em>consistency</em>: at width 1024 and especially
                         2048, MuonW leads across a wider range of learning rates and across more training
-                        steps, with advantages exceeding 10% at many points in the grid. The loss curves
+                        steps, with advantages exceeding 5% at many points in the grid. The loss curves
                         reinforce this: the gap between blue and green widens earlier and persists more
                         uniformly at larger widths, confirming that Muon&rsquo;s spectral advantages over
                         Adam compound with scale.</p>
