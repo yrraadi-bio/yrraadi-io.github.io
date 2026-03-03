@@ -219,7 +219,8 @@
                         <p>where \(\bar g_k\) is the mean gradient contribution conditioned on
                             token \(k\). Adam&rsquo;s running second moment for parameters
                             associated with token \(k\) accumulates as
-                            \(v_k\propto p_k\,\mathbb{E}[\|\bar g_k\|^2]\). The ratio of the
+                            \(v_k\propto p_k\,\mathbb{E}[\|\bar g_k\|^2]\) (this is Adam's variance estimate,
+                             see more in <a href="#appendix-a">Appendix A</a>). The ratio of the
                             largest to smallest second moment therefore scales with the frequency
                             ratio of the most to least common token:</p>
                         \[
@@ -236,7 +237,7 @@
 
                         <p><strong>DNA:</strong> With \(K=4\) and
                             \(p_k\approx 1/4\), the dynamic range is
-                            \(p_1/p_K\approx 4\). Adam&rsquo;s adaptive denominator
+                            \(p_1/p_K\approx 1\). Adam&rsquo;s adaptive denominator
                             \(\sqrt{v_k}\) is nearly identical across all tokens, reducing
                             the coordinate-wise scaling to an approximately uniform scalar.
                             The per-direction adaptation that makes Adam powerful in NLP
@@ -796,6 +797,53 @@
 
                         <p>The dynamics for the Muon optimizers are perfectly inverted: Hyperball dominates at lower learning rates, whereas independent weight decay scales flawlessly to the highest rates. Because Muon's whitened updates are entirely scale-free, MuonW relies on the unbounded growth of the weight norm to act as an implicit learning rate scheduler (decreasing the relative step size over time). At higher learning rates (&sim;\(2.27 \times 10^{-2}\)), this rapid norm growth naturally cools the optimization, allowing MuonW to comfortably digest large initial steps and achieve the absolute best validation perplexity across all sweeps (&sim;2.464). MuonH’s fixed norm eliminates this vital annealing phase, permanently trapping it in a high-temperature regime and causing perplexity to rise (&sim;2.565). Conversely, at small learning rates like &sim;\(9.00 \times 10^{-5}\), where preventing further step-size decay is actually beneficial, MuonH easily outperforms MuonW.</p>
 
+                        <h4 class="blog-subheading">Overall findings</h4>
+
+                        <p>These validation results, together with the <a href="#sec-training-results">training loss curves</a> below, paint a consistent picture: the Hyperball constraint does not uniformly improve both optimizers, and the best overall configuration is Muon with independent weight decay (MuonW)<span
+                        class="sidenote-group"><sup class="sidenote-ref">9</sup><span
+                        class="sidenote-card side-right">The Hyperball blog<sup><a
+                        href="#ref-hyperball">10</a></sup> actually shows that for Muon, the
+                        losses are comparable for models with &le; 500M parameters, and Hyperball
+                        dominates for the largest model of &gt;1B parameters. Our largest model is
+                        actually ~420M parameters large (as we are somewhat compute bound), so it is
+                        still possible for MuonH to outperform MuonW at a larger scale.</span></span>.</p>
+
+                        <details class="collapsible-section">
+                            <summary>
+                                <h4>Why does Hyperball worsen Muon?</h4>
+                            </summary>
+                        <p>We hypothesize that this is
+                        because Hyperball&rsquo;s re-projection scales all
+                        singular values of the weight matrix by the <em>same</em> multiplicative factor. When
+                        Hyperball maps \(W_{t+1} = R\,(W_t + U_t)/\|W_t + U_t\|_F\), it shrinks every singular
+                        direction of \(W\) equally<span class="sidenote-group"><sup class="sidenote-ref">10</sup><span
+                            class="sidenote-card side-left">It is actually possible to be on both the Frobenius and
+                            Spectral sphere at
+                            once as they DO intersect, but our algorithm does not guarantee that we enter
+                            the intersection. As a clarification: There exists an inequality \(\|W\|_2\le
+                            \|W\|_F\le \sqrt{\min(m, n)}\|W\|_2\), so one might believe that
+                            \(\|W\|_F\in[1,\sqrt{\min(m, n)}]\) guarantees that \(W\) lies in the intersection, but
+                            this is a necessary condition, not a sufficient one (think of a rank 1 matrix
+                            within this range)!</span></span>. The dominant singular values of \(W\), being
+                        large, survive this downscaling, and they remain the dominant share of the fixed energy
+                        budget \(\|W\|_F^2 = \sum_i \sigma_i^2 = R^2\). The smaller singular values of \(W\),
+                        however, cannot: Muon&rsquo;s whitening of the update matrix tries to grow them step
+                        after step by distributing the learning signal equally across all singular directions,
+                        but the uniform rescaling of the weight matrix pulls them back down proportionally each
+                        time. Because they never accumulate enough energy to matter, the small directions
+                        effectively die while the large ones persist, concentrating the spectrum into fewer and
+                        fewer dominant modes.
+                        The <a href="#spectral-analysis">spectral metrics</a> below support this: MuonH&rsquo;s
+                        spectral entropy and participation ratio collapse over training, consistent with the
+                        small singular directions being progressively eroded by the uniform rescaling.</p>
+
+                    <p>Adam under the same Hyperball constraint does not suffer this fate, because without
+                        whitening the spectrum is already concentrated in the task-relevant directions; the
+                        uniform rescaling therefore does comparatively little damage. Weight decay, on the other
+                        hand, does <em>not</em> alter the Muon update at all, it only decays the matrix
+                        the update is added to, so the whitening and the regularizer rarely conflict.</p>
+                        </details>
+
                         <h4 class="blog-subheading">Perplexity progression by checkpoint</h4>
 
                         <p>To understand the temporal dynamics behind the final results, we track the mean validation perplexity over the 20 checkpoints. Because validation perplexity can be volatile, observing its trajectory provides crucial context about optimizer stability and the risk of overfitting. We can view this progression from two perspectives: comparing optimizers at each learning rate, and comparing learning rates for each optimizer.</p>
@@ -836,11 +884,11 @@
                         <p>Analyzing these cross-sections reveals a clear shifting of the guard as the step size scales up:</p>
                         <ul>
                             <li>Low Learning Rates (&sim;\(9.00 \times 10^{-5}\) to &sim;\(3.59 \times 10^{-4}\)): Training is slow but highly stable. Here, the strict norm constraints of Hyperball provide a massive early acceleration. MuonH drops aggressively in the first few epochs, cleanly outperforming MuonW, which converges much more deliberately. AdamH, strangely, struggles at the absolute lowest rate compared to AdamW, but tightens the gap as the LR increases.</li>
-                            <li>Mid-Range (&sim;\(1.43 \times 10^{-3}\) to &sim;\(5.69 \times 10^{-3}\)): We enter the optimal operating window for most models. At &sim;\(5.69 \times 10^{-3}\), AdamH finally hits its stride, overtaking AdamW to reach the lowest perplexity in the Adam family. Concurrently, MuonW overtakes MuonH. MuonW leverages the larger step size perfectly, free from the spectral squeeze that begins to bottleneck MuonH's performance.</li>
+                            <li>Mid-Range (&sim;\(1.43 \times 10^{-3}\) to &sim;\(5.69 \times 10^{-3}\)): We enter the optimal operating window for most models. At &sim;\(5.69 \times 10^{-3}\), AdamH finally hits its stride, overtaking AdamW to reach the lowest perplexity in the Adam family. Concurrently, MuonW overtakes MuonH. MuonW leverages the larger step size perfectly, free from the norm bound that begins to bottleneck MuonH's performance.</li>
                             <li>High Learning Rate (&sim;\(2.27 \times 10^{-2}\)): A sharp phase transition occurs. Optimizers confined by fixed-norm hyperspheres (AdamH, MuonH) completely destabilize; their trajectories bounce erratically and plateau at suboptimal levels because their constrained manifolds cannot cleanly absorb the high variance updates. In stark contrast, MuonW thrives, plunging rapidly to achieve the absolute lowest validation perplexity (&sim;2.464) across all runs. AdamW remains remarkably resilient but lacks the representational capacity of MuonW.</li>
                         </ul>
 
-                        <p>Next, we flip the axes to view the same data grouped by optimizer, illustrating their individual hyperparameter sensitivities:</p>
+                        <p>Next, we transpose the axes to view the same data grouped by optimizer, illustrating their individual hyperparameter sensitivities:</p>
 
                         <figure class="blog-image">
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; max-width: 100%;">
@@ -887,48 +935,7 @@
                             AdamW, AdamH, MuonW, MuonH. Loss axis is nucleotide cross-entropy loss.</figcaption>
                     </figure>
 
-                    <p>We find that Muon achieves a lower train loss than Adam, consistent with existing
-                        literature<sup><a href="#ref-muon">2</a><a href="#ref-hyperball">10</a></sup>.
-                        Interestingly, the Hyperball constraint does not consistently improve both optimizers:
-                        it helps Adam (AdamH better than AdamW) but <em>hurts</em> Muon (MuonW better than MuonH)<span
-                        class="sidenote-group"><sup class="sidenote-ref">9</sup><span
-                        class="sidenote-card side-right">The Hyperball blog<sup><a
-                        href="#ref-hyperball">10</a></sup> actually shows that for Muon, the
-                        losses are comparable for models with &le; 500M parameters, and Hyperball
-                        dominates for the largest model of &gt;1B parameters. Our largest model is
-                        actually ~420M parameters large (as we are somewhat compute bound), so it is
-                        still possible for MuonH to outperform MuonW at a larger scale.</span></span>.
-                        The best overall configuration is Muon with independent weight decay (MuonW).</p>
-                        <p>Why did Hyperball worsen Muon&rsquo;s performance? We hypothesize that this is
-                        because Hyperball&rsquo;s re-projection scales all
-                        singular values of the weight matrix by the <em>same</em> multiplicative factor. When
-                        Hyperball maps \(W_{t+1} = R\,(W_t + U_t)/\|W_t + U_t\|_F\), it shrinks every singular
-                        direction of \(W\) equally<span class="sidenote-group"><sup class="sidenote-ref">10</sup><span
-                            class="sidenote-card side-left">It is actually possible to be on both the Frobenius and
-                            Spectral sphere at
-                            once as they DO intersect, but our algorithm does not guarantee that we enter
-                            the intersection. As a clarification: There exists an inequality \(\|W\|_2\le
-                            \|W\|_F\le \sqrt{\min(m, n)}\|W\|_2\), so one might believe that
-                            \(\|W\|_F\in[1,\sqrt{\min(m, n)}]\) guarantees that \(W\) lies in the intersection, but
-                            this is a necessary condition, not a sufficient one (think of a rank 1 matrix
-                            within this range)!</span></span>. The dominant singular values of \(W\), being
-                        large, survive this downscaling, and they remain the dominant share of the fixed energy
-                        budget \(\|W\|_F^2 = \sum_i \sigma_i^2 = R^2\). The smaller singular values of \(W\),
-                        however, cannot: Muon&rsquo;s whitening of the update matrix tries to grow them step
-                        after step by distributing the learning signal equally across all singular directions,
-                        but the uniform rescaling of the weight matrix pulls them back down proportionally each
-                        time. Because they never accumulate enough energy to matter, the small directions
-                        effectively die while the large ones persist, concentrating the spectrum into fewer and
-                        fewer dominant modes.
-                        The <a href="#spectral-analysis">spectral metrics</a> below support this: MuonH&rsquo;s
-                        spectral entropy and participation ratio collapse over training, consistent with the
-                        small singular directions being progressively eroded by the uniform rescaling.</p>
-
-                    <p>Adam under the same Hyperball constraint does not suffer this fate, because without
-                        whitening the spectrum is already concentrated in the task-relevant directions; the
-                        uniform rescaling therefore does comparatively little damage. Weight decay, on the other
-                        hand, does <em>not</em> alter the Muon update at all, it only decays the matrix
-                        the update is added to, so the whitening and the regularizer rarely conflict.</p>
+                    <p>Consistent with existing literature<sup><a href="#ref-muon">2</a><a href="#ref-hyperball">10</a></sup>, Muon achieves a lower train loss than Adam across all configurations. The loss curves confirm the ranking established by the validation perplexity <a href="#sec-perplexity-validation">above</a>: MuonW converges fastest and reaches the lowest loss, followed by MuonH, AdamH, and AdamW.</p>
 
                     <h4 class="blog-subheading">Learning rate sweep analysis</h4>
 
@@ -984,7 +991,8 @@
                         green dominating the mid learning rates. By width 1024, the advantage fades to
                         mostly yellow, and at width 2048 the picture inverts: the heatmap is mostly warm,
                          with weight decay winning by up to 60% at the higher learning rates late in
-                        training. This suggests that the spectral squeeze worsens with scale; larger
+                        training. This suggests that the spectral squeeze (described in the 
+                        <a href="#spectral-analysis">Spectral Analysis</a>) worsens with scale; larger
                         weight matrices have more trailing singular directions for the uniform rescaling to
                         erode.</p>
 
@@ -1009,19 +1017,6 @@
                         reinforce this: the gap between blue and green widens earlier and persists more
                         uniformly at larger widths, confirming that Muon&rsquo;s spectral advantages over
                         Adam compound with scale.</p>
-
-                    <p>The heatmaps above report percentage differences in cross-entropy loss, which are
-                        visually intuitive but can be misleading: cross-entropy is already a log-scale
-                        quantity, so a fixed percentage change means different things depending on the
-                        baseline. A more interpretable measure is the <em>perplexity ratio</em>. Because
-                        \(\mathrm{PPL} = e^{\mathrm{CE}}\) (for CE in nats), a difference in cross-entropy
-                        corresponds to a <em>ratio</em> of perplexities:
-                        \[
-                        \frac{\mathrm{PPL}_A}{\mathrm{PPL}_B} = e^{\,\Delta\mathrm{CE}},
-                        \]
-                        which directly reflects the multiplicative improvement in mean probability
-                        on the correct token. Although we retain % CE in the heatmaps for visual clarity, we
-                        use PPL ratios when discussing optimizer comparisons in the text.</p>
 
                     </details>
 
