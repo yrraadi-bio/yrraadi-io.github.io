@@ -142,8 +142,7 @@
 
                     <p>The reason is that these domains differ in several fundamental ways. DNA uses a vocabulary of
                         just 4 nucleotides whose token frequencies are far more uniform than the heavy-tailed Zipfian
-                        distribution over ~100k tokens in language, meaning the gradient statistics across tokens
-                        behave very differently numerically. The syntactical rules are explicit and local (transcription
+                        distribution over ~100k tokens in language. The syntactical rules are explicit and local (transcription
                         factor binding motifs typically span ~6&ndash;20bp), and at the short context lengths we study,
                         the signal is dominated by these independent local motif grammars rather than the long-range
                         dependencies that characterize language modeling. In this blog, we explore the behavior of
@@ -198,7 +197,7 @@
 
                     <p>The entropy of DNA&rsquo;s token distribution sits near its theoretical
                         maximum: \(H_{\text{DNA}}\approx\log_2 4=2\) bits. Natural language, despite
-                        its vastly larger vocabulary, has <em>lower</em> effective entropy because
+                        its vastly larger vocabulary, has <em>lower</em> normalized entropy because
                         Zipf&rsquo;s heavy tail concentrates probability mass on a small fraction of
                         tokens. This distinction has concrete consequences for how optimizers see
                         gradients, meaning the gradient statistics across tokens behave very
@@ -916,7 +915,7 @@
                             <figcaption>Mean validation perplexity over training checkpoints for each optimizer, across five learning rates. Lower is better.</figcaption>
                         </figure>
 
-                        <p>Viewing the optimizers individually clarifies these dynamics. For AdamH, the intermediate learning rate &sim;\(5.69 \times 10^{-3}\) (yellow) provides the steepest drop and lowest final perplexity (&sim;2.48). Exceed this, and it destabilizes; fall short, and it converges too slowly. AdamW is far more forgiving at the extremes: its second-lowest learning rate (\(\approx 3.59 \times 10^{-4}\)) yields a remarkably smooth, steady decline to &sim;2.51. MuonH exhibits a narrow but highly effective sweet spot at mid-range LRs (&sim;\(1.43 \times 10^{-3}\) to &sim;\(5.69 \times 10^{-3}\)), but is heavily penalized at the maximum rate. Finally, MuonW distinctly favors scale: its progression monotonically improves as the learning rate increases, with the highest LR (&sim;\(2.27 \times 10^{-2}\)) driving the lowest perplexity overall.</p>
+                        <p>Viewing the optimizers individually clarifies these dynamics. For AdamH, the intermediate learning rate &sim;\(5.69 \times 10^{-3}\) (yellow) provides the steepest drop and lowest final perplexity (&sim;2.48). Exceed this, and it destabilizes; fall short, and it converges too slowly. AdamW is far more forgiving across learning rates: at \(\approx 3.59 \times 10^{-4}\), it settles into a remarkably smooth, steady decline to its lowest perplexity of &sim;2.51. MuonH exhibits a narrow but highly effective sweet spot at mid-range LRs (&sim;\(1.43 \times 10^{-3}\) to &sim;\(5.69 \times 10^{-3}\)), but is heavily penalized at the maximum rate. Finally, MuonW distinctly favors scale: its progression monotonically improves as the learning rate increases, with the highest LR (&sim;\(2.27 \times 10^{-2}\)) driving the lowest perplexity overall.</p>
                         
                         <h4 class="blog-subheading">Time-to-target speedup</h4>
                            
@@ -1067,7 +1066,8 @@
                         training; Muon&rsquo;s whitening successfully builds a high-rank, distributed
                         representation. MuonH (Red), by contrast, steadily collapses from \(\approx 0.98\)
                         to \(\approx 0.68\), with the participation ratio falling in tandem: the effective
-                        rank of the weight matrices shrinks over training. The Adam variants (Orange, Green)
+                        rank of the weight matrices shrinks over training, a manifestation of representation
+                        degeneration<sup><a href="#ref-repdeg">16</a></sup>. The Adam variants (Orange, Green)
                         sit relatively lower for delta_W, which is expected since Adam does not whiten its updates.
                         The critical observation is the <em>divergence</em> between Blue and Red: both use
                         the same Muon whitening, yet MuonH&rsquo;s spectrum degrades while MuonW&rsquo;s
