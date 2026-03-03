@@ -11,8 +11,8 @@
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Does Muon improve regulatory DNA learning? Part 1. Training Results — Origin Bio</title>
-    <meta property="og:title" content="Does Muon improve regulatory DNA learning? Part 1. Training Results" />
+    <title>Does Muon improve regulatory DNA learning? Part 1. — Origin Bio</title>
+    <meta property="og:title" content="Does Muon improve regulatory DNA learning? Part 1." />
     <meta property="og:video" content="https://origin.bio/blogs/muon/assets/optimizer_gif.mp4" />
     <meta property="og:video:type" content="video/mp4" />
     <link rel="stylesheet" href="/css/style.css">
@@ -95,7 +95,7 @@
                         </video>
                     </figure>
 
-                    <h2 id="page-title">Does Muon improve regulatory DNA learning? Part 1. Training Results</h2>
+                    <h2 id="page-title">Does Muon improve regulatory DNA learning? Part 1.</h2>
                     <p class="blog-date">March 4, 2026 &middot; Viraj Doshi
                         <span class="author-socials">
                             <a href="https://x.com/viraj9451" target="_blank" class="author-social-link" aria-label="Twitter">
@@ -1229,14 +1229,15 @@
                                 through scaling by \(k_{DNA}\).
                             </span></span>.</p>
 
-                    <p>This means that part of MuonW's advantage may be an artifact of the domain: the optimizer
+                    <p>This means that part of MuonW's <em>training loss</em> advantage may be an artifact of the domain: the optimizer
                         exploits the low cardinality and low entropy of the DNA vocabulary to "hack" the loss
                         via
-                        logit scaling, rather than learning richer internal representations. MuonH (Red), with
-                        its
+                        logit scaling, rather than learning richer internal representations. In fact, MuonW's
+                        validation perplexity also clearly improved, which can also be explained by logit inflation! 
+                        MuonH (Red), with its
                         strict norm constraint, is mathematically forbidden from using this trick, which may
-                        explain its
-                        higher loss despite learning a "cleaner" low-rank representation. Disentangling this
+                        partially explain its
+                        higher training loss despite learning a "cleaner" low-rank representation. Disentangling this
                         effect from
                         the genuine spectral capacity gains discussed above is an important open question, and
                         one that
