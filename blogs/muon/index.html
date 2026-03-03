@@ -115,7 +115,7 @@
                     <section class="blog-takeaways" aria-label="Key takeaways">
                         <h3>Highlights</h3>
                         <ul>
-                            <li>To reach a validation perplexity target of 2.50, Muon requires <b>&sim;32% fewer steps</b> than Adam (both with their most optimal weight regularization method), resulting in a <b>&sim;1.5&times; speedup</b>.</li>
+                            <li>To reach a validation perplexity target of 2.50, Muon requires <b>&sim;32% fewer steps</b> (and &sim;32% fewer training tokens) than Adam, both at their most optimal weight regularization method.</li>
                             <li>For Muon, there is a distinct phase change across the learning rate spectrum: Muon with Hyperball reaches better validation perplexities at lower learning rates, but at higher rates Muon with Weight Decay starts outperforming its Hyperball counterpart, reaching the best validation perplexity overall.</li>
                             <li>For Adam, the stable learning rate window where Adam with Hyperball outperforms is narrower than for Adam with Weight Decay, but the lowest perplexity is achieved with Adam with Hyperball.</li>
                             <li>We perform a spectral analysis to show how Muon's whitening promotes feature learning by forcing weights away from initialization.</li>
@@ -207,15 +207,19 @@
                           = \sum_{k=1}^{K} p_k\,\bar g_k,
                         \]
                         <p>where \(\bar g_k\) is the mean gradient contribution conditioned on
-                            token \(k\). Adam&rsquo;s running second moment for parameters
+                            token \(k\). We can say that Adam&rsquo;s (see more in <a href="#appendix-a">Appendix A</a>) running second moment for parameters
                             associated with token \(k\) accumulates as
-                            \(v_k\propto p_k\,\mathbb{E}[\|\bar g_k\|^2]\) (this is Adam's variance estimate,
-                             see more in <a href="#appendix-a">Appendix A</a>). The ratio of the
+                            \(v_k\propto p_k\,\mathbb{E}[\|\bar g_k\|^2]\). The ratio of the
                             largest to smallest second moment therefore scales with the frequency
-                            ratio of the most to least common token:</p>
-                        \[
-                        \frac{v_1}{v_K}\;\propto\;\frac{p_1}{p_K}.
-                        \]
+                            ratio of the most to least common token \(
+                            \frac{v_1}{v_K}\;\propto\;\frac{p_1\,\mathbb{E}[\|\bar g_1\|^2]}{p_K\,\mathbb{E}[\|\bar g_K\|^2]}
+                            \). Since all token embeddings and weights are drawn from the same distribution,
+                             if we make the assumption that \(\frac{\mathbb{E}[\|\bar g_1\|^2]}{\mathbb{E}[\|\bar g_K\|^2]}\approx O(1)\), 
+                            it can be said that:</p>
+
+                            \[
+                            \frac{v_1}{v_K}\;\propto\;\frac{p_1}{p_K}
+                            \]
 
                         <p><strong>Zipf (NLP):</strong> With \(p_k\propto 1/k\) and
                             \(K\approx 100{,}000\), the dynamic range is
@@ -907,9 +911,9 @@
 
                         <p>Viewing the optimizers individually clarifies these dynamics. For AdamH, the intermediate learning rate &sim;\(5.69 \times 10^{-3}\) (yellow) provides the steepest drop and lowest final perplexity (&sim;2.48). Exceed this, and it destabilizes; fall short, and it converges too slowly. AdamW is far more forgiving across learning rates: at \(\approx 3.59 \times 10^{-4}\), it settles into a remarkably smooth, steady decline to its lowest perplexity of &sim;2.51. MuonH exhibits a narrow but highly effective sweet spot at mid-range LRs (&sim;\(1.43 \times 10^{-3}\) to &sim;\(5.69 \times 10^{-3}\)), but is heavily penalized at the maximum rate. Finally, MuonW distinctly favors scale: its progression monotonically improves as the learning rate increases, with the highest LR (&sim;\(2.27 \times 10^{-2}\)) driving the lowest perplexity overall.</p>
                         
-                        <h4 class="blog-subheading">Time-to-target speedup</h4>
-                           
-                        <p>Ultimately, these performance differentials translate directly into computational efficiency. We can quantify optimization speed by measuring the training steps required to cross a specific validation target. To achieve a validation perplexity of 2.50, MuonW at its optimal learning rate effectively crosses the threshold by checkpoint 13. In contrast, AdamH at its optimal configuration only reaches 2.50 around checkpoint 19. This demonstrates that MuonW achieves the target perplexity in roughly 32% fewer steps, delivering a ~1.5&times; compute speedup over the best performing Adam baseline.</p>
+                        <h4 class="blog-subheading">Time-to-target: step efficiency</h4>
+
+                        <p>We can quantify optimization efficiency by measuring the training steps required to cross a specific validation target. To achieve a validation perplexity of 2.50, MuonW at its optimal learning rate crosses the threshold by checkpoint 13. In contrast, AdamH at its optimal configuration only reaches 2.50 around checkpoint 19. This means MuonW reaches the target perplexity in roughly 32% fewer steps (and 32% fewer training tokens). Note that fewer steps does not necessarily translate to proportionally less wall-clock time, since Muon&rsquo;s SVD-based update is more expensive per step than Adam&rsquo;s elementwise update; the actual wall-clock savings depend on model size, hardware, and implementation.</p>
 
                     </details>
 
@@ -1281,6 +1285,9 @@
                         <li><strong>Explore hybrid optimizers:</strong> evaluate combinations of Muon and Adam
                             updates (like PRISM<sup><a href="#ref-prism">19</a></sup> and variants<sup><a href="#ref-shampoo-prism">20</a></sup>) and
                             compare against these results.</li>
+                        <li><strong>Evaluate on biological downstream tasks:</strong> measure whether
+                            perplexity gains translate to improvements on tasks that matter for biology,
+                            such as transcription factor motif recovery, and sequence generation.</li>
                     </ul>
                     </details>
 
