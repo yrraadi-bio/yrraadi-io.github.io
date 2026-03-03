@@ -916,7 +916,7 @@
                             <figcaption>Mean validation perplexity over training checkpoints for each optimizer, across five learning rates. Lower is better.</figcaption>
                         </figure>
 
-                        <p>Viewing the optimizers individually clarifies these dynamics. For AdamH, the intermediate learning rate &sim;\(5.69 \times 10^{-3}\) (green) provides the steepest drop and lowest final perplexity (&sim;2.48). Exceed this, and it destabilizes; fall short, and it converges too slowly. AdamW is far more forgiving at the extremes: its second-lowest learning rate (\(\approx 3.59 \times 10^{-4}\)) yields a remarkably smooth, steady decline to &sim;2.51. MuonH exhibits a narrow but highly effective sweet spot at mid-range LRs (&sim;\(1.43 \times 10^{-3}\) to &sim;\(5.69 \times 10^{-3}\)), but is heavily penalized at the maximum rate. Finally, MuonW distinctly favors scale: its progression monotonically improves as the learning rate increases, with the highest LR (&sim;\(2.27 \times 10^{-2}\)) driving the lowest perplexity overall.</p>
+                        <p>Viewing the optimizers individually clarifies these dynamics. For AdamH, the intermediate learning rate &sim;\(5.69 \times 10^{-3}\) (yellow) provides the steepest drop and lowest final perplexity (&sim;2.48). Exceed this, and it destabilizes; fall short, and it converges too slowly. AdamW is far more forgiving at the extremes: its second-lowest learning rate (\(\approx 3.59 \times 10^{-4}\)) yields a remarkably smooth, steady decline to &sim;2.51. MuonH exhibits a narrow but highly effective sweet spot at mid-range LRs (&sim;\(1.43 \times 10^{-3}\) to &sim;\(5.69 \times 10^{-3}\)), but is heavily penalized at the maximum rate. Finally, MuonW distinctly favors scale: its progression monotonically improves as the learning rate increases, with the highest LR (&sim;\(2.27 \times 10^{-2}\)) driving the lowest perplexity overall.</p>
                         
                         <h4 class="blog-subheading">Time-to-target speedup</h4>
                            
@@ -952,10 +952,10 @@
                     <p>What is striking about these sweep curves is how consistent their structure is
                         across scales. For Adam, Hyperball (blue) carves out a partial convex basin in
                         the mid learning rate range (\(\sim 10^{-3}\) to \(10^{-2}\)), dipping below
-                        weight decay (green) in that region and rising above it at both extremes. This
+                        weight decay (yellow) in that region and rising above it at both extremes. This
                         shape persists across widths, suggesting that Hyperball&rsquo;s norm control is
                         genuinely helpful in Adam&rsquo;s optimal operating range. For Muon, the pattern
-                        is different: MuonW&rsquo;s (green) loss decreases roughly linearly with
+                        is different: MuonW&rsquo;s (yellow) loss decreases roughly linearly with
                         increasing step size, while MuonH (blue) curves downward then upward more sharply. MuonW
                         reaches a lower minimum at a higher learning rate. This near-linear response
                         for MuonH also holds across scales, hinting that Hyperball&rsquo;s fixed-norm
@@ -977,7 +977,7 @@
                                 same shade of green or red can represent different magnitudes across panels. 
                                 Pay attention to the individual legends.</span></span> 
                             give us a clearer picture of where Hyperball (blue) has the
-                        advantage over weight decay (green). For Adam, the advantage is scale-dependent:
+                        advantage over weight decay (yellow). For Adam, the advantage is scale-dependent:
                         at width 512, the heatmap is mostly yellow (roughly even), but at width 2048, AdamH
                         shows a noticeably stronger advantage, with greener squares across much of the grid.
                         In particular, the mid learning rate range (\(\sim 10^{-3}\) to \(6\times 10^{-3}\))
@@ -1013,7 +1013,7 @@
                         other at lower learning rates, but MuonW pulls away at higher learning rates.
                         What changes with scale is <em>consistency</em>: at width 1024 and especially
                         2048, AdamH holds the advantage across the broader low/mid range, while MuonW dominates the high learning rate extremes by a massive margin. The loss curves
-                        reinforce this: the gap between blue and green widens at higher learning rates and persists more
+                        reinforce this: the gap between blue and yellow widens at higher learning rates and persists more
                         uniformly at larger widths, confirming that Muon&rsquo;s spectral advantages over
                         Adam compound with scale.</p>
 
