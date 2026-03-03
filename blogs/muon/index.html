@@ -916,7 +916,7 @@
                             <figcaption>Mean validation perplexity over training checkpoints for each optimizer, across five learning rates. Lower is better.</figcaption>
                         </figure>
 
-                        <p>Viewing the optimizers individually clarifies these dynamics. For AdamH, the intermediate learning rate &sim;\(5.69 \times 10^{-3}\) (green) provides the steepest drop and lowest final perplexity (&sim;2.48). Exceed this, and it destabilizes; fall short, and it converges too slowly. AdamW is far more forgiving at the extremes: its lowest learning rate (\(9 \times 10^{-5}\)) yields a remarkably smooth, steady decline to &sim;2.51. MuonH exhibits a narrow but highly effective sweet spot at mid-range LRs (&sim;\(1.43 \times 10^{-3}\) to &sim;\(5.69 \times 10^{-3}\)), but is heavily penalized at the maximum rate. Finally, MuonW distinctly favors scale: its progression monotonically improves as the learning rate increases, with the highest LR (&sim;\(2.27 \times 10^{-2}\)) driving the lowest perplexity overall.</p>
+                        <p>Viewing the optimizers individually clarifies these dynamics. For AdamH, the intermediate learning rate &sim;\(5.69 \times 10^{-3}\) (green) provides the steepest drop and lowest final perplexity (&sim;2.48). Exceed this, and it destabilizes; fall short, and it converges too slowly. AdamW is far more forgiving at the extremes: its second-lowest learning rate (\(\approx 3.59 \times 10^{-4}\)) yields a remarkably smooth, steady decline to &sim;2.51. MuonH exhibits a narrow but highly effective sweet spot at mid-range LRs (&sim;\(1.43 \times 10^{-3}\) to &sim;\(5.69 \times 10^{-3}\)), but is heavily penalized at the maximum rate. Finally, MuonW distinctly favors scale: its progression monotonically improves as the learning rate increases, with the highest LR (&sim;\(2.27 \times 10^{-2}\)) driving the lowest perplexity overall.</p>
                         
                         <h4 class="blog-subheading">Time-to-target speedup</h4>
                            
@@ -961,7 +961,7 @@
                         for MuonH also holds across scales, hinting that Hyperball&rsquo;s fixed-norm
                         constraint limits how much Muon can exploit larger step sizes.</p>
 
-                    <p>For Adam, the lowest point is with Hyperball at \(\eta \approx 5.69 \times 10^{-3}\) (compared to AdamW at \(\approx 3.59 \times 10^{-4}\)). For Muon, the lowest point is generally achieved with weight decay at the second-highest tested learning rate, \(\eta \approx 5.69 \times 10^{-3}\) (although Hyperball reaches its optimum earlier at \(\eta \approx 1.43 \times 10^{-3}\)). This disparity highlights a key distinction: while Adam's coordinate-wise updates become highly unstable at large learning rates, Muon's whitened updates, when unconstrained by a fixed norm, can safely exploit much larger step sizes to drive down the loss.</p>
+                    <p>For Adam, the lowest point is with Hyperball at \(\eta \approx 5.69 \times 10^{-3}\) (compared to AdamW at \(\approx 3.59 \times 10^{-4}\)). For Muon, the lowest point is generally achieved with weight decay at the higher end of tested learning rates, scaling up to \(\eta \approx 2.27 \times 10^{-2}\) (although Hyperball reaches its optimum earlier at \(\eta \approx 1.43 \times 10^{-3}\)). This disparity highlights a key distinction: while Adam's coordinate-wise updates become highly unstable at large learning rates, Muon's whitened updates, when unconstrained by a fixed norm, can safely exploit much larger step sizes to drive down the loss.</p>
 
                     <figure class="blog-image">
                         <img src="/blogs/muon/assets/adam_heatmap.png" alt="Adam sweep summary"
@@ -982,7 +982,7 @@
                         shows a noticeably stronger advantage, with greener squares across much of the grid.
                         In particular, the mid learning rate range (\(\sim 10^{-3}\) to \(6\times 10^{-3}\))
                         is consistently green across widths, suggesting Hyperball&rsquo;s norm control is
-                        most beneficial at moderate step sizes. At the highest learning rate (\(2.27	imes
+                        most beneficial at moderate step sizes. At the highest learning rate (\(2.27\times
                         10^{-2}\)), weight decay dominates, likely because the effective step size
                         grows too large (it grows \(\propto\eta\)) and training can never stabilize.</p>
 
@@ -1009,12 +1009,11 @@
                     </figure>
 
                     <p>Finally, we compare the two best configurations head-to-head: MuonW against AdamH.
-                        Even at width 512, MuonW eventually pulls away; the loss curves track each
-                        other early in training, but MuonW (green) finishes below AdamH (blue) by the
-                        end. What changes with scale is <em>consistency</em>: at width 1024 and especially
-                        2048, MuonW leads across a wider range of learning rates and across more training
-                        steps, with advantages exceeding 5% at many points in the grid. The loss curves
-                        reinforce this: the gap between blue and green widens earlier and persists more
+                        Even at width 512, MuonW eventually pulls away; the curves track each
+                        other at lower learning rates, but MuonW pulls away at higher learning rates.
+                        What changes with scale is <em>consistency</em>: at width 1024 and especially
+                        2048, AdamH holds the advantage across the broader low/mid range, while MuonW dominates the high learning rate extremes by a massive margin. The loss curves
+                        reinforce this: the gap between blue and green widens at higher learning rates and persists more
                         uniformly at larger widths, confirming that Muon&rsquo;s spectral advantages over
                         Adam compound with scale.</p>
 
