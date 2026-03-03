@@ -119,7 +119,7 @@
                     <section class="blog-takeaways" aria-label="Key takeaways">
                         <h3>Highlights</h3>
                         <ul>
-                            <li>To reach a validation perplexity target of 2.50, Muon requires <b>&sim;32% fewer steps</b> (and &sim;32% fewer training tokens) than Adam, both at their most optimal weight regularization method.</li>
+                            <li>To reach a validation perplexity of 2.51 (the lowest achieved by AdamW), MuonW requires <b>&sim;37% fewer steps</b> (and &sim;37% fewer training tokens) than AdamH, both at their most optimal learning rate.</li>
                             <li>For Muon, there is a distinct phase change across the learning rate spectrum: Muon with Hyperball reaches better validation perplexities at lower learning rates, but at higher rates Muon with Weight Decay starts outperforming its Hyperball counterpart, reaching the best validation perplexity overall.</li>
                             <li>For Adam, the stable learning rate window where Adam with Hyperball outperforms is narrower than for Adam with Weight Decay, but the lowest perplexity is achieved with Adam with Hyperball.</li>
                             <li>We perform a spectral analysis to show how Muon's whitening promotes feature learning by forcing weights away from initialization.</li>
@@ -213,12 +213,12 @@
                         <p>where \(\bar g_k\) is the mean gradient contribution conditioned on
                             token \(k\). We can say that Adam&rsquo;s (see more in <a href="#appendix-a">Appendix A</a>) running second moment for parameters
                             associated with token \(k\) accumulates as
-                            \(v_k\propto p_k\,\mathbb{E}[\|\bar g_k\|^2]\). The ratio of the
+                            \(v_k\propto p_k\,\mathbb{E}[\|\bar g_k\|^2]+(1-p_k)\,\bar 0=p_k\,\mathbb{E}[\|\bar g_k\|^2]\). The ratio of the
                             largest to smallest second moment therefore scales with the frequency
                             ratio of the most to least common token \(
                             \frac{v_1}{v_K}\;\propto\;\frac{p_1\,\mathbb{E}[\|\bar g_1\|^2]}{p_K\,\mathbb{E}[\|\bar g_K\|^2]}
-                            \). Since all token embeddings and weights are drawn from the same distribution,
-                             if we make the assumption that \(\frac{\mathbb{E}[\|\bar g_1\|^2]}{\mathbb{E}[\|\bar g_K\|^2]}\approx O(1)\), 
+                            \). If we make the assumption that \(\frac{\mathbb{E}[\|\bar g_1\|^2]}
+                            {\mathbb{E}[\|\bar g_K\|^2]}\approx O(1)\) (since all token embeddings and weights are drawn from the same distribution), 
                             it can be said that:</p>
 
                             \[
@@ -917,7 +917,7 @@
                         
                         <h4 class="blog-subheading">Time-to-target: step efficiency</h4>
 
-                        <p>We can quantify optimization efficiency by measuring the training steps required to cross a specific validation target. To achieve a validation perplexity of 2.50, MuonW at its optimal learning rate crosses the threshold by checkpoint 13. In contrast, AdamH at its optimal configuration only reaches 2.50 around checkpoint 19. This means MuonW reaches the target perplexity in roughly 32% fewer steps (and 32% fewer training tokens). Note that fewer steps does not necessarily translate to proportionally less wall-clock time, since Muon&rsquo;s SVD-based update is more expensive per step than Adam&rsquo;s elementwise update; the actual wall-clock savings depend on model size, hardware, and implementation.</p>
+                        <p>We can quantify optimization efficiency by measuring the training steps required to cross a specific validation target. We use a target of 2.51, the lowest perplexity reached by AdamW. MuonW at its optimal learning rate crosses this threshold by checkpoint 12, while AdamH at its optimal configuration only reaches it around checkpoint 19. This means MuonW reaches the target in roughly 37% fewer steps (and 37% fewer training tokens). Note that fewer steps does not necessarily translate to proportionally less wall-clock time, since Muon&rsquo;s SVD-based update is more expensive per step than Adam&rsquo;s elementwise update; the actual wall-clock savings depend on model size, hardware, and implementation.</p>
 
                     </details>
 
