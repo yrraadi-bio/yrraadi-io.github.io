@@ -118,10 +118,16 @@
                     <!-- ========== TLDR / Highlights box – edit below ========== -->
                     <section class="blog-takeaways" aria-label="Key takeaways">
                         <h3>Highlights</h3>
+                        <div class="blog-sidenote-style-note">
+                            AdamW = Adam with Decoupled Weight Decay<br>
+                            MuonW = Muon with Decoupled Weight Decay<br>
+                            AdamH = Adam with Hyperball<br>
+                            MuonH = Muon with Hyperball
+                        </div>
                         <ul>
-                            <li>To reach a validation perplexity of 2.51 (the lowest achieved by AdamW), MuonW requires <b>&sim;37% fewer steps</b> (and &sim;37% fewer training tokens) than AdamH, both at their most optimal learning rate.</li>
-                            <li>For Muon, there is a distinct phase change across the learning rate spectrum: Muon with Hyperball reaches better validation perplexities at lower learning rates, but at higher rates Muon with Weight Decay starts outperforming its Hyperball counterpart, reaching the best validation perplexity overall.</li>
-                            <li>For Adam, the stable learning rate window where Adam with Hyperball outperforms is narrower than for Adam with Weight Decay, but the lowest perplexity is achieved with Adam with Hyperball.</li>
+                            <li>To reach a validation perplexity of 2.51, MuonW requires <b>&sim;37% fewer optimizer steps</b> than AdamH, both at their most optimal learning rate.</li>
+                            <li>For Muon, there is a distinct phase change across the learning rate spectrum: MuonH reaches better validation perplexities at lower learning rates, but at higher rates MuonW starts outperforming MuonH, reaching the best validation perplexity overall.</li>
+                            <li>For Adam, the stable learning rate window where AdamH outperforms is narrower than for AdamW, but the lowest perplexity is achieved with AdamH.</li>
                             <li>We perform a spectral analysis to show how Muon's whitening promotes feature learning by forcing weights away from initialization.</li>
                         </ul>
                     </section>
@@ -923,7 +929,7 @@
                         
                         <h4 class="blog-subheading">Time-to-target: step efficiency</h4>
 
-                        <p>We can quantify optimization efficiency by measuring the training steps required to cross a specific validation target. We use a target of 2.51, the lowest perplexity reached by AdamW. MuonW at its optimal learning rate crosses this threshold by checkpoint 12, while AdamH at its optimal configuration only reaches it around checkpoint 19. This means MuonW reaches the target in roughly 37% fewer steps (and 37% fewer training tokens). Note that fewer steps does not necessarily translate to proportionally less wall-clock time, since Muon&rsquo;s SVD-based update is more expensive per step than Adam&rsquo;s elementwise update; the actual wall-clock savings depend on model size, hardware, and implementation.</p>
+                        <p>We can quantify optimization efficiency by measuring the training steps required to cross a specific validation target. We use a target of 2.51, the lowest perplexity reached by an optimizer candidate (specifically AdamW). MuonW at its optimal learning rate crosses this threshold by checkpoint 12, while AdamH at its optimal configuration only reaches it around checkpoint 19. This means MuonW reaches the target in roughly 37% fewer steps (and 37% fewer training tokens). Note that fewer steps does not necessarily translate to proportionally less wall-clock time, since Muon&rsquo;s SVD-based update is more expensive per step than Adam&rsquo;s elementwise update; the actual wall-clock savings depend on model size, hardware, and implementation.</p>
 
                     </details>
 
