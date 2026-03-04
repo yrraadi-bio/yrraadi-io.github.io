@@ -117,14 +117,16 @@
 
                     <!-- ========== TLDR / Highlights box – edit below ========== -->
                     <section class="blog-takeaways" aria-label="Key takeaways">
-                        <h3>Highlights</h3>
-                        <div class="blog-sidenote-style-note">
-                            AdamW = Adam with Decoupled Weight Decay<br>
-                            MuonW = Muon with Decoupled Weight Decay<br>
-                            AdamH = Adam with Hyperball<br>
-                            MuonH = Muon with Hyperball
-                        </div>
+                        <h3>Highlights<span class="sidenote-group"><sup
+                                    class="sidenote-ref">*</sup><span
+                                    class="sidenote-card side-right blog-sidenote-style-note">
+                                    AdamW = Adam with Decoupled Weight Decay<br>
+                                    MuonW = Muon with Decoupled Weight Decay<br>
+                                    AdamH = Adam with Hyperball<br>
+                                    MuonH = Muon with Hyperball
+                                </span></span></h3>
                         <ul>
+                            <li>DNA uses just 4 near-uniformly distributed tokens with local 6&ndash;20bp motif grammar, unlike the ~100k-token Zipfian vocabulary of natural language, so optimizer rankings from NLP do not necessarily transfer.</li>
                             <li>To reach a validation perplexity of 2.51, MuonW requires <b>&sim;37% fewer optimizer steps</b> than AdamH, both at their most optimal learning rate.</li>
                             <li>For Muon, there is a distinct phase change across the learning rate spectrum: MuonH reaches better validation perplexities at lower learning rates, but at higher rates MuonW starts outperforming MuonH, reaching the best validation perplexity overall.</li>
                             <li>For Adam, the stable learning rate window where AdamH outperforms is narrower than for AdamW, but the lowest perplexity is achieved with AdamH.</li>
@@ -148,7 +150,10 @@
                         the signal is dominated by these independent local motif grammars rather than the long-range
                         dependencies that characterize language modeling. In this blog, we explore the behavior of
                         recent optimizers on DNA sequence modeling in regulatory regions, and evaluate whether
-                        optimizer choices that work well for LLMs transfer to this distinct setting.</p>
+                        optimizer choices that work well for LLMs transfer to this distinct setting.
+                        Faster convergence has direct practical value: by reducing the compute needed to train
+                        generative DNA models, we can redirect resources toward sampling far more candidate
+                        regulatory sequences and sending them for synthesis and lab testing.</p>
 
                     <details class="collapsible-section" open>
                         <summary>
@@ -177,21 +182,13 @@
                         uniform:</p>
 
                     <figure class="blog-image">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; max-width: 100%;">
-                            <div>
-                                <img src="/blogs/muon/assets/nucleotide_K562.png"
-                                    alt="Nucleotide distribution — K562" loading="lazy" style="width: 100%;" />
-                            </div>
-                            <div>
-                                <img src="/blogs/muon/assets/nucleotide_HepG2.png"
-                                    alt="Nucleotide distribution — HepG2" loading="lazy" style="width: 100%;" />
-                            </div>
-                            <div>
-                                <img src="/blogs/muon/assets/nucleotide_SKNSH.png"
-                                    alt="Nucleotide distribution — SK-N-SH" loading="lazy" style="width: 100%;" />
-                            </div>
-                        </div>
-                        <figcaption>Nucleotide frequencies at position 1 across the three cell lines in
+                        <img src="/blogs/muon/assets/nucleotide_K562.png"
+                            alt="Nucleotide distribution — K562" loading="lazy" style="width: 100%;" />
+                        <img src="/blogs/muon/assets/nucleotide_HepG2.png"
+                            alt="Nucleotide distribution — HepG2" loading="lazy" style="width: 100%;" />
+                        <img src="/blogs/muon/assets/nucleotide_SKNSH.png"
+                            alt="Nucleotide distribution — SK-N-SH" loading="lazy" style="width: 100%;" />
+                        <figcaption>Nucleotide frequencies across the three cell lines in
                             our training set. K562 and HepG2 are nearly uniform; SK-N-SH shows a
                             moderate GC bias (28.3% each vs 21.7% for A/T).</figcaption>
                     </figure>
@@ -255,7 +252,7 @@
                         that the relative ranking of optimizers changes across domains: adaptive
                         methods (Adam, AdaGrad, RMSProp) find solutions that generalize
                         <em>worse</em> than SGD on image classification tasks, despite converging
-                        faster. Yet these same adaptive methods dominate SGD, consistent with
+                        faster. Yet these same adaptive methods dominate SGD in language modeling, consistent with
                         the classical No Free Lunch theorems<sup><a
                         href="#ref-nfl">24</a></sup>, which prove that no single
                         optimization algorithm is universally superior, and performance is always
