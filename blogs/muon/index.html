@@ -888,7 +888,7 @@
                         <ul>
                             <li>Low Learning Rates (&sim;\(9.00 \times 10^{-5}\) to &sim;\(3.59 \times 10^{-4}\)): Training is slow but highly stable. Here, the strict norm constraints of Hyperball provide a massive early acceleration. MuonH drops aggressively in the first few epochs, cleanly outperforming MuonW, which converges much more deliberately. AdamH, strangely, struggles at the absolute lowest rate compared to AdamW, but tightens the gap as the LR increases.</li>
                             <li>Mid-Range (&sim;\(1.43 \times 10^{-3}\) to &sim;\(5.69 \times 10^{-3}\)): We enter the optimal operating window for most models. At &sim;\(5.69 \times 10^{-3}\), AdamH finally hits its stride, overtaking AdamW to reach the lowest perplexity in the Adam family. Concurrently, MuonW overtakes MuonH. MuonW leverages the larger step size perfectly, free from the norm bound that begins to bottleneck MuonH's performance.</li>
-                            <li>High Learning Rate (&sim;\(2.27 \times 10^{-2}\)): We observe sharp destabilization for fixed-norm constraints (AdamH, MuonH); their trajectories bounce erratically and plateau at suboptimal levels, likely due to how hard constraints interact with high-variance updates. In stark contrast, MuonW thrives, plunging rapidly to achieve the absolute lowest validation perplexity (&sim;2.464) across all runs. AdamW remains remarkably resilient but reaches higher validation perplexity than MuonW, indicating that it lacks the representational capacity of MuonW.</li>
+                            <li>High Learning Rate (&sim;\(2.27 \times 10^{-2}\)): We observe sharp destabilization for fixed-norm constraints (AdamH, MuonH); their trajectories bounce erratically and plateau at suboptimal levels, likely due to how hard constraints interact with high-variance updates. In stark contrast, MuonW thrives, plunging rapidly to achieve the absolute lowest validation perplexity (&sim;2.464) across all runs. AdamW remains remarkably resilient but reaches higher validation perplexity than MuonW, suggesting that MuonW achieves higher effective capacity in this regime.</li>
                         </ul>
 
                         <p>Next, we transpose the axes to view the same data grouped by optimizer, illustrating their individual hyperparameter sensitivities:</p>
@@ -1075,11 +1075,11 @@
                         sit relatively lower for delta_W, which is expected since Adam does not whiten its updates.
                         The critical observation is the <em>divergence</em> between Blue and Red: both use
                         the same Muon whitening, yet MuonH&rsquo;s spectrum degrades while MuonW&rsquo;s
-                        does not. This points directly to the Hyperball constraint as the cause. The
+                        does not. This is strongly consistent with the Hyperball constraint driving the degradation. The
                         \(\Delta W\) entropy tells a consistent story: MuonW&rsquo;s updates rise and
                         stabilize near \(\approx 0.95\), while MuonH&rsquo;s updates peak early and then
                         become progressively less whitened (dropping from \(\approx 0.92\) to
-                        \(\approx 0.7\)), confirming that the collapse feeds back from the weights into
+                        \(\approx 0.7\)), consistent with a feedback loop from the weights into
                         the updates.</p>
 
                     <details class="collapsible-section">
@@ -1221,7 +1221,7 @@
                         in
                         regulatory regions the correct nucleotide often dominates its context window. Sharper
                         predictions on a tiny, low entropy vocabulary are frequently correct, so inflated logits
-                        translate directly into lower cross-entropy loss. Natural language, by contrast, has a
+                        often reduce cross-entropy loss in this setting. Natural language, by contrast, has a
                         vocabulary of ~100k tokens with genuinely ambiguous contexts where probability mass must
                         be
                         spread across many plausible continuations<span class="sidenote-group"><sup
