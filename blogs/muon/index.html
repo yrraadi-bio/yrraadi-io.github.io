@@ -293,7 +293,7 @@
                     <p>(with \(u_0=0\)). This plays the same role as Adam's first moment
                         estimate \(m_t\), but is then processed using matrix structure. In our implementation we use
                         Nesterov momentum<span class="sidenote-group"><sup class="sidenote-ref">1</sup><span
-                                class="sidenote-card side-right">Concretely, the input fed into the NS\(_5\)
+                                class="sidenote-card side-left">Concretely, the input fed into the NS\(_5\)
                                 orthogonalization is not the raw gradient \(g_t\) but the lerp
                                 \((1-\beta)\,g_t + \beta\,u_{t}\). This Nesterov interpolation means the
                                 matrix that NS\(_5\) whitens is already a lookahead blend of the current
@@ -341,11 +341,11 @@
                         decay. Classical weight decay controls the \(\ell_2\) or Frobenius norm of the weight
                         matrices (defined as \(\|W\|_F =\|\vec W\|_2= \sqrt{\sum_{i}\sum_jw_{ij}^2}\)<span
                             class="sidenote-group"><sup class="sidenote-ref">3</sup><span
-                                class="sidenote-card side-right">\(\vec W\) denotes the vectorized form of matrix
+                                class="sidenote-card side-left">\(\vec W\) denotes the vectorized form of matrix
                                 \(W\); more specifically, if \(W=[c_1, c_2, \dots, c_n]\) where \(c_i\) is the \(i\)th
                                 column of \(W\), then \(\vec W=\begin{bmatrix} c_1\\c_2\\\vdots\\c_n \end{bmatrix}\)
                                 has them merged into one column.</span></span><span class="sidenote-group"><sup
-                                class="sidenote-ref">4</sup><span class="sidenote-card side-left">It also happens to
+                                class="sidenote-ref">4</sup><span class="sidenote-card side-right">It also happens to
                                 be the case that \(\|W\|_F=\sqrt{\sum_i \sigma_i^2}\), but this is a bit of a
                                 digression and we will not prove this here.</span></span>), but in a matrix aware
                         setting one can instead target properties tied to singular values:</p>
@@ -421,7 +421,7 @@
                         matrix \(W\), simply fix the Frobenius norm of \(W\) to the initial radius \(R :=
                         \|W_0\|_F\), and the norm of update \(U\) to \(\eta R\). Rather confusingly, this confines the
                         weight matrix to a hypersphere of radius \(R\), not a ball<span class="sidenote-group"><sup
-                                class="sidenote-ref">6</sup><span class="sidenote-card side-right">Note that
+                                class="sidenote-ref">6</sup><span class="sidenote-card side-left">Note that
                                 a hypersphere and hyperball are not the same thing. A &lsquo;ball&rsquo;
                                 refers to the entire solid object, but a &lsquo;sphere&rsquo; refers only to
                                 the shell/boundary of said ball.</span></span>, but let us ignore this
@@ -768,7 +768,7 @@
                         </summary>
                         <p> We track validation perplexity throughout training as a highly interpretable and sensitive measure of model capacity<span
                             class="sidenote-group"><sup class="sidenote-ref">8</sup><span
-                            class="sidenote-card side-right">The model is a multifunctional architecture
+                            class="sidenote-card side-left">The model is a multifunctional architecture
                             similar to <a href="/introducing-axis/">Axis</a>, trained on a set of
                             candidate cis-regulatory elements (cCREs) from the ENCODE v4 registry that
                             are cell-type-specific to one of three cell lines: K562, HepG2, and
@@ -850,41 +850,67 @@
                         the update is added to, so the whitening and the regularizer rarely conflict.</p>
                         </details>
 
-                        <h4 class="blog-subheading">Perplexity progression by checkpoint</h4>
+                        <h4 class="blog-subheading">Perplexity progression by checkpoint and FLOPS</h4>
 
-                        <p>To understand the temporal dynamics behind the final results, we track the mean validation perplexity over the 20 checkpoints. Because validation perplexity can be volatile, observing its trajectory provides crucial context about optimizer stability and the risk of overfitting. We can view this progression from two perspectives: comparing optimizers at each learning rate, and comparing learning rates for each optimizer.</p>
+                        <p>To understand the temporal dynamics behind the final results, we track the mean validation perplexity over the 20 checkpoints. Because validation perplexity can be volatile, observing its trajectory provides crucial context about optimizer stability and the risk of overfitting. We present each progression in two views: by training step (checkpoint) and by total FLOPS. The FLOPS axis accounts for the per-step compute cost of each optimizer, including forward/backward passes and the optimizer update itself (e.g. Muon's SVD is more expensive per step than Adam's elementwise update). We can view this progression from two perspectives: comparing optimizers at each learning rate, and comparing learning rates for each optimizer.</p>
 
                         <p>First, we slice the data by learning rate, placing all four optimizers head-to-head at each scale:</p>
 
                         <figure class="blog-image">
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; max-width: 100%;">
-                                <div>
+                                <div style="text-align: center;">
+                                    <p style="margin: 0 0 0.25rem; font-size: 0.85em; font-weight: 600; color: #78716c;">By checkpoint</p>
                                     <img src="/blogs/muon/assets/perplexity_progression_lr_9em05.png"
-                                        alt="Perplexity progression — lr≈9×10⁻⁵" loading="lazy" style="width: 100%;" />
-                                    <p style="margin: 0.25rem 0 0; font-size: 0.9em; color: #57534e; text-align: center;">lr &approx; 9.00&times;10⁻⁵</p>
+                                        alt="Perplexity progression — lr≈9×10⁻⁵ (checkpoint)" loading="lazy" style="width: 100%;" />
                                 </div>
-                                <div>
+                                <div style="text-align: center;">
+                                    <p style="margin: 0 0 0.25rem; font-size: 0.85em; font-weight: 600; color: #78716c;">By FLOPS</p>
+                                    <img src="/blogs/muon/assets/perplexity_progression_lr_9em05_flops.png"
+                                        alt="Perplexity progression — lr≈9×10⁻⁵ (FLOPS)" loading="lazy" style="width: 100%;" />
+                                </div>
+                                <p style="grid-column: 1 / -1; margin: 0; font-size: 0.9em; color: #57534e; text-align: center;">lr &approx; 9.00&times;10⁻⁵</p>
+
+                                <div style="text-align: center;">
                                     <img src="/blogs/muon/assets/perplexity_progression_lr_0p00035857.png"
-                                        alt="Perplexity progression — lr≈3.59×10⁻⁴" loading="lazy" style="width: 100%;" />
-                                    <p style="margin: 0.25rem 0 0; font-size: 0.9em; color: #57534e; text-align: center;">lr &approx; 3.59&times;10⁻⁴</p>
+                                        alt="Perplexity progression — lr≈3.59×10⁻⁴ (checkpoint)" loading="lazy" style="width: 100%;" />
                                 </div>
-                                <div>
+                                <div style="text-align: center;">
+                                    <img src="/blogs/muon/assets/perplexity_progression_lr_0p00035857_flops.png"
+                                        alt="Perplexity progression — lr≈3.59×10⁻⁴ (FLOPS)" loading="lazy" style="width: 100%;" />
+                                </div>
+                                <p style="grid-column: 1 / -1; margin: 0; font-size: 0.9em; color: #57534e; text-align: center;">lr &approx; 3.59&times;10⁻⁴</p>
+
+                                <div style="text-align: center;">
                                     <img src="/blogs/muon/assets/perplexity_progression_lr_0p0014287.png"
-                                        alt="Perplexity progression — lr≈1.43×10⁻³" loading="lazy" style="width: 100%;" />
-                                    <p style="margin: 0.25rem 0 0; font-size: 0.9em; color: #57534e; text-align: center;">lr &approx; 1.43&times;10⁻³</p>
+                                        alt="Perplexity progression — lr≈1.43×10⁻³ (checkpoint)" loading="lazy" style="width: 100%;" />
                                 </div>
-                                <div>
+                                <div style="text-align: center;">
+                                    <img src="/blogs/muon/assets/perplexity_progression_lr_0p0014287_flops.png"
+                                        alt="Perplexity progression — lr≈1.43×10⁻³ (FLOPS)" loading="lazy" style="width: 100%;" />
+                                </div>
+                                <p style="grid-column: 1 / -1; margin: 0; font-size: 0.9em; color: #57534e; text-align: center;">lr &approx; 1.43&times;10⁻³</p>
+
+                                <div style="text-align: center;">
                                     <img src="/blogs/muon/assets/perplexity_progression_lr_0p0056924.png"
-                                        alt="Perplexity progression — lr≈5.69×10⁻³" loading="lazy" style="width: 100%;" />
-                                    <p style="margin: 0.25rem 0 0; font-size: 0.9em; color: #57534e; text-align: center;">lr &approx; 5.69&times;10⁻³</p>
+                                        alt="Perplexity progression — lr≈5.69×10⁻³ (checkpoint)" loading="lazy" style="width: 100%;" />
                                 </div>
-                                <div style="grid-column: 1 / -1; max-width: 50%; margin: 0 auto;">
+                                <div style="text-align: center;">
+                                    <img src="/blogs/muon/assets/perplexity_progression_lr_0p0056924_flops.png"
+                                        alt="Perplexity progression — lr≈5.69×10⁻³ (FLOPS)" loading="lazy" style="width: 100%;" />
+                                </div>
+                                <p style="grid-column: 1 / -1; margin: 0; font-size: 0.9em; color: #57534e; text-align: center;">lr &approx; 5.69&times;10⁻³</p>
+
+                                <div style="text-align: center;">
                                     <img src="/blogs/muon/assets/perplexity_progression_lr_0p022681.png"
-                                        alt="Perplexity progression — lr≈2.27×10⁻²" loading="lazy" style="width: 100%;" />
-                                    <p style="margin: 0.25rem 0 0; font-size: 0.9em; color: #57534e; text-align: center;">lr &approx; 2.27&times;10⁻²</p>
+                                        alt="Perplexity progression — lr≈2.27×10⁻² (checkpoint)" loading="lazy" style="width: 100%;" />
                                 </div>
+                                <div style="text-align: center;">
+                                    <img src="/blogs/muon/assets/perplexity_progression_lr_0p022681_flops.png"
+                                        alt="Perplexity progression — lr≈2.27×10⁻² (FLOPS)" loading="lazy" style="width: 100%;" />
+                                </div>
+                                <p style="grid-column: 1 / -1; margin: 0; font-size: 0.9em; color: #57534e; text-align: center;">lr &approx; 2.27&times;10⁻²</p>
                             </div>
-                            <figcaption>Mean validation perplexity over training checkpoints at each learning rate (AdamH, AdamW, MuonH, MuonW). Lower is better.</figcaption>
+                            <figcaption>Mean validation perplexity over training checkpoints (left) and FLOPS (right) at each learning rate (AdamH, AdamW, MuonH, MuonW). Lower is better. The FLOPS axis accounts for optimizer-specific compute costs, so different optimizers at the same checkpoint map to slightly different x-values.</figcaption>
                         </figure>
 
                         <p>Analyzing these cross-sections reveals a clear shifting of the guard as the step size scales up:</p>
@@ -898,28 +924,49 @@
 
                         <figure class="blog-image">
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; max-width: 100%;">
-                                <div>
+                                <div style="text-align: center;">
+                                    <p style="margin: 0 0 0.25rem; font-size: 0.85em; font-weight: 600; color: #78716c;">By checkpoint</p>
                                     <img src="/blogs/muon/assets/perplexity_progression_AdamH.png"
-                                        alt="Perplexity progression — AdamH" loading="lazy" style="width: 100%;" />
-                                    <p style="margin: 0.25rem 0 0; font-size: 0.9em; color: #57534e; text-align: center;">AdamH</p>
+                                        alt="Perplexity progression — AdamH (checkpoint)" loading="lazy" style="width: 100%;" />
                                 </div>
-                                <div>
+                                <div style="text-align: center;">
+                                    <p style="margin: 0 0 0.25rem; font-size: 0.85em; font-weight: 600; color: #78716c;">By FLOPS</p>
+                                    <img src="/blogs/muon/assets/perplexity_progression_AdamH_flops.png"
+                                        alt="Perplexity progression — AdamH (FLOPS)" loading="lazy" style="width: 100%;" />
+                                </div>
+                                <p style="grid-column: 1 / -1; margin: 0; font-size: 0.9em; color: #57534e; text-align: center;">AdamH</p>
+
+                                <div style="text-align: center;">
                                     <img src="/blogs/muon/assets/perplexity_progression_AdamW.png"
-                                        alt="Perplexity progression — AdamW" loading="lazy" style="width: 100%;" />
-                                    <p style="margin: 0.25rem 0 0; font-size: 0.9em; color: #57534e; text-align: center;">AdamW</p>
+                                        alt="Perplexity progression — AdamW (checkpoint)" loading="lazy" style="width: 100%;" />
                                 </div>
-                                <div>
+                                <div style="text-align: center;">
+                                    <img src="/blogs/muon/assets/perplexity_progression_AdamW_flops.png"
+                                        alt="Perplexity progression — AdamW (FLOPS)" loading="lazy" style="width: 100%;" />
+                                </div>
+                                <p style="grid-column: 1 / -1; margin: 0; font-size: 0.9em; color: #57534e; text-align: center;">AdamW</p>
+
+                                <div style="text-align: center;">
                                     <img src="/blogs/muon/assets/perplexity_progression_MuonH.png"
-                                        alt="Perplexity progression — MuonH" loading="lazy" style="width: 100%;" />
-                                    <p style="margin: 0.25rem 0 0; font-size: 0.9em; color: #57534e; text-align: center;">MuonH</p>
+                                        alt="Perplexity progression — MuonH (checkpoint)" loading="lazy" style="width: 100%;" />
                                 </div>
-                                <div>
+                                <div style="text-align: center;">
+                                    <img src="/blogs/muon/assets/perplexity_progression_MuonH_flops.png"
+                                        alt="Perplexity progression — MuonH (FLOPS)" loading="lazy" style="width: 100%;" />
+                                </div>
+                                <p style="grid-column: 1 / -1; margin: 0; font-size: 0.9em; color: #57534e; text-align: center;">MuonH</p>
+
+                                <div style="text-align: center;">
                                     <img src="/blogs/muon/assets/perplexity_progression_MuonW.png"
-                                        alt="Perplexity progression — MuonW" loading="lazy" style="width: 100%;" />
-                                    <p style="margin: 0.25rem 0 0; font-size: 0.9em; color: #57534e; text-align: center;">MuonW</p>
+                                        alt="Perplexity progression — MuonW (checkpoint)" loading="lazy" style="width: 100%;" />
                                 </div>
+                                <div style="text-align: center;">
+                                    <img src="/blogs/muon/assets/perplexity_progression_MuonW_flops.png"
+                                        alt="Perplexity progression — MuonW (FLOPS)" loading="lazy" style="width: 100%;" />
+                                </div>
+                                <p style="grid-column: 1 / -1; margin: 0; font-size: 0.9em; color: #57534e; text-align: center;">MuonW</p>
                             </div>
-                            <figcaption>Mean validation perplexity over training checkpoints for each optimizer, across five learning rates. Lower is better.</figcaption>
+                            <figcaption>Mean validation perplexity over training checkpoints (left) and FLOPS (right) for each optimizer, across five learning rates. Lower is better.</figcaption>
                         </figure>
 
                         <p>Viewing the optimizers individually clarifies these dynamics. For AdamH, the intermediate learning rate &sim;\(5.69 \times 10^{-3}\) (yellow) provides the steepest drop and lowest final perplexity (&sim;2.48). Exceed this, and it destabilizes; fall short, and it converges too slowly. AdamW is far more forgiving across learning rates: at \(\approx 3.59 \times 10^{-4}\), it settles into a remarkably smooth, steady decline to its lowest perplexity of &sim;2.51. MuonH exhibits a narrow but highly effective sweet spot at mid-range LRs (&sim;\(1.43 \times 10^{-3}\) to &sim;\(5.69 \times 10^{-3}\)), but is heavily penalized at the maximum rate. Finally, MuonW distinctly favors scale: its progression monotonically improves as the learning rate increases, with the highest LR (&sim;\(2.27 \times 10^{-2}\)) driving the lowest perplexity overall.</p>
@@ -979,7 +1026,7 @@
 
                     <p>These heatmaps<span class="sidenote-group"><sup
                                 class="sidenote-ref">11</sup><span
-                                class="sidenote-card side-right">Each heatmap uses its own color scale, so the 
+                                class="sidenote-card side-left">Each heatmap uses its own color scale, so the 
                                 same shade of green or red can represent different magnitudes across panels. 
                                 Pay attention to the individual legends.</span></span> 
                             give us a clearer picture of where Hyperball (blue) has the
@@ -1035,7 +1082,7 @@
                         is less important given scale invariance), we focus on the <em>distribution</em> of singular
                         values. Following the eigenspectral framework of NerVE<sup><a
                                 href="#ref-nerve">15</a></sup><span class="sidenote-group"><sup
-                                class="sidenote-ref">12</sup><span class="sidenote-card side-right">NerVE
+                                class="sidenote-ref">12</sup><span class="sidenote-card side-left">NerVE
                                 originally applies these metrics to track activation dynamics through FFN
                                 layers, but the same spectral measures are equally well defined for weight
                                 matrices.</span></span>, we track two key metrics for the weight
@@ -1168,7 +1215,7 @@
                             Norm. Bottom: Relative Step
                             Size. MuonW (Blue) shows monotonically increasing norm and decaying step size, while MuonH
                             (Red) plateaus.<span class="sidenote-group"><sup
-                                    class="sidenote-ref">14</sup><span class="sidenote-card side-right">The initial
+                                    class="sidenote-ref">14</sup><span class="sidenote-card side-left">The initial
                                     ramp-up visible in the relative step size corresponds to our learning rate warmup
                                     schedule.</span></span></figcaption>
                     </figure>
@@ -1388,7 +1435,7 @@
                         \(v_1=\arg\max_{\|x\|=1}\|Ax\|\), or \(\sigma_2=\max_{x\perp v_1:\:\|x\|=1}\|Ax\|\), and
                         \(\sigma_3\) has the stretch orthogonal to the first 2, and so on<span
                             class="sidenote-group"><sup class="sidenote-ref">16</sup><span
-                                class="sidenote-card side-right">For completeness, we can generalize this idea
+                                class="sidenote-card side-left">For completeness, we can generalize this idea
                                 either recursively (where we define \(\sigma_i\) as the max stretch orthogonal to
                                 \(v_j\) \(\forall j \lt i\)), or succinctly using the Min max theorem:
                                 \(\sigma_i=\min_{U\subseteq \mathbb R^n:\:\dim (U)=n-i+1}\max_{x\in
@@ -1401,7 +1448,7 @@
                         <li><strong>Spectral norm/stability:</strong> The spectral norm is defined as
                             \(\|\cdot\|_2=\sigma_1(\cdot)\) on matrix inputs. It is the operator norm<span
                                 class="sidenote-group"><sup class="sidenote-ref">17</sup><span
-                                    class="sidenote-card side-left">Formally, the operator norm \(\|\cdot\|_p\) is
+                                    class="sidenote-card side-right">Formally, the operator norm \(\|\cdot\|_p\) is
                                     defined for \(A\in \mathbb R^{m\times n}\) as \(\|A\|_p=\max\{\|Ax\|_p:x\in
                                     \mathbb R^n, \|x\|_p\le 1\}\), where we apply the \(\ell_p\) norm to the
                                     vectors.</span></span> induced by the vector \(\ell_2\) norm. As previously
