@@ -100,7 +100,7 @@
                     </figure>
 
                     <h2 id="page-title">Does Muon improve regulatory DNA learning? Part 1.</h2>
-                    <p class="blog-date">March 4, 2026 &middot; Viraj Doshi
+                    <p class="blog-date">March 5, 2026 &middot; Viraj Doshi
                         <span class="author-socials">
                             <a href="https://x.com/viraj9451" target="_blank" class="author-social-link" aria-label="Twitter">
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
@@ -126,7 +126,7 @@
                                 </span></span></h3>
                         <ul>
                             <li>The DNA domain differs from natural language in many ways; a much smaller vocabulary (4 tokens vs ~100k) with near-uniform token frequencies, and local 6&ndash;20bp motif grammar that dominates sequence structure, so the observed efficiency gains of Muon in NLP are not guaranteed to transfer.</li>
-                            <li>In this blog, we find that to reach a target validation perplexity of 2.51, MuonW requires <b>&sim;37% fewer FLOPS</b> than AdamH, both at their most optimal learning rate.</li>
+                            <li>We benchmark Muon and Adam variants for regulatory DNA modeling, and show MuonW reaches target validation perplexity with about 37% fewer FLOPs than AdamH.</li>
                             <li>For Muon, there is a distinct phase change across the learning rate spectrum: MuonH reaches better validation perplexities at lower learning rates, but at higher rates MuonW starts outperforming MuonH, reaching the best validation perplexity overall.</li>
                             <li>For Adam, the stable learning rate window where AdamH outperforms is narrower than for AdamW, but the lowest perplexity is achieved with AdamH.</li>
                             <li>We perform a spectral analysis to show how Muon's whitening can promote feature learning by forcing weights away from initialization.</li>
