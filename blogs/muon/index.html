@@ -117,8 +117,7 @@
 
                     <!-- ========== TLDR / Highlights box – edit below ========== -->
                     <section class="blog-takeaways" aria-label="Key takeaways">
-                        <h3>Highlights<span class="sidenote-group"><sup
-                                    class="sidenote-ref">*</sup><span
+                        <h3>Highlights<span class="sidenote-group"><span
                                     class="sidenote-card side-right blog-sidenote-style-note">
                                     AdamW = Adam with Decoupled Weight Decay<br>
                                     MuonW = Muon with Decoupled Weight Decay<br>
@@ -126,8 +125,8 @@
                                     MuonH = Muon with Hyperball
                                 </span></span></h3>
                         <ul>
-                            <li>DNA uses just 4 near-uniformly distributed tokens with local 6&ndash;20bp motif grammar, unlike the ~100k-token Zipfian vocabulary of natural language, so optimizer rankings from NLP do not necessarily transfer.</li>
-                            <li>To reach a validation perplexity of 2.51, MuonW requires <b>&sim;37% fewer FLOPS</b> than AdamH, both at their most optimal learning rate.</li>
+                            <li>The DNA domain differs from natural language in many ways; a much smaller vocabulary (4 tokens vs ~100k) with near-uniform token frequencies, and local 6&ndash;20bp motif grammar that dominates sequence structure, so the observed efficiency gains of Muon in NLP are not guaranteed to transfer.</li>
+                            <li>In this blog, we find that to reach a validation perplexity of 2.51, MuonW requires <b>&sim;37% fewer FLOPS</b> than AdamH, both at their most optimal learning rate.</li>
                             <li>For Muon, there is a distinct phase change across the learning rate spectrum: MuonH reaches better validation perplexities at lower learning rates, but at higher rates MuonW starts outperforming MuonH, reaching the best validation perplexity overall.</li>
                             <li>For Adam, the stable learning rate window where AdamH outperforms is narrower than for AdamW, but the lowest perplexity is achieved with AdamH.</li>
                             <li>We perform a spectral analysis to show how Muon's whitening can promote feature learning by forcing weights away from initialization.</li>
@@ -150,10 +149,11 @@
                         the signal is dominated by these independent local motif grammars rather than the long-range
                         dependencies that characterize language modeling. In this blog, we explore the behavior of
                         recent optimizers on DNA sequence modeling in regulatory regions, and evaluate whether
-                        optimizer choices that work well for LLMs transfer to this distinct setting.
-                        Faster convergence has direct practical value: by reducing the compute needed to train
-                        generative DNA models, we can redirect resources toward sampling far more candidate
-                        regulatory sequences and sending them for synthesis and lab testing.</p>
+                        optimizer choices that work well for LLMs transfer to this distinct setting.</p>
+
+                    <p>In domains such as coding or mathematics, model outputs can frequently be validated almost instantly. A generated program can be compiled and executed within seconds; a mathematical proof or solution can be checked automatically. This tight feedback loop makes iteration relatively inexpensive, both computationally and financially. However, biology works under a very different set of constraints. When a model proposes a DNA sequence or regulatory element, validating that prediction requires physical experimentation: DNA synthesis, cloning, viral packaging, cell culture, sequencing, and downstream assays. These experiments can take weeks to months and cost thousands to tens of thousands of dollars per iteration.</p>
+
+                    <p>Because the validation loop is so slow and expensive, significant improvement in training efficiency can have a disproportionately large impact in AI for biology. The capital and resources from every unit of compute saved during model development can instead be redirected toward wet-lab experimentation. Hence, compute efficiency in this domain is not merely an engineering optimization. It directly expands the experimental budget and accelerates the translation of models from in-silico results to real-world biological validation.</p>
 
                     <details class="collapsible-section" open>
                         <summary>
@@ -182,12 +182,14 @@
                         uniform:</p>
 
                     <figure class="blog-image">
-                        <img src="/blogs/muon/assets/nucleotide_K562.png"
-                            alt="Nucleotide distribution — K562" loading="lazy" style="width: 100%;" />
-                        <img src="/blogs/muon/assets/nucleotide_HepG2.png"
-                            alt="Nucleotide distribution — HepG2" loading="lazy" style="width: 100%;" />
-                        <img src="/blogs/muon/assets/nucleotide_SKNSH.png"
-                            alt="Nucleotide distribution — SK-N-SH" loading="lazy" style="width: 100%;" />
+                        <div style="display: flex; gap: 0.5rem; justify-content: center; align-items: center; max-width: 600px; margin: 0 auto;">
+                            <img src="/blogs/muon/assets/nucleotide_K562_pie.png"
+                                alt="Nucleotide distribution — K562" loading="lazy" style="width: 33% !important; max-width: 33% !important;" />
+                            <img src="/blogs/muon/assets/nucleotide_HepG2_pie.png"
+                                alt="Nucleotide distribution — HepG2" loading="lazy" style="width: 33% !important; max-width: 33% !important;" />
+                            <img src="/blogs/muon/assets/nucleotide_SKNSH_pie.png"
+                                alt="Nucleotide distribution — SK-N-SH" loading="lazy" style="width: 33% !important; max-width: 33% !important;" />
+                        </div>
                         <figcaption>Nucleotide frequencies across the three cell lines in
                             our training set. K562 and HepG2 are nearly uniform; SK-N-SH shows a
                             moderate GC bias (28.3% each vs 21.7% for A/T).</figcaption>
@@ -971,9 +973,9 @@
 
                         <p>Viewing the optimizers individually clarifies these dynamics. For AdamH, the intermediate learning rate &sim;\(5.69 \times 10^{-3}\) (yellow) provides the steepest drop and lowest final perplexity (&sim;2.48). Exceed this, and it destabilizes; fall short, and it converges too slowly. AdamW is far more forgiving across learning rates: at \(\approx 3.59 \times 10^{-4}\), it settles into a remarkably smooth, steady decline to its lowest perplexity of &sim;2.51. MuonH exhibits a narrow but highly effective sweet spot at mid-range LRs (&sim;\(1.43 \times 10^{-3}\) to &sim;\(5.69 \times 10^{-3}\)), but is heavily penalized at the maximum rate. Finally, MuonW distinctly favors scale: its progression monotonically improves as the learning rate increases, with the highest LR (&sim;\(2.27 \times 10^{-2}\)) driving the lowest perplexity overall.</p>
                         
-                        <h4 class="blog-subheading">Time-to-target: step efficiency</h4>
+                        <h4 class="blog-subheading">Time-to-target: FLOP efficiency</h4>
 
-                        <p>We can quantify optimization efficiency by measuring the training steps required to cross a specific validation target. We use a target of 2.51, the lowest perplexity reached by an optimizer candidate (specifically AdamW). MuonW at its optimal learning rate crosses this threshold by checkpoint 12, while AdamH at its optimal configuration only reaches it around checkpoint 19. This means MuonW reaches the target in roughly 37% fewer steps (and 37% fewer training tokens). Note that fewer steps does not necessarily translate to proportionally less wall-clock time, since Muon&rsquo;s SVD-based update is more expensive per step than Adam&rsquo;s elementwise update; the actual wall-clock savings depend on model size, hardware, and implementation.</p>
+                        <p>We can quantify optimization efficiency by measuring the training FLOPs required to cross a specific validation target. We use a target of 2.51, the lowest perplexity reached by an optimizer candidate (specifically AdamW). MuonW at its optimal learning rate crosses this threshold by checkpoint 12, while AdamH at its optimal configuration only reaches it around checkpoint 19. This means MuonW reaches the target in roughly 37% fewer steps (and 37% fewer training tokens). Because the forward and backward passes dominate per-step FLOPs, Muon&rsquo;s SVD-based update adds only a small overhead relative to the total step cost, so the 37% step reduction translates to a comparable reduction in total training FLOPs.</p>
 
                     </details>
 
@@ -1312,19 +1314,18 @@
                         </summary>
                     <p>Adam&rsquo;s update for each parameter is proportional to
                         \(m_t / \sqrt{v_t}\), where \(m_t\) is the gradient EMA and \(v_t\) the EMA of
-                        squared gradients. In DNA modeling, where batches are dominated by shifting, independent
-                        6&ndash;20bp motifs, the gradients fluctuate wildly from step to step. The first moment
-                        \(m_t\) suffers <em>destructive</em> interference as positive and negative gradients
-                        cancel, while the second moment \(v_t\), which averages strictly positive squared values, does not suffer from sign cancellation and remains relatively stable and large.
-                        The ratio shrinks, and Adam&rsquo;s steps become tiny. Increasing the learning rate does
-                        not help: a larger \(\eta\) amplifies the noisy, unstructured coordinate-wise updates,
-                        causing training to destabilize, as the charts above confirm (see how fast losses rise for the largest learning rate).</p>
+                        squared gradients. In DNA modeling, where batches are likely dominated by shifting, independent
+                        6&ndash;20bp motifs, the gradients could fluctuate significantly from step to step. The first moment
+                        \(m_t\) may suffer <em>destructive</em> interference as positive and negative gradients
+                        cancel, while the second moment \(v_t\), which averages strictly positive squared values, would not suffer from sign cancellation and could remain relatively stable and large.
+                        This would cause the ratio to shrink, making Adam&rsquo;s steps progressively smaller. Increasing the learning rate may not help: a larger \(\eta\) would amplify noisy, unstructured coordinate-wise updates,
+                        potentially destabilizing training, as the charts above suggest (see how fast losses rise for the largest learning rate).</p>
 
-                    <p>Muon sidesteps this entirely. Its Newton&ndash;Schulz whitening discards the per-element
-                        scale and forces a fixed-norm update at every step, so temporal noise never suppresses
-                        the step size. The result: MuonW can safely push large updates through the output
-                        projection, bulldozing past weight decay to inflate logits, while AdamW is trapped at
-                        a low norm by its own variance denominator.</p>
+                    <p>Muon may sidestep this issue. Its Newton&ndash;Schulz whitening discards the per-element
+                        scale and forces a fixed-norm update at every step, so temporal noise would not suppress
+                        the step size. This could explain why MuonW is able to push larger updates through the output
+                        projection, overcoming weight decay to inflate logits, while AdamW may be constrained
+                        by its own variance denominator.</p>
                     </details>
 
                     </details>
