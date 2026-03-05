@@ -127,7 +127,7 @@
                                 </span></span></h3>
                         <ul>
                             <li>DNA uses just 4 near-uniformly distributed tokens with local 6&ndash;20bp motif grammar, unlike the ~100k-token Zipfian vocabulary of natural language, so optimizer rankings from NLP do not necessarily transfer.</li>
-                            <li>To reach a validation perplexity of 2.51, MuonW requires <b>&sim;37% fewer optimizer steps</b> than AdamH, both at their most optimal learning rate.</li>
+                            <li>To reach a validation perplexity of 2.51, MuonW requires <b>&sim;37% fewer FLOPS</b> than AdamH, both at their most optimal learning rate.</li>
                             <li>For Muon, there is a distinct phase change across the learning rate spectrum: MuonH reaches better validation perplexities at lower learning rates, but at higher rates MuonW starts outperforming MuonH, reaching the best validation perplexity overall.</li>
                             <li>For Adam, the stable learning rate window where AdamH outperforms is narrower than for AdamW, but the lowest perplexity is achieved with AdamH.</li>
                             <li>We perform a spectral analysis to show how Muon's whitening can promote feature learning by forcing weights away from initialization.</li>
