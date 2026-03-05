@@ -768,7 +768,9 @@
                         <summary>
                             <h3 id="sec-perplexity-validation">Results</h3>
                         </summary>
-                        <p> We track validation perplexity throughout training as a highly interpretable and sensitive measure of model capacity<span
+                        <p> To isolate the effect of the optimizer, we hold model architecture, dataset, training duration,
+                            and all non-optimizer hyperparameters constant across runs, varying only the optimizer and
+                            learning rate. We track validation perplexity throughout training as a highly interpretable and sensitive measure of model capacity<span
                             class="sidenote-group"><sup class="sidenote-ref">8</sup><span
                             class="sidenote-card side-left">The model is a multifunctional architecture
                             similar to <a href="/introducing-axis/">Axis</a>, trained on a set of
@@ -783,7 +785,7 @@
                             grammar modeling, and we plan to validate this directly with motif-centric 
                             downstream tasks. By evaluating against a held-out validation split, 
                             we extract a clear empirical picture of optimizer performance across 
-                            varying learning rates and temporal training checkpoints.</p>
+                            varying learning rates and training checkpoints (saved every epoch).</p>
 
                         <h4 class="blog-subheading">Final test perplexity by learning rate</h4>
 
