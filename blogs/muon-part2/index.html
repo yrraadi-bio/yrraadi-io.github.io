@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-4DGX45FJCJ"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-4DGX45FJCJ');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Does Muon improve regulatory DNA learning? Part 2. — Origin Bio</title>
+    <meta property="og:title" content="Does Muon improve regulatory DNA learning? Part 2: From Training Loss to Biological Truth" />
+    <meta property="og:image" content="https://origin.bio/blogs/muon-part2/assets/fig_bio_radar.png" />
+    <meta property="og:image:secure_url" content="https://origin.bio/blogs/muon-part2/assets/fig_bio_radar.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="https://origin.bio/blogs/muon-part2/assets/fig_bio_radar.png" />
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="icon" href="/assets/favicon.png" type="image/png">
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['\\(', '\\)']],
+                displayMath: [['\\[', '\\]']],
+                processEscapes: true
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+
+<body class="blog-page blog-with-sidebar">
+    <div class="reading-progress-bar"></div>
+    <div class="dna-background">
+        <div class="dna-strand"></div>
+        <div class="dna-strand"></div>
+        <div class="dna-strand"></div>
+    </div>
+
+    <header>
+        <a href="/" class="logo-link">
+            <img src="/assets/Origin%20logo+text%20(blue%20on%20transparent).png" alt="Origin Logo" class="header-logo">
+        </a>
+    </header>
+
+    <main>
+        <section class="blog-hero">
+            <div class="blog-content">
+                <nav class="blog-toc" aria-label="Table of contents">
+                    <div class="blog-toc-header">
+                        <span class="blog-toc-title">Contents</span>
+                        <button class="blog-toc-toggle" aria-label="Toggle sidebar" title="Toggle sidebar">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="11 17 6 12 11 7"></polyline>
+                                <polyline points="18 17 13 12 18 7"></polyline>
+                            </svg>
+                        </button>
+                    </div>
+                    <ul>
+                        <li><a href="#page-title">Title</a></li>
+                        <li><a href="#sec-gap">The Loss&ndash;Biology Gap</a></li>
+                        <li><a href="#sec-eval-suite">Evaluation Suite</a></li>
+                        <li><a href="#sec-motif-abundance">Motif Abundance</a></li>
+                        <li><a href="#sec-grammar">TF Grammar</a></li>
+                        <li><a href="#sec-diversity">The Diversity Paradox</a></li>
+                        <li><a href="#sec-cka">Representations &amp; CKA</a></li>
+                        <li><a href="#sec-muonh-collapse">MuonH Collapse</a></li>
+                        <li><a href="#sec-temperature">Temperature</a></li>
+                        <li><a href="#sec-recommendations">Recommendations</a></li>
+                        <li><a href="#sec-open-questions">Open Questions</a></li>
+                    </ul>
+                </nav>
+                <button class="blog-toc-open" aria-label="Open sidebar" title="Open sidebar">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="13 7 18 12 13 17"></polyline>
+                        <polyline points="6 7 11 12 6 17"></polyline>
+                    </svg>
+                </button>
+                <article class="blog-article">
+
+                    <h2 id="page-title">Does Muon improve regulatory DNA learning? Part 2.</h2>
+                    <p class="blog-date">March 2026 &middot; Akshat Gupta, Viraj Doshi
+                        <span class="author-socials">
+                            <a href="https://x.com/viraj9451" target="_blank" class="author-social-link" aria-label="Twitter">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                                </svg>
+                            </a>
+                        </span>
+                    </p>
+
+                    <!-- ========== Highlights box ========== -->
+                    <section class="blog-takeaways" aria-label="Key takeaways">
+                        <h3>Highlights<span class="sidenote-group"><span
+                                    class="sidenote-card side-right blog-sidenote-style-note">
+                                    AdamW = Adam + Weight Decay<br>
+                                    MuonW = Muon + Weight Decay<br>
+                                    AdamH = Adam + Hyperball<br>
+                                    MuonH = Muon + Hyperball
+                                </span></span></h3>
+                        <ul>
+                            <li>All four optimizers converge to nearly identical training loss (~1.20), yet produce substantially different biological quality in generated sequences &mdash; training loss does not predict biological performance.</li>
+                            <li>MuonW excels at <strong>motif abundance and diversity</strong>: highest TF hit rate correlation (0.710 avg) and most unique regulatory programs (80% of reference).</li>
+                            <li>AdamH excels at <strong>TF grammar preservation</strong>: best co-occurrence structure (Mantel r = 0.775), 22% better than the next optimizer. Hyperball helps Adam but hurts Muon &mdash; the interaction is asymmetric.</li>
+                            <li>Spectral entropy (weight &ldquo;whiteness&rdquo;) does <strong>not</strong> correlate with grammar quality (&rho; = 0.205, p = 0.387). The model that learns the most words doesn&rsquo;t necessarily learn the best sentences.</li>
+                            <li>CKA analysis shows gradient processing (Adam vs Muon) determines <em>what</em> the model learns internally, while weight normalization modulates <em>how</em> that maps to biological output.</li>
+                        </ul>
+                    </section>
+                    <!-- ========== End Highlights ========== -->
+
+                    <p>In <a href="/blogs/muon/">Part 1</a>, we showed that MuonW reaches target validation
+                        perplexity with roughly 37% fewer FLOPs than AdamH. We dissected the spectral mechanics:
+                        Muon&rsquo;s Newton-Schulz whitening produces weight matrices with near-maximal spectral
+                        entropy, distributing learned information across all singular value directions rather than
+                        concentrating it in a few dominant modes.</p>
+
+                    <p>But perplexity measures how well a model predicts the next nucleotide. It does not measure
+                        whether the model has learned the regulatory grammar that makes enhancers function in cells.</p>
+
+                    <p>An enhancer is not a bag of nucleotides. It is a precisely orchestrated arrangement of
+                        transcription factor binding sites &mdash; specific motifs appearing in specific combinations,
+                        at specific spacings, on specific strands. A model that achieves low loss by memorizing
+                        nucleotide statistics could still generate sequences where GATA1 and TAL1 binding sites never
+                        co-occur, or where promoter-specific motifs appear in distal enhancers. These sequences would
+                        look like DNA. They would not work like DNA.</p>
+
+                    <p>This post answers the question Part 1 left open: <strong>does Muon&rsquo;s training efficiency
+                            advantage translate to better biological quality in generated regulatory sequences?</strong></p>
+
+                    <p>The short answer is: it depends on which dimension of biology you measure.</p>
+
+                    <!-- ==================== THE LOSS-BIOLOGY GAP ==================== -->
+                    <details class="collapsible-section" open>
+                        <summary>
+                            <h3 id="sec-gap">The Loss&ndash;Biology Gap</h3>
+                        </summary>
+
+                    <figure class="blog-image">
+                        <img src="/blogs/muon-part2/assets/fig_bio_radar.png"
+                            alt="Biological quality radar chart showing different optimizer strengths across 5 axes"
+                            loading="lazy" />
+                        <figcaption>Biological quality across five axes for each optimizer at its best learning rate.
+                            No single optimizer dominates all dimensions. MuonW leads on diversity and abundance;
+                            AdamH leads on grammar; AdamW leads on robustness.</figcaption>
+                    </figure>
+
+                    <p>All four optimizer configurations &mdash; AdamW, AdamH, MuonW, MuonH &mdash; converge to
+                        nearly identical training loss (~1.20 per nucleotide) after 20 epochs. Yet when we evaluate
+                        the generated sequences against a comprehensive biological quality suite, they produce
+                        substantially different results.</p>
+
+                    <p>Why should identical loss produce different biology? Consider what the cross-entropy loss
+                        actually optimizes. It averages over all positions equally, but regulatory function
+                        concentrates in the ~10&ndash;20bp motif cores that occupy &lt;10% of the sequence. A model
+                        that predicts flanking nucleotides perfectly but misses the binding site grammar can still
+                        achieve low per-position loss. The gap between &ldquo;good at predicting nucleotides&rdquo;
+                        and &ldquo;good at generating functional regulatory elements&rdquo; is the central finding
+                        of this post.</p>
+
+                    <figure class="blog-image">
+                        <img src="/blogs/muon-part2/assets/fig_summary_table.png"
+                            alt="Summary table showing which optimizer wins each biological dimension"
+                            loading="lazy" />
+                        <figcaption>Summary of which optimizer performs best on each biological dimension.
+                            Evidence strength reflects the consistency of the finding across learning rates and
+                            analysis methods.</figcaption>
+                    </figure>
+
+                    </details>
+
+                    <!-- ==================== EVALUATION SUITE ==================== -->
+                    <details class="collapsible-section">
+                        <summary>
+                            <h3 id="sec-eval-suite">The Evaluation Suite</h3>
+                        </summary>
+
+                    <p>Before presenting results, we need to establish what &ldquo;biological quality&rdquo; means
+                        for generated regulatory DNA. We developed a six-axis evaluation framework, each axis
+                        targeting a distinct aspect of regulatory biology:</p>
+
+                    <p><strong>TF binding grammar</strong> measures whether generated sequences preserve the
+                        combinatorial logic of transcription factor co-occurrence. Real erythroid enhancers don&rsquo;t
+                        just contain GATA1 binding sites &mdash; they contain GATA1 <em>together with</em> TAL1 and
+                        KLF1, at specific relative spacings. We quantify this using the Frobenius distance between
+                        reference and generated co-occurrence matrices, and test structural similarity with a proper
+                        Mantel permutation test (10,000 label permutations).</p>
+
+                    <p><strong>Motif abundance and fidelity</strong> measures how many TF binding sites are preserved
+                        and whether their relative frequencies match the reference. We scan all 16,249 sequences per
+                        condition against 22 JASPAR vertebrate motif matrices, computing per-TF hit rates, aggregate
+                        cosine similarity, and per-sequence Jensen-Shannon divergence.</p>
+
+                    <p><strong>Predicted transcriptional activity</strong> uses the Malinois MPRA
+                        model<span class="sidenote-group"><sup class="sidenote-ref">1</sup><span
+                                class="sidenote-card side-left">Malinois is trained on real Massively Parallel Reporter
+                                Assay data and predicts log2 fold-change of transcriptional activity from sequence
+                                alone. It is the closest computational proxy to wet-lab functional validation.
+                            </span></span>
+                        to predict whether generated sequences would drive gene expression in K562 (erythroid),
+                        HepG2 (hepatocyte), and SK-N-SH (neural) cell lines.</p>
+
+                    <p><strong>Cell-type specificity</strong> tests whether sequences generated with a K562 prompt
+                        contain K562-appropriate TFs (GATA1, TAL1, KLF1) and not hepatocyte TFs (HNF4A, FOXA).
+                        We use Fisher&rsquo;s exact tests with Holm-Bonferroni correction.</p>
+
+                    <p><strong>Regulatory element type fidelity</strong> tests whether generated promoters look like
+                        promoters (high CpG O/E, SP1 enrichment) and enhancers look like enhancers (intermediate GC,
+                        cell-type-specific TFs).</p>
+
+                    <p><strong>Sequence diversity</strong> measures mode collapse: unique TF binding profiles,
+                        pairwise Jaccard similarity, and k-mer diversity at k=10.</p>
+
+                    <p>We evaluate all four optimizers across five learning rates
+                        (\(9 \times 10^{-5}\) to \(2.27 \times 10^{-2}\)),
+                        yielding 20 trained models plus the reference dataset. All generations use temperature 0.5,
+                        which we found universally improves all motif metrics regardless of optimizer.</p>
+
+                    </details>
+
+                    <!-- ==================== MOTIF ABUNDANCE ==================== -->
+                    <details class="collapsible-section" open>
+                        <summary>
+                            <h3 id="sec-motif-abundance">Where Muon Shines: Motif Abundance</h3>
+                        </summary>
+
+                    <p>The dimension where Muon most clearly outperforms Adam is raw motif recovery and diversity.</p>
+
+                    <figure class="blog-image">
+                        <img src="/blogs/muon-part2/assets/moods_heatmaps.png"
+                            alt="MOODS motif recovery heatmaps across all 20 optimizer x LR runs"
+                            loading="lazy" />
+                        <figcaption>MOODS motif analysis across all 20 optimizer &times; learning rate configurations.
+                            (A) TF hit rate correlation with reference, (B) per-sequence cosine similarity,
+                            (C) total motif hits ratio, (D) mean absolute hit rate delta. The Muon family
+                            consistently produces more motif-rich sequences.</figcaption>
+                    </figure>
+
+                    <p>Across all 20 optimizer &times; learning rate configurations, the Muon family consistently
+                        produces sequences with more transcription factor binding sites. MuonW achieves the highest
+                        average TF hit rate correlation with reference (0.710 &pm; 0.077) compared to AdamW
+                        (0.608 &pm; 0.020). At its best learning rate
+                        (\(2.27 \times 10^{-2}\)), MuonW recovers 67.2% of all reference motif hits &mdash;
+                        the highest of any configuration.</p>
+
+                    <figure class="blog-image">
+                        <img src="/blogs/muon-part2/assets/tf_specificity_combined_blog.png"
+                            alt="Per-TF hit rate comparison across optimizers and cell types"
+                            loading="lazy" />
+                        <figcaption>Per-TF motif hit rates relative to reference, broken down by cell type.
+                            Muon variants (orange, red) deviate less from reference hit rates than Adam variants
+                            (blue, purple) on average. MuonH averages 8.6&ndash;13.3% deviation across cell types
+                            vs 20&ndash;32% for Adam.</figcaption>
+                    </figure>
+
+                    <p>MuonW also leads on sequence diversity: 1,689 unique TF binding profiles compared to 1,510
+                        (AdamH), 1,418 (AdamW), and 1,285 (MuonH). This is 80% of the reference diversity
+                        (2,108 unique profiles) &mdash; the closest any optimizer achieves.</p>
+
+                    <details class="collapsible-section">
+                        <summary>
+                            <h4>Why does Muon learn more motifs?</h4>
+                        </summary>
+                        <p>Muon&rsquo;s Newton-Schulz whitening pushes all singular values of the gradient update
+                            toward \([0.7, 1.3]\), distributing the update across the full rank of the weight
+                            matrix. In DNA&rsquo;s near-uniform 4-token space, this means the model explores the
+                            motif landscape broadly rather than fixating on the most statistically dominant patterns.
+                            The result: more TFs recovered, more diverse combinations, closer to the reference
+                            distribution. This is consistent with MuonW&rsquo;s higher stable rank (449 vs 63 for
+                            AdamW) &mdash; more &ldquo;active dimensions&rdquo; in the weight matrices correlate
+                            with more diverse motif recovery.</p>
+                    </details>
+
+                    </details>
+
+                    <!-- ==================== TF GRAMMAR ==================== -->
+                    <details class="collapsible-section" open>
+                        <summary>
+                            <h3 id="sec-grammar">Where Adam Surprises: TF Grammar</h3>
+                        </summary>
+
+                    <p>Here is where the story gets interesting. Despite Muon&rsquo;s clear advantage in motif
+                        abundance, AdamH preserves the <em>combinatorial grammar</em> of transcription factor
+                        co-occurrence significantly better than any Muon variant.</p>
+
+                    <figure class="blog-image">
+                        <img src="/blogs/muon-part2/assets/fig1_tf_grammar.png"
+                            alt="TF grammar preservation: Frobenius distance and Mantel correlation"
+                            loading="lazy" />
+                        <figcaption>TF binding grammar preservation at the best learning rate per optimizer.
+                            (A) Co-occurrence Frobenius distance (lower = better). (B) Co-occurrence matrix
+                            Mantel correlation (higher = better). AdamH achieves the best grammar preservation
+                            on both metrics, with Mantel r = 0.775 (22% higher than next-best).</figcaption>
+                    </figure>
+
+                    <p>AdamH at its best learning rate (\(5.69 \times 10^{-3}\)) achieves a Mantel correlation of
+                        0.775 with the reference co-occurrence matrix &mdash; 22% higher than the next-best optimizer
+                        (MuonW at 0.626). Its Frobenius distance to the reference matrix (0.184) is the lowest, and
+                        its spacing JSD (0.244) is also best. This is not a cherry-picked result. Averaged across all
+                        five learning rates, AdamH maintains the highest grammar score (0.673) compared to MuonW
+                        (0.575), AdamW (0.548), and MuonH (0.459).</p>
+
+                    <p>The pattern becomes even more striking when we examine the 2&times;2 factorial structure of
+                        our optimizer design:</p>
+
+                    <figure class="blog-image">
+                        <img src="/blogs/muon-part2/assets/fig_2x2_interaction.png"
+                            alt="2x2 factorial interaction plots for gradient processing x weight normalization"
+                            loading="lazy" />
+                        <figcaption>2&times;2 factorial interaction plots. Each panel shows one biological metric
+                            as a function of weight normalization (x-axis), with separate lines for Adam (blue)
+                            and Muon (orange). Crossing lines indicate an interaction: Hyperball helps Adam&rsquo;s
+                            grammar but hurts Muon&rsquo;s. Individual learning rates are shown as semi-transparent
+                            dots.</figcaption>
+                    </figure>
+
+                    <p>Hyperball normalization <em>improves</em> Adam&rsquo;s grammar by 23% (Mantel r: 0.548 &rarr;
+                        0.673) but <em>worsens</em> Muon&rsquo;s grammar by 20% (0.575 &rarr; 0.459). The interaction
+                        is asymmetric. Neither gradient processing alone nor weight normalization alone explains
+                        grammar quality &mdash; the specific combination matters.</p>
+
+                    <h4 class="blog-subheading">Why might Adam preserve grammar better?</h4>
+
+                    <p>TF grammar requires the model to encode <em>relationships between features</em>, not just
+                        individual features. The co-occurrence matrix encodes which TF pairs tend to appear in the
+                        same regulatory element &mdash; GATA1 and TAL1 co-occur frequently in erythroid enhancers;
+                        GATA1 and HNF4A rarely co-occur anywhere.</p>
+
+                    <p>In <a href="/blogs/muon/">Part 1</a>, we argued that Adam&rsquo;s per-coordinate scaling
+                        provides &ldquo;negligible benefit&rdquo; in DNA&rsquo;s near-uniform token space for
+                        individual nucleotide prediction. But the grammar of TF co-occurrence is <em>not</em>
+                        near-uniform &mdash; some pairs co-occur at 20&times; the rate of others. Adam&rsquo;s
+                        coordinate-wise adaptation may be capturing exactly this heterogeneity in the feature
+                        interaction landscape. Muon&rsquo;s whitening, by contrast, explicitly equalizes singular
+                        values &mdash; treating all directions in weight space as equally important. This is optimal
+                        for exploring the full motif vocabulary but may flatten the anisotropies that encode
+                        combinatorial relationships.</p>
+
+                    <h4 class="blog-subheading">Spectral whitening &ne; grammar</h4>
+
+                    <figure class="blog-image">
+                        <img src="/blogs/muon-part2/assets/fig_spectral_vs_bio.png"
+                            alt="Scatter plots of spectral properties vs biological outcomes across 20 checkpoints"
+                            loading="lazy" />
+                        <figcaption>Spectral properties vs biological outcomes across all 20 checkpoints.
+                            Top-left: spectral entropy vs grammar (Mantel r) shows no significant correlation
+                            (&rho; = 0.205, p = 0.387). Top-right: stable rank vs diversity shows a moderate
+                            negative correlation. Bottom panels show Frobenius norm and condition number.
+                            Higher spectral entropy does not mean better grammar.</figcaption>
+                    </figure>
+
+                    <p>This brings us to a key finding that directly updates Part 1&rsquo;s narrative. We measured
+                        the Spearman correlation between spectral entropy and grammar quality across all 20
+                        checkpoints: <strong>&rho; = 0.205, p = 0.387</strong>. There is no significant
+                        relationship.</p>
+
+                    <p>Part 1&rsquo;s claim that Muon produces spectrally white weights is factually correct &mdash;
+                        we measured it directly (entropy 0.955 vs 0.743 for AdamW). But the implicit assumption
+                        that spectral whitening captures &ldquo;the complex, combinatorial grammar of the
+                        genome&rdquo; is not supported by the grammar metrics. Having more whitened weights correlates
+                        with better motif abundance, but not with better grammar.</p>
+
+                    <p><strong>The model that learns the most words doesn&rsquo;t necessarily learn the best
+                            sentences.</strong></p>
+
+                    </details>
+
+                    <!-- ==================== DIVERSITY PARADOX ==================== -->
+                    <details class="collapsible-section" open>
+                        <summary>
+                            <h3 id="sec-diversity">The Diversity Paradox</h3>
+                        </summary>
+
+                    <figure class="blog-image">
+                        <img src="/blogs/muon-part2/assets/fig_diversity_paradox.png"
+                            alt="The diversity paradox: higher k-mer diversity but lower functional diversity"
+                            loading="lazy" />
+                        <figcaption>The diversity paradox. Left: at the nucleotide level, generated sequences are
+                            <em>more</em> diverse than reference (higher unique 10-mer fraction). Right: at the
+                            functional level, generated sequences are <em>less</em> diverse (fewer unique TF binding
+                            profiles). Dashed green line marks the reference level.</figcaption>
+                    </figure>
+
+                    <p>Generated sequences have <em>higher</em> k-mer diversity than the reference dataset. At k=10,
+                        generated sequences cover 87&ndash;95% of possible 10-mers, compared to 77% for real
+                        regulatory elements. Yet at the functional level &mdash; unique TF binding profiles &mdash;
+                        generated sequences are substantially <em>less</em> diverse (1,200&ndash;1,700 unique profiles
+                        vs 2,108).</p>
+
+                    <p>This is the diversity paradox: <strong>superficial diversity without functional
+                            variety.</strong></p>
+
+                    <p>Real regulatory elements are highly structured. Functional motifs create repetitive k-mer
+                        patterns &mdash; the GATA1 consensus WGATAR appears thousands of times across erythroid
+                        enhancers, lowering k-mer diversity. Generated sequences produce more uniformly distributed
+                        nucleotide patterns (higher k-mer entropy) while converging on fewer distinct regulatory
+                        programs. This finding holds across all optimizers, though MuonW comes closest to closing
+                        the gap on functional diversity (80% of reference).</p>
+
+                    </details>
+
+                    <!-- ==================== CKA ==================== -->
+                    <details class="collapsible-section" open>
+                        <summary>
+                            <h3 id="sec-cka">What the Weights Tell Us: CKA and the Gradient Hypothesis</h3>
+                        </summary>
+
+                    <p>Part 1 characterized what the weight matrices <em>look like</em> after training. We can now
+                        ask: do the models learn the same <em>internal representations</em>, and does that explain
+                        their biological differences?</p>
+
+                    <p>We computed Centered Kernel Alignment
+                        (CKA)<span class="sidenote-group"><sup class="sidenote-ref">2</sup><span
+                                class="sidenote-card side-right">Linear CKA (Kornblith et al., ICML 2019):
+                                \(\text{CKA}(X,Y) = \|Y^\top X\|_F^2 / (\|X^\top X\|_F \cdot \|Y^\top Y\|_F)\),
+                                where \(X\) and \(Y\) are centered activation matrices. Range [0, 1], with 1 =
+                                identical representations up to linear transform.</span></span>
+                        between all four best-LR models, using 500 reference sequences as input.</p>
+
+                    <figure class="blog-image">
+                        <img src="/blogs/muon-part2/assets/fig_cka_heatmap.png"
+                            alt="CKA representation similarity heatmap showing gradient type as dominant factor"
+                            loading="lazy" />
+                        <figcaption>Representation similarity (Linear CKA) between the four best-LR models.
+                            The block structure is striking: Muon models share nearly identical representations
+                            (CKA = 0.941) regardless of weight normalization. Adam models are moderately similar
+                            (0.724). Cross-gradient pairs are substantially different (0.40&ndash;0.49).
+                            Gradient processing is the dominant factor shaping internal representations.</figcaption>
+                    </figure>
+
+                    <p>The pattern is unambiguous:</p>
+                    <ul>
+                        <li><strong>Muon pair</strong> (MuonW &harr; MuonH): CKA = <strong>0.941</strong> &mdash;
+                            nearly identical representations</li>
+                        <li><strong>Adam pair</strong> (AdamW &harr; AdamH): CKA = <strong>0.724</strong> &mdash;
+                            moderately similar</li>
+                        <li><strong>Cross-gradient pairs</strong>: CKA = 0.40&ndash;0.49 &mdash; substantially
+                            different</li>
+                    </ul>
+
+                    <p>Gradient processing determines <em>what</em> the model learns. Newton-Schulz whitening
+                        produces nearly identical internal representations regardless of weight normalization.
+                        Per-coordinate Adam is more sensitive to whether you apply weight decay or Hyperball.</p>
+
+                    <p>This explains a key puzzle: why does Hyperball help Adam&rsquo;s grammar but hurt
+                        Muon&rsquo;s? Because Muon&rsquo;s representation is already &ldquo;locked in&rdquo; by
+                        the whitening &mdash; adding Hyperball doesn&rsquo;t reshape the representation, it just
+                        constrains how that fixed representation maps to outputs. For Adam, the representation is
+                        more malleable, and Hyperball&rsquo;s constraint reshapes it in a way that preserves
+                        relational structure.</p>
+
+                    </details>
+
+                    <!-- ==================== MUONH COLLAPSE ==================== -->
+                    <details class="collapsible-section">
+                        <summary>
+                            <h3 id="sec-muonh-collapse">The MuonH Cautionary Tale</h3>
+                        </summary>
+
+                    <p>In Part 1, we identified a theoretical failure mode: combining Newton-Schulz whitening with
+                        Hyperball creates a &ldquo;spectral squeeze&rdquo; where both the gradient and the weight
+                        normalization destroy magnitude information, potentially leading to rank collapse.
+                        The biological data confirms this prediction.</p>
+
+                    <figure class="blog-image">
+                        <img src="/blogs/muon-part2/assets/fig_muonh_collapse.png"
+                            alt="MuonH spectral collapse: healthy vs high-LR comparison"
+                            loading="lazy" />
+                        <figcaption>MuonH spectral comparison: healthy configuration (lr = 9&times;10&supmin;&sup5;,
+                            green) vs collapsed configuration (lr = 2.27&times;10&supmin;&sup2;, red). The collapsed
+                            model shows dramatically reduced spectral entropy, near-zero stable rank in FFN layers,
+                            and condition numbers reaching 10&sup1;&sup0;.</figcaption>
+                    </figure>
+
+                    <p>MuonH at lr = \(2.27 \times 10^{-2}\) produces only 571 unique TF profiles &mdash; 27% of
+                        the reference. Its weight matrices have condition numbers reaching \(2.64 \times 10^{10}\)
+                        (compared to 3,440 at the healthy lr = \(9 \times 10^{-5}\)). The Malinois MPRA model
+                        predicts uniformly high, non-specific transcriptional activity: these are sequences that
+                        score as generically &ldquo;active&rdquo; without encoding any cell-type-specific regulatory
+                        program.</p>
+
+                    <p>The mechanism is exactly what Part 1 predicted. For the <code>up_proj</code> layer
+                        (10922 &times; 2048), the effective learning rate is
+                        \(\eta \times \sqrt{\text{fan\_in}/\text{fan\_out}} = 0.0227 \times \sqrt{10922/2048}
+                        \approx 0.052\) &mdash; an enormous step on a unit-norm hypersphere. The weight matrices
+                        become extremely ill-conditioned, and the model collapses to generating repetitive,
+                        non-specific sequences.</p>
+
+                    </details>
+
+                    <!-- ==================== TEMPERATURE ==================== -->
+                    <details class="collapsible-section" open>
+                        <summary>
+                            <h3 id="sec-temperature">Temperature: The Elephant in the Room</h3>
+                        </summary>
+
+                    <figure class="blog-image">
+                        <img src="/blogs/muon-part2/assets/fig_temperature_interaction.png"
+                            alt="Temperature effect on masked motif recovery across optimizers"
+                            loading="lazy" />
+                        <figcaption>Temperature effect on masked motif recovery at the best learning rate per
+                            optimizer. All optimizers improve at lower temperature, but the effect is not uniform:
+                            AdamW gains ~79% from temp 0.5 vs 1.5, while MuonW gains only ~26%.</figcaption>
+                    </figure>
+
+                    <p>One finding we must be transparent about: sampling temperature has a larger effect on
+                        biological quality than optimizer choice. Dropping from temperature 1.0 to 0.5 universally
+                        improves all motif metrics across all optimizers.</p>
+
+                    <p>However, the effect is not uniform. Adam variants benefit disproportionately from lower
+                        temperature (AdamW: +79%, AdamH: +57%) compared to Muon variants (MuonH: +32%, MuonW: +26%).
+                        This connects back to Part 1&rsquo;s &ldquo;activation hacking&rdquo; observation: MuonW&rsquo;s
+                        unbounded weight norm growth effectively reduces the softmax temperature during training,
+                        sharpening predictions. Lower explicit temperature at generation time does the same thing.
+                        Some of MuonW&rsquo;s biological advantage may therefore reflect implicit temperature
+                        reduction rather than genuinely superior representation learning.</p>
+
+                    </details>
+
+                    <!-- ==================== RECOMMENDATIONS ==================== -->
+                    <details class="collapsible-section" open>
+                        <summary>
+                            <h3 id="sec-recommendations">Practical Recommendations</h3>
+                        </summary>
+
+                    <p>The right optimizer depends on what matters for your application:</p>
+
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.95em; margin: 1rem 0;">
+                            <thead>
+                                <tr style="background: #f5f5f4; border-bottom: 2px solid #d6d3d1;">
+                                    <th style="padding: 0.75rem; text-align: left;">Use case</th>
+                                    <th style="padding: 0.75rem; text-align: left;">Recommendation</th>
+                                    <th style="padding: 0.75rem; text-align: left;">Why</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr style="border-bottom: 1px solid #e7e5e4;">
+                                    <td style="padding: 0.75rem;"><strong>Regulatory element design</strong><br>
+                                        <span style="color: #78716c; font-size: 0.85em;">(need functional grammar)</span></td>
+                                    <td style="padding: 0.75rem;">AdamH, lr &asymp; 5.7&times;10&supmin;&sup3;</td>
+                                    <td style="padding: 0.75rem;">Best TF co-occurrence preservation (Mantel r = 0.775)</td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid #e7e5e4;">
+                                    <td style="padding: 0.75rem;"><strong>Diverse library screening</strong><br>
+                                        <span style="color: #78716c; font-size: 0.85em;">(need motif-rich variety)</span></td>
+                                    <td style="padding: 0.75rem;">MuonW, lr &asymp; 2.3&times;10&supmin;&sup2;</td>
+                                    <td style="padding: 0.75rem;">Most diverse, highest motif abundance (67% hits ratio)</td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid #e7e5e4;">
+                                    <td style="padding: 0.75rem;"><strong>Production default</strong><br>
+                                        <span style="color: #78716c; font-size: 0.85em;">(robustness over peak)</span></td>
+                                    <td style="padding: 0.75rem;">AdamW, lr &asymp; 2.3&times;10&supmin;&sup2;</td>
+                                    <td style="padding: 0.75rem;">30% lower cross-LR variance than next best</td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid #e7e5e4;">
+                                    <td style="padding: 0.75rem;"><strong>Cell-type discrimination</strong><br>
+                                        <span style="color: #78716c; font-size: 0.85em;">(embedding quality)</span></td>
+                                    <td style="padding: 0.75rem;">MuonH, lr &asymp; 5.7&times;10&supmin;&sup3;</td>
+                                    <td style="padding: 0.75rem;">Best DART-Eval Task 3 (0.736 AUROC)</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 0.75rem; color: #dc2626;"><strong>Avoid</strong></td>
+                                    <td style="padding: 0.75rem; color: #dc2626;">MuonH at any lr &gt; 5.7&times;10&supmin;&sup3;</td>
+                                    <td style="padding: 0.75rem; color: #dc2626;">Catastrophic collapse (condition number &gt; 10&sup1;&sup0;)</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <p>In all cases, use temperature 0.5 for generation.</p>
+
+                    <figure class="blog-image">
+                        <img src="/blogs/muon-part2/assets/fig_robustness_simplified.png"
+                            alt="Cross-learning-rate robustness comparison"
+                            loading="lazy" />
+                        <figcaption>Cross-learning-rate robustness. Left: distribution of coefficient of variation
+                            across 94 biological metrics for each optimizer. Right: mean and median CV. AdamW is
+                            the most robust (CV = 0.152), MuonH the least (CV = 0.278).</figcaption>
+                    </figure>
+
+                    </details>
+
+                    <!-- ==================== OPEN QUESTIONS ==================== -->
+                    <details class="collapsible-section" open>
+                        <summary>
+                            <h3 id="sec-open-questions">What We Don&rsquo;t Know Yet</h3>
+                        </summary>
+
+                    <p>Several questions remain open:</p>
+
+                    <p><strong>Does grammar translate to function?</strong> Our grammar metrics measure TF
+                        co-occurrence from motif scanning. The ultimate test is whether AdamH-generated sequences
+                        show higher activity in reporter assays than MuonW-generated sequences. We have Malinois
+                        predictions (a model of biology) but not biology itself.</p>
+
+                    <p><strong>Can we get the best of both?</strong> MuonW excels at abundance; AdamH excels at
+                        grammar. A hybrid training schedule &mdash; Muon for early exploration, Adam for late-stage
+                        grammar refinement &mdash; might capture both advantages. We have not tested this.</p>
+
+                    <p><strong>Is the activation hacking real?</strong> MuonW&rsquo;s growing weight norms blur the
+                        line between genuine learning and implicit temperature reduction. A controlled experiment
+                        with fixed output-head norms would isolate this effect.</p>
+
+                    <p><strong>Does this generalize?</strong> Our results are for a single architecture (Axis,
+                        ~85M parameters) trained on a specific regulatory DNA dataset. The optimizer &times; biology
+                        interaction may differ for other architectures or genomic contexts.</p>
+
+                    </details>
+
+                    <!-- ==================== SUMMARY ==================== -->
+                    <hr style="margin: 3rem 0 2rem; border: none; border-top: 1px solid #ddd;">
+
+                    <h3>Summary</h3>
+
+                    <p>Part 1 showed that Muon is faster. Part 2 shows that faster does not automatically mean
+                        biologically better &mdash; but it does mean biologically <em>different</em>.</p>
+
+                    <p>Muon&rsquo;s spectral whitening produces models that learn more of the motif vocabulary and
+                        generate more diverse regulatory sequences. Adam&rsquo;s per-coordinate scaling, when combined
+                        with Hyperball normalization, preserves the combinatorial grammar of transcription factor
+                        co-occurrence &mdash; the higher-order structure that determines whether an enhancer actually
+                        functions.</p>
+
+                    <p>The most important finding is that spectral entropy &mdash; the &ldquo;whiteness&rdquo; that
+                        Muon&rsquo;s proponents highlight as a mechanistic advantage &mdash; does not correlate with
+                        grammar quality. A model can have perfectly distributed singular values and still fail to
+                        encode which TFs belong together. The axes of biological quality are not aligned with the axes
+                        of weight matrix geometry.</p>
+
+                    <p>For practitioners, the choice is clear: match the optimizer to the biological objective. For
+                        researchers, the gradient &times; weight-normalization interaction &mdash; and its asymmetric
+                        effect on different biological dimensions &mdash; suggests that optimizer design for genomic
+                        foundation models deserves more attention than it currently receives.</p>
+
+                </article>
+            </div>
+        </section>
+    </main>
+
+    <!-- ========== Scripts (from Part 1) ========== -->
+    <script>
+        (function () {
+            function scheduleSidenoteLayout() {
+                var cards = document.querySelectorAll('.sidenote-card');
+                if (!cards.length) return;
+                var placed = [];
+                cards.forEach(function (card) {
+                    var group = card.closest('.sidenote-group');
+                    if (!group) return;
+                    var rect = group.getBoundingClientRect();
+                    var top = rect.top + window.pageYOffset;
+                    for (var i = 0; i < placed.length; i++) {
+                        if (top < placed[i] + 10) top = placed[i] + 10;
+                    }
+                    card.style.top = top + 'px';
+                    placed.push(top + card.offsetHeight);
+                });
+            }
+            function wire() {
+                scheduleSidenoteLayout();
+                window.addEventListener('resize', scheduleSidenoteLayout);
+                window.addEventListener('scroll', scheduleSidenoteLayout, { passive: true });
+                setTimeout(scheduleSidenoteLayout, 500);
+                setTimeout(scheduleSidenoteLayout, 1000);
+            }
+            if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire);
+            else wire();
+        })();
+    </script>
+    <script>
+        (function () {
+            var tocLinks = document.querySelectorAll('.blog-toc a');
+            if (!tocLinks.length) return;
+            var sectionIds = Array.prototype.map.call(tocLinks, function (a) {
+                return a.getAttribute('href').slice(1);
+            });
+            var currentActive = null;
+            var suppressObserverUpdates = false;
+            function setActiveLink(link) {
+                if (!link) return;
+                if (currentActive) currentActive.classList.remove('active');
+                link.classList.add('active');
+                currentActive = link;
+            }
+            function resumeObserverOnUserScroll(e) {
+                if (!suppressObserverUpdates) return;
+                if (e.type === 'keydown') {
+                    var key = e.key;
+                    var isScrollKey = key === 'ArrowDown' || key === 'ArrowUp' || key === 'PageDown' ||
+                        key === 'PageUp' || key === 'Home' || key === 'End' || key === ' ' || key === 'Spacebar';
+                    if (!isScrollKey) return;
+                }
+                suppressObserverUpdates = false;
+            }
+            window.addEventListener('wheel', resumeObserverOnUserScroll, { passive: true });
+            window.addEventListener('touchmove', resumeObserverOnUserScroll, { passive: true });
+            window.addEventListener('keydown', resumeObserverOnUserScroll);
+            window.addEventListener('mousedown', resumeObserverOnUserScroll, { passive: true });
+            var observer = new IntersectionObserver(function (entries) {
+                if (suppressObserverUpdates) return;
+                entries.forEach(function (entry) {
+                    if (entry.isIntersecting) {
+                        var id = entry.target.id;
+                        var link = document.querySelector('.blog-toc a[href="#' + id + '"]');
+                        if (link) setActiveLink(link);
+                    }
+                });
+            }, { rootMargin: '-20% 0px -60% 0px' });
+            tocLinks.forEach(function (link) {
+                link.addEventListener('click', function (e) {
+                    var href = link.getAttribute('href');
+                    if (!href || href.charAt(0) !== '#') return;
+                    e.preventDefault();
+                    setActiveLink(link);
+                    suppressObserverUpdates = true;
+                    var target = document.getElementById(href.slice(1));
+                    if (!target) return;
+                    var el = target.closest('details.collapsible-section');
+                    while (el) {
+                        if (!el.open) el.open = true;
+                        el = el.parentElement.closest('details.collapsible-section');
+                    }
+                    requestAnimationFrame(function () {
+                        target.scrollIntoView({ behavior: 'auto', block: 'start' });
+                        if (history.replaceState) history.replaceState(null, '', href);
+                        else window.location.hash = href;
+                    });
+                });
+            });
+            sectionIds.forEach(function (id) {
+                var el = document.getElementById(id);
+                if (el) observer.observe(el);
+            });
+            if (window.location.hash) {
+                var initial = document.querySelector('.blog-toc a[href="' + window.location.hash + '"]');
+                if (initial) setActiveLink(initial);
+            }
+        })();
+    </script>
+    <script>
+        (function () {
+            var body = document.body;
+            var closeBtn = document.querySelector('.blog-toc-toggle');
+            var openBtn = document.querySelector('.blog-toc-open');
+            if (!closeBtn || !openBtn) return;
+            function collapse() { body.classList.add('sidebar-collapsed'); }
+            function expand() { body.classList.remove('sidebar-collapsed'); }
+            closeBtn.addEventListener('click', collapse);
+            openBtn.addEventListener('click', expand);
+        })();
+    </script>
+    <script>
+        (function () {
+            var bar = document.querySelector('.reading-progress-bar');
+            var target = document.getElementById('sec-open-questions');
+            if (!bar || !target) return;
+            function update() {
+                var targetTop = target.getBoundingClientRect().top + window.pageYOffset;
+                var progress = Math.min(1, Math.max(0, window.pageYOffset / (targetTop - window.innerHeight * 0.5)));
+                bar.style.transform = 'scaleX(' + progress + ')';
+            }
+            window.addEventListener('scroll', update, { passive: true });
+            update();
+        })();
+    </script>
+</body>
+
+</html>
