@@ -62,6 +62,7 @@
                         <li><a href="#page-title">Title</a></li>
                         <li><a href="#sec-gap">The Loss&ndash;Biology Gap</a></li>
                         <li><a href="#sec-eval-suite">Evaluation Suite</a></li>
+                        <li><a href="#sec-convergence">Biological Convergence</a></li>
                         <li><a href="#sec-lr-sweep">Biological LR Sweep</a></li>
                         <li><a href="#sec-thresholds">Threshold Analysis</a></li>
                         <li><a href="#sec-grammar">TF Grammar</a></li>
@@ -199,6 +200,61 @@
 
                     <p>We evaluate all 20 configurations (4 optimizers &times; 5 learning rates) plus the reference
                         dataset. All generations use temperature 0.5.</p>
+
+                    </details>
+
+                    <!-- ==================== BIOLOGICAL CONVERGENCE ==================== -->
+                    <details class="collapsible-section" open>
+                        <summary>
+                            <h3 id="sec-convergence">Biological Convergence</h3>
+                        </summary>
+
+                    <p>In Part 1, we tracked perplexity across training checkpoints to measure convergence speed.
+                        Here we do the same for biology. We evaluated generated sequences at every checkpoint
+                        (epochs 1&ndash;19) for the best learning rate per optimizer, scanning each against 22
+                        JASPAR TF motif matrices and computing both motif abundance (TF hit rate correlation) and
+                        TF grammar (co-occurrence Mantel r).</p>
+
+                    <figure class="blog-image">
+                        <img src="/blogs/muon-part2/assets/fig_convergence.png"
+                            alt="Biological convergence: motif abundance and grammar across training checkpoints"
+                            loading="lazy" />
+                        <figcaption>Biological quality across training. (A) Motif abundance: MuonW reaches
+                            0.81 rate correlation by epoch 8, while Adam variants remain below 0.55.
+                            (B) Total motif recovery: MuonW recovers ~65% of reference hits by mid-training.
+                            (C) TF grammar (co-occurrence Mantel r): all optimizers reach similar grammar
+                            quality (~0.75&ndash;0.85) early in training. Grammar converges much faster than
+                            abundance and is less optimizer-dependent.</figcaption>
+                    </figure>
+
+                    <p>The convergence curves reveal a key asymmetry. <strong>Grammar is learned early and is
+                        relatively optimizer-insensitive</strong> &mdash; all four optimizers reach Mantel r
+                        &asymp; 0.75&ndash;0.85 within the first few epochs. The co-occurrence structure of TF
+                        binding is apparently one of the first things the model captures, regardless of how its
+                        gradients are processed.</p>
+
+                    <p><strong>Abundance is where the optimizers diverge.</strong> MuonW&rsquo;s rate correlation
+                        rises steeply from 0.37 at epoch 2 to 0.81 at epoch 8 &mdash; a 2.2&times; improvement
+                        in 6 epochs. AdamW, by contrast, hovers between 0.29 and 0.47 across the entire training
+                        run. AdamH improves slowly, reaching its peak (~0.67) only at epoch 14.</p>
+
+                    <figure class="blog-image">
+                        <img src="/blogs/muon-part2/assets/fig_abundance_vs_grammar.png"
+                            alt="Abundance vs grammar convergence per optimizer"
+                            loading="lazy" />
+                        <figcaption>Abundance (orange) vs grammar (purple dashed) convergence for each optimizer.
+                            In all four cases, grammar converges first and stays high, while abundance lags behind.
+                            The gap between the two curves is largest for Adam variants &mdash; they learn grammar
+                            well but struggle with motif abundance. MuonW closes this gap fastest.</figcaption>
+                    </figure>
+
+                    <p>This has a direct efficiency implication. If your objective is motif-rich sequence
+                        generation, <strong>MuonW reaches its biological target in roughly half the training
+                        epochs</strong> that Adam variants need. In Part 1, we showed MuonW reaches target
+                        perplexity with 37% fewer FLOPs. Here the advantage is even larger for motif abundance:
+                        MuonW crosses rate correlation 0.70 at epoch 7, while AdamH crosses it at epoch 14
+                        (if at all). Grammar, however, is not a bottleneck for any optimizer &mdash; it converges
+                        fast across the board.</p>
 
                     </details>
 
