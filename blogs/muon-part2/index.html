@@ -345,13 +345,119 @@
                             Individual learning rates shown as semi-transparent dots.</figcaption>
                     </figure>
 
-                    <p>Why might Adam preserve grammar better? TF co-occurrence is <em>not</em> near-uniform &mdash;
-                        some pairs co-occur at 20&times; the rate of others. In Part 1, we argued Adam&rsquo;s
-                        per-coordinate scaling provides &ldquo;negligible benefit&rdquo; for individual nucleotide
-                        prediction. But for the heterogeneous feature interaction landscape of TF grammar,
-                        coordinate-wise adaptation may capture exactly the right anisotropies. Muon&rsquo;s
-                        whitening equalizes all directions &mdash; optimal for exploring the motif vocabulary, but
-                        potentially flattening the relational structure.</p>
+                    <h4 class="blog-subheading">Why Muon learns more motifs: the spectral argument</h4>
+
+                    <p>Recall from Part 1 that Muon&rsquo;s Newton-Schulz whitening pushes all singular values of
+                        the update \(\tilde{u}_t = UV^\top\) toward 1, producing an approximately orthogonal
+                        update matrix. This has a direct consequence for motif learning.</p>
+
+                    <p>Consider the weight matrix \(W \in \mathbb{R}^{m \times n}\) with SVD
+                        \(W = U_W \Sigma_W V_W^\top\). The columns of \(V_W\) define the &ldquo;input
+                        directions&rdquo; the model attends to. When Muon updates \(W\), it distributes
+                        gradient energy across <em>all</em> singular directions equally. In the context of
+                        DNA, this means the model explores the full space of local sequence patterns
+                        simultaneously &mdash; no motif direction is starved of gradient signal. The
+                        result: more TFs recovered, higher stable rank, broader motif coverage.</p>
+
+                    <p>Adam, by contrast, scales each coordinate by
+                        \(1/\sqrt{v_k + \varepsilon}\), where \(v_k\) is the running second moment for
+                        coordinate \(k\). Because DNA&rsquo;s 4-token vocabulary is near-uniform, these
+                        second moments are approximately equal across coordinates (as shown in Part 1).
+                        Adam&rsquo;s updates therefore behave like <em>scaled SGD</em> &mdash; they do
+                        not actively equalize singular directions the way Muon does, resulting in lower
+                        effective rank and fewer motifs explored.</p>
+
+                    <h4 class="blog-subheading">Why Adam preserves grammar: the anisotropy argument</h4>
+
+                    <p>TF co-occurrence grammar is fundamentally <em>anisotropic</em>. Some TF pairs
+                        (e.g., GATA1&ndash;TAL1 in erythroid enhancers) co-occur at 20&times; the rate
+                        of others. Learning this structure requires the model to maintain different
+                        effective learning rates for different feature interactions &mdash; the
+                        &ldquo;GATA1 &times; TAL1&rdquo; direction in weight space should be updated
+                        differently than the &ldquo;GATA1 &times; HNF4A&rdquo; direction.</p>
+
+                    <p>Adam&rsquo;s per-coordinate scaling naturally preserves this heterogeneity. Even
+                        though the individual token frequencies are uniform, the <em>gradient second
+                        moments for co-occurrence features</em> are not &mdash; they reflect the
+                        non-uniform distribution of TF pair frequencies in the training data. Adam&rsquo;s
+                        \(1/\sqrt{v_k}\) denominator adapts to these varying magnitudes, allowing
+                        high-frequency co-occurrence patterns to be reinforced while low-frequency
+                        patterns are explored more aggressively.</p>
+
+                    <p>Muon&rsquo;s whitening explicitly destroys this heterogeneity. By mapping all
+                        singular values to approximately 1, it treats the &ldquo;GATA1 &times;
+                        TAL1&rdquo; direction and the &ldquo;GATA1 &times; HNF4A&rdquo; direction
+                        identically. This is optimal for <em>discovering</em> which TFs exist (since
+                        all directions are explored equally), but suboptimal for <em>encoding the
+                        relational structure</em> between them.</p>
+
+                    <details class="collapsible-section">
+                        <summary>
+                            <h4>Formal sketch: update geometry and co-occurrence structure</h4>
+                        </summary>
+
+                        <p>Let \(C \in \mathbb{R}^{T \times T}\) be the TF co-occurrence matrix from the
+                            training data, where \(C_{ij}\) is the frequency of TFs \(i\) and \(j\)
+                            appearing in the same regulatory element. The model learns a representation
+                            that implicitly encodes \(C\) through the weight matrices.</p>
+
+                        <p>For Adam, the effective update for weights encoding co-occurrence feature
+                            \((i,j)\) scales as:</p>
+                        \[
+                        \Delta w_{ij}^{\text{Adam}} \propto \frac{g_{ij}}{\sqrt{v_{ij} + \varepsilon}}
+                        \]
+                        <p>where \(v_{ij} \propto C_{ij} \cdot \mathbb{E}[\|\bar{g}_{ij}\|^2]\). For
+                            frequent co-occurrences (large \(C_{ij}\)), the denominator is large, providing
+                            a natural regularization that prevents overfitting to common patterns while
+                            giving rare patterns larger effective step sizes.</p>
+
+                        <p>For Muon, the SVD whitening maps all directions to unit scale:</p>
+                        \[
+                        \Delta W^{\text{Muon}} = -\eta \cdot U_g V_g^\top
+                        \]
+                        <p>where \(U_g \Sigma_g V_g^\top = \text{SVD}(g_t)\). The singular values
+                            \(\Sigma_g\) &mdash; which carry information about which co-occurrence
+                            directions have the strongest gradient signal &mdash; are discarded. This
+                            makes the update magnitude-blind: all directions receive equal-norm updates
+                            regardless of their prevalence in the data.</p>
+
+                        <p>The consequence is that Adam&rsquo;s updates preserve an implicit
+                            &ldquo;frequency prior&rdquo; on co-occurrence structure, while Muon&rsquo;s
+                            updates impose a uniform prior. For motif <em>discovery</em> (first-order
+                            statistics), the uniform prior is optimal. For co-occurrence
+                            <em>grammar</em> (second-order statistics), the frequency prior better
+                            matches the data distribution.</p>
+                    </details>
+
+                    <h4 class="blog-subheading">Why this generalizes</h4>
+
+                    <p>This argument depends on optimizer mechanics, not on our specific architecture. Any
+                        model that learns from sequential DNA data faces the same tension:</p>
+                    <ul>
+                        <li><strong>First-order features</strong> (which TFs are present) are close to
+                            uniformly discoverable &mdash; each motif is a local 6&ndash;20bp pattern
+                            that can be learned independently. Muon&rsquo;s uniform exploration advantage
+                            applies whenever the feature space is approximately isotropic at the individual
+                            feature level.</li>
+                        <li><strong>Second-order features</strong> (which TFs co-occur) are
+                            <em>heterogeneous</em> &mdash; their frequencies follow a heavy-tailed
+                            distribution set by the biology of gene regulation. Adam&rsquo;s
+                            frequency-adaptive scaling is advantageous whenever the interaction structure
+                            is anisotropic.</li>
+                    </ul>
+
+                    <p>This mirrors findings in NLP, where spectral methods excel at vocabulary coverage
+                        but adaptive methods better capture collocations and long-range
+                        dependencies<span class="sidenote-group"><sup class="sidenote-ref">3</sup><span
+                                class="sidenote-card side-left">The analogy: motif = word, co-occurrence
+                                grammar = collocation. Muon learns more words; Adam learns better sentence
+                                structure. The same tension exists in language modeling, where Muon excels
+                                at per-token perplexity but Adam-family optimizers often produce more
+                                coherent generation.</span></span>. The specific architecture (Axis, 85M
+                        parameters, transformer-based) determines the magnitude of the effect, but the
+                        qualitative direction &mdash; whitening helps first-order features, adaptive
+                        scaling helps second-order features &mdash; should hold across genomic foundation
+                        models.</p>
 
                     <h4 class="blog-subheading">Spectral whitening &ne; grammar</h4>
 
