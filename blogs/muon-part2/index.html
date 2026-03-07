@@ -63,14 +63,16 @@
                         <li><a href="#sec-gap">The Loss&ndash;Biology Gap</a></li>
                         <li><a href="#sec-eval-suite">Evaluation Suite</a></li>
                         <li><a href="#sec-convergence">Biological Convergence</a></li>
-                        <li><a href="#sec-lr-sweep">Biological LR Sweep</a></li>
-                        <li><a href="#sec-thresholds">Threshold Analysis</a></li>
+                        <li><a href="#sec-lr-sweep">Biological LR Sweep</a>
+                            <ul>
+                                <li><a href="#sec-thresholds">Threshold Analysis</a></li>
+                            </ul>
+                        </li>
                         <li><a href="#sec-grammar">TF Grammar</a></li>
-                        <li><a href="#sec-diversity">The Diversity Paradox</a></li>
+                        <li><a href="#sec-diversity">Diversity Paradox</a></li>
                         <li><a href="#sec-cka">Representations &amp; CKA</a></li>
                         <li><a href="#sec-muonh-collapse">MuonH Collapse</a></li>
-                        <li><a href="#sec-recommendations">Recommendations</a></li>
-                        <li><a href="#sec-open-questions">Open Questions</a></li>
+                        <li><a href="#sec-open-questions">Beyond Our Model</a></li>
                     </ul>
                 </nav>
                 <button class="blog-toc-open" aria-label="Open sidebar" title="Open sidebar">
@@ -621,62 +623,6 @@
                     <p>This is the biological consequence of the spectral squeeze described in Part 1. The effective
                         learning rate for the <code>up_proj</code> layer reaches ~0.052 on the unit hypersphere,
                         causing rank collapse and repetitive, non-specific generation.</p>
-
-                    </details>
-
-                    <!-- ==================== RECOMMENDATIONS ==================== -->
-                    <details class="collapsible-section" open>
-                        <summary>
-                            <h3 id="sec-recommendations">Practical Recommendations</h3>
-                        </summary>
-
-                    <div style="overflow-x: auto;">
-                        <table style="width: 100%; border-collapse: collapse; font-size: 0.95em; margin: 1rem 0;">
-                            <thead>
-                                <tr style="background: #f5f5f4; border-bottom: 2px solid #d6d3d1;">
-                                    <th style="padding: 0.75rem; text-align: left;">Use case</th>
-                                    <th style="padding: 0.75rem; text-align: left;">Recommendation</th>
-                                    <th style="padding: 0.75rem; text-align: left;">Why</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr style="border-bottom: 1px solid #e7e5e4;">
-                                    <td style="padding: 0.75rem;"><strong>Regulatory element design</strong><br>
-                                        <span style="color: #78716c; font-size: 0.85em;">(need functional grammar)</span></td>
-                                    <td style="padding: 0.75rem;">AdamH, lr &asymp; 5.7&times;10&supmin;&sup3;</td>
-                                    <td style="padding: 0.75rem;">Highest grammar (Mantel r = 0.775), clears r &gt; 0.60 at 4/5 LRs</td>
-                                </tr>
-                                <tr style="border-bottom: 1px solid #e7e5e4;">
-                                    <td style="padding: 0.75rem;"><strong>Diverse library screening</strong><br>
-                                        <span style="color: #78716c; font-size: 0.85em;">(need motif-rich variety)</span></td>
-                                    <td style="padding: 0.75rem;">MuonW, lr &asymp; 2.3&times;10&supmin;&sup2;</td>
-                                    <td style="padding: 0.75rem;">Highest diversity (1,689 profiles), best motif hits (67%), only optimizer &gt; 0.80 rate corr</td>
-                                </tr>
-                                <tr style="border-bottom: 1px solid #e7e5e4;">
-                                    <td style="padding: 0.75rem;"><strong>Production default</strong><br>
-                                        <span style="color: #78716c; font-size: 0.85em;">(robustness over peak)</span></td>
-                                    <td style="padding: 0.75rem;">AdamW, lr &asymp; 2.3&times;10&supmin;&sup2;</td>
-                                    <td style="padding: 0.75rem;">30% lower CV, clears grammar &gt; 0.50 at all 5 LRs</td>
-                                </tr>
-                                <tr>
-                                    <td style="padding: 0.75rem; color: #dc2626;"><strong>Avoid</strong></td>
-                                    <td style="padding: 0.75rem; color: #dc2626;">MuonH at lr &gt; 5.7&times;10&supmin;&sup3;</td>
-                                    <td style="padding: 0.75rem; color: #dc2626;">Catastrophic collapse (571 profiles, condition number &gt; 10&sup1;&sup0;)</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <p>In all cases, use temperature 0.5 for generation.</p>
-
-                    <figure class="blog-image">
-                        <img src="/blogs/muon-part2/assets/fig_robustness_simplified.png"
-                            alt="Cross-learning-rate robustness"
-                            loading="lazy" />
-                        <figcaption>Cross-LR robustness. Left: CV distribution across 94 biological metrics.
-                            Right: mean and median CV. AdamW is most robust (CV = 0.152), MuonH least
-                            (CV = 0.278).</figcaption>
-                    </figure>
 
                     </details>
 
