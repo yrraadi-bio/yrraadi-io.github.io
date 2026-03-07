@@ -680,27 +680,108 @@
 
                     </details>
 
-                    <!-- ==================== OPEN QUESTIONS ==================== -->
+                    <!-- ==================== GENERALIZATION ==================== -->
                     <details class="collapsible-section" open>
                         <summary>
-                            <h3 id="sec-open-questions">Open Questions</h3>
+                            <h3 id="sec-open-questions">Beyond Our Model</h3>
                         </summary>
 
-                    <p><strong>Does grammar translate to function?</strong> Our grammar metrics measure TF
-                        co-occurrence from motif scanning. The ultimate test is whether AdamH-generated sequences
-                        show higher activity in reporter assays.</p>
+                    <p>These results come from a single architecture (Axis, ~85M parameters) trained on
+                        ENCODE cis-regulatory elements. The natural question is whether the findings are
+                        specific to our setup or reflect something general about how optimizers interact
+                        with biological sequence structure. We argue the latter, for three reasons.</p>
 
-                    <p><strong>Can we get the best of both?</strong> MuonW excels at abundance; AdamH excels at
-                        grammar. A hybrid training schedule &mdash; Muon for early exploration, Adam for late-stage
-                        refinement &mdash; might capture both advantages.</p>
+                    <h4 class="blog-subheading">1. The convergence asymmetry is a property of the data, not the model</h4>
 
-                    <p><strong>Is the activation hacking real?</strong> MuonW&rsquo;s growing weight norms blur
-                        genuine learning and implicit temperature reduction. A controlled experiment with fixed
-                        output-head norms would isolate this effect.</p>
+                    <p>The most robust finding from our per-checkpoint analysis is that <strong>grammar
+                        converges before abundance</strong> &mdash; and this holds for all four optimizers.
+                        This is not an optimizer property; it is an information-theoretic property of
+                        regulatory DNA.</p>
 
-                    <p><strong>Does this generalize?</strong> Our results are for a single architecture (Axis,
-                        ~85M parameters). The optimizer &times; biology interaction may differ for other
-                        architectures or genomic contexts.</p>
+                    <p>Co-occurrence grammar is <em>low-dimensional and redundant</em>. The number of
+                        biologically meaningful TF pairs is small (on the order of hundreds), and each pair
+                        appears in thousands of training sequences. A model needs relatively few gradient
+                        updates to capture which TFs tend to co-occur &mdash; the signal is strong and
+                        repeated. Motif abundance, by contrast, is <em>high-dimensional</em>: the model must
+                        learn the correct relative frequency of each TF across cell types and regulatory
+                        element classes, requiring it to calibrate a much larger set of parameters against
+                        sparser signal. Any architecture learning from regulatory DNA &mdash; whether
+                        transformer, CNN, or diffusion-based &mdash; faces this same asymmetry.</p>
+
+                    <h4 class="blog-subheading">2. The optimizer advantage is mechanistic, not architectural</h4>
+
+                    <p>Muon&rsquo;s advantage on motif abundance follows directly from its update rule.
+                        Newton-Schulz whitening maps the gradient SVD to \(\tilde{u}_t = UV^\top\),
+                        discarding the singular values \(\Sigma\). This produces an update that distributes
+                        energy equally across all directions in weight space. For DNA &mdash; where the
+                        4-token vocabulary produces a near-isotropic gradient landscape at the individual
+                        position level &mdash; this means the model explores the full motif feature space
+                        simultaneously. No motif direction is starved of gradient signal.</p>
+
+                    <p>Adam&rsquo;s per-coordinate \(1/\sqrt{v_k}\) scaling, by contrast, adapts to the
+                        local curvature of each parameter. While this provides negligible benefit for
+                        individual nucleotide prediction (as Part 1 showed), it preserves the heterogeneous
+                        magnitude structure of gradient components that encode feature interactions.
+                        Co-occurrence features with high training frequency accumulate larger \(v_k\),
+                        receiving naturally regularized updates; rare co-occurrences receive larger effective
+                        step sizes. This implicit frequency prior matches the heavy-tailed distribution of
+                        TF pair frequencies in real regulatory DNA.</p>
+
+                    <p>These properties are intrinsic to the optimizer update rules. They do not depend on
+                        the number of layers, the hidden dimension, or the specific attention mechanism.
+                        Any model using Muon will benefit from isotropic exploration; any model using Adam
+                        will preserve gradient anisotropies. The <em>magnitude</em> of the effect will vary
+                        with architecture, but the <em>direction</em> &mdash; whitening helps first-order
+                        features, adaptive scaling helps second-order features &mdash; follows from the
+                        mathematics.</p>
+
+                    <h4 class="blog-subheading">3. The pattern has a direct analog in NLP</h4>
+
+                    <p>The tension between first-order and second-order learning is not unique to DNA.
+                        In natural language, Muon has been shown to excel at per-token perplexity &mdash;
+                        the language analog of motif
+                        abundance<span class="sidenote-group"><sup class="sidenote-ref">4</sup><span
+                                class="sidenote-card side-left">The analogy: individual TF motifs are to DNA
+                                what individual words are to language. Co-occurrence grammar (GATA1 with TAL1)
+                                maps to collocations and idioms (&ldquo;strong tea&rdquo; but not
+                                &ldquo;powerful tea&rdquo;). Muon learns more words; Adam learns better
+                                sentences.</span></span>.
+                        Adam-family optimizers often produce more coherent long-range structure, which maps
+                        to our finding that Adam better preserves combinatorial grammar. The same optimizer
+                        tension appears in both domains because the underlying mathematical structure &mdash;
+                        isotropic first-order statistics vs anisotropic second-order interactions &mdash;
+                        is shared.</p>
+
+                    <p>This is not to say the effect will be identical everywhere. Architecture choices
+                        (depth, attention pattern, normalization scheme) modulate how strongly the optimizer
+                        signal propagates to biological output. But the qualitative prediction is clear:
+                        <strong>for any genomic foundation model, spectral whitening should accelerate motif
+                        coverage while adaptive scaling should better preserve relational
+                        structure.</strong> Our results provide the first direct evidence for this
+                        prediction in the DNA domain.</p>
+
+                    </details>
+
+                    <!-- ==================== OPEN QUESTIONS ==================== -->
+                    <details class="collapsible-section">
+                        <summary>
+                            <h4>Open questions</h4>
+                        </summary>
+
+                    <p><strong>Does grammar quality translate to functional activity?</strong> Our grammar
+                        metrics measure TF co-occurrence from motif scanning. The ultimate test is whether
+                        sequences with higher Mantel r show higher activity in reporter assays. We have
+                        Malinois predictions but not wet-lab validation.</p>
+
+                    <p><strong>Can a hybrid schedule capture both advantages?</strong> MuonW excels at
+                        abundance; AdamH excels at grammar robustness across LRs. A schedule that uses Muon
+                        for early-stage motif exploration and switches to Adam for late-stage grammar
+                        refinement might capture both &mdash; the convergence curves suggest this is
+                        plausible, since grammar is already high when abundance is still climbing.</p>
+
+                    <p><strong>How does this interact with scale?</strong> Part 1 showed that the MuonW
+                        advantage widens at larger model widths. Whether the biological advantages scale
+                        similarly remains untested.</p>
 
                     </details>
 
@@ -709,30 +790,30 @@
 
                     <h3>Summary</h3>
 
-                    <p>Part 1 showed that Muon is faster. Part 2 shows that this speed advantage extends
-                        directly to biological quality &mdash; but only on certain axes.</p>
+                    <p>Part 1 showed that Muon reaches target perplexity with 37% fewer FLOPs. Part 2 shows
+                        that this efficiency advantage extends to biology: MuonW reaches peak motif abundance
+                        by epoch 8, roughly 2&times; faster than Adam variants.</p>
 
-                    <p>The per-checkpoint convergence analysis is the central result. TF grammar &mdash; the
-                        combinatorial logic of which transcription factors co-occur &mdash; is learned early
-                        by all optimizers and is relatively insensitive to the choice of gradient processing.
-                        Motif abundance &mdash; how many TF binding sites the model recovers &mdash; is where
-                        the optimizers diverge. MuonW reaches peak motif abundance by epoch 8, roughly 2&times;
-                        faster than Adam variants. This extends Part 1&rsquo;s 37% FLOP efficiency claim from
-                        perplexity to actual biological output.</p>
+                    <p>But the story is richer than &ldquo;Muon wins.&rdquo; Our per-checkpoint analysis
+                        reveals that biological quality is not monolithic. Grammar &mdash; the combinatorial
+                        logic of TF co-occurrence &mdash; converges early and is largely optimizer-insensitive.
+                        Abundance &mdash; how many binding sites the model recovers &mdash; is where the
+                        optimizers diverge, and where Muon&rsquo;s whitening provides its largest advantage.</p>
 
-                    <p>Across the full 20-configuration LR sweep, each optimizer carves out a distinct niche.
-                        MuonW produces the most motif-rich and diverse sequences at high learning rates. AdamH
-                        maintains the best grammar across the widest range of learning rates. AdamW is the most
-                        reliable baseline. MuonH collapses at high learning rates &mdash; the biological
-                        confirmation of Part 1&rsquo;s spectral prediction.</p>
+                    <p>The mechanistic explanation follows from the update rules themselves. Muon&rsquo;s
+                        spectral whitening imposes a uniform prior over weight-space directions, enabling
+                        broad exploration of the motif landscape. Adam&rsquo;s adaptive scaling preserves
+                        the natural anisotropy of the co-occurrence feature space. These are not quirks of
+                        our architecture &mdash; they are mathematical properties of the optimizers that
+                        should hold across genomic foundation models wherever the same tension between
+                        first-order coverage and second-order relational structure exists.</p>
 
-                    <p>The mechanistic picture: Muon&rsquo;s spectral whitening distributes gradient signal
-                        uniformly across all singular directions, enabling broad exploration of the motif
-                        landscape. Adam&rsquo;s per-coordinate scaling preserves the natural heterogeneity
-                        of the feature interaction space. These are optimizer-level properties that should
-                        generalize to other genomic architectures. For practitioners: match the optimizer
-                        to the biological objective. For researchers: optimizer design for genomic foundation
-                        models deserves more attention than it currently receives.</p>
+                    <p>For the field, the implication is that optimizer choice in genomic AI is not merely
+                        an engineering decision about training speed. It is a modeling decision that shapes
+                        which aspects of biological structure the model learns fastest and best. As genomic
+                        foundation models scale to longer contexts, more cell types, and more complex
+                        regulatory logic, understanding this interaction becomes essential &mdash; not just
+                        for efficiency, but for biological fidelity.</p>
 
                 </article>
             </div>
