@@ -69,7 +69,6 @@
                         <li><a href="#sec-diversity">The Diversity Paradox</a></li>
                         <li><a href="#sec-cka">Representations &amp; CKA</a></li>
                         <li><a href="#sec-muonh-collapse">MuonH Collapse</a></li>
-                        <li><a href="#sec-temperature">Temperature</a></li>
                         <li><a href="#sec-recommendations">Recommendations</a></li>
                         <li><a href="#sec-open-questions">Open Questions</a></li>
                     </ul>
@@ -103,12 +102,12 @@
                                     MuonH = Muon + Hyperball
                                 </span></span></h3>
                         <ul>
-                            <li>All four optimizers converge to nearly identical training loss (~1.20), yet produce substantially different biological quality &mdash; training loss does not predict biological performance.</li>
-                            <li>We sweep all 20 optimizer &times; learning rate configurations across a comprehensive biological evaluation suite, mirroring Part 1&rsquo;s perplexity sweep but measuring biology instead of loss.</li>
-                            <li>MuonW achieves the <strong>highest peak motif recovery</strong> (rate correlation 0.824) and <strong>most diverse generation</strong> (1,689 unique TF profiles, 80% of reference) at high learning rates.</li>
-                            <li>AdamH achieves the <strong>best TF grammar preservation</strong> (Mantel r = 0.775) &mdash; 22% higher than any other optimizer. Hyperball helps Adam but hurts Muon; the interaction is asymmetric.</li>
-                            <li>Spectral entropy does <strong>not</strong> correlate with grammar quality (&rho; = 0.205, p = 0.387). The model that learns the most motifs doesn&rsquo;t necessarily learn the best grammar.</li>
-                            <li>AdamW is the <strong>most robust</strong> across learning rates (30% lower CV), while MuonH catastrophically collapses at high learning rates &mdash; confirming Part 1&rsquo;s spectral prediction.</li>
+                            <li>Per-checkpoint biological evaluation across 72 training checkpoints shows that <strong>TF grammar converges early and is optimizer-insensitive</strong> (all reach Mantel r &asymp; 0.8 within a few epochs), while <strong>motif abundance is where the optimizers diverge</strong>.</li>
+                            <li>MuonW reaches peak motif abundance (rate correlation 0.81) by <strong>epoch 8</strong> &mdash; roughly 2&times; faster than Adam variants, extending Part 1&rsquo;s FLOP efficiency advantage to biological quality.</li>
+                            <li>Across the full 20-configuration LR sweep, MuonW achieves the <strong>highest peak motif recovery</strong> (rate correlation 0.824) and <strong>most diverse generation</strong> (1,689 unique TF profiles, 80% of reference).</li>
+                            <li>At the best learning rate per optimizer, AdamH achieves the <strong>highest TF grammar</strong> (Mantel r = 0.775). However, per-checkpoint analysis shows all optimizers learn comparable grammar early &mdash; the LR-sweep differences reflect sensitivity to learning rate choice, not fundamentally different grammar learning.</li>
+                            <li>Muon&rsquo;s spectral whitening distributes gradient signal across all singular directions, explaining its motif abundance advantage. Adam&rsquo;s per-coordinate scaling preserves anisotropies in the co-occurrence landscape. These are optimizer-level properties that generalize beyond our specific architecture.</li>
+                            <li>MuonH catastrophically collapses at high learning rates &mdash; confirming Part 1&rsquo;s spectral prediction with direct biological evidence.</li>
                         </ul>
                     </section>
                     <!-- ========== End Highlights ========== -->
@@ -116,12 +115,17 @@
                     <p>In <a href="/blogs/muon/">Part 1</a>, we showed that MuonW reaches target validation
                         perplexity with roughly 37% fewer FLOPs than AdamH. We swept five learning rates across
                         four optimizer configurations and compared convergence speed, spectral dynamics, and
-                        training stability.</p>
+                        training stability. We ended with an open question: <em>&ldquo;does this translate to
+                        improvements on tasks that matter for biology, such as transcription factor motif
+                        recovery, and sequence generation?&rdquo;</em></p>
 
-                    <p>But perplexity measures how well a model predicts the next nucleotide. It does not measure
-                        whether the model has learned the regulatory grammar that makes enhancers function in cells.
-                        In Part 2, we run the same 20-configuration sweep &mdash; but instead of measuring loss,
-                        we measure biology.</p>
+                    <p>This post answers that question. We run the same 20-configuration sweep, evaluate
+                        generated sequences at every training checkpoint, and measure biology instead of loss.
+                        The answer: MuonW&rsquo;s FLOP efficiency advantage extends directly to motif abundance,
+                        reaching biological quality thresholds in roughly half the training epochs. But the story
+                        is more nuanced than &ldquo;Muon wins again&rdquo; &mdash; different biological dimensions
+                        have fundamentally different convergence dynamics, and the right optimizer depends on which
+                        dimension you care about.</p>
 
                     <!-- ==================== THE LOSS-BIOLOGY GAP ==================== -->
                     <details class="collapsible-section" open>
@@ -374,12 +378,15 @@
                     <!-- ==================== TF GRAMMAR ==================== -->
                     <details class="collapsible-section" open>
                         <summary>
-                            <h3 id="sec-grammar">TF Grammar: Where Adam Outperforms</h3>
+                            <h3 id="sec-grammar">TF Grammar: Learned Early, Sensitive to LR</h3>
                         </summary>
 
-                    <p>The most surprising result from the sweep is AdamH&rsquo;s dominance on TF grammar. Despite
-                        Muon&rsquo;s advantages in motif abundance, AdamH preserves the <em>combinatorial
-                        structure</em> of transcription factor co-occurrence significantly better.</p>
+                    <p>The convergence analysis above showed that all optimizers learn TF co-occurrence grammar
+                        to similar levels (Mantel r &asymp; 0.75&ndash;0.85) within the first few epochs. Grammar
+                        is not the bottleneck &mdash; abundance is. However, the LR sweep reveals that grammar
+                        quality at the <em>final checkpoint</em> is sensitive to learning rate, and here AdamH
+                        has an advantage: it achieves the highest grammar at its best LR and maintains good
+                        grammar across the widest range of learning rates.</p>
 
                     <figure class="blog-image">
                         <img src="/blogs/muon-part2/assets/fig1_tf_grammar.png"
@@ -617,29 +624,6 @@
 
                     </details>
 
-                    <!-- ==================== TEMPERATURE ==================== -->
-                    <details class="collapsible-section">
-                        <summary>
-                            <h3 id="sec-temperature">Temperature</h3>
-                        </summary>
-
-                    <figure class="blog-image">
-                        <img src="/blogs/muon-part2/assets/fig_temperature_interaction.png"
-                            alt="Temperature effect on masked motif recovery"
-                            loading="lazy" />
-                        <figcaption>Temperature effect on masked motif recovery. All optimizers improve at lower
-                            temperature, but Adam variants benefit more (AdamW: +79%, MuonW: +26%).</figcaption>
-                    </figure>
-
-                    <p>Sampling temperature has a large effect on biological quality. Dropping from 1.0 to 0.5
-                        improves all metrics across all optimizers. However, the effect is not uniform: Adam
-                        variants benefit disproportionately (+57&ndash;79%) compared to Muon (+26&ndash;32%).
-                        This connects to Part 1&rsquo;s activation hacking observation &mdash; MuonW&rsquo;s
-                        growing weight norms effectively reduce softmax temperature during training, so explicit
-                        temperature reduction at generation has less additional effect.</p>
-
-                    </details>
-
                     <!-- ==================== RECOMMENDATIONS ==================== -->
                     <details class="collapsible-section" open>
                         <summary>
@@ -725,22 +709,30 @@
 
                     <h3>Summary</h3>
 
-                    <p>Part 1 showed that Muon is faster. Part 2 shows that faster does not automatically mean
-                        biologically better &mdash; but it does mean biologically <em>different</em>.</p>
+                    <p>Part 1 showed that Muon is faster. Part 2 shows that this speed advantage extends
+                        directly to biological quality &mdash; but only on certain axes.</p>
 
-                    <p>Across the full 20-configuration sweep, each optimizer carves out a distinct niche. MuonW
-                        produces the most motif-rich and diverse sequences, scaling with learning rate just as it
-                        scales with FLOPs. AdamH preserves combinatorial TF grammar best, achieving 22% higher
-                        Mantel correlation at its optimal LR. AdamW is the most reliable baseline &mdash; never
-                        the best, but never catastrophically bad. MuonH is high-risk: it can match or exceed
-                        the others in narrow regimes, but collapses at high learning rates.</p>
+                    <p>The per-checkpoint convergence analysis is the central result. TF grammar &mdash; the
+                        combinatorial logic of which transcription factors co-occur &mdash; is learned early
+                        by all optimizers and is relatively insensitive to the choice of gradient processing.
+                        Motif abundance &mdash; how many TF binding sites the model recovers &mdash; is where
+                        the optimizers diverge. MuonW reaches peak motif abundance by epoch 8, roughly 2&times;
+                        faster than Adam variants. This extends Part 1&rsquo;s 37% FLOP efficiency claim from
+                        perplexity to actual biological output.</p>
 
-                    <p>The most important finding is that spectral entropy &mdash; the &ldquo;whiteness&rdquo;
-                        that Muon&rsquo;s proponents highlight &mdash; does not correlate with grammar quality.
-                        The axes of biological quality are not aligned with the axes of weight matrix geometry.
-                        For practitioners: match the optimizer to the biological objective. For researchers:
-                        optimizer design for genomic foundation models deserves more attention than it currently
-                        receives.</p>
+                    <p>Across the full 20-configuration LR sweep, each optimizer carves out a distinct niche.
+                        MuonW produces the most motif-rich and diverse sequences at high learning rates. AdamH
+                        maintains the best grammar across the widest range of learning rates. AdamW is the most
+                        reliable baseline. MuonH collapses at high learning rates &mdash; the biological
+                        confirmation of Part 1&rsquo;s spectral prediction.</p>
+
+                    <p>The mechanistic picture: Muon&rsquo;s spectral whitening distributes gradient signal
+                        uniformly across all singular directions, enabling broad exploration of the motif
+                        landscape. Adam&rsquo;s per-coordinate scaling preserves the natural heterogeneity
+                        of the feature interaction space. These are optimizer-level properties that should
+                        generalize to other genomic architectures. For practitioners: match the optimizer
+                        to the biological objective. For researchers: optimizer design for genomic foundation
+                        models deserves more attention than it currently receives.</p>
 
                 </article>
             </div>
