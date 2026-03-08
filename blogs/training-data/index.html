@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-4DGX45FJCJ"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-4DGX45FJCJ');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>What's Actually in Your Training Data? — Origin Bio</title>
+    <meta name="description"
+        content="How we verify that our cCRE library encodes real regulatory biology before a generative model ever sees it. PCA permutation testing, TF motif specificity, lineage structure, and cross-modal validation." />
+    <meta property="og:type" content="article" />
+    <meta property="og:site_name" content="Origin Bio" />
+    <meta property="og:title" content="What's Actually in Your Training Data?" />
+    <meta property="og:description"
+        content="How we verify that our cCRE library encodes real regulatory biology before a generative model ever sees it." />
+    <meta property="og:url" content="https://origin.bio/blogs/training-data/" />
+    <meta property="og:image" content="https://origin.bio/assets/thumbnail-og.jpg?v=1" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="What's Actually in Your Training Data?" />
+    <link rel="canonical" href="https://origin.bio/blogs/training-data/">
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="icon" href="/assets/favicon.png" type="image/png">
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['\\(', '\\)']],
+                displayMath: [['\\[', '\\]']],
+                processEscapes: true
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+</head>
+
+<body class="blog-page blog-with-sidebar">
+    <div class="dna-background">
+        <div class="dna-strand"></div>
+        <div class="dna-strand"></div>
+        <div class="dna-strand"></div>
+    </div>
+
+    <header>
+        <a href="/" class="logo-link">
+            <img src="/assets/Origin%20logo+text%20(blue%20on%20transparent).png" alt="Origin Logo" class="header-logo">
+        </a>
+    </header>
+
+    <main>
+        <section class="blog-hero">
+            <div class="blog-content">
+                <nav class="blog-toc" aria-label="Table of contents">
+                    <div class="blog-toc-header">
+                        <span class="blog-toc-title">Contents</span>
+                        <button class="blog-toc-toggle" aria-label="Toggle sidebar" title="Toggle sidebar">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="11 17 6 12 11 7"></polyline>
+                                <polyline points="18 17 13 12 18 7"></polyline>
+                            </svg>
+                        </button>
+                    </div>
+                    <ul>
+                        <li><a href="#page-title">Title</a></li>
+                        <li><a href="#sec-data-landscape">The Data Landscape</a></li>
+                        <li><a href="#sec-signal-noise">Signal vs Noise</a></li>
+                        <li><a href="#sec-specificity">Cell Identity</a></li>
+                        <li><a href="#sec-lineage">The Lineage Test</a></li>
+                        <li><a href="#sec-cross-modal">Cross-Modal Agreement</a></li>
+                        <li><a href="#sec-robustness">The Hardest Test</a></li>
+                        <li><a href="#sec-next-steps">What This Means</a></li>
+                    </ul>
+                </nav>
+                <button class="blog-toc-open" aria-label="Open sidebar" title="Open sidebar">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="13 7 18 12 13 17"></polyline>
+                        <polyline points="6 7 11 12 6 17"></polyline>
+                    </svg>
+                </button>
+                <article class="blog-article">
+
+                    <!-- ========== Hero: Interactive UMAP ========== -->
+                    <figure class="blog-image" style="margin-top: 0;">
+                        <div style="position:relative;">
+                            <div id="umap-plot" style="width:100%; height:550px;"></div>
+                            <button id="umap-menu-btn" aria-label="Plot tools"
+                                style="position:absolute;top:8px;right:8px;z-index:10;background:rgba(255,255,255,0.85);border:1px solid #e5e7eb;border-radius:6px;width:32px;height:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:background 0.15s,box-shadow 0.15s;"
+                                onmouseenter="this.style.background='#fff';this.style.boxShadow='0 2px 8px rgba(0,0,0,0.12)'"
+                                onmouseleave="if(!this.classList.contains('active')){this.style.background='rgba(255,255,255,0.85)';this.style.boxShadow='none';}">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="#6b7280"><circle cx="8" cy="3" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="13" r="1.5"/></svg>
+                            </button>
+                        </div>
+                        <style>
+                            #umap-plot .modebar-container { display: none !important; }
+                            #umap-plot.show-modebar .modebar-container { display: flex !important; right: 44px !important; }
+                        </style>
+                        <figcaption>Single-cell chromatin accessibility atlas of the human brain. 624,000 nuclei from 130 samples across 42+ brain regions, integrated with Harmony batch correction. ~30K subsampled for display.</figcaption>
+                    </figure>
+
+                    <h2 id="page-title">What's Actually in Your Training Data?</h2>
+                    <p class="blog-date">March 2, 2026 &middot; Aditya Sivakumar</p>
+
+                    <!-- ========== Highlights ========== -->
+                    <section class="blog-takeaways" aria-label="Key takeaways">
+                        <h3>Highlights</h3>
+                        <ul>
+                            <li><b>28 clean axes</b> of regulatory variation survive permutation testing across 2.3M cCREs and 3,071 bulk samples.</li>
+                            <li>TF motif specificity spans from highly cell-type-restricted (<b>NEUROD2</b>, Gini&nbsp;=&nbsp;0.40) to ubiquitous housekeeping factors (<b>SP4</b>, Gini&nbsp;=&nbsp;0.05).</li>
+                            <li><b>Block-diagonal lineage structure</b> recapitulates developmental biology from chromatin alone: within-lineage JSD of 0.003&ndash;0.019 vs cross-lineage 0.20&ndash;0.30+.</li>
+                            <li><b>14 of 87</b> specific TFs reproduced across independent bulk and single-cell pipelines, confirming the signal is real.</li>
+                        </ul>
+                    </section>
+
+                    <!-- ========== Introduction ========== -->
+                    <p>We&rsquo;re building models that design synthetic regulatory DNA: short sequences that control which genes turn on in which cell types. The goal is cell-type-specific gene therapy, where a therapeutic transgene expresses only in the cells that need it. The input to these models is a library of <em>cis</em>-regulatory elements (cCREs), including enhancers, promoters, and silencers, the non-coding sequences that control cell-type-specific gene expression.<span class="sidenote-group"><sup class="sidenote-ref">1</sup><span class="sidenote-card side-right"><b>What is a cCRE?</b> Candidate <em>cis</em>-Regulatory Elements are non-coding genomic regions identified by the ENCODE project&rsquo;s SCREEN pipeline from DNase hypersensitivity signal. They are classified as dELS (distal enhancer-like), pELS (proximal enhancer-like), CTCF-only, or PLS (promoter-like) based on their chromatin signatures.</span></span> Every cell in your body has the same ~3 billion base-pair genome, but a cortical neuron and a liver hepatocyte express completely different genes. The difference is which cCREs are open.</p>
+
+                    <p>But a generative model trained on cCREs is only as good as the data it sees. Batch artifacts, technical noise, poor cell-type resolution: any of these mean the model learns nothing useful. So before anything touches a model, we put the library through a series of checks. This post walks through what we tested and what we found.</p>
+
+                    <!-- ========== The Data Landscape ========== -->
+                    <details class="collapsible-section" open>
+                        <summary>
+                            <h3 id="sec-data-landscape">The Data Landscape</h3>
+                        </summary>
+
+                        <p>We started with two datasets that both measure chromatin accessibility, but at very different scales.</p>
+
+                        <p>The first is ENCODE&rsquo;s bulk DNase-seq catalog: 2.3 million cCREs across 3,071 human samples from every major organ system. DNase-seq finds regions where the chromatin is open, unwound from its histone packaging and accessible to transcription factors.<span class="sidenote-group"><sup class="sidenote-ref">2</sup><span class="sidenote-card side-right"><b>How DNase-seq works.</b> DNase I preferentially cleaves nucleosome-free DNA; sequencing the cut sites reveals regions of open chromatin. This is a tissue-level assay: the signal averages across all cell types in the sample.</span></span> The breadth is good (thousands of samples across every organ), but each sample is a blend of cell types ground together. You can see what regulatory elements exist across the human body. You can&rsquo;t attribute them to individual cell types.</p>
+
+                        <figure class="blog-image">
+                            <img src="assets/pca_plot.png" alt="All-ENCODE PCA scatter of 3,071 samples colored by organ system" loading="lazy" />
+                            <figcaption>PCA of the full ENCODE cCRE accessibility matrix. 3,071 samples colored by organ system.</figcaption>
+                        </figure>
+
+                        <p>The second dataset gives us cell-type resolution. The Allen Brain Institute&rsquo;s snATAC-seq atlas profiles ~9.4 million individual nuclei from 130 samples spanning 42+ brain regions and 106 cell types. For each individual cell, we know which cCREs are open.<span class="sidenote-group"><sup class="sidenote-ref">3</sup><span class="sidenote-card side-right"><b>How snATAC-seq differs from bulk.</b> Each nucleus is individually barcoded via combinatorial indexing or droplet-based capture, so chromatin accessibility is measured per-cell rather than averaged across tissue. The cost is extreme sparsity: most regions read as &ldquo;0&rdquo; in any single cell because only ~10,000 of ~2 million possible regions are captured per nucleus.</span></span> The tradeoff is scope: this atlas covers the brain in depth, but only the brain.</p>
+
+                        <p>Together, bulk gives us breadth and statistical power; single-cell gives us cell-type resolution. The question is whether they agree, and whether either one contains real regulatory signal at all.</p>
+                    </details>
+
+                    <!-- ========== Signal vs Noise ========== -->
+                    <details class="collapsible-section">
+                        <summary>
+                            <h3 id="sec-signal-noise">Separating Signal from Noise</h3>
+                        </summary>
+
+                        <p>The first question is the most basic: <em>is the variation in this dataset biological, or is it just technical noise?</em></p>
+
+                        <p>We ran PCA on the full bulk accessibility matrix (2.3 million cCREs across 3,071 samples). Early PCs were interpretable: PC1 (15.0% of variance) separates chromatin compaction from transcriptional activity. PC2 (8.3%) separates brain from blood, with immune signaling on one end and lipid metabolism on the other (&eta;&sup2;&nbsp;=&nbsp;0.77 for tissue type). PC14 separates cortex from basal ganglia.</p>
+
+                        <p>But you can always find patterns in data. The question is whether the later PCs are above what you&rsquo;d get from chance structure. We shuffled sample labels 100 times, re-ran PCA each time, and built a null distribution for the variance explained by each component. Thirty PCs exceed the null (all \(p = 0.010\)). Two of those turned out to be batch: PC3 correlates with file size (\(r = -0.52\), a proxy for sequencing depth<span class="sidenote-group"><sup class="sidenote-ref">4</sup><span class="sidenote-card side-right"><b>Why file size is a batch proxy.</b> Larger files reflect deeper sequencing, which systematically inflates accessibility estimates in samples with more reads. When a PC correlates with file size, it is capturing technical variance in sequencing depth rather than biological variation.</span></span>), PC6 with experimental batch (\(r = -0.38\)). We dropped both.</p>
+
+                        <p>That leaves <b>28 clean axes of biological variation</b>. By PC30 (the last one above the null) the variance explained has dropped from 41% to 0.14%, but it still clears the permutation threshold with a z-score of 11.7. Past that, noise.</p>
+
+                        <figure class="blog-image">
+                            <div style="position:relative;">
+                                <div id="perm-plot" style="width:100%; height:480px;"></div>
+                                <button id="perm-menu-btn" aria-label="Plot tools"
+                                    style="position:absolute;top:8px;right:8px;z-index:10;background:rgba(255,255,255,0.85);border:1px solid #e5e7eb;border-radius:6px;width:32px;height:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:background 0.15s,box-shadow 0.15s;"
+                                    onmouseenter="this.style.background='#fff';this.style.boxShadow='0 2px 8px rgba(0,0,0,0.12)'"
+                                    onmouseleave="if(!this.classList.contains('active')){this.style.background='rgba(255,255,255,0.85)';this.style.boxShadow='none';}">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="#6b7280"><circle cx="8" cy="3" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="13" r="1.5"/></svg>
+                                </button>
+                            </div>
+                            <style>
+                                #perm-plot .modebar-container { display: none !important; }
+                                #perm-plot.show-modebar .modebar-container { display: flex !important; right: 44px !important; }
+                            </style>
+                            <figcaption>PCA permutation test. Left: full spectrum (PC1&ndash;50). Right: transition zone (PC20&ndash;42) where observed variance crosses the permutation null. Blue = observed, dashed gray = null mean, gray band = 95% CI.</figcaption>
+                        </figure>
+
+                        <noscript>
+                            <figure class="blog-image">
+                                <img src="assets/05_pca_permutation.png" alt="PCA permutation test" loading="lazy" />
+                            </figure>
+                        </noscript>
+
+                        <h4>What the axes actually encode</h4>
+
+                        <p>Permutation testing tells you the axes are real. It doesn&rsquo;t tell you what they mean. For that, we looked at the specific cCREs with the highest loadings on each PC. If PC2 really separates brain from blood, the cCREs driving it should sit on genes with known brain or blood functions, and ideally be promoters near the transcription start site.</p>
+
+                        <p>On the brain side of PC2 (8.3% of variance), the highest-loading promoter-like cCREs include:</p>
+
+                        <ul>
+                            <li><b>GRM3</b> (glutamate metabotropic receptor 3). PLS element <b>88&thinsp;bp</b> from its TSS. Receptor for the brain&rsquo;s primary excitatory neurotransmitter.</li>
+                            <li><b>NTM</b> (neurotrimin), a neural cell adhesion molecule involved in neurite outgrowth. Promoter <b>87&thinsp;bp</b> away.</li>
+                            <li><b>CX3CL1</b> (fractalkine), the primary neuron-to-microglia signaling molecule. Promoter <b>36&thinsp;bp</b> away.</li>
+                            <li><b>GPR75</b>, a G-protein coupled receptor enriched in brain. Promoter <b>7&thinsp;bp</b> from the TSS, essentially overlapping it.</li>
+                            <li><b>AQP4</b> (aquaporin-4), the water channel at astrocyte endfeet along the blood&ndash;brain barrier. Promoter 2.5&thinsp;kb away.</li>
+                        </ul>
+
+                        <p>On the blood side of the same axis, the top cCREs are proximal enhancers near hematopoietic genes: <b>MYO1G</b> (a myosin expressed exclusively in blood cells, pELS 1.6&thinsp;kb), <b>ADAM8</b> (a metalloprotease involved in leukocyte migration, pELS 1.8&thinsp;kb), and <b>ITGB7</b> (integrin beta-7, leukocyte homing, PLS 21&thinsp;bp).</p>
+
+                        <p>So the axis separating brain from blood in PCA is built from promoters of glutamate receptors on one side and leukocyte integrins on the other.</p>
+
+                        <p>The same pattern holds for other axes. PC1 (chromatin compaction vs transcriptional activity, 15.0%) has high-loading promoters near <b>FOSL2</b> (AP-1 transcription factor, PLS 4.4&thinsp;kb) and <b>NR2F2</b>/COUP-TFII (nuclear receptor controlling tissue-specific enhancer activity, PLS 1.5&thinsp;kb), both involved in chromatin state regulation. PC14 (cortex vs basal ganglia) loads on <b>SYT3</b> (synaptotagmin-3, enriched in subcortical structures, pELS 560&thinsp;bp on the basal ganglia side) and <b>TAGLN</b> (transgelin, a smooth-muscle marker enriched in cortical vasculature, pELS 210&thinsp;bp on the cortical side).</p>
+
+                        <p>We ran the same analysis on a brain-only PCA (813 brain samples, separate from the all-ENCODE decomposition). The cerebellum axis (brain PC2, 15.4% of variance, Cohen&rsquo;s \(d = 6.04\)) loads on promoters of <b>LHX1</b> (PLS <b>33&thinsp;bp</b> from its TSS), a LIM-homeodomain factor required for cerebellar Purkinje cell differentiation, and <b>BARHL2</b> (pELS 801&thinsp;bp), which specifies cerebellar granule neurons. The basal ganglia axis (brain PC4, \(d = 1.55\)) loads on <b>PPP1R1B</b>, better known as DARPP-32, at 456&thinsp;bp from its nearest pELS. DARPP-32 is the canonical marker of medium spiny neurons in the striatum. The hypothalamus/hippocampus axis (brain PC23) loads on <b>FOXG1</b> (telencephalon identity, PLS 2.4&thinsp;kb) on the cortical side and <b>IRX3</b> (iroquois homeobox 3, involved in hypothalamic energy-balance circuits, PLS <b>103&thinsp;bp</b>) on the hypothalamic side.</p>
+
+                    </details>
+
+                    <!-- ========== Cell-Type Specificity ========== -->
+                    <details class="collapsible-section">
+                        <summary>
+                            <h3 id="sec-specificity">Does the Library Encode Cell Identity?</h3>
+                        </summary>
+
+                        <p>The bulk data contains real biological variation, but the more important question is whether the library encodes cell-type-specific regulatory programs. For that, we need the single-cell data.</p>
+
+                        <p>We scanned 981 deduplicated TF binding motifs across all 106 brain cell types and computed a Gini coefficient for each, measuring how unevenly a motif is distributed. Gini of 0: equally enriched everywhere. Gini near 1: concentrated in one cell type.<span class="sidenote-group"><sup class="sidenote-ref">5</sup><span class="sidenote-card side-right"><b>What TF families mean.</b> bHLH (basic helix-loop-helix) factors are the master regulators of neural cell fate; they form homo- and heterodimers that bind E-box motifs (CANNTG) in enhancers. AP-1 factors (FOS, JUN, JUNB) form dimers that mediate activity-dependent gene expression. KLF/SP factors regulate broadly expressed metabolic and chromatin genes.</span></span></p>
+
+                        <p>The most specific TFs are the ones a developmental neurobiologist would predict:</p>
+
+                        <ul>
+                            <li><b>NEUROD2</b> (Gini&nbsp;=&nbsp;0.40), a bHLH factor that drives cortical neuron maturation in layers 4/5, activating genes for synaptic transmission and dendritic growth. In our data, it&rsquo;s restricted almost entirely to excitatory neuron subtypes.</li>
+                            <li><b>OLIG1/2/3</b> (Gini&nbsp;=&nbsp;0.34&ndash;0.40), the oligodendrocyte lineage specification factors. OLIG2 is required for both oligodendrocyte precursors and motor neuron progenitors; OLIG1 drives terminal differentiation. Their specificity means the library resolves glial from neuronal programs.</li>
+                            <li><b>NEUROG1</b> (Gini&nbsp;=&nbsp;0.33), a proneural factor specifying glutamatergic fate from radial glia progenitors during cortical neurogenesis. This is a developmental factor, which means the library captures regulatory logic from differentiation, not just mature cell states.</li>
+                        </ul>
+
+                        <p>At the other end: <b>SP4</b> (Gini&nbsp;=&nbsp;0.18), a zinc-finger factor that broadly regulates neuronal transcription, and <b>EGR1</b> (Gini&nbsp;=&nbsp;0.18), an immediate-early gene that fires in any active neuron. These are housekeeping programs, not cell identity markers.</p>
+
+                        <figure class="blog-image">
+                            <div style="position:relative;">
+                                <div id="gini-plot" style="width:100%; height:480px;"></div>
+                                <button id="gini-menu-btn" aria-label="Plot tools"
+                                    style="position:absolute;top:8px;right:8px;z-index:10;background:rgba(255,255,255,0.85);border:1px solid #e5e7eb;border-radius:6px;width:32px;height:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:background 0.15s,box-shadow 0.15s;"
+                                    onmouseenter="this.style.background='#fff';this.style.boxShadow='0 2px 8px rgba(0,0,0,0.12)'"
+                                    onmouseleave="if(!this.classList.contains('active')){this.style.background='rgba(255,255,255,0.85)';this.style.boxShadow='none';}">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="#6b7280"><circle cx="8" cy="3" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="13" r="1.5"/></svg>
+                                </button>
+                            </div>
+                            <style>
+                                #gini-plot .modebar-container { display: none !important; }
+                                #gini-plot.show-modebar .modebar-container { display: flex !important; right: 44px !important; }
+                            </style>
+                            <figcaption>Gini coefficient distribution across 981 TF binding motifs, ranked from most cell-type-specific (left) to most ubiquitous (right). Key TFs annotated.</figcaption>
+                        </figure>
+
+                        <noscript>
+                            <figure class="blog-image">
+                                <img src="assets/02_gini_distribution.png" alt="Gini distribution" loading="lazy" />
+                            </figure>
+                        </noscript>
+
+                        <p>One detail on curation: these 981 motifs aren&rsquo;t the raw JASPAR output. We removed 138 whose parent TF isn&rsquo;t expressed in brain (HPA nTPM&nbsp;&lt;&nbsp;1.0) and deduplicated 653 with correlated binding profiles (complete-linkage \(r > 0.95\)). That leaves 190 non-redundant, brain-expressed motifs (19% of the original set). Every surviving motif corresponds to a protein actually present in brain tissue.</p>
+
+                        <figure class="blog-image">
+                            <div style="position:relative;">
+                                <div id="filter-plot" style="width:100%; height:320px;"></div>
+                                <button id="filter-menu-btn" aria-label="Plot tools"
+                                    style="position:absolute;top:8px;right:8px;z-index:10;background:rgba(255,255,255,0.85);border:1px solid #e5e7eb;border-radius:6px;width:32px;height:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:background 0.15s,box-shadow 0.15s;"
+                                    onmouseenter="this.style.background='#fff';this.style.boxShadow='0 2px 8px rgba(0,0,0,0.12)'"
+                                    onmouseleave="if(!this.classList.contains('active')){this.style.background='rgba(255,255,255,0.85)';this.style.boxShadow='none';}">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="#6b7280"><circle cx="8" cy="3" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="13" r="1.5"/></svg>
+                                </button>
+                            </div>
+                            <style>
+                                #filter-plot .modebar-container { display: none !important; }
+                                #filter-plot.show-modebar .modebar-container { display: flex !important; right: 44px !important; }
+                            </style>
+                            <figcaption>Motif curation pipeline. Expression filtering and deduplication reduce 981 JASPAR motifs to 190 non-redundant, brain-expressed TFs.</figcaption>
+                        </figure>
+
+                        <details class="collapsible-section">
+                            <summary>
+                                <h4>Gini coefficient formula</h4>
+                            </summary>
+                            <p>The Gini coefficient measures inequality of a motif&rsquo;s hit rate across cell types. For a motif with hit rates \(x_1, x_2, \ldots, x_n\) across \(n\) cell types:</p>
+                            \[
+                            G = \frac{\displaystyle\sum_{i=1}^{n}\sum_{j=1}^{n}|x_i - x_j|}{2n\displaystyle\sum_{i=1}^{n}x_i}
+                            \]
+                            <p>\(G = 0\) means the motif is equally enriched in every cell type (completely ubiquitous); \(G \to 1\) means it is concentrated in a single cell type (perfectly specific).</p>
+                        </details>
+                    </details>
+
+                    <!-- ========== Lineage Structure ========== -->
+                    <details class="collapsible-section">
+                        <summary>
+                            <h3 id="sec-lineage">The Lineage Test</h3>
+                        </summary>
+
+                        <p>Individual motif specificity is useful, but we also need to check whether the <em>relationships</em> between cell types make sense. If the library encodes real regulatory biology, cell types from the same developmental lineage should look more similar to each other than to unrelated types.<span class="sidenote-group"><sup class="sidenote-ref">6</sup><span class="sidenote-card side-right"><b>Lineage in this context.</b> Brain cells derive from neural stem cells that progressively restrict their fate. The major branch point separates neurons (excitatory + inhibitory) from glia (astrocytes, oligodendrocytes). Within neurons, excitatory cells (glutamatergic, born in the cortex) and inhibitory cells (GABAergic, born in the ganglionic eminences) have distinct developmental origins despite intermingling in the mature brain.</span></span></p>
+
+                        <p>We tested this two ways. First, the <b>Jaccard index</b>: for any pair of cell types, what fraction of their cCREs overlap? Within the oligodendrocyte lineage (OGC_1 through OPC and COP), subtypes share 77&ndash;87% of their open chromatin regions. These cells all descend from a common precursor, and even as they mature they retain most of their ancestor&rsquo;s regulatory landscape. Oligodendrocytes vs excitatory neurons: overlap drops to 0.15&ndash;0.25. Those lineages diverged early in development (ventral progenitors vs dorsal radial glia).</p>
+
+                        <p>Second, <b>Jensen&ndash;Shannon divergence</b>, which measures whether two cell types use the same <em>transcription factor binding motifs</em>, not just whether they share the same open regions. Within-lineage JSD ranges from 0.003&ndash;0.019: cells in the same lineage use the same regulatory programs. Cross-lineage JSD reaches 0.20&ndash;0.30+.</p>
+
+                        <p>The heatmaps below show clear block-diagonal structure: tight clusters within each lineage, sharp boundaries between them. Excitatory neurons, inhibitory subtypes (PVALB, SST, VIP, LAMP5, SNCG), astrocytes, oligodendrocytes, microglia. This structure was not imposed by our analysis; no labels were used in the clustering. It falls out of the data from unsupervised hierarchical clustering alone.</p>
+
+                        <figure class="blog-image">
+                            <div style="position:relative;">
+                                <div id="jsd-plot" style="width:100%; height:600px;"></div>
+                                <button id="jsd-menu-btn" aria-label="Plot tools"
+                                    style="position:absolute;top:8px;right:8px;z-index:10;background:rgba(255,255,255,0.85);border:1px solid #e5e7eb;border-radius:6px;width:32px;height:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:background 0.15s,box-shadow 0.15s;"
+                                    onmouseenter="this.style.background='#fff';this.style.boxShadow='0 2px 8px rgba(0,0,0,0.12)'"
+                                    onmouseleave="if(!this.classList.contains('active')){this.style.background='rgba(255,255,255,0.85)';this.style.boxShadow='none';}">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="#6b7280"><circle cx="8" cy="3" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="13" r="1.5"/></svg>
+                                </button>
+                            </div>
+                            <style>
+                                #jsd-plot .modebar-container { display: none !important; }
+                                #jsd-plot.show-modebar .modebar-container { display: flex !important; right: 44px !important; }
+                            </style>
+                            <figcaption>Jensen&ndash;Shannon divergence heatmap across 104 brain cell types. Green = similar TF motif profiles, dark = divergent. Block-diagonal structure reflects developmental lineage relationships.</figcaption>
+                        </figure>
+
+                        <noscript>
+                            <figure class="blog-image">
+                                <img src="assets/01_jsd_heatmap.png" alt="JSD heatmap" loading="lazy" />
+                            </figure>
+                        </noscript>
+
+                        <figure class="blog-image">
+                            <div style="position:relative;">
+                                <div id="jaccard-plot" style="width:100%; height:600px;"></div>
+                                <button id="jaccard-menu-btn" aria-label="Plot tools"
+                                    style="position:absolute;top:8px;right:8px;z-index:10;background:rgba(255,255,255,0.85);border:1px solid #e5e7eb;border-radius:6px;width:32px;height:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:background 0.15s,box-shadow 0.15s;"
+                                    onmouseenter="this.style.background='#fff';this.style.boxShadow='0 2px 8px rgba(0,0,0,0.12)'"
+                                    onmouseleave="if(!this.classList.contains('active')){this.style.background='rgba(255,255,255,0.85)';this.style.boxShadow='none';}">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="#6b7280"><circle cx="8" cy="3" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="13" r="1.5"/></svg>
+                                </button>
+                            </div>
+                            <style>
+                                #jaccard-plot .modebar-container { display: none !important; }
+                                #jaccard-plot.show-modebar .modebar-container { display: flex !important; right: 44px !important; }
+                            </style>
+                            <figcaption>Jaccard index heatmap (cCRE coordinate overlap) across 104 brain cell types. Blue = high overlap, light = low. Within-lineage sharing of 0.70&ndash;0.87 vs cross-lineage 0.05&ndash;0.25.</figcaption>
+                        </figure>
+
+                        <noscript>
+                            <figure class="blog-image">
+                                <img src="assets/04_jaccard_heatmap.png" alt="Jaccard heatmap" loading="lazy" />
+                            </figure>
+                        </noscript>
+
+                        <details class="collapsible-section">
+                            <summary>
+                                <h4>Mathematical definitions</h4>
+                            </summary>
+                            <p><b>Jaccard index.</b> For two cell types \(A\) and \(B\) with sets of accessible cCREs:</p>
+                            \[
+                            J(A,B) = \frac{|A \cap B|}{|A \cup B|}
+                            \]
+                            <p>\(J = 1\) means identical regulatory landscapes; \(J = 0\) means completely disjoint.</p>
+                            <p><b>Jensen&ndash;Shannon divergence.</b> For TF motif distributions \(P\) and \(Q\) over a shared motif vocabulary:</p>
+                            \[
+                            \text{JSD}(P \| Q) = \frac{1}{2}D_{\text{KL}}(P \| M) + \frac{1}{2}D_{\text{KL}}(Q \| M)
+                            \]
+                            <p>where \(M = \frac{1}{2}(P + Q)\) and</p>
+                            \[
+                            D_{\text{KL}}(P \| M) = \sum_i P(i)\log\frac{P(i)}{M(i)}
+                            \]
+                            <p>JSD is symmetric and bounded in \([0, \ln 2]\). Values near 0 mean identical TF programs; large values mean divergent regulatory grammars.</p>
+                        </details>
+                    </details>
+
+                    <!-- ========== Cross-Modal Validation ========== -->
+                    <details class="collapsible-section">
+                        <summary>
+                            <h3 id="sec-cross-modal">Do the Two Pipelines Agree?</h3>
+                        </summary>
+
+                        <p>The two pipelines above use different assays, different samples, different statistical frameworks, and different definitions of &ldquo;specificity.&rdquo; Comparing their outputs is a direct test of whether the signal is real.</p>
+
+                        <p>Of 87 TFs flagged as significantly specific by either pipeline, <b>14 appear in both</b>. The bar is high: a TF has to be specific enough to emerge at single-cell resolution among 106 cell types <em>and</em> variable enough to show up in tissue-level PCA across 3,071 bulk samples. The 14 include <b>NEUROD2</b> and <b>OLIG3</b> (top cell-type factors from the Gini analysis), <b>TCF21</b> (mesenchymal lineage), <b>TFAP2E</b> (cerebellar/olfactory), and several AP-1 family members (<b>JUNB, JUND, FOSL2</b>) marking medium spiny neurons of the striatum.</p>
+
+                        <p>The non-overlapping TFs are informative too. The <b>bulk-only TFs</b> (34) are dominated by immediate-early genes (<b>FOSB, JUN, EGR2/3/4</b>) and metabolic regulators (<b>KLF1/7/11/14/15</b>). These vary between brain <em>regions</em> (different activity levels) but don&rsquo;t distinguish individual cell types within a region.</p>
+
+                        <p>The <b>single-cell-only TFs</b> (64) are cell-fate determinants invisible to bulk because they distinguish cell types <em>within</em> the same tissue. <b>DLX5</b> specifies forebrain inhibitory neurons. <b>FOXG1</b> defines telencephalon identity. <b>LHX6</b> guides MGE-derived interneuron migration. <b>NEUROG2</b> determines cortical excitatory fate. These only become visible at single-cell resolution.<span class="sidenote-group"><sup class="sidenote-ref">7</sup><span class="sidenote-card side-right"><b>Why this split makes biological sense.</b> Bulk tissue is a mixture of cell types, so the TFs that emerge from bulk analysis are those that vary between brain <em>regions</em> (different mixtures of cell types) rather than between individual cell types. Activity-dependent genes (FOS, JUN, EGR family) fire in all active neurons and are prominent in tissue with high neural activity. Single-cell analysis resolves individual cells, so the TFs that emerge are those that distinguish one cell type from another within the same tissue: developmental fate determinants.</span></span></p>
+
+                        <figure class="blog-image">
+                            <div style="position:relative;">
+                                <div id="concordance-plot" style="width:100%; height:520px;"></div>
+                                <button id="conc-menu-btn" aria-label="Plot tools"
+                                    style="position:absolute;top:8px;right:8px;z-index:10;background:rgba(255,255,255,0.85);border:1px solid #e5e7eb;border-radius:6px;width:32px;height:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:background 0.15s,box-shadow 0.15s;"
+                                    onmouseenter="this.style.background='#fff';this.style.boxShadow='0 2px 8px rgba(0,0,0,0.12)'"
+                                    onmouseleave="if(!this.classList.contains('active')){this.style.background='rgba(255,255,255,0.85)';this.style.boxShadow='none';}">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="#6b7280"><circle cx="8" cy="3" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="13" r="1.5"/></svg>
+                                </button>
+                            </div>
+                            <style>
+                                #concordance-plot .modebar-container { display: none !important; }
+                                #concordance-plot.show-modebar .modebar-container { display: flex !important; right: 44px !important; }
+                            </style>
+                            <figcaption>Cross-modal concordance: 87 specific TFs categorized by detection source (bulk-only, shared, single-cell-only) and colored by TF protein family.</figcaption>
+                        </figure>
+
+                        <noscript>
+                            <figure class="blog-image">
+                                <img src="assets/03_bulk_vs_sc_concordance.png" alt="Bulk vs SC concordance" loading="lazy" />
+                            </figure>
+                        </noscript>
+                    </details>
+
+                    <!-- ========== The Hardest Test ========== -->
+                    <details class="collapsible-section">
+                        <summary>
+                            <h3 id="sec-robustness">The Hardest Test</h3>
+                        </summary>
+
+                        <p>Everything above benefits from large sample sizes (thousands of bulk samples, hundreds of thousands of cells). The harder question is whether the framework holds up when data is scarce. We zoomed in to individual brain regions and asked: how many differential cCREs does each one produce, and do the TFs that emerge make biological sense?</p>
+
+                        <p>The range is wide. The cerebellum, developmentally distinct from the rest of the brain and born from the rhombic lip rather than the forebrain, produces 38,360 differential cCREs. The basal ganglia yield 1,010. The cortex, 1,309. Then you get to the underrepresented regions: the hypothalamus yields 27 differential cCREs. The amygdala, 2. And the substantia nigra, home to the dopaminergic neurons whose death causes Parkinson&rsquo;s disease, produces just 256 (134 enriched, 122 depleted).</p>
+
+                        <p>Those 134 enriched cCREs in the substantia nigra are enough to resolve <b>15 unique brain-relevant TFs</b>, transcription factors that appear in no other brain region&rsquo;s enriched set. The top hits include <b>NR2F1</b>, a nuclear receptor that regulates cortical area identity (142 nTPM in the region). <b>ZBTB18</b>, a zinc-finger repressor critical for cortical neuron migration, shows the highest expression of any hit at 462 nTPM. <b>RORA</b>, a retinoid-related orphan receptor involved in cerebellar and cortical development, at 153 nTPM. <b>NR4A1</b>, a nuclear receptor in the NURR1 family important for dopaminergic neuron survival, at 288 nTPM. All of these are known regulators of neural programs consistent with this region&rsquo;s neuronal identity.<span class="sidenote-group"><sup class="sidenote-ref">8</sup><span class="sidenote-card side-right"><b>Expression validation.</b> nTPM (normalized Transcripts Per Million) values come from the Human Protein Atlas snRNA-seq data for each brain region. Requiring nTPM &ge; 1.0 ensures that every TF we report is not just computationally enriched but actually expressed as protein in the tissue.</span></span></p>
+
+                        <p>Across all 8 brain regions, distinct TF signatures emerge. The cerebellum is dominated by unique developmental programs consistent with its separate embryonic origin. The basal ganglia show enrichment for AP-1 and activity-dependent factors. And even at the very bottom of data availability, the substantia nigra produces biologically coherent results.</p>
+
+                        <figure class="blog-image">
+                            <img src="assets/12_dotplot_tf_enrichment.png" alt="Region TF enrichment dotplot across 8 brain regions" loading="lazy" />
+                            <figcaption>TF enrichment across 8 brain regions. Dot size = enrichment magnitude, color = statistical significance.</figcaption>
+                        </figure>
+
+                        <figure class="blog-image">
+                            <img src="assets/05_brain_tf_enrichment_vs_expression.png" alt="Brain TF enrichment vs gene expression" loading="lazy" />
+                            <figcaption>TF enrichment (chromatin accessibility) vs gene expression (HPA immunohistochemistry). Concordance between the two modalities validates that the enriched TFs are not just computationally identified but biologically active.</figcaption>
+                        </figure>
+
+                        <p>The cases where gene therapy is most needed (rare diseases, understudied cell populations, small patient cohorts) are exactly the cases where data is hardest to come by. Extracting meaningful regulatory signatures from 134 cCREs in the substantia nigra suggests the framework is applicable in those settings.</p>
+                    </details>
+
+                    <!-- ========== What This Means ========== -->
+                    <h3 id="sec-next-steps">What This Means</h3>
+
+                    <p>The bulk data contains 28 clean axes of regulatory variation that survive permutation testing, and the cCREs driving those axes sit on promoters of genes with known functions matching each axis&rsquo;s biology. The single-cell data resolves TF motifs into a spectrum from cell-type-specific fate determinants to ubiquitous housekeeping. The relationships between cell types recapitulate developmental lineage from unsupervised clustering alone. And the strongest signals replicate across two independent pipelines.</p>
+
+                    <p>The result is a cCRE library where the regulatory structure has been verified at every level we could test: individual motifs, pairwise relationships, lineage architecture, cross-modal reproducibility, and small-sample robustness. When we train generative models on this library to design synthetic regulatory DNA, we know the patterns they&rsquo;re learning reflect biology.</p>
+
+                    <!-- ========== References ========== -->
+                    <h3 id="references">References</h3>
+                    <ol class="blog-references">
+                        <li id="ref-encode">ENCODE Project Consortium. <a href="https://doi.org/10.1038/s41586-020-2493-4" target="_blank">Expanded encyclopaedias of DNA elements in the human and mouse genomes</a>. <em>Nature</em> 583, 699&ndash;710 (2020).</li>
+                        <li id="ref-allen-brain">Bakken, T. E. et al. (BICCN). <a href="https://doi.org/10.1126/science.adf6812" target="_blank">Comparative cellular analysis of motor cortex in human, marmoset and mouse</a>. <em>Science</em> 382, eadf6812 (2023).</li>
+                        <li id="ref-alphagenome">Gane, A. et al. (Google DeepMind). <a href="https://doi.org/10.1101/2025.04.15.649429" target="_blank">AlphaGenome: genome foundation model</a>. <em>bioRxiv</em> (2025).</li>
+                        <li id="ref-enformer">Avsec, &Zcaron;. et al. <a href="https://doi.org/10.1038/s41592-021-01252-x" target="_blank">Effective gene expression prediction from sequence by integrating long-range interactions</a>. <em>Nature Methods</em> 18, 1196&ndash;1203 (2021).</li>
+                        <li id="ref-evo2">Nguyen, E. et al. (Arc Institute). <a href="https://doi.org/10.1126/science.ado9336" target="_blank">Sequence modeling and design from molecular to genome scale with Evo</a>. <em>Science</em> 386, eado9336 (2024).</li>
+                        <li id="ref-jaspar">Castro-Mondragon, J. A. et al. <a href="https://doi.org/10.1093/nar/gkab1113" target="_blank">JASPAR 2024: 20th anniversary of the open-access database of transcription factor binding profiles</a>. <em>Nucleic Acids Research</em> 52, D142&ndash;D148 (2024).</li>
+                        <li id="ref-harmony">Korsunsky, I. et al. <a href="https://doi.org/10.1038/s41592-019-0619-0" target="_blank">Fast, sensitive and accurate integration of single-cell data with Harmony</a>. <em>Nature Methods</em> 16, 1289&ndash;1296 (2019).</li>
+                        <li id="ref-screen">ENCODE Project Consortium. <a href="https://doi.org/10.1038/s41586-020-2493-4" target="_blank">SCREEN: Search Candidate cis-Regulatory Elements by ENCODE</a>. (2020).</li>
+                    </ol>
+
+                </article>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="social-links">
+            <a href="https://x.com/origin_bio" target="_blank" class="social-link" aria-label="Twitter">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                </svg>
+            </a>
+            <a href="https://linkedin.com/company/origin-bio-inc" target="_blank" class="social-link" aria-label="LinkedIn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+                </svg>
+            </a>
+        </div>
+        <div class="copyright">&copy; 2026 Origin Bio</div>
+    </footer>
+
+    <script src="/js/script.js"></script>
+
+    <!-- ========== Load data and render Plotly visualisations ========== -->
+    <script>
+    (function () {
+        /* ── Helpers ─────────────────────────────────────────────── */
+        function menuToggle(btnId, plotId) {
+            var btn = document.getElementById(btnId);
+            var plot = document.getElementById(plotId);
+            if (!btn || !plot) return;
+            btn.addEventListener('click', function () {
+                var open = plot.classList.toggle('show-modebar');
+                btn.classList.toggle('active', open);
+                btn.style.background = open ? '#fff' : 'rgba(255,255,255,0.85)';
+                btn.style.boxShadow = open ? '0 2px 8px rgba(0,0,0,0.12)' : 'none';
+            });
+        }
+
+        var plotlyConfig = {
+            responsive: true,
+            displayModeBar: true,
+            modeBarButtonsToRemove: ['toImage', 'sendDataToCloud'],
+            displaylogo: false
+        };
+
+        var fontFamily = 'Roboto, sans-serif';
+        var baseLayout = {
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            font: { family: fontFamily, color: '#333' }
+        };
+
+        /* ── Fetch helper ────────────────────────────────────────── */
+        function loadJSON(url) {
+            return fetch(url).then(function (r) { return r.json(); });
+        }
+
+        /* ── 1. UMAP (hero) ─────────────────────────────────────── */
+        loadJSON('umap_data.json').then(function (d) {
+            /* Map cluster numbers to broad types + colors */
+            var clusterCounts = {};
+            d.cluster.forEach(function (c) { clusterCounts[c] = (clusterCounts[c] || 0) + 1; });
+            var sortedClusters = Object.keys(clusterCounts).map(Number).sort(function (a, b) { return clusterCounts[b] - clusterCounts[a]; });
+
+            var broadTypes = [
+                'Excitatory neuron', 'Inhibitory neuron', 'Oligodendrocyte',
+                'Astrocyte', 'MSN', 'Microglia', 'Other neuron', 'Other / rare'
+            ];
+            var broadColors = {
+                'Excitatory neuron': '#2166AC', 'Inhibitory neuron': '#D6604D',
+                'Oligodendrocyte': '#1B7837', 'Astrocyte': '#7B3294',
+                'MSN': '#E66101', 'Microglia': '#C51B7D',
+                'Other neuron': '#878787', 'Other / rare': '#B8B8B8'
+            };
+            /* Assign broad type to clusters by position */
+            var clusterMap = {};
+            sortedClusters.forEach(function (c, i) {
+                clusterMap[c] = broadTypes[i % broadTypes.length];
+            });
+
+            var cellTypes = d.cluster.map(function (c) { return clusterMap[c]; });
+            var colors = cellTypes.map(function (t) { return broadColors[t] || '#B8B8B8'; });
+
+            /* Build one trace per broad type for legend */
+            var traces = [];
+            broadTypes.forEach(function (bt) {
+                var idx = [];
+                for (var i = 0; i < cellTypes.length; i++) { if (cellTypes[i] === bt) idx.push(i); }
+                if (idx.length === 0) return;
+                traces.push({
+                    type: 'scattergl',
+                    mode: 'markers',
+                    name: bt,
+                    x: idx.map(function (i) { return d.umap1[i]; }),
+                    y: idx.map(function (i) { return d.umap2[i]; }),
+                    text: idx.map(function (i) { return bt + '<br>Region: ' + d.region[i] + '<br>Donor: ' + d.donor[i]; }),
+                    hovertemplate: '%{text}<extra></extra>',
+                    marker: { size: 2, color: broadColors[bt], opacity: 0.6 }
+                });
+            });
+
+            Plotly.newPlot('umap-plot', traces, Object.assign({}, baseLayout, {
+                title: { text: 'Human Brain Single-Cell Chromatin Atlas (624K nuclei)', font: { size: 14 } },
+                xaxis: { title: 'UMAP 1 (chromatin accessibility)', zeroline: false, showgrid: false },
+                yaxis: { title: 'UMAP 2', zeroline: false, showgrid: false },
+                margin: { l: 50, r: 20, t: 45, b: 50 },
+                legend: { font: { size: 11 }, itemsizing: 'constant', tracegroupgap: 2 },
+                hovermode: 'closest'
+            }), plotlyConfig);
+            menuToggle('umap-menu-btn', 'umap-plot');
+        });
+
+        /* ── 2. PCA permutation ──────────────────────────────────── */
+        loadJSON('permutation_data.json').then(function (d) {
+            var pcNums = d.pc.map(function (p) { return parseInt(p.replace('PC', '')); });
+            var nullUpper = d.null_mean.map(function (m, i) { return m + 2 * d.null_std[i]; });
+            var nullLower = d.null_mean.map(function (m, i) { return m - 2 * d.null_std[i]; });
+
+            function makeSubplot(start, end, showLegend) {
+                var idx = [];
+                for (var i = 0; i < pcNums.length; i++) { if (pcNums[i] >= start && pcNums[i] <= end) idx.push(i); }
+                var x = idx.map(function (i) { return pcNums[i]; });
+                return [
+                    /* 95% CI band */
+                    { x: x.concat(x.slice().reverse()),
+                      y: idx.map(function (i) { return nullUpper[i]; }).concat(idx.slice().reverse().map(function (i) { return nullLower[i]; })),
+                      fill: 'toself', fillcolor: 'rgba(180,180,180,0.25)', line: { color: 'transparent' },
+                      type: 'scatter', mode: 'lines', showlegend: false, hoverinfo: 'skip' },
+                    /* Null mean */
+                    { x: x, y: idx.map(function (i) { return d.null_mean[i]; }),
+                      type: 'scatter', mode: 'lines',
+                      line: { color: '#333', dash: 'dash', width: 1.5 },
+                      name: 'Null mean', showlegend: showLegend, hoverinfo: 'skip' },
+                    /* Observed */
+                    { x: x, y: idx.map(function (i) { return d.observed[i]; }),
+                      type: 'scatter', mode: 'markers+lines',
+                      marker: { color: idx.map(function (i) { return d.p_value[i] < 0.05 ? '#2166AC' : '#FDDBC7'; }), size: 7, line: { color: '#fff', width: 1 } },
+                      line: { color: '#2166AC', width: 1.5 },
+                      name: 'Observed', showlegend: showLegend,
+                      text: idx.map(function (i) { return d.pc[i] + '<br>Variance: ' + d.observed[i].toFixed(4) + '<br>z = ' + d.z_score[i].toFixed(0) + '<br>p = ' + d.p_value[i]; }),
+                      hovertemplate: '%{text}<extra></extra>' }
+                ];
+            }
+
+            var traces = [];
+            makeSubplot(1, 50, true).forEach(function (t) { t.xaxis = 'x'; t.yaxis = 'y'; traces.push(t); });
+            makeSubplot(20, 42, false).forEach(function (t) { t.xaxis = 'x2'; t.yaxis = 'y2'; traces.push(t); });
+
+            Plotly.newPlot('perm-plot', traces, Object.assign({}, baseLayout, {
+                grid: { rows: 1, columns: 2, pattern: 'independent', subplots: [['xy', 'x2y2']] },
+                xaxis: { title: 'Principal component', dtick: 5 },
+                yaxis: { title: 'Fraction of variance explained', type: 'log' },
+                xaxis2: { title: 'Principal component (zoom: 20\u201342)', dtick: 2 },
+                yaxis2: { title: 'Fraction of variance explained' },
+                margin: { l: 60, r: 20, t: 35, b: 50 },
+                legend: { x: 0.65, y: 0.95, font: { size: 11 } },
+                annotations: [
+                    { text: '<b>Full Spectrum</b>', xref: 'x', yref: 'paper', x: 25, y: 1.04, showarrow: false, font: { size: 12 } },
+                    { text: '<b>Transition Zone</b>', xref: 'x2', yref: 'paper', x: 31, y: 1.04, showarrow: false, font: { size: 12 } }
+                ]
+            }), plotlyConfig);
+            menuToggle('perm-menu-btn', 'perm-plot');
+        });
+
+        /* ── 3. Gini distribution ────────────────────────────────── */
+        loadJSON('gini_data.json').then(function (d) {
+            /* Color gradient: red (high Gini) → blue (low Gini) */
+            var maxG = Math.max.apply(null, d.gini);
+            var minG = Math.min.apply(null, d.gini);
+            var colors = d.gini.map(function (g) {
+                var t = (g - minG) / (maxG - minG);
+                var r = Math.round(179 + (103 - 179) * (1 - t));  /* #67 → #B3 */
+                var gr = Math.round(0 + (169 - 0) * (1 - t));
+                var b = Math.round(31 + (207 - 31) * (1 - t));
+                return 'rgb(' + r + ',' + gr + ',' + b + ')';
+            });
+
+            /* Annotate key TFs mentioned in the blog text.
+               Each entry: [name, ax-offset, ay-offset] to avoid overlaps. */
+            var keyTFs = [
+                ['NEUROD2',  30, -40],
+                ['OLIG2',   -45,  -24],
+                ['NEUROG1',  50, -14],
+                ['SP4',     -30, -35],
+                ['EGR1',     30, -35]
+            ];
+            var annotations = [];
+            keyTFs.forEach(function (item) {
+                var name = item[0], axOff = item[1], ayOff = item[2];
+                var idx = d.motif.indexOf(name);
+                if (idx === -1) return;
+                annotations.push({
+                    x: idx, y: d.gini[idx],
+                    text: '<b>' + name + '</b>', showarrow: true,
+                    arrowhead: 2, arrowsize: 0.8,
+                    ax: axOff, ay: ayOff,
+                    font: { size: 11, color: '#1a1a1a' }
+                });
+            });
+
+            Plotly.newPlot('gini-plot', [{
+                type: 'bar',
+                x: d.motif.map(function (_, i) { return i; }),
+                y: d.gini,
+                marker: { color: colors },
+                text: d.motif.map(function (m, i) {
+                    return m + '<br>Gini: ' + d.gini[i].toFixed(3) +
+                           '<br>Top cell type: ' + d.top_cell_type[i] +
+                           '<br>Max hit rate: ' + d.max_hit_rate[i].toFixed(4) +
+                           '<br>Mean hit rate: ' + d.mean_hit_rate[i].toFixed(4);
+                }),
+                hovertemplate: '%{text}<extra></extra>',
+                showlegend: false
+            }], Object.assign({}, baseLayout, {
+                title: { text: 'TF Motif Specificity (981 motifs ranked by Gini coefficient)', font: { size: 14 } },
+                xaxis: { title: 'TF motifs (ranked most specific \u2192 most ubiquitous)', showticklabels: false },
+                yaxis: { title: 'Gini coefficient (cell-type specificity)' },
+                margin: { l: 60, r: 20, t: 45, b: 50 },
+                annotations: annotations
+            }), plotlyConfig);
+            menuToggle('gini-menu-btn', 'gini-plot');
+        });
+
+        /* ── 3b. Motif filtering pipeline (Sankey) ─────────────── */
+        (function () {
+            Plotly.newPlot('filter-plot', [{
+                type: 'sankey',
+                orientation: 'h',
+                arrangement: 'snap',
+                node: {
+                    pad: 20,
+                    thickness: 24,
+                    line: { color: '#ccc', width: 0.5 },
+                    label: [
+                        'JASPAR motifs (981)',
+                        'Brain-expressed (843)',
+                        'Final set (190)',
+                        'Not expressed (\u2212138)',
+                        'Redundant (\u2212653)'
+                    ],
+                    color: ['#4285f4', '#e65100', '#2e7d32', '#ef9a9a', '#ce93d8'],
+                    customdata: [
+                        'All 981 motifs from the JASPAR 2024 database',
+                        '843 motifs whose parent TF has HPA nTPM \u2265 1.0 in brain',
+                        '190 non-redundant, brain-expressed TF motifs (19% retained)',
+                        '138 motifs removed: parent TF not expressed in brain (HPA nTPM < 1.0)',
+                        '653 motifs removed: correlated binding profiles (complete-linkage r > 0.95)'
+                    ],
+                    hovertemplate: '%{customdata}<extra></extra>'
+                },
+                link: {
+                    source: [0, 1, 0, 1],
+                    target: [1, 2, 3, 4],
+                    value:  [843, 190, 138, 653],
+                    color: ['rgba(66,133,244,0.25)', 'rgba(46,125,50,0.25)', 'rgba(239,154,154,0.35)', 'rgba(206,147,216,0.35)'],
+                    customdata: [
+                        '843 motifs pass expression filter (HPA nTPM \u2265 1.0)',
+                        '190 motifs survive deduplication (19% of original)',
+                        '138 motifs removed: TF not expressed in brain',
+                        '653 motifs removed: redundant (r > 0.95 with another motif)'
+                    ],
+                    hovertemplate: '%{customdata}<extra></extra>'
+                }
+            }], Object.assign({}, baseLayout, {
+                title: { text: 'Motif curation pipeline', font: { size: 14 } },
+                margin: { l: 20, r: 20, t: 45, b: 10 },
+                height: 300
+            }), plotlyConfig);
+            menuToggle('filter-menu-btn', 'filter-plot');
+        })();
+
+        /* ── 4. JSD heatmap ──────────────────────────────────────── */
+        loadJSON('jsd_data.json').then(function (d) {
+            /* Green colorscale matching blog_figures.py */
+            var colorscale = [
+                [0, '#F7F7F7'], [0.01, '#D9F0D3'], [0.05, '#A6DBA0'],
+                [0.15, '#5AAE61'], [0.4, '#1B7837'], [1, '#00441B']
+            ];
+
+            Plotly.newPlot('jsd-plot', [{
+                type: 'heatmap',
+                z: d.matrix,
+                x: d.labels,
+                y: d.labels,
+                colorscale: colorscale,
+                colorbar: { title: { text: 'JSD', font: { size: 12 } }, thickness: 14, len: 0.6 },
+                hovertemplate: '%{x} vs %{y}<br>JSD = %{z:.4f}<extra></extra>'
+            }], Object.assign({}, baseLayout, {
+                title: { text: 'Jensen\u2013Shannon Divergence (TF motif profiles)', font: { size: 14 } },
+                xaxis: { showticklabels: false, title: 'Cell type (hierarchically clustered)' },
+                yaxis: { showticklabels: false, title: 'Cell type', autorange: 'reversed' },
+                margin: { l: 55, r: 30, t: 45, b: 50 },
+                width: null,
+                height: 600
+            }), plotlyConfig);
+            menuToggle('jsd-menu-btn', 'jsd-plot');
+        });
+
+        /* ── 5. Jaccard heatmap ──────────────────────────────────── */
+        loadJSON('jaccard_data.json').then(function (d) {
+            var colorscale = [
+                [0, '#F7F7F7'], [0.1, '#D1E5F0'], [0.25, '#92C5DE'],
+                [0.5, '#4393C3'], [0.75, '#2166AC'], [1, '#053061']
+            ];
+
+            Plotly.newPlot('jaccard-plot', [{
+                type: 'heatmap',
+                z: d.matrix,
+                x: d.labels,
+                y: d.labels,
+                colorscale: colorscale,
+                colorbar: { title: { text: 'Jaccard', font: { size: 12 } }, thickness: 14, len: 0.6 },
+                hovertemplate: '%{x} vs %{y}<br>Jaccard = %{z:.4f}<extra></extra>'
+            }], Object.assign({}, baseLayout, {
+                title: { text: 'Jaccard Index (cCRE coordinate overlap)', font: { size: 14 } },
+                xaxis: { showticklabels: false, title: 'Cell type (hierarchically clustered)' },
+                yaxis: { showticklabels: false, title: 'Cell type', autorange: 'reversed' },
+                margin: { l: 55, r: 30, t: 45, b: 50 },
+                width: null,
+                height: 600
+            }), plotlyConfig);
+            menuToggle('jaccard-menu-btn', 'jaccard-plot');
+        });
+
+        /* ── 6. Concordance ──────────────────────────────────────── */
+        loadJSON('concordance_data.json').then(function (data) {
+            var familyColors = {
+                'bHLH': '#2166AC',
+                'AP-1/bZIP': '#D6604D',
+                'Zinc finger': '#1B7837',
+                'KLF/SP': '#E66101',
+                'Homeobox': '#7B3294',
+                'Unknown': '#B8B8B8'
+            };
+            var sourceOrder = ['BULK_ONLY', 'BOTH', 'SC_ONLY'];
+            var sourceLabels = { 'BULK_ONLY': 'Bulk only', 'BOTH': 'Shared', 'SC_ONLY': 'Single-cell only' };
+            var sourceColors = { 'BULK_ONLY': '#4393C3', 'BOTH': '#542788', 'SC_ONLY': '#D6604D' };
+
+            /* Group by source */
+            var traces = [];
+            var seenFamilies = {};
+            sourceOrder.forEach(function (src) {
+                var items = data.filter(function (d) { return d.source === src; });
+                items.sort(function (a, b) {
+                    if (a.family < b.family) return -1;
+                    if (a.family > b.family) return 1;
+                    return a.tf < b.tf ? -1 : 1;
+                });
+                items.forEach(function (item, i) {
+                    var fam = item.family || 'Unknown';
+                    var color = familyColors[fam] || '#B8B8B8';
+                    var showLegend = !seenFamilies[fam];
+                    seenFamilies[fam] = true;
+                    traces.push({
+                        type: 'scatter',
+                        mode: 'markers',
+                        x: [sourceLabels[src]],
+                        y: [i],
+                        marker: { size: 8, color: color, symbol: 'circle', line: { color: '#fff', width: 0.5 } },
+                        name: fam,
+                        legendgroup: fam,
+                        showlegend: showLegend,
+                        text: [item.tf + '<br>Family: ' + fam + '<br>Role: ' + (item.role || 'N/A') +
+                               (item.sc_gini ? '<br>Gini: ' + item.sc_gini.toFixed(3) : '') +
+                               (item.sc_top ? '<br>Top cell: ' + item.sc_top : '') +
+                               (item.bulk_pc ? '<br>Bulk PC: ' + item.bulk_pc : '')],
+                        hovertemplate: '%{text}<extra></extra>'
+                    });
+                });
+            });
+
+            Plotly.newPlot('concordance-plot', traces, Object.assign({}, baseLayout, {
+                title: { text: 'Cross-Modal Concordance: 87 Specific TFs', font: { size: 14 } },
+                xaxis: { title: 'Detection source (bulk PCA vs single-cell Gini)', type: 'category', categoryorder: 'array', categoryarray: ['Bulk only', 'Shared', 'Single-cell only'] },
+                yaxis: { title: 'Individual TFs', showticklabels: false },
+                margin: { l: 50, r: 20, t: 45, b: 50 },
+                legend: { font: { size: 11 }, title: { text: 'TF Family', font: { size: 12 } } },
+                hovermode: 'closest'
+            }), plotlyConfig);
+            menuToggle('conc-menu-btn', 'concordance-plot');
+        });
+
+    })();
+    </script>
+
+    <!-- ========== Sidenote behavior ========== -->
+    <script>
+        (function () {
+            var mq = window.matchMedia('(max-width: 1299px)');
+            var desktopMq = window.matchMedia('(min-width: 1300px)');
+            var pinnedCard = null;
+
+            function placeDesktopSidenotes() {
+                var cards = Array.prototype.slice.call(document.querySelectorAll('.sidenote-card'));
+                if (pinnedCard && cards.indexOf(pinnedCard) === -1) pinnedCard = null;
+                cards.forEach(function (card) {
+                    card.classList.remove('sidenote-hidden-desktop');
+                    card.style.top = '';
+                });
+                document.querySelectorAll('.sidenote-overflow-indicator').forEach(function (el) { el.remove(); });
+                if (!desktopMq.matches) return;
+                var positionedCards = [];
+                cards.forEach(function (card) {
+                    var group = card.closest('.sidenote-group');
+                    var container = card.offsetParent;
+                    if (!group || !container) return;
+                    var closedDetails = card.closest('details.collapsible-section:not([open])');
+                    if (closedDetails) return;
+                    var ref = group.querySelector('.sidenote-ref');
+                    if (!ref) return;
+                    var refRect = ref.getBoundingClientRect();
+                    var containerRect = container.getBoundingClientRect();
+                    var topPx = Math.max(0, refRect.top - containerRect.top - 2);
+                    card.style.top = topPx + 'px';
+                    positionedCards.push(card);
+                });
+                var pendingIndicators = [];
+                ['side-left', 'side-right'].forEach(function (sideClass) {
+                    var placed = [];
+                    var sideCards = positionedCards
+                        .filter(function (card) { return card.classList.contains(sideClass); })
+                        .sort(function (a, b) { return a.getBoundingClientRect().top - b.getBoundingClientRect().top; });
+                    if (pinnedCard && pinnedCard.classList.contains(sideClass) && sideCards.indexOf(pinnedCard) !== -1) {
+                        sideCards = [pinnedCard].concat(sideCards.filter(function (card) { return card !== pinnedCard; }));
+                    }
+                    sideCards.forEach(function (card) {
+                        var rect = card.getBoundingClientRect();
+                        var overlappingWith = placed.filter(function (prev) {
+                            var prevRect = prev.getBoundingClientRect();
+                            return rect.top < (prevRect.bottom + 8) && rect.bottom > (prevRect.top - 8);
+                        });
+                        if (overlappingWith.length > 0) {
+                            card.classList.add('sidenote-hidden-desktop');
+                            overlappingWith.forEach(function (visibleCard) {
+                                pendingIndicators.push({ visibleCard: visibleCard, hiddenCard: card });
+                            });
+                        } else { placed.push(card); }
+                    });
+                });
+                pendingIndicators.forEach(function (item) {
+                    if (item.visibleCard.querySelector('.sidenote-overflow-indicator')) return;
+                    var hiddenGroup = item.hiddenCard.closest('.sidenote-group');
+                    var hiddenRef = hiddenGroup ? hiddenGroup.querySelector('.sidenote-ref') : null;
+                    var num = hiddenRef ? hiddenRef.textContent.trim() : '';
+                    var indicator = document.createElement('div');
+                    indicator.className = 'sidenote-overflow-indicator';
+                    if (num) indicator.title = 'Note \u2039' + num + '\u203a is also anchored here \u2014 click to read it';
+                    indicator.innerHTML = '<span class="sidenote-overflow-dots">\u00b7\u00b7\u00b7</span>' + (num ? '<span class="sidenote-overflow-num">(' + num + ')</span>' : '');
+                    indicator.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        item.hiddenCard.dispatchEvent(new MouseEvent('click', { bubbles: false }));
+                    });
+                    item.visibleCard.appendChild(indicator);
+                });
+            }
+
+            function scheduleSidenoteLayout() { window.requestAnimationFrame(placeDesktopSidenotes); }
+
+            function wire() {
+                function setPinnedCard(card) {
+                    var isPinned = pinnedCard === card;
+                    pinnedCard = isPinned ? null : card;
+                    document.querySelectorAll('.sidenote-card.glowing').forEach(function (c) { c.classList.remove('glowing'); });
+                    if (!isPinned) card.classList.add('glowing');
+                    scheduleSidenoteLayout();
+                }
+                document.querySelectorAll('.sidenote-ref').forEach(function (ref) {
+                    ref.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        var card = ref.closest('.sidenote-group').querySelector('.sidenote-card');
+                        if (!card) return;
+                        if (mq.matches) {
+                            document.querySelectorAll('.sidenote-card.open').forEach(function (c) { if (c !== card) c.classList.remove('open'); });
+                            card.classList.toggle('open');
+                        } else { if (pinnedCard !== card) setPinnedCard(card); }
+                    });
+                });
+                document.querySelectorAll('.sidenote-card').forEach(function (card) {
+                    card.addEventListener('click', function (e) {
+                        if (mq.matches) return;
+                        e.stopPropagation();
+                        setPinnedCard(card);
+                    });
+                });
+                var article = document.querySelector('.blog-article');
+                if (article) {
+                    article.querySelectorAll('img').forEach(function (img) {
+                        if (!img.complete) {
+                            img.addEventListener('load', scheduleSidenoteLayout, { passive: true });
+                            img.addEventListener('error', scheduleSidenoteLayout, { passive: true });
+                        }
+                    });
+                    article.querySelectorAll('details.collapsible-section').forEach(function (el) {
+                        el.addEventListener('toggle', scheduleSidenoteLayout, { passive: true });
+                    });
+                    if ('ResizeObserver' in window) {
+                        var ro = new ResizeObserver(function () { scheduleSidenoteLayout(); });
+                        ro.observe(article);
+                        article.querySelectorAll('figure, img').forEach(function (el) { ro.observe(el); });
+                    }
+                }
+                scheduleSidenoteLayout();
+                window.addEventListener('resize', scheduleSidenoteLayout);
+                window.addEventListener('load', scheduleSidenoteLayout);
+                if (desktopMq.addEventListener) desktopMq.addEventListener('change', scheduleSidenoteLayout);
+                setTimeout(scheduleSidenoteLayout, 250);
+                setTimeout(scheduleSidenoteLayout, 1000);
+            }
+            if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire);
+            else wire();
+        })();
+    </script>
+
+    <!-- ========== TOC active-link tracking ========== -->
+    <script>
+        (function () {
+            var tocLinks = document.querySelectorAll('.blog-toc a');
+            if (!tocLinks.length) return;
+            var sectionIds = Array.prototype.map.call(tocLinks, function (a) { return a.getAttribute('href').slice(1); });
+            var currentActive = null;
+            var suppressObserverUpdates = false;
+
+            function setActiveLink(link) {
+                if (!link) return;
+                if (currentActive) currentActive.classList.remove('active');
+                link.classList.add('active');
+                currentActive = link;
+            }
+            function resumeObserverOnUserScroll(e) {
+                if (!suppressObserverUpdates) return;
+                if (e.type === 'keydown') {
+                    var key = e.key;
+                    var isScrollKey = key === 'ArrowDown' || key === 'ArrowUp' || key === 'PageDown' || key === 'PageUp' || key === 'Home' || key === 'End' || key === ' ';
+                    if (!isScrollKey) return;
+                }
+                suppressObserverUpdates = false;
+            }
+            window.addEventListener('wheel', resumeObserverOnUserScroll, { passive: true });
+            window.addEventListener('touchmove', resumeObserverOnUserScroll, { passive: true });
+            window.addEventListener('keydown', resumeObserverOnUserScroll);
+            window.addEventListener('mousedown', resumeObserverOnUserScroll, { passive: true });
+
+            var observer = new IntersectionObserver(function (entries) {
+                if (suppressObserverUpdates) return;
+                entries.forEach(function (entry) {
+                    if (entry.isIntersecting) {
+                        var id = entry.target.id;
+                        var link = document.querySelector('.blog-toc a[href="#' + id + '"]');
+                        if (link) setActiveLink(link);
+                    }
+                });
+            }, { rootMargin: '-20% 0px -60% 0px' });
+
+            tocLinks.forEach(function (link) {
+                link.addEventListener('click', function (e) {
+                    var href = link.getAttribute('href');
+                    if (!href || href.charAt(0) !== '#') return;
+                    e.preventDefault();
+                    setActiveLink(link);
+                    suppressObserverUpdates = true;
+                    var target = document.getElementById(href.slice(1));
+                    if (!target) return;
+                    var el = target.closest('details.collapsible-section');
+                    while (el) { if (!el.open) el.open = true; el = el.parentElement.closest('details.collapsible-section'); }
+                    requestAnimationFrame(function () {
+                        target.scrollIntoView({ behavior: 'auto', block: 'start' });
+                        if (history.replaceState) history.replaceState(null, '', href);
+                    });
+                });
+            });
+
+            sectionIds.forEach(function (id) {
+                var el = document.getElementById(id);
+                if (el) observer.observe(el);
+            });
+            if (window.location.hash) {
+                var initial = document.querySelector('.blog-toc a[href="' + window.location.hash + '"]');
+                if (initial) setActiveLink(initial);
+            }
+        })();
+    </script>
+
+    <!-- ========== Sidebar toggle ========== -->
+    <script>
+        (function () {
+            var body = document.body;
+            var closeBtn = document.querySelector('.blog-toc-toggle');
+            var openBtn = document.querySelector('.blog-toc-open');
+            if (!closeBtn || !openBtn) return;
+            closeBtn.addEventListener('click', function () { body.classList.add('sidebar-collapsed'); });
+            openBtn.addEventListener('click', function () { body.classList.remove('sidebar-collapsed'); });
+        })();
+    </script>
+</body>
+
+</html>
