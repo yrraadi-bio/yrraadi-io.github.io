@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-4DGX45FJCJ"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-4DGX45FJCJ');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>10,000 AI-Designed Regulatory DNA Sequences, Open for Research — Origin Bio</title>
+    <meta property="og:title" content="10,000 AI-Designed Regulatory DNA Sequences, Open for Research" />
+    <meta property="og:description" content="We're releasing 10,000 AI-designed proximal enhancer-like sequences across three cell types, with predicted activity, TF binding annotations, and 3D structures." />
+    <meta property="og:video" content="https://origin.bio/blogs/switch/assets/structure_spin.mp4" />
+    <meta property="og:video:type" content="video/mp4" />
+    <meta property="og:url" content="https://origin.bio/blogs/switch/" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="https://origin.bio/blogs/switch/assets/structure_spin.gif" />
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="icon" href="/assets/favicon.png" type="image/png">
+</head>
+
+<body class="blog-page">
+    <div class="reading-progress-bar"></div>
+    <div class="dna-background">
+        <div class="dna-strand"></div>
+        <div class="dna-strand"></div>
+        <div class="dna-strand"></div>
+    </div>
+
+    <header>
+        <a href="/" class="logo-link">
+            <img src="/assets/Origin%20logo+text%20(blue%20on%20transparent).png" alt="Origin Logo" class="header-logo">
+        </a>
+    </header>
+
+    <main>
+        <section class="blog-hero">
+            <div class="blog-content">
+                <article class="blog-article">
+
+                    <h2 id="page-title">10,000 AI-Designed Regulatory DNA Sequences, Open for Research</h2>
+                    <p class="blog-date">March 2026 &middot; Origin Bio</p>
+
+                    <figure class="blog-image" style="margin-top: 0;">
+                        <video autoplay muted loop playsinline preload="auto">
+                            <source src="/blogs/switch/assets/structure_spin.mp4" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                    </figure>
+
+                    <p>Today, we&rsquo;re releasing 10,000 AI-designed proximal enhancer-like sequences (pELS) across three cell types: SK-N-SH (neuroblastoma), HepG2 (hepatocellular), and K562 (erythroleukemia). Proximal enhancer-like sequences are short DNA elements positioned near gene promoters (~2kb) that boost transcription.</p>
+
+                    <p>For each sequence, we provide:</p>
+
+                    <ul>
+                        <li><strong>Predicted activity</strong> across all three cell types using <a href="https://www.biorxiv.org/content/10.1101/2023.03.05.531189" target="_blank">Malinois</a>, an independently validated model from the Broad Institute that predicts MPRA activity from DNA sequence alone.</li>
+                        <li><strong>Sequence quality metrics</strong> including worst hairpin stability (&Delta;G), GC content, nucleotide composition, and longest homopolymer length</li>
+                        <li><strong>Transcription factor binding site annotations</strong> that can be filtered and visualized</li>
+                        <li><strong>3D double-stranded DNA structure</strong>, using <a href="https://github.com/bytedance/protenix" target="_blank">Protenix</a>.</li>
+                    </ul>
+
+                    <p>We hope the research community will find these sequences useful in experiments such as MPRA studies and functional assays like ATAC-seq and ChIP-seq. As we experimentally evaluate the activity of these sequences, we&rsquo;ll share those results on <a href="https://switch.origin.bio" target="_blank">Switch</a> &mdash; and we&rsquo;ll enable others to do the same. We aim to continue contributing sequences to this repository, including for primary cells and tissues. The breadth of experiments to run, findings to uncover, and impact to be made go far beyond any single organization.</p>
+
+                    <h3 id="sec-why">Why are we designing and testing these libraries at scale?</h3>
+
+                    <p>We see regulatory elements &mdash; nature&rsquo;s DNA switches and dials &mdash; as a means to encode spatiotemporal control over gene expression, making medicines more programmable. The implications will be medicines with increased specificity and the ability to respond to changes in cell-state.</p>
+
+                    <p>Beyond applications in cell and gene therapies, we see these sequences as a fundamentally new tool for perturbation biology. Traditional perturbation approaches &mdash; gene knockdowns, knockouts &mdash; are largely binary. Chemical treatments offer dosage control but lack target specificity, hitting multiple pathways simultaneously. Cell fate decisions are driven by the dosage of gene expression: how much of a protein is made, in which cells, and when.</p>
+
+                    <p>By designing libraries of regulatory elements with graded transcriptional strengths, we can titrate a gene&rsquo;s expression across a continuous range and measure how the transcriptome reshapes in response. This moves perturbation biology from asking <em>&ldquo;what happens when we remove gene X?&rdquo;</em> to asking <em>&ldquo;what happens as we dial gene X from low to high expression in disease cells?&rdquo;</em></p>
+
+                    <h3 id="sec-questions">Consider the questions this enables.</h3>
+
+                    <p>How does varying IL-10 dosage reprogram tumor-infiltrating lymphocytes toward stemness? Recent work has shown that T cell fate in the tumor microenvironment is governed by a metabolic-epigenetic axis: elevated extracellular potassium in necrotic tumors triggers functional caloric restriction, depleting nucleocytosolic acetyl-CoA and stripping activating histone marks from effector and exhaustion gene loci &mdash; thereby preserving the stem-like T cell state most associated with durable anti-tumor responses. IL-10 appears to act on a related axis &mdash; metabolically reprogramming terminally exhausted CD8+ T cells to restore anti-tumor function. But while we know both signals can shift T cell fate, we don&rsquo;t know the dose-response landscape for either. Is there an expression threshold at which IL-10 flips exhausted TILs toward a more favorable state without overshooting into immunosuppression? Graded regulatory elements let you map that landscape systematically rather than guessing with a single overexpression construct.</p>
+
+                    <p>Or consider the broader challenge of T cell therapy. Clinical data show that the two strongest predictors of efficacy are T cell stemness &mdash; measured by markers like TCF7 expression and the CD39&#x207B;CD69&#x207B; phenotype &mdash; and polyclonal tumor reactivity across multiple neoantigens. Yet during ex vivo expansion, both properties erode: tumor-reactive clonotypes are selectively lost and the remaining cells terminally differentiate. What if you could use titrated expression of stemness-associated transcription factors like TCF7 or BACH2 during expansion to find the precise dosage that preserves self-renewal without sacrificing effector potential?</p>
+
+                    <p>These are the kinds of questions that become experimentally tractable when you have libraries of regulatory elements spanning a continuous range of transcriptional activity in specific cell types &mdash; and that&rsquo;s exactly what we&rsquo;re building.</p>
+
+                    <p style="margin-top: 2em; font-size: 1.1em;"><strong>Explore the sequences at <a href="https://switch.origin.bio" target="_blank">switch.origin.bio</a>.</strong></p>
+
+                </article>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        (function () {
+            var bar = document.querySelector('.reading-progress-bar');
+            var target = document.getElementById('sec-questions');
+            if (!bar || !target) return;
+            function update() {
+                var targetTop = target.getBoundingClientRect().top + window.pageYOffset;
+                var progress = Math.min(1, Math.max(0, window.pageYOffset / (targetTop - window.innerHeight * 0.5)));
+                bar.style.transform = 'scaleX(' + progress + ')';
+            }
+            window.addEventListener('scroll', update, { passive: true });
+            update();
+        })();
+    </script>
+</body>
+
+</html>
