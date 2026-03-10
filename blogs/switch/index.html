@@ -53,9 +53,7 @@
                     </div>
                     <ul>
                         <li><a href="#page-title">Title</a></li>
-                        <li><a href="#sec-release">The Release</a></li>
                         <li><a href="#sec-why">Why At Scale?</a></li>
-                        <li><a href="#sec-perturbation">A New Tool for Perturbation Biology</a></li>
                         <li><a href="#sec-questions">Questions This Enables</a></li>
                         <li><a href="#sec-explore">Explore</a></li>
                     </ul>
@@ -93,23 +91,15 @@
                         </span>
                     </p>
 
-                    <!-- ========== Highlights ========== -->
-                    <section class="blog-takeaways" aria-label="Key takeaways">
-                        <h3>What we&rsquo;re releasing</h3>
-                        <ul>
-                            <li><strong>10,000 AI-designed proximal enhancer-like sequences</strong> (pELS) across three cell types: SK-N-SH, HepG2, and K562.</li>
-                            <li><strong>Predicted transcriptional activity</strong> via <a href="https://www.biorxiv.org/content/10.1101/2023.03.05.531189" target="_blank">Malinois</a> (Broad Institute), an independently validated MPRA activity predictor.</li>
-                            <li><strong>Sequence quality metrics:</strong> hairpin stability (&Delta;G), GC content, nucleotide composition, longest homopolymer.</li>
-                            <li><strong>TF binding site annotations</strong> from MOODS, filterable and visualizable per-sequence.</li>
-                            <li><strong>3D double-stranded DNA structures</strong> predicted by <a href="https://github.com/bytedance/protenix" target="_blank">Protenix</a>.</li>
-                        </ul>
-                        <p style="margin-top: 0.75em;"><strong>Explore all sequences at <a href="https://switch.origin.bio" target="_blank">switch.origin.bio</a></strong></p>
-                    </section>
-                    <!-- ========== End Highlights ========== -->
-
-                    <h3 id="sec-release">The Release</h3>
-
                     <p>Today, we&rsquo;re releasing 10,000 AI-designed proximal enhancer-like sequences (pELS) across three cell types: SK-N-SH (neuroblastoma), HepG2 (hepatocellular), and K562 (erythroleukemia). Proximal enhancer-like sequences are short DNA elements positioned near gene promoters (~2kb) that boost transcription.</p>
+
+                    <p>For each sequence, we provide:</p>
+                    <ul>
+                        <li>Predicted activity across all three cell types using <a href="https://www.biorxiv.org/content/10.1101/2023.03.05.531189" target="_blank">Malinois</a>, an independently validated model from the Broad Institute that predicts MPRA activity from DNA sequence alone.</li>
+                        <li>Sequence quality metrics including worst hairpin stability (&Delta;G), GC content, nucleotide composition, and longest homopolymer length.</li>
+                        <li>Transcription factor binding site annotations that can be filtered and visualized.</li>
+                        <li>3D double-stranded DNA structure, using <a href="https://github.com/bytedance/protenix" target="_blank">Protenix</a>.</li>
+                    </ul>
 
                     <p>We hope the research community will find these sequences useful in experiments such as MPRA studies and functional assays like ATAC-seq and ChIP-seq. As we experimentally evaluate the activity of these sequences, we&rsquo;ll share those results on <a href="https://switch.origin.bio" target="_blank">Switch</a>&thinsp;&mdash;&thinsp;and we&rsquo;ll enable others to do the same. We aim to continue contributing sequences to this repository, including for primary cells and tissues. The breadth of experiments to run, findings to uncover, and impact to be made go far beyond any single organization.</p>
 
@@ -117,17 +107,13 @@
 
                     <p>We see regulatory elements&thinsp;&mdash;&thinsp;nature&rsquo;s DNA switches and dials&thinsp;&mdash;&thinsp;as a means to encode spatiotemporal control over gene expression, making medicines more programmable. The implications will be medicines with increased specificity and the ability to respond to changes in cell-state.</p>
 
-                    <h3 id="sec-perturbation">A new tool for perturbation biology</h3>
-
                     <p>Beyond applications in cell and gene therapies, we see these sequences as a fundamentally new tool for perturbation biology. Traditional perturbation approaches&thinsp;&mdash;&thinsp;gene knockdowns, knockouts&thinsp;&mdash;&thinsp;are largely binary. Chemical treatments offer dosage control but lack target specificity, hitting multiple pathways simultaneously. Cell fate decisions are driven by the dosage of gene expression: how much of a protein is made, in which cells, and when.</p>
 
                     <p>By designing libraries of regulatory elements with graded transcriptional strengths, we can titrate a gene&rsquo;s expression across a continuous range and measure how the transcriptome reshapes in response. This moves perturbation biology from asking <em>&ldquo;what happens when we remove gene X?&rdquo;</em> to asking <em>&ldquo;what happens as we dial gene X from low to high expression in disease cells?&rdquo;</em></p>
 
                     <h3 id="sec-questions">Consider the questions this enables.</h3>
 
-                    <p>How does varying IL-10 dosage reprogram tumor-infiltrating lymphocytes toward stemness? Recent work has shown that T cell fate in the tumor microenvironment is governed by a metabolic-epigenetic axis: elevated extracellular potassium in necrotic tumors triggers functional caloric restriction, depleting nucleocytosolic acetyl-CoA and stripping activating histone marks from effector and exhaustion gene loci&thinsp;&mdash;&thinsp;thereby preserving the stem-like T cell state most associated with durable anti-tumor responses.</p>
-
-                    <p>IL-10 appears to act on a related axis&thinsp;&mdash;&thinsp;metabolically reprogramming terminally exhausted CD8+ T cells to restore anti-tumor function. But while we know both signals can shift T cell fate, we don&rsquo;t know the dose-response landscape for either.</p>
+                    <p>How does varying IL-10 dosage reprogram tumor-infiltrating lymphocytes toward stemness? Recent work has shown that T cell fate in the tumor microenvironment is governed by a metabolic-epigenetic axis: elevated extracellular potassium in necrotic tumors triggers functional caloric restriction, depleting nucleocytosolic acetyl-CoA and stripping activating histone marks from effector and exhaustion gene loci&thinsp;&mdash;&thinsp;thereby preserving the stem-like T cell state most associated with durable anti-tumor responses. IL-10 appears to act on a related axis&thinsp;&mdash;&thinsp;metabolically reprogramming terminally exhausted CD8+ T cells to restore anti-tumor function. But while we know both signals can shift T cell fate, we don&rsquo;t know the dose-response landscape for either.</p>
 
                     <blockquote>
                         <p>Is there an expression threshold at which IL-10 flips exhausted TILs toward a more favorable state without overshooting into immunosuppression? Graded regulatory elements let you map that landscape systematically rather than guessing with a single overexpression construct.</p>
@@ -141,9 +127,7 @@
 
                     <p>These are the kinds of questions that become experimentally tractable when you have libraries of regulatory elements spanning a continuous range of transcriptional activity in specific cell types&thinsp;&mdash;&thinsp;and that&rsquo;s exactly what we&rsquo;re building.</p>
 
-                    <h3 id="sec-explore">Explore</h3>
-
-                    <p>Browse all 10,000 sequences, inspect predicted activity scores, filter by transcription factor binding, and view 3D structures at <a href="https://switch.origin.bio" target="_blank"><strong>switch.origin.bio</strong></a>.</p>
+                    <h3 id="sec-explore">Explore the sequences at <a href="https://switch.origin.bio" target="_blank">switch.origin.bio</a>.</h3>
 
                 </article>
             </div>
