@@ -59,15 +59,15 @@ body {
 /* Header */
 .top-header {
     width: 100%;
-    padding: 20px 50px;
-    padding-top: 67px;
+    padding: 16px 50px;
     box-sizing: border-box;
-    position: sticky;
-    top: 0;
+    position: fixed;
+    top: 47px;
     left: 0;
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(28, 25, 23, 0.06);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -107,7 +107,7 @@ body {
     align-items: center;
     justify-content: center;
     min-height: 100vh;
-    padding: 60px 40px 80px;
+    padding: 140px 40px 80px;
     box-sizing: border-box;
     background: #fff !important;
 }
@@ -570,7 +570,7 @@ body {
 
     /* Main Wrapper */
     .main-wrapper {
-        padding: 40px 20px 40px;
+        padding: 130px 20px 40px;
     }
 
     .announcement-text {
