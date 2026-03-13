@@ -18,19 +18,20 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
+    gap: 12px;
     width: 100%;
-    padding: 14px 24px;
+    padding: 14px 28px;
     box-sizing: border-box;
     background: #0f3462;
     color: #fff;
     text-decoration: none;
     font-size: 15px;
-    font-weight: 500;
+    font-weight: 600;
     letter-spacing: 0.01em;
     transition: background 0.2s ease;
-    position: relative;
-    z-index: 11;
+    position: sticky;
+    top: 0;
+    z-index: 12;
 }
 
 .announcement-bar:hover {
@@ -57,10 +58,10 @@ body {
 /* Header */
 .top-header {
     width: 100%;
-    padding: 30px 50px;
+    padding: 20px 50px;
     box-sizing: border-box;
     position: sticky;
-    top: 0;
+    top: 47px;
     left: 0;
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(8px);
