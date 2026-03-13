@@ -109,10 +109,10 @@
                     <section class="blog-takeaways" aria-label="Key takeaways">
                         <h3>Highlights</h3>
                         <ul>
-                            <li>The top principal components of the cCRE library are built from <b>promoters near genes with known tissue functions</b>: glutamate receptors and neural adhesion molecules on the brain axis, leukocyte integrins and hematopoietic markers on the blood axis.</li>
+                            <li><b>28 clean axes</b> of regulatory variation survive permutation testing across 2.3M cCREs and 3,071 bulk samples.</li>
                             <li>TF motif specificity spans from highly cell-type-restricted (<b>NEUROD2</b>, Gini&nbsp;=&nbsp;0.40) to ubiquitous housekeeping factors (<b>SP4</b>, Gini&nbsp;=&nbsp;0.05).</li>
-                            <li>Unsupervised clustering of 106 brain cell types produces <b>block-diagonal lineage structure</b> from chromatin alone&mdash;oligodendrocyte subtypes share 77&ndash;87% of open chromatin, dropping to 15&ndash;25% against excitatory neurons.</li>
-                            <li><b>14 of 87</b> TFs flagged as specific appear in both independent bulk and single-cell pipelines, including <b>NEUROD2</b>, <b>OLIG3</b>, and AP-1 family members marking medium spiny neurons.</li>
+                            <li><b>Block-diagonal lineage structure</b> recapitulates developmental biology from chromatin alone: within-lineage JSD of 0.003&ndash;0.019 vs cross-lineage 0.20&ndash;0.30+.</li>
+                            <li><b>14 of 87</b> specific TFs reproduced across independent bulk and single-cell pipelines, confirming the signal is real.</li>
                         </ul>
                     </section>
 
@@ -129,12 +129,7 @@
 
                         <p>We started with two datasets that both measure chromatin accessibility, but at very different scales.</p>
 
-                        <p>The first is ENCODE&rsquo;s bulk DNase-seq catalog: 2.3 million cCREs across 3,071 human samples from every major organ system. DNase-seq finds regions where the chromatin is open, unwound from its histone packaging and accessible to transcription factors.<span class="sidenote-group"><sup class="sidenote-ref">2</sup><span class="sidenote-card side-right"><b>How DNase-seq works.</b> DNase I preferentially cleaves nucleosome-free DNA; sequencing the cut sites reveals regions of open chromatin. This is a tissue-level assay: the signal averages across all cell types in the sample.</span></span> The breadth spans thousands of samples across every major organ system, giving enough volume to detect regulatory patterns, but each sample is a blend of cell types ground together. You can see what regulatory elements exist across the human body. You can&rsquo;t attribute them to individual cell types.</p>
-
-                        <figure class="blog-image">
-                            <img src="assets/pca_plot.png" alt="All-ENCODE PCA scatter of 3,071 samples colored by organ system" loading="lazy" />
-                            <figcaption>PCA of the binary cCRE presence/absence matrix. Each dot is one of 3,071 bulk tissue samples, colored by organ system (not individual cell types&mdash;bulk samples blend all cell types within a tissue).</figcaption>
-                        </figure>
+                        <p>The first is ENCODE&rsquo;s bulk DNase-seq catalog: 2.3 million cCREs across 3,071 human samples from every major organ system. DNase-seq finds regions where the chromatin is open, unwound from its histone packaging and accessible to transcription factors.<span class="sidenote-group"><sup class="sidenote-ref">2</sup><span class="sidenote-card side-right"><b>How DNase-seq works.</b> DNase I preferentially cleaves nucleosome-free DNA; sequencing the cut sites reveals regions of open chromatin. This is a tissue-level assay: the signal averages across all cell types in the sample.</span></span> The breadth is good (thousands of samples across every organ), but each sample is a blend of cell types ground together. You can see what regulatory elements exist across the human body. You can&rsquo;t attribute them to individual cell types.</p>
 
                         <p>The second dataset gives us cell-type resolution. The Allen Brain Institute&rsquo;s snATAC-seq atlas profiles ~9.4 million individual nuclei from 130 samples spanning 42+ brain regions and 106 cell types. For each individual cell, we know which cCREs are open.<span class="sidenote-group"><sup class="sidenote-ref">3</sup><span class="sidenote-card side-right"><b>How snATAC-seq differs from bulk.</b> Each nucleus is individually barcoded via combinatorial indexing or droplet-based capture, so chromatin accessibility is measured per-cell rather than averaged across tissue. The cost is extreme sparsity: most regions read as &ldquo;0&rdquo; in any single cell because only ~10,000 of ~2 million possible regions are captured per nucleus.</span></span> The tradeoff is scope: this atlas covers the brain in depth, but only the brain.</p>
 
@@ -149,9 +144,7 @@
 
                         <p>The first question is the most basic: <em>is the variation in this dataset biological, or is it just technical noise?</em></p>
 
-                        <p>The input to PCA is a binary presence/absence matrix: 2.3 million cCREs (rows) by 3,071 samples (columns), where each entry is 1 if that cCRE is accessible in that sample and 0 otherwise. We use binary rather than continuous signal because we&rsquo;re looking for <em>co-occurrence patterns</em>&mdash;which regulatory elements tend to be open together across different tissues and conditions. PCA then finds weighted combinations of cCREs (called principal components) that capture the most variation across samples. Each cCRE gets a &ldquo;loading&rdquo; on each component: a weight measuring how much it contributes to that axis of variation. The cCREs with the highest loadings on a given component are the ones most responsible for the pattern that component captures.<span class="sidenote-group"><sup class="sidenote-ref">2a</sup><span class="sidenote-card side-right"><b>Why binary?</b> Continuous DNase signal is confounded by sequencing depth, library complexity, and other technical factors. Binarizing at the ENCODE SCREEN threshold removes these confounders and focuses the analysis on <em>which</em> regions are accessible rather than <em>how much</em> signal they have.</span></span></p>
-
-                        <p>Early PCs were interpretable: PC1 (15.0% of variance) separates chromatin compaction from transcriptional activity. PC2 (8.3%) separates brain from blood, with immune signaling on one end and lipid metabolism on the other (&eta;&sup2;&nbsp;=&nbsp;0.77 for tissue type). PC14 separates cortex from basal ganglia.</p>
+                        <p>We ran PCA on the full bulk accessibility matrix (2.3 million cCREs across 3,071 samples). Early PCs were interpretable: PC1 (15.0% of variance) separates chromatin compaction from transcriptional activity. PC2 (8.3%) separates brain from blood, with immune signaling on one end and lipid metabolism on the other (&eta;&sup2;&nbsp;=&nbsp;0.77 for tissue type). PC14 separates cortex from basal ganglia.</p>
 
                         <p>But you can always find patterns in data. The question is whether the later PCs are above what you&rsquo;d get from chance structure. We shuffled sample labels 100 times, re-ran PCA each time, and built a null distribution for the variance explained by each component. Thirty PCs exceed the null (all \(p = 0.010\)). Two of those turned out to be batch: PC3 correlates with file size (\(r = -0.52\), a proxy for sequencing depth<span class="sidenote-group"><sup class="sidenote-ref">4</sup><span class="sidenote-card side-right"><b>Why file size is a batch proxy.</b> Larger files reflect deeper sequencing, which systematically inflates accessibility estimates in samples with more reads. When a PC correlates with file size, it is capturing technical variance in sequencing depth rather than biological variation.</span></span>), PC6 with experimental batch (\(r = -0.38\)). We dropped both.</p>
 
@@ -182,44 +175,125 @@
 
                         <h4>What the axes actually encode</h4>
 
-                        <p>Permutation testing tells you the axes are real. It doesn&rsquo;t tell you what they mean. Each principal component is a weighted sum of all 2.3 million cCREs, and the cCREs with the highest weights (loadings) on a given component are the regulatory elements driving that axis. If PC2 really separates brain from blood, the highest-loading cCREs should sit near genes with known brain or blood functions&mdash;and ideally be promoter-like elements (PLS) close to the transcription start site, since those are the most directly interpretable links between a regulatory element and a gene.</p>
+                        <p>Permutation testing tells you the axes are real. It doesn&rsquo;t tell you what they mean. For that, we looked at the specific cCREs with the highest loadings on each PC. If PC2 really separates brain from blood, the cCREs driving it should sit on genes with known brain or blood functions, and ideally be promoters near the transcription start site.</p>
 
                         <p>On the brain side of PC2 (8.3% of variance), the highest-loading promoter-like cCREs include:</p>
 
                         <ul>
-                            <li><b>GRM3</b> (glutamate metabotropic receptor 3). PLS element <b>88&thinsp;bp</b> from its TSS. Receptor for the brain&rsquo;s primary excitatory neurotransmitter.</li>
-                            <li><b>NTM</b> (neurotrimin), a neural cell adhesion molecule involved in neurite outgrowth. Promoter <b>87&thinsp;bp</b> away.</li>
-                            <li><b>CX3CL1</b> (fractalkine), the primary neuron-to-microglia signaling molecule. Promoter <b>36&thinsp;bp</b> away.</li>
+                            <li><b>GRM3</b> (glutamate metabotropic receptor 3). PLS element <b>61&thinsp;bp</b> from its TSS. Receptor for the brain&rsquo;s primary excitatory neurotransmitter.</li>
+                            <li><b>NTM</b> (neurotrimin), a neural cell adhesion molecule involved in neurite outgrowth. PLS <b>50&thinsp;bp</b> away.</li>
+                            <li><b>CX3CL1</b> (fractalkine), the primary neuron-to-microglia signaling molecule. pELS <b>450&thinsp;bp</b> away.</li>
                             <li><b>GPR75</b>, a G-protein coupled receptor enriched in brain. Promoter <b>7&thinsp;bp</b> from the TSS, essentially overlapping it.</li>
                             <li><b>AQP4</b> (aquaporin-4), the water channel at astrocyte endfeet along the blood&ndash;brain barrier. Promoter 2.5&thinsp;kb away.</li>
                         </ul>
 
-                        <p>On the blood side of the same axis, the top cCREs are proximal enhancers near hematopoietic genes: <b>MYO1G</b> (a myosin expressed exclusively in blood cells, pELS 1.6&thinsp;kb), <b>ADAM8</b> (a metalloprotease involved in leukocyte migration, pELS 1.8&thinsp;kb), and <b>ITGB7</b> (integrin beta-7, leukocyte homing, PLS 21&thinsp;bp).</p>
+                        <p>On the blood side of the same axis, the top cCREs are near hematopoietic genes: <b>ADAM8</b> (a metalloprotease involved in leukocyte migration, pELS 1.3&thinsp;kb), <b>ITGB7</b> (integrin beta-7, leukocyte homing, dELS 2.7&thinsp;kb), and <b>MYO1G</b> (a myosin expressed exclusively in blood cells, PLS 7.9&thinsp;kb).</p>
 
                         <p>So the axis separating brain from blood in PCA is built from promoters of glutamate receptors on one side and leukocyte integrins on the other.</p>
 
-                        <p>The top 500 highest-loading cCREs for each of the top 20 principal components break down by regulatory element type as follows. Note how some axes (PC1, PC7, PC8, PC13, PC18) are dominated by promoters (PLS) and proximal enhancers (pELS), while others (PC2, PC4, PC5, PC17) are driven primarily by distal enhancers (dELS). The background rate of promoter-like elements in the full library is only 10.5%, so any axis where promoters make up &gt;30% of the top cCREs is substantially enriched.</p>
+                        <p>The same pattern holds for other axes. PC1 (chromatin compaction vs transcriptional activity, 15.0%) has high-loading promoters near <b>FOSL2</b> (AP-1 transcription factor, PLS 8&thinsp;bp) and <b>NR2F2</b>/COUP-TFII (nuclear receptor controlling tissue-specific enhancer activity, PLS 179&thinsp;bp), both involved in chromatin state regulation. PC14 (cortex vs basal ganglia) loads on <b>SYT3</b> (synaptotagmin-3, enriched in subcortical structures, pELS 506&thinsp;bp on the basal ganglia side) and <b>TAGLN</b> (transgelin, a smooth-muscle marker enriched in cortical vasculature, pELS 1.8&thinsp;kb on the cortical side).</p>
+
+                        <p>We ran the same analysis on a brain-only PCA (813 brain samples, separate from the all-ENCODE decomposition). The cerebellum axis (brain PC2, 15.4% of variance, Cohen&rsquo;s \(d = 6.04\)) loads on promoters of <b>LHX1</b> (PLS <b>33&thinsp;bp</b> from its TSS), a LIM-homeodomain factor required for cerebellar Purkinje cell differentiation, and <b>BARHL2</b> (pELS 801&thinsp;bp), which specifies cerebellar granule neurons. The basal ganglia axis (brain PC4, \(d = 1.55\)) loads on <b>PPP1R1B</b>, better known as DARPP-32, at 456&thinsp;bp from its nearest pELS. DARPP-32 is the canonical marker of medium spiny neurons in the striatum. The hypothalamus/hippocampus axis (brain PC23) loads on <b>FOXG1</b> (telencephalon identity, PLS 2.4&thinsp;kb) on the cortical side and <b>IRX3</b> (iroquois homeobox 3, involved in hypothalamic energy-balance circuits, PLS <b>103&thinsp;bp</b>) on the hypothalamic side.</p>
+
+                        <p>The plot below lets you explore all 28 clean axes. Each axis shows the top-loading cCREs and their nearest genes at both ends.</p>
 
                         <figure class="blog-image">
-                            <div style="position:relative;">
-                                <div id="pca-type-plot" style="width:100%; height:480px;"></div>
-                                <button id="pca-type-menu-btn" aria-label="Plot tools"
+                            <style>
+                                #pca-explorer .modebar-container { display: none !important; }
+                                #pca-explorer.show-modebar .modebar-container { display: flex !important; right: 44px !important; }
+                                .pca-controls {
+                                    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+                                    justify-content: center;
+                                    padding: 10px 14px; background: #f8f9fb; border: 1px solid #e5e7eb;
+                                    border-radius: 8px 8px 0 0; border-bottom: none;
+                                }
+                                .pca-controls label {
+                                    font-size: 0.8rem; font-weight: 600; color: #555; letter-spacing: 0.03em;
+                                    text-transform: uppercase; white-space: nowrap;
+                                }
+                                .pca-controls select {
+                                    font-size: 0.85rem; font-family: inherit; padding: 4px 8px;
+                                    border: 1px solid #d1d5db; border-radius: 5px; background: #fff;
+                                    color: #333; cursor: pointer; min-width: 170px;
+                                }
+                                .pca-controls select:focus { outline: none; border-color: #2166AC; box-shadow: 0 0 0 2px rgba(33,102,172,0.15); }
+                                .pca-controls .pca-ctrl-sep { width: 1px; height: 24px; background: #d1d5db; }
+                                .pca-plot-wrap {
+                                    position: relative; border: 1px solid #e5e7eb; border-top: none;
+                                    border-radius: 0 0 8px 8px;
+                                    background: linear-gradient(145deg, #fafbfc 0%, #f4f5f7 100%);
+                                }
+                                .pca-legend {
+                                    display: none; /* hidden on mobile, shown on desktop via media query */
+                                }
+                                @media (min-width: 1300px) {
+                                    .pca-legend {
+                                        display: block; position: absolute;
+                                        left: 100%; margin-left: 2rem; top: 0;
+                                        width: 200px; font-size: 0.78rem; line-height: 1.7; color: #555;
+                                        background: rgba(255,255,255,0.92); border: 1px solid #e5e7eb;
+                                        border-radius: 6px; padding: 10px 12px;
+                                    }
+                                    .pca-legend-title {
+                                        font-weight: 600; font-size: 0.72rem; text-transform: uppercase;
+                                        letter-spacing: 0.04em; color: #888; margin-bottom: 4px;
+                                    }
+                                    .pca-legend-item {
+                                        display: flex; align-items: center; gap: 6px; cursor: pointer;
+                                        padding: 1px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+                                    }
+                                    .pca-legend-item:hover { color: #111; }
+                                    .pca-legend-dot {
+                                        width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+                                    }
+                                }
+                                #pca-gene-callouts {
+                                    margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+                                    font-size: 0.82rem; line-height: 1.55; color: #444;
+                                }
+                                @media (max-width: 640px) { #pca-gene-callouts { grid-template-columns: 1fr; } }
+                                .pca-callout-card {
+                                    background: #f8f9fb; border: 1px solid #e5e7eb; border-radius: 6px;
+                                    padding: 10px 12px;
+                                }
+                                .pca-callout-card .pca-card-title {
+                                    font-weight: 600; font-size: 0.78rem; text-transform: uppercase;
+                                    letter-spacing: 0.04em; color: #666; margin-bottom: 4px;
+                                }
+                                .pca-callout-card .pca-card-interp {
+                                    font-size: 0.8rem; color: #999; margin-bottom: 6px;
+                                }
+                                .pca-gene-row { display: flex; align-items: baseline; gap: 6px; margin: 2px 0; }
+                                .pca-gene-row .pca-dir-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 2px; }
+                                .pca-gene-row .pca-dir-label { font-size: 0.75rem; color: #888; min-width: 60px; }
+                                .pca-gene-tag { display: inline-block; font-weight: 600; color: #1a1a1a; }
+                                .pca-gene-meta { color: #aaa; font-size: 0.78rem; }
+                            </style>
+                            <div class="pca-controls">
+                                <label for="pca-x-sel">X axis</label>
+                                <select id="pca-x-sel"></select>
+                                <div class="pca-ctrl-sep"></div>
+                                <label for="pca-y-sel">Y axis</label>
+                                <select id="pca-y-sel"></select>
+                            </div>
+                            <div class="pca-plot-wrap" style="overflow:visible;">
+                                <div id="pca-explorer" style="width:100%; height:540px;"></div>
+                                <div id="pca-legend" class="pca-legend"></div>
+                                <button id="pca-menu-btn" aria-label="Plot tools"
                                     style="position:absolute;top:8px;right:8px;z-index:10;background:rgba(255,255,255,0.85);border:1px solid #e5e7eb;border-radius:6px;width:32px;height:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:background 0.15s,box-shadow 0.15s;"
                                     onmouseenter="this.style.background='#fff';this.style.boxShadow='0 2px 8px rgba(0,0,0,0.12)'"
                                     onmouseleave="if(!this.classList.contains('active')){this.style.background='rgba(255,255,255,0.85)';this.style.boxShadow='none';}">
                                     <svg width="16" height="16" viewBox="0 0 16 16" fill="#6b7280"><circle cx="8" cy="3" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="13" r="1.5"/></svg>
                                 </button>
                             </div>
-                            <style>
-                                #pca-type-plot .modebar-container { display: none !important; }
-                                #pca-type-plot.show-modebar .modebar-container { display: flex !important; right: 44px !important; }
-                            </style>
-                            <figcaption>cCRE type composition of the top 500 highest-loading elements for each of the first 20 principal components, split by loading direction. PLS = promoter-like, pELS = proximal enhancer-like, dELS = distal enhancer-like. Dashed lines show background rates in the full library.</figcaption>
+                            <div id="pca-gene-callouts"></div>
+                            <figcaption>Each sample&rsquo;s projection onto a pair of principal components. Points colored by organ system. Edge labels show the nearest genes to the highest-loading cCREs on each axis; cards below show the full set with cCRE type and distance to TSS.</figcaption>
                         </figure>
-
-                        <p>The same pattern holds for other axes. PC1 (chromatin compaction vs transcriptional activity, 15.0%) has high-loading promoters near <b>FOSL2</b> (AP-1 transcription factor, PLS 4.4&thinsp;kb) and <b>NR2F2</b>/COUP-TFII (nuclear receptor controlling tissue-specific enhancer activity, PLS 1.5&thinsp;kb), both involved in chromatin state regulation. PC14 (cortex vs basal ganglia) loads on <b>SYT3</b> (synaptotagmin-3, enriched in subcortical structures, pELS 560&thinsp;bp on the basal ganglia side) and <b>TAGLN</b> (transgelin, a smooth-muscle marker enriched in cortical vasculature, pELS 210&thinsp;bp on the cortical side).</p>
-
-                        <p>We ran the same analysis on a brain-only PCA (813 brain samples, separate from the all-ENCODE decomposition). The cerebellum axis (brain PC2, 15.4% of variance, Cohen&rsquo;s \(d = 6.04\)) loads on promoters of <b>LHX1</b> (PLS <b>33&thinsp;bp</b> from its TSS), a LIM-homeodomain factor required for cerebellar Purkinje cell differentiation, and <b>BARHL2</b> (pELS 801&thinsp;bp), which specifies cerebellar granule neurons. The basal ganglia axis (brain PC4, \(d = 1.55\)) loads on <b>PPP1R1B</b>, better known as DARPP-32, at 456&thinsp;bp from its nearest pELS. DARPP-32 is the canonical marker of medium spiny neurons in the striatum. The hypothalamus/hippocampus axis (brain PC23) loads on <b>FOXG1</b> (telencephalon identity, PLS 2.4&thinsp;kb) on the cortical side and <b>IRX3</b> (iroquois homeobox 3, involved in hypothalamic energy-balance circuits, PLS <b>103&thinsp;bp</b>) on the hypothalamic side.</p>
+                        <noscript>
+                            <figure class="blog-image">
+                                <img src="assets/pca_plot.png" alt="All-ENCODE PCA scatter of 3,071 samples colored by organ system" loading="lazy" />
+                            </figure>
+                        </noscript>
 
                     </details>
 
@@ -307,30 +381,9 @@
 
                         <p>We tested this two ways. First, the <b>Jaccard index</b>: for any pair of cell types, what fraction of their cCREs overlap? Within the oligodendrocyte lineage (OGC_1 through OPC and COP), subtypes share 77&ndash;87% of their open chromatin regions. These cells all descend from a common precursor, and even as they mature they retain most of their ancestor&rsquo;s regulatory landscape. Oligodendrocytes vs excitatory neurons: overlap drops to 0.15&ndash;0.25. Those lineages diverged early in development (ventral progenitors vs dorsal radial glia).</p>
 
-                        <figure class="blog-image">
-                            <div style="position:relative;">
-                                <div id="jaccard-plot" style="width:100%; height:600px;"></div>
-                                <button id="jaccard-menu-btn" aria-label="Plot tools"
-                                    style="position:absolute;top:8px;right:8px;z-index:10;background:rgba(255,255,255,0.85);border:1px solid #e5e7eb;border-radius:6px;width:32px;height:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:background 0.15s,box-shadow 0.15s;"
-                                    onmouseenter="this.style.background='#fff';this.style.boxShadow='0 2px 8px rgba(0,0,0,0.12)'"
-                                    onmouseleave="if(!this.classList.contains('active')){this.style.background='rgba(255,255,255,0.85)';this.style.boxShadow='none';}">
-                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="#6b7280"><circle cx="8" cy="3" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="13" r="1.5"/></svg>
-                                </button>
-                            </div>
-                            <style>
-                                #jaccard-plot .modebar-container { display: none !important; }
-                                #jaccard-plot.show-modebar .modebar-container { display: flex !important; right: 44px !important; }
-                            </style>
-                            <figcaption>Jaccard index heatmap (cCRE coordinate overlap) across 104 brain cell types. Blue = high overlap, light = low. Within-lineage sharing of 0.70&ndash;0.87 vs cross-lineage 0.05&ndash;0.25.</figcaption>
-                        </figure>
-
-                        <noscript>
-                            <figure class="blog-image">
-                                <img src="assets/04_jaccard_heatmap.png" alt="Jaccard heatmap" loading="lazy" />
-                            </figure>
-                        </noscript>
-
                         <p>Second, <b>Jensen&ndash;Shannon divergence</b>, which measures whether two cell types use the same <em>transcription factor binding motifs</em>, not just whether they share the same open regions. Within-lineage JSD ranges from 0.003&ndash;0.019: cells in the same lineage use the same regulatory programs. Cross-lineage JSD reaches 0.20&ndash;0.30+.</p>
+
+                        <p>The heatmaps below show clear block-diagonal structure: tight clusters within each lineage, sharp boundaries between them. Excitatory neurons, inhibitory subtypes (PVALB, SST, VIP, LAMP5, SNCG), astrocytes, oligodendrocytes, microglia. This structure was not imposed by our analysis; no labels were used in the clustering. It falls out of the data from unsupervised hierarchical clustering alone.</p>
 
                         <figure class="blog-image">
                             <div style="position:relative;">
@@ -355,7 +408,28 @@
                             </figure>
                         </noscript>
 
-                        <p>Both heatmaps show clear block-diagonal structure: tight clusters within each lineage, sharp boundaries between them. Excitatory neurons, inhibitory subtypes (PVALB, SST, VIP, LAMP5, SNCG), astrocytes, oligodendrocytes, microglia. This structure was not imposed by our analysis; no labels were used in the clustering. It falls out of the data from unsupervised hierarchical clustering alone.</p>
+                        <figure class="blog-image">
+                            <div style="position:relative;">
+                                <div id="jaccard-plot" style="width:100%; height:600px;"></div>
+                                <button id="jaccard-menu-btn" aria-label="Plot tools"
+                                    style="position:absolute;top:8px;right:8px;z-index:10;background:rgba(255,255,255,0.85);border:1px solid #e5e7eb;border-radius:6px;width:32px;height:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:background 0.15s,box-shadow 0.15s;"
+                                    onmouseenter="this.style.background='#fff';this.style.boxShadow='0 2px 8px rgba(0,0,0,0.12)'"
+                                    onmouseleave="if(!this.classList.contains('active')){this.style.background='rgba(255,255,255,0.85)';this.style.boxShadow='none';}">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="#6b7280"><circle cx="8" cy="3" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="13" r="1.5"/></svg>
+                                </button>
+                            </div>
+                            <style>
+                                #jaccard-plot .modebar-container { display: none !important; }
+                                #jaccard-plot.show-modebar .modebar-container { display: flex !important; right: 44px !important; }
+                            </style>
+                            <figcaption>Jaccard index heatmap (cCRE coordinate overlap) across 104 brain cell types. Blue = high overlap, light = low. Within-lineage sharing of 0.70&ndash;0.87 vs cross-lineage 0.05&ndash;0.25.</figcaption>
+                        </figure>
+
+                        <noscript>
+                            <figure class="blog-image">
+                                <img src="assets/04_jaccard_heatmap.png" alt="Jaccard heatmap" loading="lazy" />
+                            </figure>
+                        </noscript>
 
                         <details class="collapsible-section">
                             <summary>
@@ -576,6 +650,276 @@
             menuToggle('umap-menu-btn', 'umap-plot');
         });
 
+        /* ── 1b. PCA Explorer (interactive axis switcher) ─────── */
+        loadJSON('pca_explorer_data.json').then(function (d) {
+            /* Semantic organ color palette */
+            var organColorMap = {
+                'blood':               '#D6604D',
+                'brain':               '#2166AC',
+                'connective tissue':   '#8C564B',
+                'bone marrow':         '#E377C2',
+                'central nervous system': '#4393C3',
+                'liver':               '#8B6914',
+                'breast':              '#C49C94',
+                'kidney':              '#1B7837',
+                'colon':               '#FF7F0E',
+                'lung':                '#5AAE61',
+                'heart':               '#B2182B',
+                'skin of body':        '#DBAE58',
+                'bone element':        '#AEC7E8',
+                'embryo':              '#98DF8A',
+                'arterial blood vessel':'#D62728',
+                'placenta':            '#C5B0D5',
+                'eye':                 '#17BECF',
+                'prostate gland':      '#9467BD',
+                'musculature of body': '#BCBD22',
+                'large intestine':     '#FF9896',
+                'stomach':             '#FFBB78',
+                'thymus':              '#C7C7C7',
+                'spleen':              '#762A83',
+                'adrenal gland':       '#01665E',
+                'esophagus':           '#F4A582'
+            };
+            var defaultGray = '#C0C0C0';
+
+            /* Count organs, pick top 14 for legend */
+            var organCounts = {};
+            d.organ.forEach(function (o) { organCounts[o] = (organCounts[o] || 0) + 1; });
+            var topOrgans = Object.keys(organCounts).sort(function (a, b) { return organCounts[b] - organCounts[a]; });
+            var legendOrgans = topOrgans.slice(0, 14);
+            var otherSet = {};
+            topOrgans.slice(14).forEach(function (o) { otherSet[o] = true; });
+
+            /* Clean PCs (excluding PC3 and PC6) */
+            var cleanPCs = [];
+            for (var i = 1; i <= 30; i++) {
+                if (i !== 3 && i !== 6) cleanPCs.push(i);
+            }
+
+            var currentX = 'PC1', currentY = 'PC2';
+
+            /* Populate HTML <select> dropdowns */
+            var xSel = document.getElementById('pca-x-sel');
+            var ySel = document.getElementById('pca-y-sel');
+            cleanPCs.forEach(function (n) {
+                var pc = 'PC' + n;
+                var interp = d.interpretations[pc] || {};
+                var txt = pc + '  (' + d.variance_pct[pc] + '%)  —  ' + (interp.low || '') + ' vs ' + (interp.high || '');
+                var optX = document.createElement('option');
+                optX.value = pc; optX.textContent = txt;
+                xSel.appendChild(optX);
+                var optY = document.createElement('option');
+                optY.value = pc; optY.textContent = txt;
+                ySel.appendChild(optY);
+            });
+            xSel.value = currentX;
+            ySel.value = currentY;
+
+            /* Format gene callout text */
+            function fmtDist(dist) {
+                return dist < 1000 ? dist + '\u2009bp' : (dist / 1000).toFixed(1) + '\u2009kb';
+            }
+
+            function geneCalloutHTML(xPC, yPC) {
+                function cardHTML(pc, label) {
+                    var gc = d.gene_callouts[pc];
+                    if (!gc) return '';
+                    var interp = d.interpretations[pc] || {};
+                    var h = '<div class="pca-callout-card">';
+                    h += '<div class="pca-card-title">' + label + ' — ' + pc + ' (' + d.variance_pct[pc] + '%)</div>';
+                    h += '<div class="pca-card-interp">' + (interp.low || '?') + '  ⟵  ⟶  ' + (interp.high || '?') + '</div>';
+                    if (gc.pos && gc.pos.length > 0) {
+                        h += '<div class="pca-gene-row">';
+                        h += '<span class="pca-dir-dot" style="background:#B2182B;"></span>';
+                        h += '<span class="pca-dir-label">' + (interp.high || '+') + '</span>';
+                        h += gc.pos.map(function (g) {
+                            return '<span class="pca-gene-tag">' + g.gene + '</span> <span class="pca-gene-meta">' + g.type + ', ' + fmtDist(g.dist) + '</span>';
+                        }).join(' · ');
+                        h += '</div>';
+                    }
+                    if (gc.neg && gc.neg.length > 0) {
+                        h += '<div class="pca-gene-row">';
+                        h += '<span class="pca-dir-dot" style="background:#2166AC;"></span>';
+                        h += '<span class="pca-dir-label">' + (interp.low || '−') + '</span>';
+                        h += gc.neg.map(function (g) {
+                            return '<span class="pca-gene-tag">' + g.gene + '</span> <span class="pca-gene-meta">' + g.type + ', ' + fmtDist(g.dist) + '</span>';
+                        }).join(' · ');
+                        h += '</div>';
+                    }
+                    h += '</div>';
+                    return h;
+                }
+                return cardHTML(xPC, 'X axis') + cardHTML(yPC, 'Y axis');
+            }
+
+            /* Build traces */
+            function buildTraces(xPC, yPC) {
+                var traces = [];
+                legendOrgans.forEach(function (org) {
+                    var idx = [];
+                    for (var j = 0; j < d.organ.length; j++) { if (d.organ[j] === org) idx.push(j); }
+                    if (idx.length === 0) return;
+                    traces.push({
+                        type: 'scattergl', mode: 'markers',
+                        name: org,
+                        x: idx.map(function (j) { return d[xPC][j]; }),
+                        y: idx.map(function (j) { return d[yPC][j]; }),
+                        text: idx.map(function (j) {
+                            return '<b>' + d.tissue[j] + '</b><br>' + d.organ[j];
+                        }),
+                        hovertemplate: '%{text}<extra></extra>',
+                        marker: {
+                            size: 5, color: organColorMap[org] || defaultGray,
+                            opacity: 0.75,
+                            line: { color: 'rgba(255,255,255,0.5)', width: 0.4 }
+                        }
+                    });
+                });
+                /* Other organs */
+                var otherIdx = [];
+                for (var j = 0; j < d.organ.length; j++) { if (otherSet[d.organ[j]]) otherIdx.push(j); }
+                if (otherIdx.length > 0) {
+                    traces.push({
+                        type: 'scattergl', mode: 'markers',
+                        name: 'other organs',
+                        x: otherIdx.map(function (j) { return d[xPC][j]; }),
+                        y: otherIdx.map(function (j) { return d[yPC][j]; }),
+                        text: otherIdx.map(function (j) {
+                            return '<b>' + d.tissue[j] + '</b><br>' + d.organ[j];
+                        }),
+                        hovertemplate: '%{text}<extra></extra>',
+                        marker: { size: 4, color: defaultGray, opacity: 0.4 }
+                    });
+                }
+                return traces;
+            }
+
+            /* On-plot gene callout annotations at axis edges.
+               Format: "tissue — GENE1, GENE2" so the reader sees
+               the biological interpretation grounded in molecular evidence. */
+            function buildAnnotations(xPC, yPC) {
+                var anns = [];
+                var gcX = d.gene_callouts[xPC] || {};
+                var gcY = d.gene_callouts[yPC] || {};
+                var interpX = d.interpretations[xPC] || {};
+                var interpY = d.interpretations[yPC] || {};
+
+                function edgeLabel(tissue, genes, maxN) {
+                    var gStr = genes.slice(0, maxN).map(function (g) { return '<i>' + g.gene + '</i>'; }).join(', ');
+                    return (tissue ? '<b>' + tissue + '</b>: ' : '') + gStr;
+                }
+
+                /* X-axis right (+) */
+                if (gcX.pos && gcX.pos.length > 0) {
+                    anns.push({
+                        xref: 'paper', yref: 'paper', x: 0.99, y: 0.05,
+                        text: edgeLabel(interpX.high, gcX.pos, 2) + '  →',
+                        showarrow: false,
+                        font: { size: 10, color: '#555', family: fontFamily },
+                        bgcolor: 'rgba(255,255,255,0.9)', bordercolor: 'rgba(0,0,0,0.08)',
+                        borderwidth: 1, borderpad: 4, xanchor: 'right'
+                    });
+                }
+                /* X-axis left (−) */
+                if (gcX.neg && gcX.neg.length > 0) {
+                    anns.push({
+                        xref: 'paper', yref: 'paper', x: 0.01, y: 0.05,
+                        text: '←  ' + edgeLabel(interpX.low, gcX.neg, 2),
+                        showarrow: false,
+                        font: { size: 10, color: '#555', family: fontFamily },
+                        bgcolor: 'rgba(255,255,255,0.9)', bordercolor: 'rgba(0,0,0,0.08)',
+                        borderwidth: 1, borderpad: 4, xanchor: 'left'
+                    });
+                }
+                /* Y-axis top (+) */
+                if (gcY.pos && gcY.pos.length > 0) {
+                    anns.push({
+                        xref: 'paper', yref: 'paper', x: 0.01, y: 0.97,
+                        text: '↑ ' + edgeLabel(interpY.high, gcY.pos, 2),
+                        showarrow: false,
+                        font: { size: 10, color: '#555', family: fontFamily },
+                        bgcolor: 'rgba(255,255,255,0.9)', bordercolor: 'rgba(0,0,0,0.08)',
+                        borderwidth: 1, borderpad: 4, xanchor: 'left', yanchor: 'top'
+                    });
+                }
+                /* Y-axis bottom (−) */
+                if (gcY.neg && gcY.neg.length > 0) {
+                    anns.push({
+                        xref: 'paper', yref: 'paper', x: 0.99, y: 0.97,
+                        text: edgeLabel(interpY.low, gcY.neg, 2) + ' ↓',
+                        showarrow: false,
+                        font: { size: 10, color: '#555', family: fontFamily },
+                        bgcolor: 'rgba(255,255,255,0.9)', bordercolor: 'rgba(0,0,0,0.08)',
+                        borderwidth: 1, borderpad: 4, xanchor: 'right', yanchor: 'top'
+                    });
+                }
+                return anns;
+            }
+
+            function axisTitle(pc) {
+                return pc + ' projection (' + d.variance_pct[pc] + '%)';
+            }
+
+            function makeLayout(xPC, yPC, anns) {
+                return Object.assign({}, baseLayout, {
+                    xaxis: {
+                        title: { text: axisTitle(xPC), font: { size: 12 }, standoff: 8 },
+                        zeroline: false, showgrid: true,
+                        gridcolor: 'rgba(0,0,0,0.04)', gridwidth: 1
+                    },
+                    yaxis: {
+                        title: { text: axisTitle(yPC), font: { size: 12 }, standoff: 8 },
+                        zeroline: false, showgrid: true,
+                        gridcolor: 'rgba(0,0,0,0.04)', gridwidth: 1
+                    },
+                    margin: { l: 58, r: 16, t: 10, b: 48 },
+                    showlegend: false,
+                    hovermode: 'closest',
+                    annotations: anns
+                });
+            }
+
+            /* Initial render */
+            var initTraces = buildTraces(currentX, currentY);
+            var initAnns = buildAnnotations(currentX, currentY);
+
+            Plotly.newPlot('pca-explorer', initTraces,
+                makeLayout(currentX, currentY, initAnns), plotlyConfig);
+            document.getElementById('pca-gene-callouts').innerHTML = geneCalloutHTML(currentX, currentY);
+
+            /* Populate HTML legend in the sidenote margin */
+            (function () {
+                var legendEl = document.getElementById('pca-legend');
+                if (!legendEl) return;
+                var html = '<div class="pca-legend-title">Organ system</div>';
+                legendOrgans.forEach(function (org) {
+                    var c = organColorMap[org] || defaultGray;
+                    html += '<div class="pca-legend-item">'
+                         + '<span class="pca-legend-dot" style="background:' + c + ';"></span>'
+                         + org
+                         + '</div>';
+                });
+                html += '<div class="pca-legend-item">'
+                     + '<span class="pca-legend-dot" style="background:' + defaultGray + ';"></span>'
+                     + '<span style="color:#999;">other organs</span>'
+                     + '</div>';
+                legendEl.innerHTML = html;
+            })();
+
+            /* Handle dropdown changes */
+            function updatePlot() {
+                var newTraces = buildTraces(currentX, currentY);
+                var newAnns = buildAnnotations(currentX, currentY);
+                Plotly.react('pca-explorer', newTraces,
+                    makeLayout(currentX, currentY, newAnns), plotlyConfig);
+                document.getElementById('pca-gene-callouts').innerHTML = geneCalloutHTML(currentX, currentY);
+            }
+            xSel.addEventListener('change', function () { currentX = this.value; updatePlot(); });
+            ySel.addEventListener('change', function () { currentY = this.value; updatePlot(); });
+
+            menuToggle('pca-menu-btn', 'pca-explorer');
+        });
+
         /* ── 2. PCA permutation ──────────────────────────────────── */
         loadJSON('permutation_data.json').then(function (d) {
             var pcNums = d.pc.map(function (p) { return parseInt(p.replace('PC', '')); });
@@ -626,64 +970,6 @@
                 ]
             }), plotlyConfig);
             menuToggle('perm-menu-btn', 'perm-plot');
-        });
-
-        /* ── 2b. PCA cCRE type composition ────────────────────────── */
-        loadJSON('pca_type_data.json').then(function (d) {
-            var typeColors = { PLS: '#2166AC', pELS: '#67A9CF', dELS: '#D6604D' };
-            var typeLabels = { PLS: 'Promoter-like (PLS)', pELS: 'Proximal enhancer (pELS)', dELS: 'Distal enhancer (dELS)' };
-            var types = ['PLS', 'pELS', 'dELS'];
-
-            var traces = [];
-            types.forEach(function (t) {
-                traces.push({
-                    type: 'bar', name: typeLabels[t] + ' (+)',
-                    x: d.pcs, y: d.positive[t],
-                    marker: { color: typeColors[t] },
-                    legendgroup: t, showlegend: true,
-                    hovertemplate: '%{x} positive<br>' + typeLabels[t] + ': %{y:.1%}<extra></extra>',
-                    xaxis: 'x', yaxis: 'y'
-                });
-            });
-            types.forEach(function (t) {
-                traces.push({
-                    type: 'bar', name: typeLabels[t] + ' (\u2212)',
-                    x: d.pcs, y: d.negative[t],
-                    marker: { color: typeColors[t], opacity: 0.55 },
-                    legendgroup: t, showlegend: false,
-                    hovertemplate: '%{x} negative<br>' + typeLabels[t] + ': %{y:.1%}<extra></extra>',
-                    xaxis: 'x2', yaxis: 'y2'
-                });
-            });
-
-            var bgShapes = [];
-            types.forEach(function (t) {
-                [{ xa: 'x', ya: 'y' }, { xa: 'x2', ya: 'y2' }].forEach(function (ax) {
-                    bgShapes.push({
-                        type: 'line', xref: ax.xa, yref: ax.ya,
-                        x0: -0.5, x1: d.pcs.length - 0.5, y0: d.background[t], y1: d.background[t],
-                        line: { color: typeColors[t], width: 1.5, dash: 'dash' },
-                        opacity: 0.6
-                    });
-                });
-            });
-
-            Plotly.newPlot('pca-type-plot', traces, Object.assign({}, baseLayout, {
-                grid: { rows: 1, columns: 2, pattern: 'independent', subplots: [['xy', 'x2y2']] },
-                barmode: 'stack',
-                xaxis: { title: 'Principal component (positive loadings)' },
-                yaxis: { title: 'Fraction of top 500 cCREs', range: [0, 1.05], tickformat: '.0%' },
-                xaxis2: { title: 'Principal component (negative loadings)' },
-                yaxis2: { title: '', range: [0, 1.05], tickformat: '.0%' },
-                margin: { l: 60, r: 20, t: 35, b: 50 },
-                legend: { font: { size: 10 }, x: 0.01, y: 0.99, bgcolor: 'rgba(255,255,255,0.8)' },
-                shapes: bgShapes,
-                annotations: [
-                    { text: '<b>Positive Loadings</b>', xref: 'paper', yref: 'paper', x: 0.22, y: 1.06, showarrow: false, font: { size: 12 } },
-                    { text: '<b>Negative Loadings</b>', xref: 'paper', yref: 'paper', x: 0.78, y: 1.06, showarrow: false, font: { size: 12 } }
-                ]
-            }), plotlyConfig);
-            menuToggle('pca-type-menu-btn', 'pca-type-plot');
         });
 
         /* ── 3. Gini distribution ────────────────────────────────── */
