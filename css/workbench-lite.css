@@ -60,6 +60,7 @@ body {
 .top-header {
     width: 100%;
     padding: 20px 50px;
+    padding-top: 67px;
     box-sizing: border-box;
     position: sticky;
     top: 0;
@@ -67,7 +68,6 @@ body {
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-    margin-top: 47px;
     display: flex;
     justify-content: space-between;
     align-items: center;
