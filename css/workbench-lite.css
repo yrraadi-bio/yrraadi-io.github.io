@@ -29,8 +29,9 @@ body {
     font-weight: 600;
     letter-spacing: 0.01em;
     transition: background 0.2s ease;
-    position: sticky;
+    position: fixed;
     top: 0;
+    left: 0;
     z-index: 12;
 }
 
@@ -61,11 +62,12 @@ body {
     padding: 20px 50px;
     box-sizing: border-box;
     position: sticky;
-    top: 47px;
+    top: 0;
     left: 0;
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
+    margin-top: 47px;
     display: flex;
     justify-content: space-between;
     align-items: center;
