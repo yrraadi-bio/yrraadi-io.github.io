@@ -556,13 +556,25 @@ body {
 
 /* ── Mobile Responsive Styles ── */
 @media (max-width: 768px) {
+    /* Announcement Banner */
+    .announcement-bar {
+        padding: 10px 16px;
+        font-size: 13px;
+    }
+
+    .announcement-text {
+        white-space: normal;
+        text-align: center;
+    }
+
     /* Header */
     .top-header {
-        padding: 20px;
+        padding: 12px 20px;
+        top: 58px;
     }
     
     .origin-logo {
-        height: 48px;
+        height: 36px;
     }
 
     .nav-link {
@@ -572,11 +584,6 @@ body {
     /* Main Wrapper */
     .main-wrapper {
         padding: 130px 20px 40px;
-    }
-
-    .announcement-text {
-        white-space: normal;
-        text-align: center;
     }
 
     /* Title Group */
