@@ -558,19 +558,25 @@ body {
 @media (max-width: 768px) {
     /* Announcement Banner */
     .announcement-bar {
-        padding: 10px 16px;
-        font-size: 13px;
+        padding: 8px 16px;
+        font-size: 12px;
+        font-weight: 500;
     }
 
     .announcement-text {
         white-space: normal;
         text-align: center;
+        line-height: 1.4;
+    }
+
+    .announcement-bar svg {
+        display: none;
     }
 
     /* Header */
     .top-header {
-        padding: 12px 20px;
-        top: 58px;
+        padding: 10px 20px;
+        top: 70px;
     }
     
     .origin-logo {
