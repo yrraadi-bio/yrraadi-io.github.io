@@ -111,7 +111,7 @@ function renderSequence() {
 // --- 3D Generation Logic (S3 Fetch) ---
 
 const S3_BASE = 'https://origin-workbench-public-3dstructures.s3.us-east-2.amazonaws.com/protenix-dsdna-3dstructures';
-const LIB_URL = 'https://3Dmol.org/build/3Dmol-min.js';
+const LIB_URL = 'https://cdn.jsdelivr.net/npm/3dmol@2.4.2/build/3Dmol-min.js';
 
 function load3DmolScript() {
     if (typeof $3Dmol !== 'undefined') return Promise.resolve();
