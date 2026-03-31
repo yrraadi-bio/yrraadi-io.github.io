@@ -1,7 +1,6 @@
 <!DOCTYPE html>
-<html lang="en" style="background:#fff;">
+<html lang="en">
 <head>
-    <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-4DGX45FJCJ"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
@@ -9,151 +8,328 @@
         gtag('js', new Date());
         gtag('config', 'G-4DGX45FJCJ');
     </script>
-
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Origin</title>
-    
+    <title>Origin Bio — Perturbation Biology in Real Tumors</title>
+    <meta name="description" content="We test chemical and genetic perturbations directly in human tumor tissue to build the foundation for precision cancer therapeutics.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preconnect" href="https://cdn.jsdelivr.net">
-    <link rel="preconnect" href="https://origin-workbench-public-3dstructures.s3.us-east-2.amazonaws.com">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-    
-    <link rel="stylesheet" href="css/workbench-lite.css?v=6">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/workbench-lite.css?v=63">
     <link rel="icon" href="/assets/favicon.png" type="image/png">
 </head>
-<body style="background:#fff;">
+<body>
 
-    <div class="fixed-top-bar" id="fixed-top-bar">
-        <a href="https://switch.origin.bio" target="_blank" class="announcement-bar">
-            <span class="announcement-text">Introducing Switch &mdash; a platform for 10,000 AI-designed regulatory DNA sequences, open for research</span>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-        </a>
-        <header class="top-header">
-            <img src="assets/Origin logo+text (blue on transparent).png" alt="Origin Bio" class="origin-logo">
-            <div class="header-nav">
-                <a href="#blog" class="nav-link">Blog</a>
+    <nav class="site-nav" id="siteNav">
+        <div class="nav-inner">
+            <a href="/" class="nav-logo">
+                <img src="assets/Origin logo+text (blue on transparent).png" alt="Origin Bio">
+            </a>
+            <div class="nav-links">
+                <a href="#platform" class="nav-link">Platform</a>
+                <a href="#research" class="nav-link">Research</a>
                 <a href="mailto:yash@origin.bio" class="nav-link">Contact</a>
             </div>
-        </header>
-    </div>
+        </div>
+    </nav>
 
-    <div class="main-wrapper">
-        <div class="title-group" data-reveal="fade-up" data-delay="100">
+    <section class="hero">
+        <canvas id="heroCanvas"></canvas>
+        <div class="hero-overlay"></div>
+        <div class="hero-content" data-reveal="fade-up" data-delay="100">
             <a href="https://www.ycombinator.com/companies/origin-bio" target="_blank" rel="noopener noreferrer" class="yc-badge">
-                <span class="yc-badge-text">Backed by</span>
-                <span class="yc-badge-icon">Y</span>
-                <span class="yc-badge-text">Combinator</span>
+                <span class="yc-text">Backed by</span>
+                <span class="yc-icon">Y</span>
+                <span class="yc-text">Combinator</span>
             </a>
-            <h1 class="page-title">AI for safer cell and gene therapies.</h1>
-            <p class="page-subtitle">We design DNA switches & dials that program gene expression with unprecedented precision.</p>
-        </div>
-
-        <div class="workbench-container" data-reveal="scale-up" data-delay="250">
-            <div class="seq-display" id="seq-display"></div>
-            <div class="viewer-area">
-                <div id="structure-canvas"></div>
-                <div id="scroll-blocker"></div>
+            <h1 class="hero-title">Mapping cancer biology at scale.</h1>
+            <p class="hero-subtitle">We perturb real patient tumor tissue and study response at a molecular level.</p>
+            <div class="hero-cell-wrap" id="cellWrap">
+                <div class="hero-cell" id="heroCell"></div>
             </div>
         </div>
+    </section>
 
-        <!-- Team Section -->
-        <div class="section-container" data-reveal="fade-up" data-delay="0">
-            <div class="section-title">Team From</div>
-            <div class="logo-grid">
-                <img src="company_logos/nvidia-logo-vert.png" alt="NVIDIA" class="company-logo" data-reveal="pop" data-delay="0">
-                <img src="company_logos/UC-Berkeley-Symbol.png" alt="UC Berkeley" class="company-logo" data-reveal="pop" data-delay="80">
-                <img src="company_logos/UniversityofPennsylvania_FullLogo_RGB-4_0.png" alt="UPenn" class="company-logo" data-reveal="pop" data-delay="160">
-                <img src="company_logos/UIUC-Logo.jpg" alt="UIUC" class="company-logo" data-reveal="pop" data-delay="240">
-            </div>
-        </div>
+    <div class="page-body">
+    <section id="platform" class="pipeline-section">
+        <div class="pipeline-scroll" id="pipelineScroll">
+            <div class="pipeline-sticky">
+                <div class="pipeline-viewport-label">
+                    <span class="section-label">The Platform</span>
+                </div>
+                <div class="pipeline-viewport">
+                <div class="pipeline-cards">
 
-        <!-- Blog Section -->
-        <div id="blog" class="section-container" data-reveal="fade-up" data-delay="0">
-            <div class="section-title">Blog</div>
-            <div class="blog-list">
-                <a href="blogs/switch/" class="blog-item" data-reveal="slide-left" data-delay="60">
-                    <div class="blog-video-container">
-                        <video class="blog-video" autoplay muted loop playsinline preload="auto">
-                            <source src="blogs/switch/assets/switch.mp4" type="video/mp4">
-                        </video>
-                    </div>
-                    <div class="blog-content-wrapper">
-                        <div class="blog-content">
-                            <span class="blog-date">Mar 13, 2026</span>
-                            <h3 class="blog-title">10,000 AI-Designed Regulatory DNA Sequences, Open for Research</h3>
-                            <p class="blog-desc">We're releasing 10,000 AI-designed proximal enhancer-like sequences across three cell types, with predicted activity, TF binding annotations, and 3D structures.</p>
+                    <div class="pipe-step">
+                        <div class="pipe-visual">
+                            <svg viewBox="0 0 240 240" fill="none" class="dia dia-tissue">
+                                <!-- Cylinder Tissue Core (Whole, Minimal) -->
+                                <g class="cell-dot" style="--i:0">
+                                    <!-- Cylinder Body -->
+                                    <path d="M 70 100 L 70 160 A 50 25 0 0 0 170 160 L 170 100 A 50 25 0 0 1 70 100 Z" fill="rgba(27,54,93,0.08)" stroke="rgba(27,54,93,0.4)" stroke-width="1.5" stroke-linejoin="round"/>
+                                    
+                                    <!-- Top Face (Ellipse) -->
+                                    <ellipse cx="120" cy="100" rx="50" ry="25" fill="rgba(27,54,93,0.04)" stroke="rgba(27,54,93,0.4)" stroke-width="1.5"/>
+                                    
+                                    <!-- Minimal surface detail (curved grid lines) -->
+                                    <path d="M 85 93 A 40 20 0 0 0 155 93" stroke="rgba(27,54,93,0.15)" stroke-width="1" fill="none"/>
+                                    <path d="M 85 107 A 40 20 0 0 1 155 107" stroke="rgba(27,54,93,0.15)" stroke-width="1" fill="none"/>
+                                    <path d="M 105 80 A 20 40 0 0 0 105 120" stroke="rgba(27,54,93,0.15)" stroke-width="1" fill="none"/>
+                                    <path d="M 135 80 A 20 40 0 0 1 135 120" stroke="rgba(27,54,93,0.15)" stroke-width="1" fill="none"/>
+                                </g>
+                            </svg>
+                        </div>
+                        <div class="pipe-text">
+                            <span class="step-num">01</span>
+                            <h3 class="step-title">Tissue Collection</h3>
+                            <p class="step-desc">Fresh surgical resections sourced directly from partner hospital networks, preserving full viability and the native tumor microenvironment.</p>
                         </div>
                     </div>
-                </a>
-                <a href="blogs/muon/" class="blog-item" data-reveal="slide-left" data-delay="140">
-                    <div class="blog-video-container">
-                        <video class="blog-video" autoplay muted loop playsinline preload="auto">
-                            <source src="blogs/muon/assets/optimizer_gif.mp4" type="video/mp4">
-                        </video>
-                    </div>
-                    <div class="blog-content-wrapper">
-                        <div class="blog-content">
-                            <span class="blog-date">Mar 5, 2026</span>
-                            <h3 class="blog-title">Does Muon improve regulatory DNA learning? Part 1.</h3>
-                            <p class="blog-desc">We benchmark Muon and Adam variants for regulatory DNA modeling, and show MuonW reaches target validation perplexity with about 37% fewer FLOPs than AdamH.</p>
+
+                            <div class="pipe-step">
+                        <div class="pipe-visual">
+                            <svg viewBox="0 0 240 240" fill="none" class="dia dia-section">
+                                <!-- Projection lines drawing in -->
+                                <path class="blade-line" d="M 70 160 L 70 60" stroke="rgba(27,54,93,0.15)" stroke-width="1" stroke-dasharray="4 4"/>
+                                <path class="blade-line" d="M 170 160 L 170 60" stroke="rgba(27,54,93,0.15)" stroke-width="1" stroke-dasharray="4 4"/>
+
+                                <!-- Main Tissue Cylinder Base -->
+                                <g class="slab s0">
+                                    <!-- Cylinder Body (Lower half) -->
+                                    <path d="M 70 160 L 70 190 A 50 25 0 0 0 170 190 L 170 160 A 50 25 0 0 1 70 160 Z" fill="rgba(27,54,93,0.08)" stroke="rgba(27,54,93,0.4)" stroke-width="1.5" stroke-linejoin="round"/>
+                                    <!-- Top Face (Ellipse) -->
+                                    <ellipse cx="120" cy="160" rx="50" ry="25" fill="rgba(27,54,93,0.04)" stroke="rgba(27,54,93,0.4)" stroke-width="1.5"/>
+                                </g>
+
+                                <!-- Slices (Ellipses) -->
+                                <g class="slab s1">
+                                    <ellipse cx="120" cy="130" rx="50" ry="25" fill="rgba(27,54,93,0.03)" stroke="rgba(27,54,93,0.4)" stroke-width="1.5"/>
+                                </g>
+
+                                <g class="slab s2">
+                                    <ellipse cx="120" cy="100" rx="50" ry="25" fill="rgba(27,54,93,0.03)" stroke="rgba(27,54,93,0.4)" stroke-width="1.5"/>
+                                </g>
+
+                                <g class="slab s3">
+                                    <ellipse cx="120" cy="70" rx="50" ry="25" fill="rgba(27,54,93,0.03)" stroke="rgba(27,54,93,0.4)" stroke-width="1.5"/>
+                                </g>
+                            </svg>
+                        </div>
+                        <div class="pipe-text">
+                            <span class="step-num">02</span>
+                            <h3 class="step-title">Precision Sectioning</h3>
+                            <p class="step-desc">Vibratome-cut slices that preserve native tumor architecture and the intact cellular microenvironment.</p>
                         </div>
                     </div>
-                </a>
-                <a href="introducing-axis/" class="blog-item" data-reveal="slide-left" data-delay="180">
-                    <div class="blog-video-container">
-                        <video class="blog-video" autoplay muted loop playsinline preload="auto">
-                            <source src="assets/Blog_video_website_final.mp4" type="video/mp4">
-                        </video>
-                    </div>
-                    <div class="blog-content-wrapper">
-                        <div class="blog-content">
-                            <span class="blog-date">Oct 8, 2025</span>
-                            <h3 class="blog-title">Introducing Axis</h3>
-                            <p class="blog-desc">Today, we are announcing Axis, the first AI model that generates regulatory DNA elements and also predicts their function.</p>
+
+                            <div class="pipe-step">
+                        <div class="pipe-visual">
+                            <svg viewBox="0 0 240 220" fill="none" class="dia dia-perturb">
+                                <text class="plate-label" x="120" y="20" text-anchor="middle" font-family="Inter,sans-serif" font-size="10" font-weight="600" letter-spacing="1.5">CONTROL</text>
+                                <circle class="well ctrl" style="--i:0" cx="48" cy="48" r="11" stroke-width="1"/>
+                                <circle class="well ctrl" style="--i:1" cx="84" cy="48" r="11" stroke-width="1"/>
+                                <circle class="well ctrl" style="--i:2" cx="120" cy="48" r="11" stroke-width="1"/>
+                                <circle class="well ctrl" style="--i:3" cx="156" cy="48" r="11" stroke-width="1"/>
+                                <circle class="well ctrl" style="--i:4" cx="192" cy="48" r="11" stroke-width="1"/>
+                                <circle class="well ctrl" style="--i:5" cx="48" cy="78" r="11" stroke-width="1"/>
+                                <circle class="well ctrl" style="--i:6" cx="84" cy="78" r="11" stroke-width="1"/>
+                                <circle class="well ctrl" style="--i:7" cx="120" cy="78" r="11" stroke-width="1"/>
+                                <circle class="well ctrl" style="--i:8" cx="156" cy="78" r="11" stroke-width="1"/>
+                                <circle class="well ctrl" style="--i:9" cx="192" cy="78" r="11" stroke-width="1"/>
+                                <text class="plate-label" x="120" y="115" text-anchor="middle" font-family="Inter,sans-serif" font-size="10" font-weight="600" letter-spacing="1.5">PERTURBED</text>
+                                <circle class="well pert" style="--i:10" cx="48" cy="142" r="11" stroke-width="1"/>
+                                <circle class="well pert" style="--i:11" cx="84" cy="142" r="11" stroke-width="1"/>
+                                <circle class="well pert" style="--i:12" cx="120" cy="142" r="11" stroke-width="1"/>
+                                <circle class="well pert" style="--i:13" cx="156" cy="142" r="11" stroke-width="1"/>
+                                <circle class="well pert" style="--i:14" cx="192" cy="142" r="11" stroke-width="1"/>
+                                <circle class="well pert" style="--i:15" cx="48" cy="172" r="11" stroke-width="1"/>
+                                <circle class="well pert" style="--i:16" cx="84" cy="172" r="11" stroke-width="1"/>
+                                <circle class="well pert" style="--i:17" cx="120" cy="172" r="11" stroke-width="1"/>
+                                <circle class="well pert" style="--i:18" cx="156" cy="172" r="11" stroke-width="1"/>
+                                <circle class="well pert" style="--i:19" cx="192" cy="172" r="11" stroke-width="1"/>
+                            </svg>
+                        </div>
+                        <div class="pipe-text">
+                            <span class="step-num">03</span>
+                            <h3 class="step-title">Perturbation</h3>
+                            <p class="step-desc">AI-designed chemical and genetic perturbations applied to live tissue with matched controls, simulating interventions to maximize information gain per experiment.</p>
                         </div>
                     </div>
-                </a>
+
+                            <div class="pipe-step">
+                        <div class="pipe-visual">
+                            <svg viewBox="0 0 280 160" fill="none" class="dia dia-read">
+                                <!-- Transcriptomic heatmap (left) -->
+                                <text x="68" y="14" text-anchor="middle" font-family="Inter,sans-serif" font-size="7.5" fill="rgba(27,54,93,0.45)" letter-spacing="1.5">TRANSCRIPTOMICS</text>
+                                <rect x="10" y="24" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.55)"/><rect x="28" y="24" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.2)"/><rect x="46" y="24" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.7)"/><rect x="64" y="24" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.12)"/><rect x="82" y="24" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.4)"/><rect x="100" y="24" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.6)"/><rect x="118" y="24" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.25)"/>
+                                <rect x="10" y="39" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.3)"/><rect x="28" y="39" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.65)"/><rect x="46" y="39" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.08)"/><rect x="64" y="39" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.5)"/><rect x="82" y="39" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.35)"/><rect x="100" y="39" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.15)"/><rect x="118" y="39" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.55)"/>
+                                <rect x="10" y="54" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.7)"/><rect x="28" y="54" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.1)"/><rect x="46" y="54" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.45)"/><rect x="64" y="54" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.6)"/><rect x="82" y="54" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.2)"/><rect x="100" y="54" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.5)"/><rect x="118" y="54" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.35)"/>
+                                <rect x="10" y="69" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.15)"/><rect x="28" y="69" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.5)"/><rect x="46" y="69" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.3)"/><rect x="64" y="69" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.08)"/><rect x="82" y="69" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.65)"/><rect x="100" y="69" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.4)"/><rect x="118" y="69" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.2)"/>
+                                <rect x="10" y="84" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.45)"/><rect x="28" y="84" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.25)"/><rect x="46" y="84" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.6)"/><rect x="64" y="84" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.35)"/><rect x="82" y="84" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.1)"/><rect x="100" y="84" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.55)"/><rect x="118" y="84" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.3)"/>
+                                <rect x="10" y="99" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.6)"/><rect x="28" y="99" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.4)"/><rect x="46" y="99" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.15)"/><rect x="64" y="99" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.5)"/><rect x="82" y="99" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.3)"/><rect x="100" y="99" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.7)"/><rect x="118" y="99" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.1)"/>
+                                <rect x="10" y="114" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.2)"/><rect x="28" y="114" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.55)"/><rect x="46" y="114" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.4)"/><rect x="64" y="114" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.65)"/><rect x="82" y="114" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.18)"/><rect x="100" y="114" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.45)"/><rect x="118" y="114" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.6)"/>
+                                <rect x="10" y="129" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.5)"/><rect x="28" y="129" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.12)"/><rect x="46" y="129" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.35)"/><rect x="64" y="129" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.7)"/><rect x="82" y="129" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.25)"/><rect x="100" y="129" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.55)"/><rect x="118" y="129" width="16" height="13" rx="1.5" fill="rgba(27,54,93,0.08)"/>
+
+                                <!-- Spatial tissue map (right) -->
+                                <text x="210" y="14" text-anchor="middle" font-family="Inter,sans-serif" font-size="7.5" fill="rgba(27,54,93,0.45)" letter-spacing="1.5">SPATIAL</text>
+                                <ellipse cx="210" cy="82" rx="58" ry="54" fill="rgba(27,54,93,0.035)" stroke="rgba(27,54,93,0.2)" stroke-width="0.8"/>
+                                <circle cx="188" cy="50" r="3.5" fill="rgba(27,54,93,0.5)"/><circle cx="206" cy="42" r="3" fill="rgba(27,54,93,0.35)"/><circle cx="228" cy="48" r="3.8" fill="rgba(27,54,93,0.6)"/><circle cx="242" cy="62" r="2.8" fill="rgba(27,54,93,0.3)"/>
+                                <circle cx="178" cy="68" r="3.2" fill="rgba(27,54,93,0.45)"/><circle cx="196" cy="64" r="2.5" fill="rgba(27,54,93,0.55)"/><circle cx="215" cy="58" r="4" fill="rgba(27,54,93,0.4)"/><circle cx="234" cy="70" r="3" fill="rgba(27,54,93,0.5)"/>
+                                <circle cx="182" cy="86" r="3" fill="rgba(27,54,93,0.35)"/><circle cx="200" cy="80" r="3.5" fill="rgba(27,54,93,0.6)"/><circle cx="218" cy="82" r="2.8" fill="rgba(27,54,93,0.25)"/><circle cx="238" cy="80" r="3.2" fill="rgba(27,54,93,0.45)"/>
+                                <circle cx="190" cy="100" r="2.8" fill="rgba(27,54,93,0.3)"/><circle cx="210" cy="96" r="3.8" fill="rgba(27,54,93,0.5)"/><circle cx="230" cy="94" r="2.5" fill="rgba(27,54,93,0.4)"/><circle cx="246" cy="86" r="2" fill="rgba(27,54,93,0.25)"/>
+                                <circle cx="196" cy="114" r="3" fill="rgba(27,54,93,0.2)"/><circle cx="216" cy="110" r="2.5" fill="rgba(27,54,93,0.35)"/><circle cx="178" cy="104" r="2.2" fill="rgba(27,54,93,0.3)"/><circle cx="232" cy="106" r="2.8" fill="rgba(27,54,93,0.4)"/>
+                                <circle cx="204" cy="124" r="2.6" fill="rgba(27,54,93,0.18)"/><circle cx="220" cy="120" r="2" fill="rgba(27,54,93,0.3)"/>
+                            </svg>
+                        </div>
+                        <div class="pipe-text">
+                            <span class="step-num">04</span>
+                            <h3 class="step-title">Multimodal Readouts</h3>
+                            <p class="step-desc">High-throughput measurement across transcriptomics, proteomics, and spatial modalities for comprehensive tumor profiling.</p>
+                        </div>
+                    </div>
+
+                            <div class="pipe-step">
+                        <div class="pipe-visual">
+                            <svg viewBox="0 0 280 200" fill="none" class="dia dia-analysis">
+                                <!-- Neural network / MLP diagram -->
+                                <!-- Input layer (4 nodes) -->
+                                <circle class="nn-node nl0" style="--i:0" cx="30" cy="35" r="10" fill="rgba(27,54,93,0.12)" stroke="rgba(27,54,93,0.4)" stroke-width="1"/>
+                                <circle class="nn-node nl0" style="--i:1" cx="30" cy="75" r="10" fill="rgba(27,54,93,0.12)" stroke="rgba(27,54,93,0.4)" stroke-width="1"/>
+                                <circle class="nn-node nl0" style="--i:2" cx="30" cy="115" r="10" fill="rgba(27,54,93,0.12)" stroke="rgba(27,54,93,0.4)" stroke-width="1"/>
+                                <circle class="nn-node nl0" style="--i:3" cx="30" cy="155" r="10" fill="rgba(27,54,93,0.12)" stroke="rgba(27,54,93,0.4)" stroke-width="1"/>
+                                <!-- Hidden layer 1 (6 nodes) -->
+                                <circle class="nn-node nl1" style="--i:4" cx="100" cy="20" r="10" fill="rgba(27,54,93,0.18)" stroke="rgba(27,54,93,0.5)" stroke-width="1"/>
+                                <circle class="nn-node nl1" style="--i:5" cx="100" cy="52" r="10" fill="rgba(27,54,93,0.18)" stroke="rgba(27,54,93,0.5)" stroke-width="1"/>
+                                <circle class="nn-node nl1" style="--i:6" cx="100" cy="84" r="10" fill="rgba(27,54,93,0.18)" stroke="rgba(27,54,93,0.5)" stroke-width="1"/>
+                                <circle class="nn-node nl1" style="--i:7" cx="100" cy="116" r="10" fill="rgba(27,54,93,0.18)" stroke="rgba(27,54,93,0.5)" stroke-width="1"/>
+                                <circle class="nn-node nl1" style="--i:8" cx="100" cy="148" r="10" fill="rgba(27,54,93,0.18)" stroke="rgba(27,54,93,0.5)" stroke-width="1"/>
+                                <circle class="nn-node nl1" style="--i:9" cx="100" cy="180" r="10" fill="rgba(27,54,93,0.18)" stroke="rgba(27,54,93,0.5)" stroke-width="1"/>
+                                <!-- Hidden layer 2 (5 nodes) -->
+                                <circle class="nn-node nl2" style="--i:10" cx="175" cy="28" r="10" fill="rgba(27,54,93,0.22)" stroke="rgba(27,54,93,0.55)" stroke-width="1"/>
+                                <circle class="nn-node nl2" style="--i:11" cx="175" cy="62" r="10" fill="rgba(27,54,93,0.22)" stroke="rgba(27,54,93,0.55)" stroke-width="1"/>
+                                <circle class="nn-node nl2" style="--i:12" cx="175" cy="100" r="10" fill="rgba(27,54,93,0.22)" stroke="rgba(27,54,93,0.55)" stroke-width="1"/>
+                                <circle class="nn-node nl2" style="--i:13" cx="175" cy="138" r="10" fill="rgba(27,54,93,0.22)" stroke="rgba(27,54,93,0.55)" stroke-width="1"/>
+                                <circle class="nn-node nl2" style="--i:14" cx="175" cy="172" r="10" fill="rgba(27,54,93,0.22)" stroke="rgba(27,54,93,0.55)" stroke-width="1"/>
+                                <!-- Output layer (2 nodes) -->
+                                <circle class="nn-node nl3" style="--i:15" cx="250" cy="70" r="12" fill="rgba(27,54,93,0.28)" stroke="rgba(27,54,93,0.6)" stroke-width="1.2"/>
+                                <circle class="nn-node nl3" style="--i:16" cx="250" cy="130" r="12" fill="rgba(27,54,93,0.28)" stroke="rgba(27,54,93,0.6)" stroke-width="1.2"/>
+                                <!-- Connections: input → hidden1 -->
+                                <line class="nn-edge" x1="40" y1="35" x2="90" y2="20" stroke="rgba(27,54,93,0.1)" stroke-width="0.6"/><line class="nn-edge" x1="40" y1="35" x2="90" y2="52" stroke="rgba(27,54,93,0.1)" stroke-width="0.6"/><line class="nn-edge" x1="40" y1="35" x2="90" y2="84" stroke="rgba(27,54,93,0.08)" stroke-width="0.5"/><line class="nn-edge" x1="40" y1="35" x2="90" y2="116" stroke="rgba(27,54,93,0.06)" stroke-width="0.4"/><line class="nn-edge" x1="40" y1="35" x2="90" y2="148" stroke="rgba(27,54,93,0.05)" stroke-width="0.4"/><line class="nn-edge" x1="40" y1="35" x2="90" y2="180" stroke="rgba(27,54,93,0.04)" stroke-width="0.3"/>
+                                <line class="nn-edge" x1="40" y1="75" x2="90" y2="20" stroke="rgba(27,54,93,0.06)" stroke-width="0.4"/><line class="nn-edge" x1="40" y1="75" x2="90" y2="52" stroke="rgba(27,54,93,0.1)" stroke-width="0.6"/><line class="nn-edge" x1="40" y1="75" x2="90" y2="84" stroke="rgba(27,54,93,0.1)" stroke-width="0.6"/><line class="nn-edge" x1="40" y1="75" x2="90" y2="116" stroke="rgba(27,54,93,0.08)" stroke-width="0.5"/><line class="nn-edge" x1="40" y1="75" x2="90" y2="148" stroke="rgba(27,54,93,0.06)" stroke-width="0.4"/><line class="nn-edge" x1="40" y1="75" x2="90" y2="180" stroke="rgba(27,54,93,0.05)" stroke-width="0.4"/>
+                                <line class="nn-edge" x1="40" y1="115" x2="90" y2="20" stroke="rgba(27,54,93,0.05)" stroke-width="0.4"/><line class="nn-edge" x1="40" y1="115" x2="90" y2="52" stroke="rgba(27,54,93,0.06)" stroke-width="0.4"/><line class="nn-edge" x1="40" y1="115" x2="90" y2="84" stroke="rgba(27,54,93,0.08)" stroke-width="0.5"/><line class="nn-edge" x1="40" y1="115" x2="90" y2="116" stroke="rgba(27,54,93,0.1)" stroke-width="0.6"/><line class="nn-edge" x1="40" y1="115" x2="90" y2="148" stroke="rgba(27,54,93,0.1)" stroke-width="0.6"/><line class="nn-edge" x1="40" y1="115" x2="90" y2="180" stroke="rgba(27,54,93,0.06)" stroke-width="0.4"/>
+                                <line class="nn-edge" x1="40" y1="155" x2="90" y2="20" stroke="rgba(27,54,93,0.04)" stroke-width="0.3"/><line class="nn-edge" x1="40" y1="155" x2="90" y2="52" stroke="rgba(27,54,93,0.05)" stroke-width="0.4"/><line class="nn-edge" x1="40" y1="155" x2="90" y2="84" stroke="rgba(27,54,93,0.06)" stroke-width="0.4"/><line class="nn-edge" x1="40" y1="155" x2="90" y2="116" stroke="rgba(27,54,93,0.08)" stroke-width="0.5"/><line class="nn-edge" x1="40" y1="155" x2="90" y2="148" stroke="rgba(27,54,93,0.1)" stroke-width="0.6"/><line class="nn-edge" x1="40" y1="155" x2="90" y2="180" stroke="rgba(27,54,93,0.1)" stroke-width="0.6"/>
+                                <!-- Connections: hidden1 → hidden2 -->
+                                <line class="nn-edge" x1="110" y1="20" x2="165" y2="28" stroke="rgba(27,54,93,0.1)" stroke-width="0.6"/><line class="nn-edge" x1="110" y1="20" x2="165" y2="62" stroke="rgba(27,54,93,0.08)" stroke-width="0.5"/><line class="nn-edge" x1="110" y1="20" x2="165" y2="100" stroke="rgba(27,54,93,0.05)" stroke-width="0.4"/><line class="nn-edge" x1="110" y1="20" x2="165" y2="138" stroke="rgba(27,54,93,0.04)" stroke-width="0.3"/><line class="nn-edge" x1="110" y1="20" x2="165" y2="172" stroke="rgba(27,54,93,0.03)" stroke-width="0.3"/>
+                                <line class="nn-edge" x1="110" y1="52" x2="165" y2="28" stroke="rgba(27,54,93,0.08)" stroke-width="0.5"/><line class="nn-edge" x1="110" y1="52" x2="165" y2="62" stroke="rgba(27,54,93,0.1)" stroke-width="0.6"/><line class="nn-edge" x1="110" y1="52" x2="165" y2="100" stroke="rgba(27,54,93,0.08)" stroke-width="0.5"/><line class="nn-edge" x1="110" y1="52" x2="165" y2="138" stroke="rgba(27,54,93,0.05)" stroke-width="0.4"/><line class="nn-edge" x1="110" y1="52" x2="165" y2="172" stroke="rgba(27,54,93,0.04)" stroke-width="0.3"/>
+                                <line class="nn-edge" x1="110" y1="84" x2="165" y2="28" stroke="rgba(27,54,93,0.05)" stroke-width="0.4"/><line class="nn-edge" x1="110" y1="84" x2="165" y2="62" stroke="rgba(27,54,93,0.08)" stroke-width="0.5"/><line class="nn-edge" x1="110" y1="84" x2="165" y2="100" stroke="rgba(27,54,93,0.1)" stroke-width="0.6"/><line class="nn-edge" x1="110" y1="84" x2="165" y2="138" stroke="rgba(27,54,93,0.08)" stroke-width="0.5"/><line class="nn-edge" x1="110" y1="84" x2="165" y2="172" stroke="rgba(27,54,93,0.05)" stroke-width="0.4"/>
+                                <line class="nn-edge" x1="110" y1="116" x2="165" y2="28" stroke="rgba(27,54,93,0.04)" stroke-width="0.3"/><line class="nn-edge" x1="110" y1="116" x2="165" y2="62" stroke="rgba(27,54,93,0.05)" stroke-width="0.4"/><line class="nn-edge" x1="110" y1="116" x2="165" y2="100" stroke="rgba(27,54,93,0.08)" stroke-width="0.5"/><line class="nn-edge" x1="110" y1="116" x2="165" y2="138" stroke="rgba(27,54,93,0.1)" stroke-width="0.6"/><line class="nn-edge" x1="110" y1="116" x2="165" y2="172" stroke="rgba(27,54,93,0.08)" stroke-width="0.5"/>
+                                <line class="nn-edge" x1="110" y1="148" x2="165" y2="28" stroke="rgba(27,54,93,0.03)" stroke-width="0.3"/><line class="nn-edge" x1="110" y1="148" x2="165" y2="62" stroke="rgba(27,54,93,0.04)" stroke-width="0.3"/><line class="nn-edge" x1="110" y1="148" x2="165" y2="100" stroke="rgba(27,54,93,0.06)" stroke-width="0.4"/><line class="nn-edge" x1="110" y1="148" x2="165" y2="138" stroke="rgba(27,54,93,0.1)" stroke-width="0.6"/><line class="nn-edge" x1="110" y1="148" x2="165" y2="172" stroke="rgba(27,54,93,0.1)" stroke-width="0.6"/>
+                                <line class="nn-edge" x1="110" y1="180" x2="165" y2="28" stroke="rgba(27,54,93,0.03)" stroke-width="0.3"/><line class="nn-edge" x1="110" y1="180" x2="165" y2="62" stroke="rgba(27,54,93,0.04)" stroke-width="0.3"/><line class="nn-edge" x1="110" y1="180" x2="165" y2="100" stroke="rgba(27,54,93,0.05)" stroke-width="0.4"/><line class="nn-edge" x1="110" y1="180" x2="165" y2="138" stroke="rgba(27,54,93,0.08)" stroke-width="0.5"/><line class="nn-edge" x1="110" y1="180" x2="165" y2="172" stroke="rgba(27,54,93,0.1)" stroke-width="0.6"/>
+                                <!-- Connections: hidden2 → output -->
+                                <line class="nn-edge" x1="185" y1="28" x2="238" y2="70" stroke="rgba(27,54,93,0.1)" stroke-width="0.6"/><line class="nn-edge" x1="185" y1="28" x2="238" y2="130" stroke="rgba(27,54,93,0.05)" stroke-width="0.4"/>
+                                <line class="nn-edge" x1="185" y1="62" x2="238" y2="70" stroke="rgba(27,54,93,0.1)" stroke-width="0.6"/><line class="nn-edge" x1="185" y1="62" x2="238" y2="130" stroke="rgba(27,54,93,0.06)" stroke-width="0.4"/>
+                                <line class="nn-edge" x1="185" y1="100" x2="238" y2="70" stroke="rgba(27,54,93,0.08)" stroke-width="0.5"/><line class="nn-edge" x1="185" y1="100" x2="238" y2="130" stroke="rgba(27,54,93,0.08)" stroke-width="0.5"/>
+                                <line class="nn-edge" x1="185" y1="138" x2="238" y2="70" stroke="rgba(27,54,93,0.06)" stroke-width="0.4"/><line class="nn-edge" x1="185" y1="138" x2="238" y2="130" stroke="rgba(27,54,93,0.1)" stroke-width="0.6"/>
+                                <line class="nn-edge" x1="185" y1="172" x2="238" y2="70" stroke="rgba(27,54,93,0.04)" stroke-width="0.3"/><line class="nn-edge" x1="185" y1="172" x2="238" y2="130" stroke="rgba(27,54,93,0.1)" stroke-width="0.6"/>
+                            </svg>
+                        </div>
+                        <div class="pipe-text">
+                            <span class="step-num">05</span>
+                            <h3 class="step-title">AI Analysis</h3>
+                            <p class="step-desc">Foundation models trained on perturbation response data, mapping tumor vulnerability landscapes and designing the next round of experiments.</p>
+                        </div>
+                    </div>
+
+                </div> <!-- closes pipeline-cards -->
+            </div> <!-- closes pipeline-viewport -->
+
+            <section class="team-section">
+                <div class="section-header" data-reveal="fade-up" data-delay="0">
+                    <span class="section-label">Team From</span>
+                </div>
+                <div class="logo-grid" data-reveal="fade-up" data-delay="100">
+                    <img src="company_logos/nvidia-logo-vert.png" alt="NVIDIA" class="company-logo">
+                    <img src="company_logos/UC-Berkeley-Symbol.png" alt="UC Berkeley" class="company-logo">
+                    <img src="company_logos/UniversityofPennsylvania_FullLogo_RGB-4_0.png" alt="UPenn" class="company-logo">
+                    <img src="company_logos/UIUC-Logo.jpg" alt="UIUC" class="company-logo">
+                </div>
+            </section>
+
+        </div> <!-- closes pipeline-sticky -->
+    </div> <!-- closes pipeline-scroll -->
+</section> <!-- closes pipeline-section -->
+
+    <section id="research" class="research-section">
+        <div class="section-header" data-reveal="fade-up" data-delay="0">
+            <span class="section-label">Research</span>
+        </div>
+        <div class="research-grid">
+            <a href="blogs/switch/" class="research-card" data-reveal="fade-up" data-delay="0">
+                <div class="card-media">
+                    <video class="blog-video" autoplay muted loop playsinline preload="auto">
+                        <source src="blogs/switch/assets/switch.mp4" type="video/mp4">
+                    </video>
+                </div>
+                <div class="card-body">
+                    <span class="card-date">Mar 13, 2026</span>
+                    <h3 class="card-title">10,000 AI-Designed Regulatory DNA Sequences</h3>
+                    <p class="card-desc">AI-designed proximal enhancer-like sequences across three cell types, with predicted activity and 3D structures.</p>
+                </div>
+            </a>
+            <a href="blogs/muon/" class="research-card" data-reveal="fade-up" data-delay="100">
+                <div class="card-media">
+                    <video class="blog-video" autoplay muted loop playsinline preload="auto">
+                        <source src="blogs/muon/assets/optimizer_gif.mp4" type="video/mp4">
+                    </video>
+                </div>
+                <div class="card-body">
+                    <span class="card-date">Mar 5, 2026</span>
+                    <h3 class="card-title">Does Muon Improve Regulatory DNA Learning?</h3>
+                    <p class="card-desc">Benchmarking Muon and Adam variants for regulatory DNA modeling.</p>
+                </div>
+            </a>
+            <a href="introducing-axis/" class="research-card" data-reveal="fade-up" data-delay="200">
+                <div class="card-media">
+                    <video class="blog-video" autoplay muted loop playsinline preload="auto">
+                        <source src="assets/Blog_video_website_final.mp4" type="video/mp4">
+                    </video>
+                </div>
+                <div class="card-body">
+                    <span class="card-date">Oct 8, 2025</span>
+                    <h3 class="card-title">Introducing Axis</h3>
+                    <p class="card-desc">The first AI model that generates regulatory DNA elements and predicts their function.</p>
+                </div>
+            </a>
+        </div>
+    </section>
+
+    <section class="advisors-section">
+        <div class="section-header" data-reveal="fade-up" data-delay="0">
+            <span class="section-label">Scientific Advisors</span>
+        </div>
+        <div class="advisors-grid">
+            <div class="advisor-card" data-reveal="fade-up" data-delay="0">
+                <img src="assets/advisors/kellis.jpg" alt="Dr. Manolis Kellis" class="advisor-photo">
+                <h3 class="advisor-name">Dr. Manolis Kellis</h3>
+                <p class="advisor-role">Professor of Computer Science, MIT &middot; Broad Institute</p>
+                <p class="advisor-bio">Leads the MIT Computational Biology Group, focusing on genomics, epigenomics, and regulatory genomics.</p>
+            </div>
+            <div class="advisor-card" data-reveal="fade-up" data-delay="100">
+                <img src="assets/advisors/paulk.jpg" alt="Dr. Nicole Paulk" class="advisor-photo">
+                <h3 class="advisor-name">Dr. Nicole Paulk</h3>
+                <p class="advisor-role">Founder &amp; CEO, Siren Biotechnology &middot; UCSF</p>
+                <p class="advisor-bio">Leading expert in AAV gene therapy, advising Dyno Therapeutics, Astellas, and Metagenomi.</p>
+            </div>
+            <div class="advisor-card" data-reveal="fade-up" data-delay="200">
+                <img src="assets/advisors/bashir.jpg" alt="Dr. Rashid Bashir" class="advisor-photo">
+                <h3 class="advisor-name">Dr. Rashid Bashir</h3>
+                <p class="advisor-role">Dean, Grainger College of Engineering, UIUC</p>
+                <p class="advisor-bio">Pioneer in bio-nanotechnology, biosensors, and microfluidics. CZ Biohub Chicago advisory committee.</p>
             </div>
         </div>
+    </section>
 
-        <!-- Scientific Advisors Section -->
-        <div class="section-container" data-reveal="fade-up" data-delay="0">
-            <div class="section-title">Scientific Advisors</div>
-            <div class="advisors-grid">
-
-                <div class="advisor-card" data-reveal="pop" data-delay="0">
-                    <img src="assets/advisors/kellis.jpg" alt="Dr. Manolis Kellis" class="advisor-photo">
-                    <h3 class="advisor-name">Dr. Manolis Kellis</h3>
-                    <p class="advisor-role">Professor of Computer Science, MIT &middot; Broad Institute</p>
-                    <p class="advisor-bio">Dr. Manolis Kellis leads the MIT Computational Biology Group, which focuses on genomics, epigenomics, and regulatory genomics. His work has been instrumental in understanding the regulatory elements of the human genome and their role in disease.</p>
-                </div>
-
-                <div class="advisor-card" data-reveal="pop" data-delay="100">
-                    <img src="assets/advisors/paulk.jpg" alt="Dr. Nicole Paulk" class="advisor-photo">
-                    <h3 class="advisor-name">Dr. Nicole Paulk</h3>
-                    <p class="advisor-role">Founder &amp; CEO, Siren Biotechnology &middot; Assistant Professor, UCSF</p>
-                    <p class="advisor-bio">Dr. Nicole Paulk is a leading expert in AAV gene therapy and serves on the scientific advisory boards of Dyno Therapeutics, Astellas Gene Therapies, and Metagenomi, among other leading companies in the gene and cell therapy space.</p>
-                </div>
-
-                <div class="advisor-card" data-reveal="pop" data-delay="200">
-                    <img src="assets/advisors/bashir.jpg" alt="Dr. Rashid Bashir" class="advisor-photo">
-                    <h3 class="advisor-name">Dr. Rashid Bashir</h3>
-                    <p class="advisor-role">Dean, Grainger College of Engineering, UIUC &middot; Chan Zuckerberg Biohub Chicago</p>
-                    <p class="advisor-bio">Dr. Rashid Bashir serves on the Executive Advisory Committee of the Chan Zuckerberg Biohub Chicago. He is a pioneer in bio-nanotechnology and bioengineering, with expertise in biosensors, microfluidics, and synthetic biology.</p>
-                </div>
-
-            </div>
-            <div class="advisor-dots" aria-hidden="true">
-                <span class="advisor-dot active"></span>
-                <span class="advisor-dot"></span>
-                <span class="advisor-dot"></span>
-            </div>
-        </div>
-    </div>
-
-    <footer class="site-footer" data-reveal="fade" data-delay="0">
+    <footer class="site-footer">
         <div class="footer-inner">
             <div class="footer-left">
                 <p class="footer-copyright">&copy; 2026 Origin Bio. All rights reserved.</p>
@@ -170,19 +346,11 @@
         </div>
     </footer>
 
-    <script>
-        (function() {
-            var bar = document.getElementById('fixed-top-bar');
-            var wrapper = document.querySelector('.main-wrapper');
-            if (!bar || !wrapper) return;
-            function setOffset() {
-                wrapper.style.paddingTop = bar.offsetHeight + 40 + 'px';
-            }
-            setOffset();
-            window.addEventListener('resize', setOffset);
-        })();
-    </script>
-    <script src="js/structure-viewer.js?v=4"></script>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="js/cell-interact.js?v=13"></script>
+    <script src="js/hero-canvas.js?v=16"></script>
+    <script src="js/pipeline-scroll.js?v=7"></script>
     <script src="js/scroll-reveal.js?v=5"></script>
 </body>
 </html>
