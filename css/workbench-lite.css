@@ -1145,8 +1145,8 @@ img { max-width: 100%; display: block; }
     .nav-links { gap: 20px; }
     .nav-link { font-size: 12px; }
 
-    .hero-content { gap: 16px; margin-top: 3vh; }
-    .hero-title { font-size: 38px; margin-top: 0; line-height: 1.08; }
+    .hero-content { gap: 16px; margin-top: 1vh; }
+    .hero-title { font-size: 42px; margin-top: 0; line-height: 1.08; }
     .hero-subtitle { font-size: 16px; margin-top: 0; }
     .hero-cell-wrap { width: 300px; height: 300px; margin-top: 0; }
 
@@ -1229,7 +1229,7 @@ img { max-width: 100%; display: block; }
     .site-nav { padding: 0 16px; }
     .nav-links { gap: 12px; }
     .nav-link { font-size: 11px; }
-    .hero-title { font-size: 34px; line-height: 1.08; }
+    .hero-title { font-size: 38px; line-height: 1.08; }
     .hero-subtitle { font-size: 15px; }
     .hero-cell-wrap { width: 220px; height: 220px; margin-top: 32px; }
     .step-num { font-size: 15px; }
