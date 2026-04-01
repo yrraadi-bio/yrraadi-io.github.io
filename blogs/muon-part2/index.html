@@ -116,18 +116,20 @@
                         of why: Muon&rsquo;s Newton-Schulz whitening distributes learned information across all
                         singular value directions, while Adam concentrates it in fewer dominant modes.</p>
 
-                    <p>We ended with an open question: <em>&ldquo;does this translate to improvements on tasks
-                        that matter for biology, such as transcription factor motif recovery, and sequence
-                        generation?&rdquo;</em></p>
+                    <p>But we ended Part 1 with an important caveat. Perplexity measures how well a model
+                        predicts the next nucleotide &mdash; not whether it has learned the regulatory grammar
+                        that makes enhancers actually function in cells. We wrote: <em>&ldquo;Next, we plan to
+                        evaluate on biological downstream tasks &mdash; whether perplexity gains translate to
+                        improvements on tasks that matter for biology, such as transcription factor motif
+                        recovery, and sequence generation.&rdquo;</em></p>
 
-                    <p>This is not a trivial question. Validation perplexity measures how well a model predicts
-                        the next nucleotide. It does not measure whether the model has learned the regulatory
-                        grammar that makes enhancers function in cells. An enhancer is not a bag of nucleotides
-                        &mdash; it is a precisely orchestrated arrangement of transcription factor binding sites,
-                        appearing in specific combinations, at specific spacings. A model that achieves low
-                        perplexity by memorizing nucleotide statistics could still generate sequences where the
-                        wrong TFs co-occur, or where promoter-specific motifs appear in distal enhancers. To
-                        answer Part 1&rsquo;s question, we need to evaluate the biology directly.</p>
+                    <p>This post is that evaluation. And the answer turns out to be more interesting than a
+                        simple yes or no. An enhancer is not a bag of nucleotides &mdash; it is a precisely
+                        orchestrated arrangement of transcription factor binding sites, appearing in specific
+                        combinations, at specific spacings. A model that achieves low perplexity by memorizing
+                        nucleotide statistics could still generate sequences where the wrong TFs co-occur, or
+                        where promoter-specific motifs appear in distal enhancers. To understand what the
+                        optimizers are actually learning, we need to evaluate the biology directly.</p>
 
                     </details>
 
@@ -147,19 +149,23 @@
 
                     <p>All four optimizers converge to similar validation perplexity (~1.20 CE loss) by epoch 20.
                         Yet as we show in the sections that follow, the sequences they generate have substantially
-                        different biological properties. Why?</p>
+                        different biological properties.</p>
 
-                    <p>Optimization is program search. Two regions of parameter space can produce similar
-                        cross-entropy on the same distribution while prioritizing learning different features.
-                        The CE loss averages over all positions equally, but regulatory function concentrates in
-                        the ~10&ndash;20bp motif cores that occupy &lt;10% of the sequence. A model can achieve
-                        low average loss by predicting flanking nucleotides well while encoding very different
-                        amounts of motif structure. Think of it as a high-dimensional loss landscape with
-                        &ldquo;hidden directions&rdquo; that measure biological features &mdash; directions that
-                        the scalar loss does not distinguish.</p>
+                    <p>To understand why this is possible, consider what the cross-entropy loss actually
+                        optimizes. It averages over all positions equally, but regulatory function is not
+                        distributed equally &mdash; it concentrates in the ~10&ndash;20bp motif cores that
+                        occupy less than 10% of the sequence. A model can achieve low average loss by predicting
+                        flanking nucleotides accurately while encoding very different amounts of motif structure
+                        in the functionally critical positions.</p>
 
-                    <p>This is the justification for everything that follows. To understand whether optimizer
-                        choice affects biological quality, we need evaluations that measure biology directly.</p>
+                    <p>More fundamentally, optimization is program search. The loss landscape is high-dimensional,
+                        and two models can settle into different regions of parameter space that produce similar
+                        scalar loss but prioritize different learned features. Think of it as a landscape with
+                        &ldquo;hidden directions&rdquo; &mdash; directions that measure specific biological
+                        properties (motif abundance, co-occurrence grammar, functional diversity) but that the
+                        scalar loss does not distinguish between. Different optimizers navigate this landscape
+                        differently, and the biological evaluations below are designed to measure where each
+                        one ends up.</p>
 
                     </details>
 
@@ -198,11 +204,19 @@
                             converge to similar levels early.</figcaption>
                     </figure>
 
-                    <p>MuonW converges to peak motif abundance roughly <strong>2&times; faster</strong> than
-                        AdamH. MuonW&rsquo;s Pearson r rises steeply from 0.37 at epoch 2 to 0.81 at epoch 8.
-                        AdamH improves more slowly, reaching its peak (~0.67) at epoch 14. AdamW hovers between
-                        0.29 and 0.47 across the entire training run. In Part 1, we showed MuonW reaches target
-                        perplexity with 37% fewer FLOPs. Here the biological advantage is even larger.</p>
+                    <p>The convergence curves tell a clear story. MuonW&rsquo;s Pearson r rises steeply
+                        from 0.37 at epoch 2 to 0.81 at epoch 8 &mdash; a 2.2&times; improvement in just
+                        six epochs. AdamH improves more gradually, reaching its peak (~0.67) at epoch 14.
+                        AdamW, despite being the most robust optimizer on other metrics, hovers between 0.29
+                        and 0.47 across the entire training run and never reaches competitive motif abundance.</p>
+
+                    <p>This means MuonW converges to peak motif abundance roughly <strong>2&times; faster</strong>
+                        than the best Adam variant. In Part 1, we showed MuonW reaches target perplexity with
+                        37% fewer FLOPs. Here the biological advantage is even larger &mdash; and unlike
+                        perplexity, this directly measures whether the model is producing the right regulatory
+                        building blocks.</p>
+
+                    <p>The full learning rate sweep confirms this is not cherry-picked from one LR:</p>
 
                     <figure class="blog-image">
                         <img src="/blogs/muon-part2/assets/fig_metrics_vs_lr.png"
@@ -210,7 +224,8 @@
                             loading="lazy" />
                         <figcaption>Biological quality at the final checkpoint across all 5 learning rates.
                             MuonW peaks at r = 0.824 (lr = \(3.6 \times 10^{-4}\)) &mdash; the highest
-                            motif abundance of any configuration.</figcaption>
+                            motif abundance of any configuration. It maintains high abundance across a wider
+                            LR range than any other optimizer.</figcaption>
                     </figure>
 
                     <h4 class="blog-subheading">Why this makes sense</h4>
@@ -240,8 +255,9 @@
 
                     <h4 class="blog-subheading">Why this test matters</h4>
 
-                    <p>Recovering individual motifs is necessary but not sufficient. Real erythroid enhancers
-                        contain GATA1 <em>together with</em> TAL1 and KLF1 &mdash; not GATA1 with hepatocyte
+                    <p>The motif abundance results establish that MuonW learns the regulatory parts list faster.
+                        But recovering individual motifs is necessary and not sufficient. A real erythroid enhancer
+                        contains GATA1 <em>together with</em> TAL1 and KLF1 &mdash; not GATA1 with hepatocyte
                         factors like HNF4A. The combinatorial logic of which TFs co-occur in the same regulatory
                         element is what makes the element functional in the right cell type. A model that recovers
                         all the right motifs individually but pairs them incorrectly would produce sequences that
@@ -266,16 +282,24 @@
                             variants.</figcaption>
                     </figure>
 
-                    <p>Surprisingly, <strong>grammar is not the bottleneck.</strong> All four optimizers reach
-                        Mantel r &asymp; 0.75&ndash;0.85 within the first few epochs. The co-occurrence structure
-                        of TF binding &mdash; which TFs tend to appear together &mdash; is one of the first things
-                        the model captures, regardless of gradient processing. The optimizer differences that
-                        dominate on motif abundance are largely absent on grammar convergence.</p>
+                    <p>Given Muon&rsquo;s large advantage on motif abundance, one might expect a similar
+                        advantage on grammar. Surprisingly, <strong>grammar is not the bottleneck.</strong>
+                        All four optimizers reach Mantel r &asymp; 0.75&ndash;0.85 within the first few epochs.
+                        The co-occurrence structure of TF binding &mdash; which TFs tend to appear together
+                        &mdash; is one of the first things the model captures, regardless of how its gradients
+                        are processed. The large optimizer differences that dominate motif abundance are largely
+                        absent on grammar convergence.</p>
 
-                    <p>At the final checkpoint, grammar quality does vary with learning rate, and AdamH achieves
-                        the highest score at its optimal LR (Mantel r = 0.775). The Hyperball &times; gradient
-                        interaction is asymmetric: Hyperball improves Adam&rsquo;s grammar by 23% but worsens
-                        Muon&rsquo;s by 20%.</p>
+                    <p>This pattern is visible in every panel of the figure above: the purple dashed line
+                        (grammar) starts high and stays high, while the orange line (abundance) climbs slowly.
+                        The gap between the two curves is largest for Adam variants &mdash; they learn
+                        combinatorial grammar well but struggle to calibrate individual motif frequencies.</p>
+
+                    <p>At the final checkpoint, grammar quality does vary with learning rate. AdamH achieves the
+                        highest grammar score at its optimal LR (Mantel r = 0.775). The interaction between
+                        gradient processing and weight normalization is asymmetric: Hyperball improves
+                        Adam&rsquo;s grammar by 23% but worsens Muon&rsquo;s by 20%. This matters for LR
+                        robustness, though not for convergence speed.</p>
 
                     <figure class="blog-image">
                         <img src="/blogs/muon-part2/assets/fig1_tf_grammar.png"
@@ -357,17 +381,19 @@
 
                     <h4 class="blog-subheading">Why this test matters</h4>
 
-                    <p>A model might recover the right motifs at the right frequencies in aggregate, yet still
-                        generate the same few regulatory programs over and over. This is mode collapse &mdash;
-                        and it matters because real regulatory genomes contain thousands of distinct enhancer
-                        programs, each with a unique combination of TF binding sites. A useful generative model
-                        must produce variety, not just correctness on average.</p>
+                    <p>The previous two tests measure whether the model produces the right motifs (abundance)
+                        in the right combinations (grammar). But there is a third dimension: does the model
+                        produce <em>varied</em> sequences, or does it collapse to generating the same few
+                        regulatory programs over and over?</p>
 
-                    <p>Raw nucleotide diversity (e.g., k-mer coverage) is not the right metric here. Biological
-                        diversity is diversity over <em>functional regulatory programs</em> &mdash; distinct
-                        combinations of which TFs are present in each sequence. We count the number of
-                        <strong>unique TF binding profiles</strong> in the generated set. The reference dataset
-                        contains 2,108 unique profiles; fewer unique profiles means more mode collapse.</p>
+                    <p>This matters because real regulatory genomes contain thousands of distinct enhancer
+                        programs, each with a unique combination of TF binding sites. A useful generative model
+                        must produce variety, not just average correctness. And critically, the right way to
+                        measure diversity is not at the raw nucleotide level (e.g., k-mer coverage) but at the
+                        level of <em>functional regulatory programs</em> &mdash; distinct combinations of which
+                        TFs are present in each sequence. We count the number of <strong>unique TF binding
+                        profiles</strong> in the generated set. The reference dataset contains 2,108 unique
+                        profiles; fewer unique profiles means more mode collapse.</p>
 
                     <h4 class="blog-subheading">What we observed</h4>
 
