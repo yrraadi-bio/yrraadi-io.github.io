@@ -552,192 +552,94 @@ img { max-width: 100%; display: block; }
     gap: 24px;
 }
 
-.pipe-row {
+/* ─── Pipeline Steps ─── */
+
+.pipe-step {
     display: grid;
-    grid-template-columns: minmax(0, 1.1fr) minmax(300px, 0.9fr);
-    gap: 40px;
-    align-items: center;
-    padding: 32px;
-    border: 1px solid rgba(27, 54, 93, 0.08);
-    background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(247, 249, 252, 0.92) 100%);
-    box-shadow: 0 24px 60px rgba(12, 24, 44, 0.04);
+    grid-template-columns: auto 1fr;
+    gap: 0 48px;
+    align-items: start;
+    padding: 48px 40px;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    transition: background 0.4s ease;
 }
 
-.pipe-row:nth-child(even) .pipe-figure {
-    order: -1;
+.pipe-step:last-child {
+    border-bottom: none;
 }
 
-.pipe-copy {
-    max-width: 560px;
+.pipe-step:hover {
+    background: rgba(45, 181, 168, 0.02);
 }
 
-.pipe-figure {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 280px;
-}
-
-.step-num {
-    display: block;
-    font-size: 18px;
-    font-weight: 600;
-    letter-spacing: 0.24em;
-    color: rgba(27, 54, 93, 0.42);
-    margin-bottom: 18px;
-    font-variant-numeric: tabular-nums;
-}
-
-.step-title {
+.pipe-step-num {
     font-family: var(--font-display);
-    font-size: 38px;
+    font-size: 72px;
     font-weight: 400;
     line-height: 1;
-    margin: 0 0 16px;
+    color: rgba(27, 54, 93, 0.08);
+    transition: color 0.4s ease;
+    user-select: none;
+    min-width: 90px;
+}
+
+.pipe-step:hover .pipe-step-num {
+    color: rgba(45, 181, 168, 0.18);
+}
+
+.pipe-step-body {
+    max-width: 640px;
+    padding-top: 8px;
+}
+
+.pipe-step-title {
+    font-family: var(--font-display);
+    font-size: 32px;
+    font-weight: 400;
+    line-height: 1.1;
+    margin: 0 0 14px;
     color: var(--text-1);
 }
 
-.step-desc {
-    font-size: 18px;
+.pipe-step-desc {
+    font-size: 17px;
     color: var(--text-2);
-    line-height: 1.7;
-    max-width: 520px;
+    line-height: 1.75;
+    margin: 0 0 20px;
 }
 
-/* ─── Figures ─── */
-
-.data-plate {
-    position: relative;
-    width: 100%;
-    max-width: 480px;
-    background: #050505;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+.pipe-step-tags {
     display: flex;
-    flex-direction: column;
-    font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
-    transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-    margin: 0 auto;
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
-.data-plate-header {
-    display: flex;
-    justify-content: space-between;
-    padding: 10px 16px;
-    font-size: 0.65rem;
-    color: rgba(255, 255, 255, 0.4);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    background: rgba(255, 255, 255, 0.01);
+.pipe-tag {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: var(--accent);
+    background: var(--accent-dim);
+    padding: 5px 14px;
+    border-radius: 100px;
+    white-space: nowrap;
 }
 
-.data-plate-viewport {
-    position: relative;
-    aspect-ratio: 4 / 3;
-    overflow: hidden;
-    padding: 16px;
-    background: #000;
-}
-
-.data-plate-image {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    filter: grayscale(100%) contrast(1.4) brightness(0.7);
-    opacity: 0.6;
-    transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
-    mix-blend-mode: screen;
-}
-
-
-/* Crosshairs / Reticles */
-.reticle {
-    position: absolute;
-    width: 12px;
-    height: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    z-index: 10;
-    transition: border-color 0.6s ease;
-}
-.reticle-tl { top: 16px; left: 16px; border-right: none; border-bottom: none; }
-.reticle-tr { top: 16px; right: 16px; border-left: none; border-bottom: none; }
-.reticle-bl { bottom: 16px; left: 16px; border-right: none; border-top: none; }
-.reticle-br { bottom: 16px; right: 16px; border-left: none; border-top: none; }
-
-/* Scanning Line */
-.scan-line {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, rgba(0, 255, 200, 0.3), transparent);
-    opacity: 0;
-    transform: translateY(-100%);
-    transition: opacity 0.3s ease;
-    z-index: 15;
-}
-
-.data-plate-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 16px;
-    font-size: 0.6rem;
-    color: rgba(255, 255, 255, 0.3);
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
-    background: rgba(255, 255, 255, 0.01);
-}
-
-.scale-bar {
-    height: 2px;
-    width: 40px;
-    background: rgba(255, 255, 255, 0.2);
-    position: relative;
-}
-.scale-bar::before, .scale-bar::after {
-    content: '';
-    position: absolute;
-    top: -3px;
-    width: 1px;
-    height: 8px;
-    background: rgba(255, 255, 255, 0.2);
-}
-.scale-bar::before { left: 0; }
-.scale-bar::after { right: 0; }
-
-/* Hover Effects */
-.pipe-row:hover .data-plate {
-    border-color: rgba(255, 255, 255, 0.15);
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 40px rgba(0, 255, 200, 0.03);
-}
-
-.pipe-row:hover .data-plate-image {
-    filter: grayscale(20%) contrast(1.2) brightness(1);
-    opacity: 1;
-    transform: scale(1.02);
-}
-
-.pipe-row:hover .reticle {
-    border-color: var(--teal);
-}
-
-.pipe-row:hover .scan-line {
-    opacity: 1;
-    animation: scan 3s linear infinite;
-}
-
-@keyframes scan {
-    0% { transform: translateY(0); }
-    100% { transform: translateY(300px); }
-}
-
-/* Mobile Adjustments */
 @media (max-width: 768px) {
-    .data-plate-viewport {
-        aspect-ratio: 16 / 9;
+    .pipe-step {
+        grid-template-columns: 1fr;
+        gap: 8px;
+        padding: 32px 20px;
+    }
+
+    .pipe-step-num {
+        font-size: 48px;
+    }
+
+    .pipe-step-title {
+        font-size: 26px;
     }
 }
 

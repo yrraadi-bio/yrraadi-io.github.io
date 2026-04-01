@@ -15,7 +15,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/workbench-lite.css?v=78">
+    <link rel="stylesheet" href="css/workbench-lite.css?v=79">
     <link rel="icon" href="/assets/favicon.png" type="image/png">
 </head>
 <body>
@@ -57,142 +57,67 @@
             <span class="section-label">The Platform</span>
         </div>
         <div class="pipeline-list">
-            <article class="pipe-row" data-reveal="fade-up" data-delay="0">
-                <div class="pipe-copy">
-                    <span class="step-num">01</span>
-                    <h3 class="step-title">Tissue Collection</h3>
-                    <p class="step-desc">Fresh surgical resections sourced directly from partner hospital networks, preserving full viability and the native tumor microenvironment.</p>
-                </div>
-                <div class="pipe-figure pipe-figure-tissue" aria-hidden="true">
-                    <div class="data-plate">
-                        <div class="data-plate-header">
-                            <span>ID: ORG-TISSUE-01</span>
-                            <span>MOD: MULTIPLEX</span>
-                        </div>
-                        <div class="data-plate-viewport">
-                            <div class="reticle reticle-tl"></div>
-                            <div class="reticle reticle-tr"></div>
-                            <div class="reticle reticle-bl"></div>
-                            <div class="reticle reticle-br"></div>
-                            <img src="https://images.unsplash.com/photo-1576086213369-97a306d36557?q=80&w=1000&auto=format&fit=crop" alt="" class="data-plate-image">
-                            <div class="scan-line"></div>
-                        </div>
-                        <div class="data-plate-footer">
-                            <div class="scale-bar"></div>
-                            <span>100 μm</span>
-                        </div>
+            <article class="pipe-step" data-reveal="fade-up" data-delay="0">
+                <div class="pipe-step-num">01</div>
+                <div class="pipe-step-body">
+                    <h3 class="pipe-step-title">Tissue Collection</h3>
+                    <p class="pipe-step-desc">Fresh surgical resections sourced directly from partner hospital networks, preserving full viability and the native tumor microenvironment.</p>
+                    <div class="pipe-step-tags">
+                        <span class="pipe-tag">Patient-derived</span>
+                        <span class="pipe-tag">Clinical annotations</span>
+                        <span class="pipe-tag">20,000+ annual volume</span>
                     </div>
                 </div>
             </article>
 
-            <article class="pipe-row" data-reveal="fade-up" data-delay="60">
-                <div class="pipe-copy">
-                    <span class="step-num">02</span>
-                    <h3 class="step-title">Precision Sectioning</h3>
-                    <p class="step-desc">Vibratome-cut slices that preserve native tumor architecture and the intact cellular microenvironment.</p>
-                </div>
-                <div class="pipe-figure" aria-hidden="true">
-                    <div class="data-plate">
-                        <div class="data-plate-header">
-                            <span>PCTS-SEC-02</span>
-                            <span>~300 μm</span>
-                        </div>
-                        <div class="data-plate-viewport">
-                            <div class="reticle reticle-tl"></div>
-                            <div class="reticle reticle-tr"></div>
-                            <div class="reticle reticle-bl"></div>
-                            <div class="reticle reticle-br"></div>
-                            <img src="https://images.unsplash.com/photo-1583912086268-cb0854235c9f?q=80&w=1000&auto=format&fit=crop" alt="Microtome sectioning tissue at NCI" class="data-plate-image">
-                            <div class="scan-line"></div>
-                        </div>
-                        <div class="data-plate-footer">
-                            <div class="scale-bar"></div>
-                            <span>Z-AXIS ALIGNED</span>
-                        </div>
+            <article class="pipe-step" data-reveal="fade-up" data-delay="60">
+                <div class="pipe-step-num">02</div>
+                <div class="pipe-step-body">
+                    <h3 class="pipe-step-title">Precision Sectioning</h3>
+                    <p class="pipe-step-desc">Vibratome-cut slices that preserve native tumor architecture and the intact cellular microenvironment.</p>
+                    <div class="pipe-step-tags">
+                        <span class="pipe-tag">PCTS ~300 μm</span>
+                        <span class="pipe-tag">Intact microenvironment</span>
+                        <span class="pipe-tag">Native spatial arrangement</span>
                     </div>
                 </div>
             </article>
 
-            <article class="pipe-row" data-reveal="fade-up" data-delay="120">
-                <div class="pipe-copy">
-                    <span class="step-num">03</span>
-                    <h3 class="step-title">Perturbation</h3>
-                    <p class="step-desc">AI-designed chemical and genetic perturbations applied to live tissue with matched controls, simulating interventions to maximize information gain per experiment.</p>
-                </div>
-                <div class="pipe-figure" aria-hidden="true">
-                    <div class="data-plate">
-                        <div class="data-plate-header">
-                            <span>PERT-ARRAY-99</span>
-                            <span>CTRL / TREATED</span>
-                        </div>
-                        <div class="data-plate-viewport">
-                            <div class="reticle reticle-tl"></div>
-                            <div class="reticle reticle-tr"></div>
-                            <div class="reticle reticle-bl"></div>
-                            <div class="reticle reticle-br"></div>
-                            <img src="https://images.unsplash.com/photo-1748281296151-b3209b37e1cb?q=80&w=1000&auto=format&fit=crop" alt="Micropipette depositing liquid for perturbation assay" class="data-plate-image">
-                            <div class="scan-line"></div>
-                        </div>
-                        <div class="data-plate-footer">
-                            <div class="scale-bar" style="width: 60%"></div>
-                            <span>MATCHED ARMS</span>
-                        </div>
+            <article class="pipe-step" data-reveal="fade-up" data-delay="120">
+                <div class="pipe-step-num">03</div>
+                <div class="pipe-step-body">
+                    <h3 class="pipe-step-title">Perturbation</h3>
+                    <p class="pipe-step-desc">Chemical and genetic perturbations applied to live tissue with matched controls, maximizing information gain per experiment.</p>
+                    <div class="pipe-step-tags">
+                        <span class="pipe-tag">Matched control / treated</span>
+                        <span class="pipe-tag">Checkpoint inhibitors</span>
+                        <span class="pipe-tag">Chemotherapeutics</span>
                     </div>
                 </div>
             </article>
 
-            <article class="pipe-row" data-reveal="fade-up" data-delay="180">
-                <div class="pipe-copy">
-                    <span class="step-num">04</span>
-                    <h3 class="step-title">Multimodal Readouts</h3>
-                    <p class="step-desc">High-throughput measurement across transcriptomics, proteomics, and spatial modalities for comprehensive tumor profiling.</p>
-                </div>
-                <div class="pipe-figure" aria-hidden="true">
-                    <div class="data-plate">
-                        <div class="data-plate-header">
-                            <span>SEQ-MAP-X</span>
-                            <span>scRNA + SPATIAL</span>
-                        </div>
-                        <div class="data-plate-viewport">
-                            <div class="reticle reticle-tl"></div>
-                            <div class="reticle reticle-tr"></div>
-                            <div class="reticle reticle-bl"></div>
-                            <div class="reticle reticle-br"></div>
-                            <img src="https://images.unsplash.com/photo-1579154204601-01588f351e67?q=80&w=1000&auto=format&fit=crop" alt="Desktop genomic sequencing machines at NCI Cancer Genomics Lab" class="data-plate-image">
-                            <div class="scan-line"></div>
-                        </div>
-                        <div class="data-plate-footer">
-                            <div class="scale-bar" style="width: 80%"></div>
-                            <span>SINGLE-CELL</span>
-                        </div>
+            <article class="pipe-step" data-reveal="fade-up" data-delay="180">
+                <div class="pipe-step-num">04</div>
+                <div class="pipe-step-body">
+                    <h3 class="pipe-step-title">Multimodal Readouts</h3>
+                    <p class="pipe-step-desc">High-throughput measurement across transcriptomics, proteomics, and spatial modalities for comprehensive tumor profiling.</p>
+                    <div class="pipe-step-tags">
+                        <span class="pipe-tag">scRNA-seq</span>
+                        <span class="pipe-tag">Spatial transcriptomics</span>
+                        <span class="pipe-tag">Proteomic panels</span>
                     </div>
                 </div>
             </article>
 
-            <article class="pipe-row" data-reveal="fade-up" data-delay="240">
-                <div class="pipe-copy">
-                    <span class="step-num">05</span>
-                    <h3 class="step-title">AI Analysis</h3>
-                    <p class="step-desc">Foundation models trained on perturbation response data, mapping tumor vulnerability landscapes and designing the next round of experiments.</p>
-                </div>
-                <div class="pipe-figure" aria-hidden="true">
-                    <div class="data-plate">
-                        <div class="data-plate-header">
-                            <span>FND-MODEL-V2</span>
-                            <span>INFERENCE</span>
-                        </div>
-                        <div class="data-plate-viewport">
-                            <div class="reticle reticle-tl"></div>
-                            <div class="reticle reticle-tr"></div>
-                            <div class="reticle reticle-bl"></div>
-                            <div class="reticle reticle-br"></div>
-                            <img src="https://images.unsplash.com/photo-1578496479939-722d9dd1cc5b?q=80&w=1000&auto=format&fit=crop" alt="Bioinformatician analyzing genomic data at NCI" class="data-plate-image">
-                            <div class="scan-line"></div>
-                        </div>
-                        <div class="data-plate-footer">
-                            <div class="scale-bar" style="width: 100%"></div>
-                            <span>VULNERABILITY MAP</span>
-                        </div>
+            <article class="pipe-step" data-reveal="fade-up" data-delay="240">
+                <div class="pipe-step-num">05</div>
+                <div class="pipe-step-body">
+                    <h3 class="pipe-step-title">AI Analysis</h3>
+                    <p class="pipe-step-desc">Foundation models trained on perturbation response data, mapping tumor vulnerability landscapes and designing the next round of experiments.</p>
+                    <div class="pipe-step-tags">
+                        <span class="pipe-tag">Latent space models</span>
+                        <span class="pipe-tag">Target identification</span>
+                        <span class="pipe-tag">Drug screening</span>
                     </div>
                 </div>
             </article>
