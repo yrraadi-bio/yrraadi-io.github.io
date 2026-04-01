@@ -651,37 +651,6 @@ img { max-width: 100%; display: block; }
     mix-blend-mode: screen;
 }
 
-/* SVG figures for steps 02–05 */
-.fig-svg {
-    position: absolute;
-    inset: 16px;
-    width: calc(100% - 32px);
-    height: calc(100% - 32px);
-    z-index: 2;
-    opacity: 0.85;
-    transition: opacity 0.6s ease;
-}
-
-.pipe-row:hover .fig-svg {
-    opacity: 1;
-}
-
-.fig-blade {
-    animation: blade-pulse 3s ease-in-out infinite;
-}
-
-@keyframes blade-pulse {
-    0%, 100% { opacity: 0.6; }
-    50% { opacity: 1; }
-}
-
-.fig-detached-slice {
-    transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.pipe-row:hover .fig-detached-slice {
-    transform: translate(14, -24);
-}
 
 /* Crosshairs / Reticles */
 .reticle {

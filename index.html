@@ -15,7 +15,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/workbench-lite.css?v=77">
+    <link rel="stylesheet" href="css/workbench-lite.css?v=78">
     <link rel="icon" href="/assets/favicon.png" type="image/png">
 </head>
 <body>
@@ -102,46 +102,7 @@
                             <div class="reticle reticle-tr"></div>
                             <div class="reticle reticle-bl"></div>
                             <div class="reticle reticle-br"></div>
-                            <svg class="fig-svg" viewBox="0 0 320 240" preserveAspectRatio="xMidYMid meet">
-                                <defs>
-                                    <linearGradient id="tissue-grad" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stop-color="#3a7ca5" stop-opacity="0.5"/>
-                                        <stop offset="100%" stop-color="#1b365d" stop-opacity="0.8"/>
-                                    </linearGradient>
-                                    <linearGradient id="blade-grad" x1="0" y1="0" x2="1" y2="0">
-                                        <stop offset="0%" stop-color="rgba(255,255,255,0.05)"/>
-                                        <stop offset="50%" stop-color="rgba(255,255,255,0.3)"/>
-                                        <stop offset="100%" stop-color="rgba(255,255,255,0.05)"/>
-                                    </linearGradient>
-                                </defs>
-                                <!-- Tissue block (3D-ish perspective) -->
-                                <g class="fig-tissue-block">
-                                    <path d="M80 55 L240 55 L260 75 L260 185 L240 205 L80 205 L60 185 L60 75 Z" fill="url(#tissue-grad)" stroke="rgba(255,255,255,0.08)" stroke-width="0.5"/>
-                                    <!-- Internal structure hints -->
-                                    <circle cx="120" cy="110" r="8" fill="rgba(45,181,168,0.12)" stroke="rgba(45,181,168,0.2)" stroke-width="0.4"/>
-                                    <circle cx="180" cy="130" r="12" fill="rgba(45,181,168,0.08)" stroke="rgba(45,181,168,0.15)" stroke-width="0.4"/>
-                                    <circle cx="150" cy="160" r="6" fill="rgba(45,181,168,0.15)" stroke="rgba(45,181,168,0.25)" stroke-width="0.4"/>
-                                    <circle cx="200" cy="100" r="5" fill="rgba(27,54,93,0.3)" stroke="rgba(255,255,255,0.06)" stroke-width="0.3"/>
-                                    <circle cx="110" cy="170" r="9" fill="rgba(27,54,93,0.25)" stroke="rgba(255,255,255,0.06)" stroke-width="0.3"/>
-                                </g>
-                                <!-- Slice lines -->
-                                <line class="fig-cut" x1="55" y1="95" x2="265" y2="95" stroke="rgba(255,255,255,0.25)" stroke-width="0.5" stroke-dasharray="4 3"/>
-                                <line class="fig-cut" x1="55" y1="135" x2="265" y2="135" stroke="rgba(255,255,255,0.25)" stroke-width="0.5" stroke-dasharray="4 3"/>
-                                <line class="fig-cut" x1="55" y1="175" x2="265" y2="175" stroke="rgba(255,255,255,0.25)" stroke-width="0.5" stroke-dasharray="4 3"/>
-                                <!-- Blade -->
-                                <rect class="fig-blade" x="50" y="130" width="220" height="3" rx="1" fill="url(#blade-grad)"/>
-                                <!-- Separated slice floating out -->
-                                <g class="fig-detached-slice" opacity="0.7">
-                                    <path d="M80 55 L240 55 L260 75 L260 95 L240 95 L80 95 L60 75 L60 55 Z" fill="url(#tissue-grad)" stroke="rgba(255,255,255,0.12)" stroke-width="0.5" transform="translate(12, -18)"/>
-                                    <circle cx="132" cy="52" r="5" fill="rgba(45,181,168,0.12)"/>
-                                    <circle cx="200" cy="47" r="4" fill="rgba(45,181,168,0.1)"/>
-                                </g>
-                                <!-- Dimension annotation -->
-                                <line x1="270" y1="95" x2="270" y2="135" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
-                                <line x1="266" y1="95" x2="274" y2="95" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
-                                <line x1="266" y1="135" x2="274" y2="135" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
-                                <text x="280" y="118" fill="rgba(255,255,255,0.3)" font-size="7" font-family="monospace">300μm</text>
-                            </svg>
+                            <img src="https://images.unsplash.com/photo-1583912086268-cb0854235c9f?q=80&w=1000&auto=format&fit=crop" alt="Microtome sectioning tissue at NCI" class="data-plate-image">
                             <div class="scan-line"></div>
                         </div>
                         <div class="data-plate-footer">
@@ -169,100 +130,7 @@
                             <div class="reticle reticle-tr"></div>
                             <div class="reticle reticle-bl"></div>
                             <div class="reticle reticle-br"></div>
-                            <svg class="fig-svg" viewBox="0 0 320 240" preserveAspectRatio="xMidYMid meet">
-                                <defs>
-                                    <radialGradient id="well-glow">
-                                        <stop offset="0%" stop-color="rgba(45,181,168,0.35)"/>
-                                        <stop offset="100%" stop-color="rgba(45,181,168,0)"/>
-                                    </radialGradient>
-                                </defs>
-                                <!-- "CONTROL" label -->
-                                <text x="160" y="22" text-anchor="middle" fill="rgba(255,255,255,0.3)" font-size="7" font-family="monospace" letter-spacing="2">CONTROL</text>
-                                <!-- Control plate (top) - 8x4 grid -->
-                                <g class="fig-plate fig-plate--ctrl" transform="translate(40,28)">
-                                    <rect x="0" y="0" width="240" height="80" rx="3" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="0.5"/>
-                                    <!-- Row 1 -->
-                                    <circle cx="18" cy="14" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="48" cy="14" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="78" cy="14" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="108" cy="14" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="138" cy="14" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="168" cy="14" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="198" cy="14" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="228" cy="14" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <!-- Row 2 -->
-                                    <circle cx="18" cy="34" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="48" cy="34" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="78" cy="34" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="108" cy="34" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="138" cy="34" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="168" cy="34" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="198" cy="34" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="228" cy="34" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <!-- Row 3 -->
-                                    <circle cx="18" cy="54" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="48" cy="54" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="78" cy="54" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="108" cy="54" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="138" cy="54" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="168" cy="54" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="198" cy="54" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="228" cy="54" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <!-- Row 4 -->
-                                    <circle cx="18" cy="68" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="48" cy="68" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="78" cy="68" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="108" cy="68" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="138" cy="68" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="168" cy="68" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="198" cy="68" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="228" cy="68" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                </g>
-                                <!-- Divider -->
-                                <line x1="60" y1="118" x2="260" y2="118" stroke="rgba(255,255,255,0.08)" stroke-width="0.5" stroke-dasharray="2 4"/>
-                                <!-- "PERTURBED" label -->
-                                <text x="160" y="135" text-anchor="middle" fill="rgba(45,181,168,0.45)" font-size="7" font-family="monospace" letter-spacing="2">PERTURBED</text>
-                                <!-- Perturbed plate (bottom) - same grid, some wells glowing -->
-                                <g class="fig-plate fig-plate--pert" transform="translate(40,140)">
-                                    <rect x="0" y="0" width="240" height="80" rx="3" fill="none" stroke="rgba(45,181,168,0.12)" stroke-width="0.5"/>
-                                    <!-- Row 1 -->
-                                    <circle cx="18" cy="14" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="48" cy="14" r="5.5" fill="rgba(45,181,168,0.25)" stroke="rgba(45,181,168,0.4)" stroke-width="0.4"/><circle cx="48" cy="14" r="10" fill="url(#well-glow)"/>
-                                    <circle cx="78" cy="14" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="108" cy="14" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="138" cy="14" r="5.5" fill="rgba(45,181,168,0.25)" stroke="rgba(45,181,168,0.4)" stroke-width="0.4"/><circle cx="138" cy="14" r="10" fill="url(#well-glow)"/>
-                                    <circle cx="168" cy="14" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="198" cy="14" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="228" cy="14" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <!-- Row 2 -->
-                                    <circle cx="18" cy="34" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="48" cy="34" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="78" cy="34" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="108" cy="34" r="5.5" fill="rgba(45,181,168,0.25)" stroke="rgba(45,181,168,0.4)" stroke-width="0.4"/><circle cx="108" cy="34" r="10" fill="url(#well-glow)"/>
-                                    <circle cx="138" cy="34" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="168" cy="34" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="198" cy="34" r="5.5" fill="rgba(45,181,168,0.25)" stroke="rgba(45,181,168,0.4)" stroke-width="0.4"/><circle cx="198" cy="34" r="10" fill="url(#well-glow)"/>
-                                    <circle cx="228" cy="34" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <!-- Row 3 -->
-                                    <circle cx="18" cy="54" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="48" cy="54" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="78" cy="54" r="5.5" fill="rgba(45,181,168,0.25)" stroke="rgba(45,181,168,0.4)" stroke-width="0.4"/><circle cx="78" cy="54" r="10" fill="url(#well-glow)"/>
-                                    <circle cx="108" cy="54" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="138" cy="54" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="168" cy="54" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="198" cy="54" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="228" cy="54" r="5.5" fill="rgba(45,181,168,0.25)" stroke="rgba(45,181,168,0.4)" stroke-width="0.4"/><circle cx="228" cy="54" r="10" fill="url(#well-glow)"/>
-                                    <!-- Row 4 -->
-                                    <circle cx="18" cy="68" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="48" cy="68" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="78" cy="68" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="108" cy="68" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="138" cy="68" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="168" cy="68" r="5.5" fill="rgba(45,181,168,0.25)" stroke="rgba(45,181,168,0.4)" stroke-width="0.4"/><circle cx="168" cy="68" r="10" fill="url(#well-glow)"/>
-                                    <circle cx="198" cy="68" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                    <circle cx="228" cy="68" r="5.5" fill="rgba(27,54,93,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
-                                </g>
-                            </svg>
+                            <img src="https://images.unsplash.com/photo-1748281296151-b3209b37e1cb?q=80&w=1000&auto=format&fit=crop" alt="Micropipette depositing liquid for perturbation assay" class="data-plate-image">
                             <div class="scan-line"></div>
                         </div>
                         <div class="data-plate-footer">
@@ -290,48 +158,7 @@
                             <div class="reticle reticle-tr"></div>
                             <div class="reticle reticle-bl"></div>
                             <div class="reticle reticle-br"></div>
-                            <svg class="fig-svg" viewBox="0 0 320 240" preserveAspectRatio="xMidYMid meet">
-                                <defs>
-                                    <radialGradient id="cluster-a"><stop offset="0%" stop-color="rgba(45,181,168,0.3)"/><stop offset="100%" stop-color="transparent"/></radialGradient>
-                                    <radialGradient id="cluster-b"><stop offset="0%" stop-color="rgba(27,54,93,0.4)"/><stop offset="100%" stop-color="transparent"/></radialGradient>
-                                    <radialGradient id="cluster-c"><stop offset="0%" stop-color="rgba(120,80,160,0.3)"/><stop offset="100%" stop-color="transparent"/></radialGradient>
-                                </defs>
-                                <!-- Axis labels -->
-                                <text x="160" y="232" text-anchor="middle" fill="rgba(255,255,255,0.2)" font-size="7" font-family="monospace">t-SNE 1</text>
-                                <text x="12" y="120" text-anchor="middle" fill="rgba(255,255,255,0.2)" font-size="7" font-family="monospace" transform="rotate(-90,12,120)">t-SNE 2</text>
-                                <!-- Cluster halos -->
-                                <circle cx="100" cy="80" r="38" fill="url(#cluster-a)"/>
-                                <circle cx="210" cy="100" r="42" fill="url(#cluster-b)"/>
-                                <circle cx="150" cy="170" r="35" fill="url(#cluster-c)"/>
-                                <!-- Cluster A (teal) - immune cells -->
-                                <circle cx="88" cy="65" r="2" fill="rgba(45,181,168,0.7)"/><circle cx="95" cy="72" r="1.8" fill="rgba(45,181,168,0.6)"/>
-                                <circle cx="105" cy="68" r="2.2" fill="rgba(45,181,168,0.65)"/><circle cx="112" cy="78" r="1.6" fill="rgba(45,181,168,0.55)"/>
-                                <circle cx="98" cy="85" r="2" fill="rgba(45,181,168,0.7)"/><circle cx="82" cy="80" r="1.5" fill="rgba(45,181,168,0.5)"/>
-                                <circle cx="108" cy="92" r="1.8" fill="rgba(45,181,168,0.6)"/><circle cx="90" cy="95" r="2" fill="rgba(45,181,168,0.65)"/>
-                                <circle cx="118" cy="85" r="1.4" fill="rgba(45,181,168,0.5)"/><circle cx="78" cy="72" r="1.6" fill="rgba(45,181,168,0.55)"/>
-                                <circle cx="102" cy="58" r="1.5" fill="rgba(45,181,168,0.5)"/><circle cx="115" cy="70" r="1.8" fill="rgba(45,181,168,0.6)"/>
-                                <!-- Cluster B (navy) - tumor -->
-                                <circle cx="198" cy="88" r="2.2" fill="rgba(100,140,200,0.7)"/><circle cx="210" cy="95" r="2" fill="rgba(100,140,200,0.65)"/>
-                                <circle cx="222" cy="90" r="1.8" fill="rgba(100,140,200,0.6)"/><circle cx="215" cy="108" r="2.2" fill="rgba(100,140,200,0.7)"/>
-                                <circle cx="205" cy="115" r="1.6" fill="rgba(100,140,200,0.55)"/><circle cx="228" cy="105" r="2" fill="rgba(100,140,200,0.65)"/>
-                                <circle cx="195" cy="105" r="1.8" fill="rgba(100,140,200,0.6)"/><circle cx="238" cy="95" r="1.5" fill="rgba(100,140,200,0.5)"/>
-                                <circle cx="218" cy="78" r="1.6" fill="rgba(100,140,200,0.55)"/><circle cx="200" cy="78" r="1.4" fill="rgba(100,140,200,0.5)"/>
-                                <circle cx="230" cy="112" r="1.8" fill="rgba(100,140,200,0.6)"/><circle cx="208" cy="82" r="1.5" fill="rgba(100,140,200,0.5)"/>
-                                <!-- Cluster C (purple) - stroma -->
-                                <circle cx="140" cy="158" r="2" fill="rgba(140,100,180,0.65)"/><circle cx="152" cy="165" r="1.8" fill="rgba(140,100,180,0.6)"/>
-                                <circle cx="162" cy="172" r="2.2" fill="rgba(140,100,180,0.7)"/><circle cx="148" cy="180" r="1.6" fill="rgba(140,100,180,0.55)"/>
-                                <circle cx="135" cy="175" r="2" fill="rgba(140,100,180,0.65)"/><circle cx="158" cy="155" r="1.5" fill="rgba(140,100,180,0.5)"/>
-                                <circle cx="170" cy="165" r="1.8" fill="rgba(140,100,180,0.6)"/><circle cx="130" cy="165" r="1.4" fill="rgba(140,100,180,0.5)"/>
-                                <circle cx="155" cy="188" r="1.6" fill="rgba(140,100,180,0.55)"/><circle cx="142" cy="148" r="1.5" fill="rgba(140,100,180,0.5)"/>
-                                <!-- Outlier / bridge points -->
-                                <circle cx="155" cy="125" r="1.2" fill="rgba(255,255,255,0.15)"/>
-                                <circle cx="170" cy="135" r="1" fill="rgba(255,255,255,0.12)"/>
-                                <circle cx="130" cy="115" r="1.1" fill="rgba(255,255,255,0.13)"/>
-                                <!-- Legend -->
-                                <circle cx="260" cy="195" r="3" fill="rgba(45,181,168,0.6)"/><text x="268" y="197" fill="rgba(255,255,255,0.3)" font-size="6" font-family="monospace">immune</text>
-                                <circle cx="260" cy="208" r="3" fill="rgba(100,140,200,0.6)"/><text x="268" y="210" fill="rgba(255,255,255,0.3)" font-size="6" font-family="monospace">tumor</text>
-                                <circle cx="260" cy="221" r="3" fill="rgba(140,100,180,0.6)"/><text x="268" y="223" fill="rgba(255,255,255,0.3)" font-size="6" font-family="monospace">stroma</text>
-                            </svg>
+                            <img src="https://images.unsplash.com/photo-1579154204601-01588f351e67?q=80&w=1000&auto=format&fit=crop" alt="Desktop genomic sequencing machines at NCI Cancer Genomics Lab" class="data-plate-image">
                             <div class="scan-line"></div>
                         </div>
                         <div class="data-plate-footer">
@@ -359,72 +186,7 @@
                             <div class="reticle reticle-tr"></div>
                             <div class="reticle reticle-bl"></div>
                             <div class="reticle reticle-br"></div>
-                            <svg class="fig-svg" viewBox="0 0 320 240" preserveAspectRatio="xMidYMid meet">
-                                <defs>
-                                    <linearGradient id="edge-teal" x1="0" y1="0" x2="1" y2="0">
-                                        <stop offset="0%" stop-color="rgba(45,181,168,0)"/>
-                                        <stop offset="50%" stop-color="rgba(45,181,168,0.3)"/>
-                                        <stop offset="100%" stop-color="rgba(45,181,168,0)"/>
-                                    </linearGradient>
-                                </defs>
-                                <!-- Input layer (left): perturbation signals -->
-                                <text x="36" y="22" text-anchor="middle" fill="rgba(255,255,255,0.2)" font-size="6" font-family="monospace">INPUT</text>
-                                <circle cx="36" cy="52" r="5" fill="rgba(45,181,168,0.2)" stroke="rgba(45,181,168,0.35)" stroke-width="0.5"/>
-                                <circle cx="36" cy="80" r="5" fill="rgba(45,181,168,0.2)" stroke="rgba(45,181,168,0.35)" stroke-width="0.5"/>
-                                <circle cx="36" cy="108" r="5" fill="rgba(45,181,168,0.2)" stroke="rgba(45,181,168,0.35)" stroke-width="0.5"/>
-                                <circle cx="36" cy="136" r="5" fill="rgba(45,181,168,0.2)" stroke="rgba(45,181,168,0.35)" stroke-width="0.5"/>
-                                <circle cx="36" cy="164" r="5" fill="rgba(45,181,168,0.2)" stroke="rgba(45,181,168,0.35)" stroke-width="0.5"/>
-                                <circle cx="36" cy="192" r="5" fill="rgba(45,181,168,0.2)" stroke="rgba(45,181,168,0.35)" stroke-width="0.5"/>
-                                <!-- Hidden layer 1 -->
-                                <circle cx="120" cy="60" r="6" fill="rgba(27,54,93,0.35)" stroke="rgba(255,255,255,0.12)" stroke-width="0.4"/>
-                                <circle cx="120" cy="100" r="6" fill="rgba(27,54,93,0.35)" stroke="rgba(255,255,255,0.12)" stroke-width="0.4"/>
-                                <circle cx="120" cy="140" r="6" fill="rgba(27,54,93,0.35)" stroke="rgba(255,255,255,0.12)" stroke-width="0.4"/>
-                                <circle cx="120" cy="180" r="6" fill="rgba(27,54,93,0.35)" stroke="rgba(255,255,255,0.12)" stroke-width="0.4"/>
-                                <!-- Hidden layer 2 (latent bottleneck) -->
-                                <text x="190" y="22" text-anchor="middle" fill="rgba(255,255,255,0.2)" font-size="6" font-family="monospace">LATENT</text>
-                                <circle cx="190" cy="80" r="7" fill="rgba(45,181,168,0.12)" stroke="rgba(45,181,168,0.3)" stroke-width="0.6"/>
-                                <circle cx="190" cy="120" r="7" fill="rgba(45,181,168,0.12)" stroke="rgba(45,181,168,0.3)" stroke-width="0.6"/>
-                                <circle cx="190" cy="160" r="7" fill="rgba(45,181,168,0.12)" stroke="rgba(45,181,168,0.3)" stroke-width="0.6"/>
-                                <!-- Output layer (right): vulnerability predictions -->
-                                <text x="275" y="22" text-anchor="middle" fill="rgba(255,255,255,0.2)" font-size="6" font-family="monospace">OUTPUT</text>
-                                <rect x="260" y="55" width="30" height="10" rx="2" fill="rgba(45,181,168,0.35)" opacity="0.9"/>
-                                <rect x="260" y="75" width="22" height="10" rx="2" fill="rgba(45,181,168,0.25)" opacity="0.7"/>
-                                <rect x="260" y="95" width="18" height="10" rx="2" fill="rgba(45,181,168,0.18)" opacity="0.5"/>
-                                <rect x="260" y="115" width="26" height="10" rx="2" fill="rgba(45,181,168,0.3)" opacity="0.8"/>
-                                <rect x="260" y="135" width="12" height="10" rx="2" fill="rgba(45,181,168,0.12)" opacity="0.4"/>
-                                <rect x="260" y="155" width="20" height="10" rx="2" fill="rgba(45,181,168,0.2)" opacity="0.6"/>
-                                <rect x="260" y="175" width="28" height="10" rx="2" fill="rgba(45,181,168,0.32)" opacity="0.85"/>
-                                <!-- Edges: input -> h1 (sparse) -->
-                                <line x1="41" y1="52" x2="114" y2="60" stroke="rgba(255,255,255,0.04)" stroke-width="0.4"/>
-                                <line x1="41" y1="52" x2="114" y2="100" stroke="rgba(255,255,255,0.03)" stroke-width="0.3"/>
-                                <line x1="41" y1="80" x2="114" y2="60" stroke="rgba(255,255,255,0.04)" stroke-width="0.4"/>
-                                <line x1="41" y1="80" x2="114" y2="100" stroke="rgba(255,255,255,0.05)" stroke-width="0.4"/>
-                                <line x1="41" y1="108" x2="114" y2="100" stroke="rgba(255,255,255,0.04)" stroke-width="0.4"/>
-                                <line x1="41" y1="108" x2="114" y2="140" stroke="rgba(255,255,255,0.04)" stroke-width="0.4"/>
-                                <line x1="41" y1="136" x2="114" y2="140" stroke="rgba(255,255,255,0.05)" stroke-width="0.4"/>
-                                <line x1="41" y1="136" x2="114" y2="180" stroke="rgba(255,255,255,0.03)" stroke-width="0.3"/>
-                                <line x1="41" y1="164" x2="114" y2="140" stroke="rgba(255,255,255,0.04)" stroke-width="0.4"/>
-                                <line x1="41" y1="164" x2="114" y2="180" stroke="rgba(255,255,255,0.05)" stroke-width="0.4"/>
-                                <line x1="41" y1="192" x2="114" y2="180" stroke="rgba(255,255,255,0.04)" stroke-width="0.4"/>
-                                <!-- Edges: h1 -> latent -->
-                                <line x1="126" y1="60" x2="183" y2="80" stroke="rgba(45,181,168,0.1)" stroke-width="0.5"/>
-                                <line x1="126" y1="60" x2="183" y2="120" stroke="rgba(45,181,168,0.06)" stroke-width="0.3"/>
-                                <line x1="126" y1="100" x2="183" y2="80" stroke="rgba(45,181,168,0.08)" stroke-width="0.4"/>
-                                <line x1="126" y1="100" x2="183" y2="120" stroke="rgba(45,181,168,0.1)" stroke-width="0.5"/>
-                                <line x1="126" y1="140" x2="183" y2="120" stroke="rgba(45,181,168,0.08)" stroke-width="0.4"/>
-                                <line x1="126" y1="140" x2="183" y2="160" stroke="rgba(45,181,168,0.1)" stroke-width="0.5"/>
-                                <line x1="126" y1="180" x2="183" y2="160" stroke="rgba(45,181,168,0.1)" stroke-width="0.5"/>
-                                <line x1="126" y1="180" x2="183" y2="120" stroke="rgba(45,181,168,0.06)" stroke-width="0.3"/>
-                                <!-- Edges: latent -> output -->
-                                <line x1="197" y1="80" x2="260" y2="60" stroke="rgba(45,181,168,0.08)" stroke-width="0.4"/>
-                                <line x1="197" y1="80" x2="260" y2="80" stroke="rgba(45,181,168,0.06)" stroke-width="0.3"/>
-                                <line x1="197" y1="80" x2="260" y2="120" stroke="rgba(45,181,168,0.07)" stroke-width="0.35"/>
-                                <line x1="197" y1="120" x2="260" y2="100" stroke="rgba(45,181,168,0.08)" stroke-width="0.4"/>
-                                <line x1="197" y1="120" x2="260" y2="140" stroke="rgba(45,181,168,0.06)" stroke-width="0.3"/>
-                                <line x1="197" y1="120" x2="260" y2="160" stroke="rgba(45,181,168,0.07)" stroke-width="0.35"/>
-                                <line x1="197" y1="160" x2="260" y2="160" stroke="rgba(45,181,168,0.08)" stroke-width="0.4"/>
-                                <line x1="197" y1="160" x2="260" y2="180" stroke="rgba(45,181,168,0.1)" stroke-width="0.5"/>
-                            </svg>
+                            <img src="https://images.unsplash.com/photo-1578496479939-722d9dd1cc5b?q=80&w=1000&auto=format&fit=crop" alt="Bioinformatician analyzing genomic data at NCI" class="data-plate-image">
                             <div class="scan-line"></div>
                         </div>
                         <div class="data-plate-footer">
