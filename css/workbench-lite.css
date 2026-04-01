@@ -636,6 +636,262 @@ img { max-width: 100%; display: block; }
     grid-template-columns: 1fr 1fr;
 }
 
+.abstract-frame {
+    background:
+        radial-gradient(circle at 20% 18%, rgba(45, 181, 168, 0.08), transparent 32%),
+        radial-gradient(circle at 82% 78%, rgba(27, 54, 93, 0.08), transparent 34%),
+        linear-gradient(180deg, rgba(250, 252, 255, 0.99) 0%, rgba(242, 246, 250, 0.96) 100%);
+}
+
+.abstract-frame::before {
+    display: none;
+}
+
+.abstract-frame::after {
+    content: "";
+    position: absolute;
+    inset: 18px;
+    border: 1px solid rgba(27, 54, 93, 0.08);
+    pointer-events: none;
+}
+
+.tissue-figure,
+.section-figure,
+.perturb-figure,
+.readout-figure {
+    overflow: hidden;
+}
+
+.tissue-halo,
+.tissue-form,
+.tissue-punch,
+.section-rail,
+.section-stack,
+.section-cut,
+.array-wash,
+.array-grid,
+.readout-grid,
+.readout-cloud,
+.readout-point {
+    position: absolute;
+}
+
+.tissue-halo {
+    border-radius: 50%;
+    border: 1px solid rgba(27, 54, 93, 0.08);
+}
+
+.tissue-halo-a {
+    inset: 40px 72px 56px 58px;
+}
+
+.tissue-halo-b {
+    inset: 72px 108px 84px 96px;
+    border-style: dashed;
+    opacity: 0.7;
+}
+
+.tissue-form {
+    left: 22%;
+    top: 20%;
+    width: 56%;
+    height: 58%;
+    border-radius: 57% 43% 52% 48% / 42% 58% 46% 54%;
+    background:
+        radial-gradient(circle at 36% 40%, rgba(45, 181, 168, 0.16), transparent 20%),
+        radial-gradient(circle at 68% 62%, rgba(27, 54, 93, 0.14), transparent 24%),
+        linear-gradient(135deg, rgba(27, 54, 93, 0.12), rgba(27, 54, 93, 0.03));
+    transform: rotate(-9deg);
+}
+
+.tissue-core {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.28);
+    border: 1px solid rgba(255, 255, 255, 0.34);
+}
+
+.tissue-core-a {
+    width: 18%;
+    height: 18%;
+    top: 18%;
+    left: 22%;
+}
+
+.tissue-core-b {
+    width: 14%;
+    height: 14%;
+    top: 50%;
+    left: 56%;
+}
+
+.tissue-core-c {
+    width: 12%;
+    height: 12%;
+    top: 58%;
+    left: 28%;
+}
+
+.tissue-punch {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: 1px solid rgba(45, 181, 168, 0.28);
+    background: rgba(255, 255, 255, 0.55);
+    box-shadow: 0 0 0 8px rgba(45, 181, 168, 0.05);
+}
+
+.tissue-punch-a {
+    left: 20%;
+    top: 24%;
+}
+
+.tissue-punch-b {
+    right: 21%;
+    bottom: 24%;
+}
+
+.section-rail {
+    left: 50%;
+    top: 42px;
+    bottom: 42px;
+    width: 1px;
+    background: linear-gradient(180deg, transparent, rgba(27, 54, 93, 0.14), transparent);
+}
+
+.section-stack {
+    left: 18%;
+    right: 18%;
+    top: 62px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.section-slice {
+    display: block;
+    height: 28px;
+    border-radius: 999px;
+    border: 1px solid rgba(27, 54, 93, 0.09);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(225, 232, 240, 0.5));
+}
+
+.section-slice-a { width: 78%; }
+.section-slice-b { width: 88%; margin-left: 10%; }
+.section-slice-c { width: 82%; margin-left: 4%; }
+.section-slice-d { width: 74%; margin-left: 12%; }
+
+.section-cut {
+    left: 16%;
+    right: 16%;
+    top: 50%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(45, 181, 168, 0.26), transparent);
+}
+
+.array-wash {
+    inset: 34px;
+    background: linear-gradient(135deg, transparent 10%, rgba(45, 181, 168, 0.08) 48%, transparent 78%);
+}
+
+.array-grid {
+    inset: 54px 58px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}
+
+.array-core {
+    display: block;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    border: 1px solid rgba(27, 54, 93, 0.14);
+    background: rgba(255, 255, 255, 0.62);
+}
+
+.array-core.is-active {
+    background: radial-gradient(circle, rgba(45, 181, 168, 0.22), rgba(255, 255, 255, 0.72));
+    border-color: rgba(45, 181, 168, 0.3);
+    box-shadow: 0 0 0 8px rgba(45, 181, 168, 0.04);
+}
+
+.readout-grid {
+    border: 1px solid rgba(27, 54, 93, 0.08);
+    background-image:
+        linear-gradient(rgba(27, 54, 93, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(27, 54, 93, 0.05) 1px, transparent 1px);
+    background-size: 18px 18px;
+}
+
+.readout-grid-a {
+    left: 18%;
+    top: 20%;
+    width: 38%;
+    height: 44%;
+    transform: rotate(-6deg);
+}
+
+.readout-grid-b {
+    right: 16%;
+    bottom: 18%;
+    width: 34%;
+    height: 38%;
+    transform: rotate(7deg);
+}
+
+.readout-cloud {
+    border-radius: 50%;
+    filter: blur(1px);
+}
+
+.readout-cloud-a {
+    left: 18%;
+    top: 22%;
+    width: 120px;
+    height: 86px;
+    background: rgba(45, 181, 168, 0.14);
+}
+
+.readout-cloud-b {
+    right: 20%;
+    top: 26%;
+    width: 90px;
+    height: 72px;
+    background: rgba(27, 54, 93, 0.12);
+}
+
+.readout-cloud-c {
+    left: 38%;
+    bottom: 18%;
+    width: 110px;
+    height: 78px;
+    background: rgba(200, 160, 50, 0.14);
+}
+
+.readout-point {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+.readout-point-a {
+    left: 32%;
+    top: 30%;
+    background: rgba(45, 181, 168, 0.82);
+}
+
+.readout-point-b {
+    right: 28%;
+    top: 42%;
+    background: rgba(27, 54, 93, 0.72);
+}
+
+.readout-point-c {
+    left: 52%;
+    bottom: 28%;
+    background: rgba(200, 160, 50, 0.76);
+}
+
 .panel-head,
 .figure-caption,
 .analysis-label,
@@ -927,52 +1183,39 @@ img { max-width: 100%; display: block; }
     align-items: center;
 }
 
-.ai-label,
-.ai-caption {
-    font-family: "Inter", sans-serif;
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-}
-
-.ai-label {
-    position: absolute;
-    top: 0;
-    color: rgba(27, 54, 93, 0.38);
-}
-
-.ai-label-left { left: 0; }
-.ai-label-center { left: 50%; transform: translateX(-50%); }
-.ai-label-right { right: 0; }
-
 .ai-inputs,
 .ai-outputs {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    padding-top: 22px;
+    justify-content: center;
 }
 
 .ai-chip,
 .ai-program {
-    min-height: 34px;
+    min-height: 18px;
     display: flex;
     align-items: center;
     justify-content: center;
     border: 1px solid rgba(27, 54, 93, 0.08);
     background: rgba(255, 255, 255, 0.88);
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: rgba(27, 54, 93, 0.66);
+    font-size: 0;
+    color: transparent;
 }
 
 .ai-chip-navy { background: rgba(27, 54, 93, 0.08); }
 .ai-chip-teal { background: rgba(45, 181, 168, 0.12); }
 .ai-chip-gold { background: rgba(200, 160, 50, 0.14); }
 .ai-chip-purple { background: rgba(120, 70, 210, 0.1); }
+
+.ai-chip:nth-child(1) { width: 72%; }
+.ai-chip:nth-child(2) { width: 58%; }
+.ai-chip:nth-child(3) { width: 82%; }
+.ai-chip:nth-child(4) { width: 64%; }
+
+.ai-program:nth-child(1) { width: 70%; }
+.ai-program:nth-child(2) { width: 54%; }
+.ai-program:nth-child(3) { width: 78%; }
 
 .ai-core {
     position: relative;
@@ -997,7 +1240,7 @@ img { max-width: 100%; display: block; }
 .ai-layer {
     position: relative;
     z-index: 1;
-    height: 18px;
+    height: 16px;
     margin: 0 auto;
     width: 78%;
     border: 1px solid rgba(27, 54, 93, 0.08);
@@ -1038,6 +1281,11 @@ img { max-width: 100%; display: block; }
     left: 50%;
     bottom: 0;
     transform: translateX(-50%);
+    font-family: "Inter", sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
     color: rgba(27, 54, 93, 0.34);
     white-space: nowrap;
 }
@@ -1596,6 +1844,12 @@ img { max-width: 100%; display: block; }
     .matrix-cell { min-height: 38px; padding: 6px; font-size: 11px; }
     .readout-panel { padding: 16px 14px 14px; }
     .heatmap-grid { gap: 4px; }
+    .abstract-frame::after { inset: 14px; }
+    .tissue-punch { width: 34px; height: 34px; }
+    .section-stack { left: 14%; right: 14%; }
+    .array-grid { inset: 42px 44px; gap: 12px; }
+    .readout-grid-a { width: 42%; }
+    .readout-grid-b { width: 38%; }
     .data-panel-ai { padding: 16px; }
     .ai-figure { grid-template-columns: 82px 1fr 78px; gap: 16px; min-height: 220px; }
     .ai-connector-left { left: 82px; width: 18px; }
@@ -1674,18 +1928,20 @@ img { max-width: 100%; display: block; }
     .matrix-cell { min-height: 34px; padding: 4px; font-size: 10px; }
     .readout-panel { padding: 14px 12px 12px; }
     .heatmap-grid { gap: 3px; }
-    .plot-dot { width: 8px; height: 8px; }
+    .abstract-frame::after { inset: 10px; }
+    .tissue-halo-a { inset: 28px 44px 42px 34px; }
+    .tissue-halo-b { inset: 52px 70px 62px 60px; }
+    .tissue-punch { width: 26px; height: 26px; }
+    .section-stack { left: 12%; right: 12%; top: 52px; }
+    .section-slice { height: 22px; }
+    .array-grid { inset: 34px 30px; gap: 10px; }
+    .readout-grid-a { left: 14%; width: 46%; }
+    .readout-grid-b { right: 12%; width: 40%; }
     .data-panel-ai { padding: 14px; }
     .ai-figure { grid-template-columns: 1fr; gap: 14px; min-height: auto; }
     .ai-inputs,
     .ai-outputs { padding-top: 18px; }
     .ai-core { height: 124px; }
-    .ai-label-left,
-    .ai-label-center,
-    .ai-label-right {
-        position: static;
-        transform: none;
-    }
     .ai-connector,
     .ai-caption { display: none; }
     .ai-chip,

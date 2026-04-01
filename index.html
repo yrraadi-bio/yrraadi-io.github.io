@@ -15,7 +15,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/workbench-lite.css?v=73">
+    <link rel="stylesheet" href="css/workbench-lite.css?v=74">
     <link rel="icon" href="/assets/favicon.png" type="image/png">
 </head>
 <body>
@@ -64,42 +64,16 @@
                     <p class="step-desc">Fresh surgical resections sourced directly from partner hospital networks, preserving full viability and the native tumor microenvironment.</p>
                 </div>
                 <div class="pipe-figure pipe-figure-tissue" aria-hidden="true">
-                    <div class="figure-frame data-panel">
-                        <div class="panel-head">
-                            <span class="panel-kicker">fresh tissue intake</span>
-                            <span class="panel-meta">n=24 resections</span>
+                    <div class="figure-frame abstract-frame tissue-figure">
+                        <div class="tissue-halo tissue-halo-a"></div>
+                        <div class="tissue-halo tissue-halo-b"></div>
+                        <div class="tissue-form">
+                            <span class="tissue-core tissue-core-a"></span>
+                            <span class="tissue-core tissue-core-b"></span>
+                            <span class="tissue-core tissue-core-c"></span>
                         </div>
-                        <div class="metric-grid">
-                            <div class="metric-card">
-                                <strong class="metric-value">92%</strong>
-                                <span class="metric-label">viability</span>
-                            </div>
-                            <div class="metric-card">
-                                <strong class="metric-value">4.6h</strong>
-                                <span class="metric-label">to assay</span>
-                            </div>
-                            <div class="metric-card">
-                                <strong class="metric-value">3</strong>
-                                <span class="metric-label">sites</span>
-                            </div>
-                        </div>
-                        <div class="stat-list">
-                            <div class="stat-row">
-                                <span class="stat-name">tumor content</span>
-                                <div class="stat-track"><span class="stat-fill stat-fill-navy" style="--w: 84%"></span></div>
-                                <span class="stat-value">84%</span>
-                            </div>
-                            <div class="stat-row">
-                                <span class="stat-name">immune retention</span>
-                                <div class="stat-track"><span class="stat-fill stat-fill-teal" style="--w: 71%"></span></div>
-                                <span class="stat-value">71%</span>
-                            </div>
-                            <div class="stat-row">
-                                <span class="stat-name">stromal retention</span>
-                                <div class="stat-track"><span class="stat-fill stat-fill-gold" style="--w: 63%"></span></div>
-                                <span class="stat-value">63%</span>
-                            </div>
-                        </div>
+                        <div class="tissue-punch tissue-punch-a"></div>
+                        <div class="tissue-punch tissue-punch-b"></div>
                     </div>
                 </div>
             </article>
@@ -111,41 +85,15 @@
                     <p class="step-desc">Vibratome-cut slices that preserve native tumor architecture and the intact cellular microenvironment.</p>
                 </div>
                 <div class="pipe-figure pipe-figure-section" aria-hidden="true">
-                    <div class="figure-frame data-panel">
-                        <div class="panel-head">
-                            <span class="panel-kicker">slice uniformity</span>
-                            <span class="panel-meta">target 300 um</span>
+                    <div class="figure-frame abstract-frame section-figure">
+                        <div class="section-rail"></div>
+                        <div class="section-stack">
+                            <span class="section-slice section-slice-a"></span>
+                            <span class="section-slice section-slice-b"></span>
+                            <span class="section-slice section-slice-c"></span>
+                            <span class="section-slice section-slice-d"></span>
                         </div>
-                        <div class="histogram-panel">
-                            <div class="histogram-bars">
-                                <span class="hist-bar" style="--h: 34%"></span>
-                                <span class="hist-bar" style="--h: 58%"></span>
-                                <span class="hist-bar" style="--h: 82%"></span>
-                                <span class="hist-bar" style="--h: 100%"></span>
-                                <span class="hist-bar" style="--h: 78%"></span>
-                                <span class="hist-bar" style="--h: 52%"></span>
-                                <span class="hist-bar" style="--h: 28%"></span>
-                            </div>
-                            <div class="histogram-axis">
-                                <span>240</span>
-                                <span>300</span>
-                                <span>360</span>
-                            </div>
-                        </div>
-                        <div class="micro-table">
-                            <div class="micro-row">
-                                <span class="micro-label">median thickness</span>
-                                <span class="micro-value">302 um</span>
-                            </div>
-                            <div class="micro-row">
-                                <span class="micro-label">slice CV</span>
-                                <span class="micro-value">6.1%</span>
-                            </div>
-                            <div class="micro-row">
-                                <span class="micro-label">accepted slices</span>
-                                <span class="micro-value">94%</span>
-                            </div>
-                        </div>
+                        <div class="section-cut"></div>
                     </div>
                 </div>
             </article>
@@ -157,35 +105,25 @@
                     <p class="step-desc">AI-designed chemical and genetic perturbations applied to live tissue with matched controls, simulating interventions to maximize information gain per experiment.</p>
                 </div>
                 <div class="pipe-figure pipe-figure-perturb" aria-hidden="true">
-                    <div class="figure-frame data-panel">
-                        <div class="panel-head">
-                            <span class="panel-kicker">perturbation matrix</span>
-                            <span class="panel-meta">48 conditions</span>
-                        </div>
-                        <div class="matrix-panel">
-                            <div class="matrix-head">sample</div>
-                            <div class="matrix-head">ctrl</div>
-                            <div class="matrix-head">drug</div>
-                            <div class="matrix-head">crispr</div>
-                            <div class="matrix-head">combo</div>
-
-                            <div class="matrix-label">T01</div>
-                            <div class="matrix-cell matrix-cell-neutral">1.00</div>
-                            <div class="matrix-cell matrix-cell-teal">0.72</div>
-                            <div class="matrix-cell matrix-cell-gold">0.68</div>
-                            <div class="matrix-cell matrix-cell-purple">0.41</div>
-
-                            <div class="matrix-label">T08</div>
-                            <div class="matrix-cell matrix-cell-neutral">1.00</div>
-                            <div class="matrix-cell matrix-cell-teal">0.81</div>
-                            <div class="matrix-cell matrix-cell-gold">0.74</div>
-                            <div class="matrix-cell matrix-cell-purple">0.49</div>
-
-                            <div class="matrix-label">T14</div>
-                            <div class="matrix-cell matrix-cell-neutral">1.00</div>
-                            <div class="matrix-cell matrix-cell-teal">0.66</div>
-                            <div class="matrix-cell matrix-cell-gold">0.63</div>
-                            <div class="matrix-cell matrix-cell-purple">0.37</div>
+                    <div class="figure-frame abstract-frame perturb-figure">
+                        <div class="array-wash"></div>
+                        <div class="array-grid">
+                            <span class="array-core"></span>
+                            <span class="array-core"></span>
+                            <span class="array-core"></span>
+                            <span class="array-core"></span>
+                            <span class="array-core"></span>
+                            <span class="array-core"></span>
+                            <span class="array-core is-active"></span>
+                            <span class="array-core"></span>
+                            <span class="array-core"></span>
+                            <span class="array-core is-active"></span>
+                            <span class="array-core"></span>
+                            <span class="array-core"></span>
+                            <span class="array-core"></span>
+                            <span class="array-core"></span>
+                            <span class="array-core"></span>
+                            <span class="array-core is-active"></span>
                         </div>
                     </div>
                 </div>
@@ -198,33 +136,15 @@
                     <p class="step-desc">High-throughput measurement across transcriptomics, proteomics, and spatial modalities for comprehensive tumor profiling.</p>
                 </div>
                 <div class="pipe-figure pipe-figure-readouts" aria-hidden="true">
-                    <div class="figure-frame figure-frame-split data-panel">
-                        <div class="readout-panel">
-                            <span class="figure-caption">transcriptomics</span>
-                            <div class="heatmap-grid">
-                                <span class="heat-1"></span><span class="heat-2"></span><span class="heat-3"></span><span class="heat-4"></span><span class="heat-2"></span><span class="heat-1"></span>
-                                <span class="heat-4"></span><span class="heat-1"></span><span class="heat-2"></span><span class="heat-3"></span><span class="heat-1"></span><span class="heat-2"></span>
-                                <span class="heat-2"></span><span class="heat-4"></span><span class="heat-1"></span><span class="heat-2"></span><span class="heat-3"></span><span class="heat-4"></span>
-                                <span class="heat-3"></span><span class="heat-2"></span><span class="heat-4"></span><span class="heat-1"></span><span class="heat-2"></span><span class="heat-1"></span>
-                                <span class="heat-1"></span><span class="heat-3"></span><span class="heat-2"></span><span class="heat-4"></span><span class="heat-1"></span><span class="heat-3"></span>
-                                <span class="heat-2"></span><span class="heat-1"></span><span class="heat-4"></span><span class="heat-2"></span><span class="heat-3"></span><span class="heat-1"></span>
-                            </div>
-                        </div>
-                        <div class="readout-panel">
-                            <span class="figure-caption">spatial</span>
-                            <div class="spatial-field">
-                                <span class="plot-dot plot-dot-teal" style="left:20%;top:18%"></span>
-                                <span class="plot-dot plot-dot-navy" style="left:46%;top:16%"></span>
-                                <span class="plot-dot plot-dot-gold" style="left:68%;top:26%"></span>
-                                <span class="plot-dot plot-dot-navy" style="left:26%;top:40%"></span>
-                                <span class="plot-dot plot-dot-teal" style="left:52%;top:38%"></span>
-                                <span class="plot-dot plot-dot-gold" style="left:72%;top:46%"></span>
-                                <span class="plot-dot plot-dot-navy" style="left:34%;top:62%"></span>
-                                <span class="plot-dot plot-dot-teal" style="left:58%;top:62%"></span>
-                                <div class="plot-axis plot-axis-x"></div>
-                                <div class="plot-axis plot-axis-y"></div>
-                            </div>
-                        </div>
+                    <div class="figure-frame abstract-frame readout-figure">
+                        <div class="readout-grid readout-grid-a"></div>
+                        <div class="readout-grid readout-grid-b"></div>
+                        <div class="readout-cloud readout-cloud-a"></div>
+                        <div class="readout-cloud readout-cloud-b"></div>
+                        <div class="readout-cloud readout-cloud-c"></div>
+                        <div class="readout-point readout-point-a"></div>
+                        <div class="readout-point readout-point-b"></div>
+                        <div class="readout-point readout-point-c"></div>
                     </div>
                 </div>
             </article>
@@ -238,15 +158,11 @@
                 <div class="pipe-figure pipe-figure-analysis" aria-hidden="true">
                     <div class="figure-frame data-panel data-panel-ai">
                         <div class="ai-figure">
-                            <span class="ai-label ai-label-left">bio</span>
-                            <span class="ai-label ai-label-center">transformer</span>
-                            <span class="ai-label ai-label-right">programs</span>
-
                             <div class="ai-inputs">
-                                <span class="ai-chip ai-chip-navy">EGFR</span>
-                                <span class="ai-chip ai-chip-teal">IFNG</span>
-                                <span class="ai-chip ai-chip-gold">KRAS</span>
-                                <span class="ai-chip ai-chip-purple">TP53</span>
+                                <span class="ai-chip ai-chip-navy"></span>
+                                <span class="ai-chip ai-chip-teal"></span>
+                                <span class="ai-chip ai-chip-gold"></span>
+                                <span class="ai-chip ai-chip-purple"></span>
                             </div>
 
                             <div class="ai-core">
@@ -260,14 +176,13 @@
                             </div>
 
                             <div class="ai-outputs">
-                                <span class="ai-program">P07</span>
-                                <span class="ai-program">P03</span>
-                                <span class="ai-program">P11</span>
+                                <span class="ai-program"></span>
+                                <span class="ai-program"></span>
+                                <span class="ai-program"></span>
                             </div>
 
                             <div class="ai-connector ai-connector-left"></div>
                             <div class="ai-connector ai-connector-right"></div>
-                            <div class="ai-caption">EGFR -> ERK -> CCND1</div>
                         </div>
                     </div>
                 </div>
