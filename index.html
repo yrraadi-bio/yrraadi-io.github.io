@@ -15,7 +15,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/workbench-lite.css?v=80">
+    <link rel="stylesheet" href="css/workbench-lite.css?v=81">
     <link rel="icon" href="/assets/favicon.png" type="image/png">
 </head>
 <body>
@@ -26,7 +26,6 @@
                 <img src="assets/Origin logo+text (blue on transparent).png" alt="Origin Bio">
             </a>
             <div class="nav-links">
-                <a href="#platform" class="nav-link">Platform</a>
                 <a href="#research" class="nav-link">Research</a>
                 <a href="mailto:yash@origin.bio" class="nav-link">Contact</a>
             </div>
@@ -57,48 +56,36 @@
             <span class="section-label">The Platform</span>
             <p class="section-subtitle">From surgical resection to perturbation dataset.</p>
         </div>
-        <div class="tl">
-            <div class="tl-line" aria-hidden="true"></div>
-
-            <article class="tl-node" data-reveal="fade-up" data-delay="0">
-                <div class="tl-marker"><span>01</span></div>
-                <div class="tl-content">
-                    <h3 class="tl-title">Tissue Collection</h3>
-                    <p class="tl-desc">Patient-derived tumor resections from partner hospital networks across four major cities. 20,000+ annual surgical volume. Tissue arrives with full clinical annotations — tumor type, grade, stage, treatment history.</p>
-                </div>
-            </article>
-
-            <article class="tl-node" data-reveal="fade-up" data-delay="60">
-                <div class="tl-marker"><span>02</span></div>
-                <div class="tl-content">
-                    <h3 class="tl-title">Precision Sectioning</h3>
-                    <p class="tl-desc">Fresh tissue processed into precision-cut tumor slices ~300 μm thick. Unlike cell lines or organoids, PCTSs preserve the intact tumor microenvironment — cellular composition, native spatial arrangement, vasculature.</p>
-                </div>
-            </article>
-
-            <article class="tl-node" data-reveal="fade-up" data-delay="120">
-                <div class="tl-marker"><span>03</span></div>
-                <div class="tl-content">
-                    <h3 class="tl-title">Perturbation</h3>
-                    <p class="tl-desc">Slices allocated into matched arms — untreated and perturbed. Compounds span checkpoint inhibitors, chemotherapeutics, and cytokines. AI-designed perturbation schedules maximize information gain per experiment.</p>
-                </div>
-            </article>
-
-            <article class="tl-node" data-reveal="fade-up" data-delay="180">
-                <div class="tl-marker"><span>04</span></div>
-                <div class="tl-content">
-                    <h3 class="tl-title">Multimodal Readouts</h3>
-                    <p class="tl-desc">Before-and-after datasets at single-cell resolution. Primary readout: scRNA-seq. Additional panels: spatial transcriptomics, proteomic assays, histological imaging. Clinical and compound metadata for computational applications.</p>
-                </div>
-            </article>
-
-            <article class="tl-node" data-reveal="fade-up" data-delay="240">
-                <div class="tl-marker"><span>05</span></div>
-                <div class="tl-content">
-                    <h3 class="tl-title">AI Analysis</h3>
-                    <p class="tl-desc">Foundation models trained on perturbation-response data. Applications: target identification, in-silico drug screening, patient stratification, and biomarker discovery. Each experiment feeds back into the next cycle.</p>
-                </div>
-            </article>
+        <div class="pl-track" data-reveal="fade-up" data-delay="80">
+            <div class="pl-card">
+                <span class="pl-num">01</span>
+                <h3 class="pl-title">Tissue Collection</h3>
+                <p class="pl-desc">Patient-derived tumor resections are collected form partner hospital networks. Tissue arrives with anonymized clinical annotations - tumor type, grade, stage, treatment history.</p>
+            </div>
+            <div class="pl-arrow" aria-hidden="true"></div>
+            <div class="pl-card">
+                <span class="pl-num">02</span>
+                <h3 class="pl-title">Precision Slicing</h3>
+                <p class="pl-desc">Fresh tissue processed into precision-cut tumor slices ~300 μm thick. Unlike cell lines or organoids, PCTSs preserve the intact tumor microenvironment — cellular composition, native spatial arrangement, vasculature.</p>
+            </div>
+            <div class="pl-arrow" aria-hidden="true"></div>
+            <div class="pl-card">
+                <span class="pl-num">03</span>
+                <h3 class="pl-title">Perturbation</h3>
+                <p class="pl-desc">Slices allocated into matched arms — untreated and perturbed. Compounds screened include checkpoint inhibitors, chemotherapeutic agents, cytokines and more.</p>
+            </div>
+            <div class="pl-arrow" aria-hidden="true"></div>
+            <div class="pl-card">
+                <span class="pl-num">04</span>
+                <h3 class="pl-title">Multimodal Readouts</h3>
+                <p class="pl-desc">Numerousslices allow running a variety of panels post pertubation. These include transcriptomic, proteomic and histological assays. </p>
+            </div>
+            <div class="pl-arrow" aria-hidden="true"></div>
+            <div class="pl-card">
+                <span class="pl-num">05</span>
+                <h3 class="pl-title">AI Training and Applications</h3>
+                <p class="pl-desc">Foundation models trained on perturbation-response data. Applications include: target identification, in-silico drug screening, patient stratification, and biomarker discovery. Each experiment feeds back into the next cycle informing the next round of data collection and perturbations.</p>
+            </div>
         </div>
     </section>
 
