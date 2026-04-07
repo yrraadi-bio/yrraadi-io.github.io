@@ -847,6 +847,61 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+        // XOR logic demo
+        const xorEl = document.querySelector('.visual-xor');
+        if (xorEl) {
+            const toggles = Array.from(xorEl.querySelectorAll('.xor-toggle'));
+            const targetNode = xorEl.querySelector('.xor-target');
+            
+            function updateXorState() {
+                const activeCount = toggles.filter(t => t.getAttribute('aria-pressed') === 'true').length;
+                // XOR: Exactly one must be active
+                const isActive = activeCount === 1;
+                targetNode.classList.toggle('on', isActive);
+            }
+            
+            toggles.forEach(toggle => {
+                toggle.addEventListener('click', () => {
+                    const isPressed = toggle.getAttribute('aria-pressed') === 'true';
+                    toggle.setAttribute('aria-pressed', (!isPressed).toString());
+                    toggle.classList.toggle('active', !isPressed);
+                    updateXorState();
+                });
+            });
+            // Initial state
+            updateXorState();
+        }
+
+        // Slider logic demo
+        const sliderEl = document.querySelector('.visual-slider');
+        if (sliderEl) {
+            const ratioSlider = sliderEl.querySelector('.ratio-slider');
+            const sliderValueText = sliderEl.querySelector('.slider-value');
+            const targetNode = sliderEl.querySelector('.slider-target');
+            const caption = sliderEl.querySelector('.slider-caption');
+            
+            function updateSliderState() {
+                const val = parseFloat(ratioSlider.value);
+                sliderValueText.textContent = val.toFixed(2);
+                
+                // Below 0.5 activates, above 0.5 represses
+                const isActive = val < 0.5;
+                targetNode.classList.toggle('on', isActive);
+                
+                if (isActive) {
+                    caption.textContent = 'Ratio favors activation.';
+                } else if (val === 0.5) {
+                    caption.textContent = 'Ratio is balanced.';
+                } else {
+                    caption.textContent = 'Ratio favors repression.';
+                }
+            }
+            
+            ratioSlider.addEventListener('input', updateSliderState);
+            // Initial state
+            updateSliderState();
+        }
+
     // Dial visual demo(s): initialize all .visual-dial instances
     if (document.body.classList.contains('blog-page')) {
         const dialEls = document.querySelectorAll('.visual-dial');
