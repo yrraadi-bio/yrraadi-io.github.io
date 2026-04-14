@@ -1,0 +1,13 @@
+PWD /Users/viraj/Documents/GitHub/origin-website/blogs/muon/latex
+INPUT /usr/local/texlive/2025basic/texmf.cnf
+INPUT /usr/local/texlive/2025basic/texmf-dist/web2c/texmf.cnf
+INPUT /usr/local/texlive/2025basic/texmf-var/web2c/pdftex/pdflatex.fmt
+INPUT /Users/viraj/Documents/GitHub/origin-website/blogs/muon/latex/neurips_format.tex
+OUTPUT neurips_format.log
+INPUT /usr/local/texlive/2025basic/texmf-dist/tex/latex/base/article.cls
+INPUT /usr/local/texlive/2025basic/texmf-dist/tex/latex/base/article.cls
+INPUT /usr/local/texlive/2025basic/texmf-dist/tex/latex/base/size10.clo
+INPUT /usr/local/texlive/2025basic/texmf-dist/tex/latex/base/size10.clo
+INPUT /usr/local/texlive/2025basic/texmf-dist/tex/latex/base/size10.clo
+INPUT ./neurips_2026.sty
+INPUT neurips_2026.sty

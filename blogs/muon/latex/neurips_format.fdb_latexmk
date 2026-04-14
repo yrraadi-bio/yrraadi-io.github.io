@@ -1,0 +1,17 @@
+# Fdb version 4
+["pdflatex"] 1776201568.19992 "/Users/viraj/Documents/GitHub/origin-website/blogs/muon/latex/neurips_format.tex" "neurips_format.pdf" "neurips_format" 1776201568.28106 2
+  "/Users/viraj/Documents/GitHub/origin-website/blogs/muon/latex/neurips_format.tex" 1776201567.969 65266 9a7be72c359a618952dea384597198ad ""
+  "/usr/local/texlive/2025basic/texmf-dist/tex/latex/base/article.cls" 1738182759 20144 63d8bacaf52e5abf4db3bc322373e1d4 ""
+  "/usr/local/texlive/2025basic/texmf-dist/tex/latex/base/size10.clo" 1738182759 8448 5cf247d4bd0c7d5d711bbbdf111fae2e ""
+  "/usr/local/texlive/2025basic/texmf-dist/web2c/texmf.cnf" 1739380943 42148 61becc7c670cd061bb319c643c27fdd4 ""
+  "/usr/local/texlive/2025basic/texmf-var/web2c/pdftex/pdflatex.fmt" 1741448339 2663854 a6f6b8c904d47faabe5d94cfdac61310 ""
+  "/usr/local/texlive/2025basic/texmf.cnf" 1741448314 628 81d1ada0f601fb1ffa62f1323192d946 ""
+  "environ.sty" 0 -1 0 ""
+  "neurips_2026.sty" 1776116647.73112 13462 818d80447f57703e59b8270885421e82 ""
+  "neurips_format.aux" 0 -1 0 "pdflatex"
+  "neurips_format.tex" 1776201567.969 65266 9a7be72c359a618952dea384597198ad ""
+  (generated)
+  "neurips_format.aux"
+  "neurips_format.log"
+  "neurips_format.pdf"
+  (rewritten before read)

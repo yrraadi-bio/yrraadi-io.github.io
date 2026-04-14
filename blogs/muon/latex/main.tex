@@ -1,0 +1,854 @@
+% =============================================================================
+% Does Muon improve regulatory DNA learning? Part 1.
+% NeurIPS 2026 format — LaTeX conversion of https://origin.bio/blogs/muon/
+% =============================================================================
+
+\documentclass{article}
+
+\usepackage[preprint]{neurips_2026}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{booktabs}
+\usepackage{amsfonts}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{nicefrac}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage[most]{tcolorbox}
+\usepackage{float}
+
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.9}
+\renewcommand{\textfraction}{0.1}
+\renewcommand{\floatpagefraction}{0.8}
+\setcounter{topnumber}{3}
+\setcounter{bottomnumber}{3}
+\setcounter{totalnumber}{6}
+
+\definecolor{optionalboxbg}{HTML}{FAFAF9}
+\definecolor{optionalboxborder}{HTML}{D6D3D1}
+
+\title{Does Muon Improve Regulatory DNA Learning? Part 1.}
+
+\author{%
+  Viraj Doshi \\
+  Origin Bio \\
+  \texttt{viraj@origin.bio} \\
+}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+We benchmark Muon and Adam, each paired with decoupled weight decay or Hyperball norm control, for regulatory DNA sequence modeling on candidate cis-regulatory elements from ENCODE. Muon with weight decay (MuonW) reaches target validation perplexity with approximately 37\% fewer FLOPs than the best Adam configuration. We perform a spectral analysis of the learned weight matrices and find that Hyperball's uniform rescaling causes progressive rank collapse under Muon, while weight decay preserves the distributed spectral structure that Muon's whitened updates create.
+\end{abstract}
+
+Adam~\citep{adamw} variants dominate DNA sequence modeling (AlphaGenome~\citep{alphagenome}, Enformer~\citep{enformer}, Evo~2~\citep{evo}). Muon~\citep{muon} achieves faster convergence in NLP, but the transfer to nucleotide modeling is not obvious: DNA has a vocabulary of 4 tokens with near-uniform frequencies versus Zipf-distributed ${\sim}$100k tokens in language~\citep{zipf-review}, and the dominant syntax consists of local 6--20\,bp transcription-factor binding motifs rather than long-range dependencies. These differences fundamentally alter the gradient statistics and loss landscape curvature that optimizers exploit (Section~\ref{sec:distribution}).
+
+Unlike code or mathematics, where outputs can be validated in seconds, biological predictions require wet-lab experiments (like DNA synthesis, cloning, cell culture, sequencing, and downstream assays) spanning weeks to months and costing thousands of dollars per iteration. Compute savings during training therefore have outsized impact: every unit of compute saved can be redirected toward experimental validation, making optimizer efficiency not just an engineering concern but a direct accelerant for translating models to real-world biology.
+
+
+% ============================================================
+\section{Distribution Differences}
+\label{sec:distribution}
+% ============================================================
+
+\subsection{Zipf's law in natural language}
+
+Nearly all modern optimizer benchmarks are run on natural language data, where token frequencies follow Zipf's law~\citep{zipf-review,zipf}: the $k$-th most common token appears with frequency $f(k)\propto 1/k^{\alpha}$ ($\alpha\approx 1$). A handful of tokens (``the'', ``a'', ``is'') dominate, while the vast majority of the $\sim$100k vocabulary is rarely seen (see Figure~\ref{fig:zipf} in Appendix~\ref{app:figures}).
+
+\subsection{DNA is near-uniform}
+
+DNA, by contrast, has a vocabulary of just 4 nucleotides. In our training data (candidate cis-regulatory elements (cCREs) from ENCODE cell lines) the marginal nucleotide frequencies are strikingly close to uniform (Figure~\ref{fig:nucleotide-dist} in Appendix~\ref{app:figures}). K562 and HepG2 are nearly uniform; SK-N-SH shows a moderate GC bias (28.3\% each vs 21.7\% for A/T).
+
+The entropy of DNA's token distribution sits near its theoretical maximum: $H_{\text{DNA}}\approx\log_2 4=2$ bits. Natural language, despite its vastly larger vocabulary, has \emph{lower} normalized entropy because Zipf's heavy tail concentrates probability mass on a small fraction of tokens. This distinction has concrete consequences for how optimizers see gradients, meaning the gradient statistics across tokens behave very differently numerically.
+
+\begin{tcolorbox}[colback=optionalboxbg, colframe=optionalboxborder, sharp corners, boxrule=0.6pt, left=6pt, right=6pt, top=4pt, bottom=4pt]
+\textbf{Why gradient statistics differ: a sketch} -- see Appendix~\ref{app:gradient-stats}.
+\end{tcolorbox}
+
+\subsection{Optimizer performance is distribution-dependent}
+
+\citet{wilson} demonstrated empirically that the relative ranking of optimizers changes across domains: adaptive methods (Adam, AdaGrad, RMSProp) find solutions that generalize \emph{worse} than SGD on image classification tasks, despite converging faster. Yet these same adaptive methods dominate SGD in language modeling, consistent with the classical No Free Lunch theorems~\citep{nfl}, which prove that no single optimization algorithm is universally superior, and performance is always relative to the structure of the problem.
+
+Our results extend this observation to genomics. The near-uniform token distribution of DNA removes the statistical asymmetry that adaptive methods exploit in NLP, while the low cardinality ($K=4$) and positional grammar of regulatory sequences create a loss landscape with fundamentally different curvature. This is precisely why benchmarking optimizers \emph{on DNA data directly} (as we do here) is essential: rankings established on language corpora do not transfer.
+
+
+% ============================================================
+\section{Weight Regularization}
+\label{sec:weight-reg}
+% ============================================================
+
+\subsection{Why is weight decay necessary?}
+\label{sec:weight-decay}
+
+Without weight decay, the norm of the weight matrices grows $\propto \sqrt{t}$ as training progresses~\citep{hyperball}. This unchecked growth inflates the parameter scale relative to the step size, effectively shrinking the learning signal and hindering convergence~\citep{spectral-fl}. Weight decay counteracts this by imposing an $\ell_2$ bias that drives the norm toward an equilibrium value~\citep{wdeq,adamw,hyperball}, and empirically, adding decay improves both Adam and Muon~\citep{hyperball,adamw,wdeq}. The reason is a clean separation of concerns: the optimizer determines \emph{directional} update structure (moments for Adam, singular direction shaping for Muon), while decay provides a control knob on overall parameter scale~\citep{wdeq}.
+
+Although weight decay drives the norm toward an equilibrium, the weights only ``hover'' near it, and the optimizer must still search the space created by these fluctuations. Even if the norm `hovers' within just $0<\varepsilon\ll N$ of the equilibrium $N$ (or in the range $[N-\varepsilon, N+\varepsilon]$), we still have to consider a relatively large space of values within the hyperball. By Appendix~\ref{app:concentration}, nearly all of this volume lies in a thin shell at the boundary.
+
+Crucially, with correctly placed RMSNorms, these matrices become \emph{scale invariant} (Appendix~\ref{app:scale-inv}); their scale does not impact capacity, only direction. Since scale is irrelevant, wouldn't it be more efficient to fix the norm (set $\varepsilon=0$) and let the update focus solely on direction?
+
+\subsection{The Hyperball update}
+\label{sec:hyperball}
+
+The intuition of Hyperball~\citep{hyperball} is to, for a weight matrix $W$, simply fix the Frobenius norm of $W$ to the initial radius $R := \|W_0\|_F$, and the norm of update $U$ to $\eta R$. Rather confusingly, this confines the weight matrix to a hypersphere of radius $R$, not a ball\footnote{Note that a hypersphere and hyperball are not the same thing. A `ball' refers to the entire solid object, but a `sphere' refers only to the shell/boundary of said ball.}, but let us ignore this superficial detail. Suppose $\mathrm{Normalize}(A):=A/\|{A}\|_F$. Given an optimizer's proposed update step $\tilde u_t$, let the actual update be:
+\[
+U_t = -\eta R\,\mathrm{Normalize}(\tilde u_t),
+\]
+then let
+\[
+W_{t+1} = R\,\mathrm{Normalize}(W_t + U_t).
+\]
+What makes this optimization special is that it can be wrapped around any optimizer update, so it works with Adam and Muon (using it alongside weight decay would be useless, as we hard-set the weight norms in the wrapper function).
+
+Note that not only do we set the weight norm to be $R$, but the update vector norm is set to $\eta R$. Let $\Delta W = W_{t+1}-W_t$, if we make the generous assumption that $\|\Delta W\|_F = O(\|U_t\|_F)$, we can see that we have a relative step size of:
+\[
+\frac{\|\Delta W\|_F}{\|W_t\|_F}=\frac{O(\|U_t\|_F)}{\|W_t\|_F}=O(\eta)
+\]
+which is an easily adjustable hyperparameter.
+
+Now, this \emph{is} a generous assumption, so we can make better estimates. Let us use the Frobenius norm throughout the next calculation; suppose that we know the expected normalized dot product\footnote{The Frobenius inner product $\langle A, B\rangle_F=\operatorname{Tr}(A^TB)=\langle\vec A,\vec B\rangle=\sum_{i,j}a_{ij}b_{ij}$ is the sum of the element wise product of the matrices $A$ and $B$.} $\gamma=\frac{\langle W_t, U_t\rangle_F}{\|U_t\|_F\|W_t\|_F}=\frac{\langle W_t, U_t\rangle_F}{\eta R^2}=\cos\theta$, where $\theta:=\angle(\vec W_t, \vec U_t)$\footnote{$\vec W$ denotes the vectorized form of matrix $W$; if $W=[c_1, c_2, \dots, c_n]$ where $c_i$ is the $i$th column of $W$, then $\vec W=\begin{bmatrix} c_1\\c_2\\\vdots\\c_n \end{bmatrix}$.}. By applying the cosine and sine rules to the triangle formed by the origin, $W_t$, and $W_t+U_t$ (see the 2D diagram in Appendix~\ref{app:derivation} for the full derivation), we obtain the exact step size:
+
+\[
+x := \|\Delta W\| = R\sqrt{2}\sqrt{1 - \cos\phi}, \quad\text{where}\quad \cos\phi = \sqrt{1-\frac{\eta^2(1-\gamma^2)}{1+\eta^2+2\eta\gamma}}.
+\]
+
+\noindent\emph{Note: An interactive 3D visualization and surface plot are available at \url{https://origin.bio/blogs/muon}.}
+
+\medskip
+
+When $\gamma,\eta\in(0,1)$, a careful bounding argument (Appendix~\ref{app:bounds}) shows that the relative step size lies in $\frac{x}{\|W_t\|}\in (0,\sqrt{2-\sqrt{2}})\approx (0, 0.765)$. This is quite loose without knowing $\gamma$; as an example, for practical learning rates $\eta\in(10^{-4},10^{-1})$ with an ideal $\gamma=0$, the bound tightens to roughly $(0.0001, 0.0996)$.
+
+\subsection{Estimations for low \texorpdfstring{$\eta$}{eta}}
+
+Knowing that our practical learning rates are such that $\eta^2\ll1$ and $\gamma\eta\ll 1$, we can make some estimations, like $1+\eta^2+2\eta\gamma\approx1$, so we get $x\approx R\sqrt{2}\sqrt{1-\sqrt{1-(\eta^2-\gamma^2\eta^2)}}$. Using $\sqrt{1-z}\approx 1-z/2$ we can see $x\approx R\sqrt2\sqrt{1-(1-(\eta^2-\gamma^2\eta^2)/2)}=R\eta\sqrt{1-\gamma^2}=R\eta\sin\theta$, which is just a tangent space approximation of the step size! This would make the relative step size $\frac{x}{\|W_t\|}\approx\eta\sqrt{1-\gamma^2}$, and we get something very similar to our initial estimate of $O(\eta)$. In fact, for $\gamma=0$, we get $\frac{x}{\|W_t\|}\approx \eta$!
+
+It is very `nice' that $\frac{x}{\|W_t\|}\propto\eta$, because when we have a weight decay instead, the effective step size is a nonlinear function of $\eta$ and $\lambda$~\citep{hyperball}, which adds another layer of complexity to the solution space.
+
+
+% ============================================================
+\section{Results}
+\label{sec:results}
+% ============================================================
+
+To isolate the effect of the optimizer, we hold model architecture, dataset, training duration, and all non-optimizer hyperparameters constant across runs, varying only the optimizer and learning rate. We track validation perplexity throughout training as a highly interpretable and sensitive measure of model capacity\footnote{The model is a multifunctional architecture similar to Axis, trained on a set of candidate cis-regulatory elements (cCREs) from the ENCODE v4 registry that are cell-type-specific to one of three cell lines: K562, HepG2, and SK-N-SH. Training was limited to 20 epochs due to compute constraints; the loss has not begun to saturate (we have trained to much lower cross-entropy in prior runs), so these results reflect relative optimizer comparisons, not absolute model quality.}. We use perplexity as a sensitive proxy for sequence modeling quality; in practice we expect improvements to correlate with better motif and grammar modeling, and we plan to validate this directly with motif-centric downstream tasks. By evaluating against a held-out validation split, we extract a clear empirical picture of optimizer performance across varying learning rates and training checkpoints (saved every epoch).
+
+\subsection{Final test perplexity by learning rate}
+
+Figure~\ref{fig:final-perplexity} shows the final validation perplexity (at the last checkpoint) for each optimizer pair as a function of the learning rate (log scale). Lower perplexity indicates superior probability mass placement on the target sequence.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{subfigure}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{images/comparison_AdamH_vs_AdamW.png}
+    \caption{AdamH (blue) vs AdamW (red).}
+    \label{fig:final-perp-adam}
+  \end{subfigure}\hfill
+  \begin{subfigure}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{images/comparison_MuonH_vs_MuonW.png}
+    \caption{MuonH (blue) vs MuonW (red).}
+    \label{fig:final-perp-muon}
+  \end{subfigure}
+  \caption{Final test perplexity across learning rates for Adam variants (left) and Muon variants (right).}
+  \label{fig:final-perplexity}
+\end{figure}
+
+For Adam variants, applying the Hyperball constraint improves peak performance but sharply narrows the stable operating window. AdamH achieves the absolute lowest overall perplexity for the Adam family ($\sim$2.485) at a moderate learning rate of $\sim 5.69 \times 10^{-3}$. However, AdamW proves dramatically more resilient at the extremes. At the lowest learning rate ($\sim 9.00 \times 10^{-5}$), AdamW's independent weight decay slowly regularizes the network without disrupting the coordinate-wise updates, maintaining a lead ($\sim$2.534 vs.\ $\sim$2.566). Conversely, at the highest rate ($\sim 2.27 \times 10^{-2}$), AdamH degrades sharply ($\sim$2.574); its rigidly fixed norm overrides the natural decay in step size that occurs when weights grow, causing the optimizer to catastrophically bounce around the local minimum, while AdamW remains relatively stable ($\sim$2.526).
+
+The dynamics for the Muon optimizers are perfectly inverted: Hyperball dominates at lower learning rates, whereas independent weight decay scales flawlessly to the highest rates. Because Muon's whitened updates are entirely scale-free, MuonW relies on the unbounded growth of the weight norm to act as an implicit learning rate scheduler (decreasing the relative step size over time). At higher learning rates ($\sim 2.27 \times 10^{-2}$), this rapid norm growth naturally cools the optimization, allowing MuonW to comfortably digest large initial steps and achieve the absolute best validation perplexity across all sweeps ($\sim$2.464). MuonH's fixed norm eliminates this vital annealing phase, permanently trapping it in a high-temperature regime and causing perplexity to rise ($\sim$2.565). Conversely, at small learning rates like $\sim 9.00 \times 10^{-5}$, where preventing further step-size decay is actually beneficial, MuonH easily outperforms MuonW.
+
+\subsection{Overall findings}
+
+These validation results, together with the training loss curves (Section~\ref{sec:training}), paint a consistent picture: the Hyperball constraint does not uniformly improve both optimizers, and the best overall configuration is Muon with independent weight decay (MuonW)\footnote{The Hyperball blog~\citep{hyperball} actually shows that for Muon, the losses are comparable for models with $\le$~500M parameters, and Hyperball dominates for the largest model of $>$1B parameters. Our largest model is actually $\sim$420M parameters large (as we are somewhat compute bound), so it is still possible for MuonH to outperform MuonW at a larger scale.}.
+
+\begin{tcolorbox}[colback=optionalboxbg, colframe=optionalboxborder, sharp corners, boxrule=0.6pt, left=6pt, right=6pt, top=4pt, bottom=4pt]
+\textbf{Why does Hyperball worsen Muon?} -- see Appendix~\ref{app:hyperball-worsen}.
+\end{tcolorbox}
+
+\subsection{Perplexity progression by checkpoint and FLOPS}
+
+To understand the temporal dynamics behind the final results, we track the mean validation perplexity over the 20 checkpoints. We present each progression in two views: by training step (checkpoint) and by total FLOPS. The FLOPS axis accounts for the per-step compute cost of each optimizer, including forward/backward passes and the optimizer update itself (e.g.\ Muon's SVD is more expensive per step than Adam's elementwise update). The full set of per-learning-rate and per-optimizer progression curves is provided in Figures~\ref{fig:perp-by-lr-1}--\ref{fig:perp-by-optimizer-muon} in Appendix~\ref{app:figures}.
+
+Analyzing these cross-sections reveals a clear shifting of the guard as the step size scales up:
+\begin{itemize}
+  \item \textbf{Low Learning Rates} ($\sim 9.00 \times 10^{-5}$ to $\sim 3.59 \times 10^{-4}$): Training is slow but highly stable. Here, the strict norm constraints of Hyperball provide a massive early acceleration. MuonH drops aggressively in the first few epochs, cleanly outperforming MuonW, which converges much more deliberately.
+  \item \textbf{Mid-Range} ($\sim 1.43 \times 10^{-3}$ to $\sim 5.69 \times 10^{-3}$): We enter the optimal operating window for most models. At $\sim 5.69 \times 10^{-3}$, AdamH finally hits its stride, overtaking AdamW to reach the lowest perplexity in the Adam family. Concurrently, MuonW overtakes MuonH.
+  \item \textbf{High Learning Rate} ($\sim 2.27 \times 10^{-2}$): We observe sharp destabilization for fixed-norm constraints (AdamH, MuonH). In stark contrast, MuonW thrives, plunging rapidly to achieve the absolute lowest validation perplexity ($\sim$2.464) across all runs.
+\end{itemize}
+
+Viewing the optimizers individually clarifies these dynamics. For AdamH, the intermediate learning rate $\sim 5.69 \times 10^{-3}$ provides the steepest drop and lowest final perplexity ($\sim$2.48). AdamW is far more forgiving across learning rates: at $\approx 3.59 \times 10^{-4}$, it settles into a remarkably smooth, steady decline to its lowest perplexity of $\sim$2.51. MuonH exhibits a narrow but highly effective sweet spot at mid-range LRs, but is heavily penalized at the maximum rate. Finally, MuonW distinctly favors scale: its progression monotonically improves as the learning rate increases, with the highest LR driving the lowest perplexity overall.
+
+\subsection{Time-to-target: FLOP efficiency}
+
+We can quantify optimization efficiency by measuring the training FLOPs required to cross a specific validation target. We use a target of 2.51, the lowest perplexity reached by an optimizer candidate (specifically AdamW). MuonW at its optimal learning rate crosses this threshold by checkpoint 12, while AdamH at its optimal configuration only reaches it around checkpoint 19. This means MuonW reaches the target in roughly 37\% fewer steps (and 37\% fewer training tokens). Because the forward and backward passes dominate per-step FLOPs, Muon's SVD-based update adds only a small overhead relative to the total step cost, so the 37\% step reduction translates to a comparable reduction in total training FLOPs.
+
+
+% ============================================================
+\section{Training Dynamics}
+\label{sec:training}
+% ============================================================
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.85\linewidth]{images/loss_curves_nucleotide_loss.png}
+  \caption{Learning curves for the most optimal runs for all 4 optimizer combinations: AdamW, AdamH, MuonW, MuonH. Loss axis is nucleotide cross-entropy loss.}
+  \label{fig:loss-curves}
+\end{figure}
+
+Consistent with existing literature~\citep{muon,hyperball}, Muon achieves a lower train loss than Adam across all configurations. The loss curves confirm the ranking established by the validation perplexity (Section~\ref{sec:results}): MuonW converges fastest and reaches the lowest loss, followed by MuonH, AdamH, and AdamW.
+
+\subsection{Learning rate sweep analysis}
+
+The learning rate sweep loss curves and advantage heatmaps are shown in Figures~\ref{fig:sweep-losses-adam}--\ref{fig:heatmap-muon} (Appendix~\ref{app:figures}). What is striking about these sweep curves is how consistent their structure is across scales. For Adam, Hyperball (blue) carves out a partial convex basin in the mid learning rate range ($\sim 10^{-3}$ to $10^{-2}$), dipping below weight decay (yellow) in that region and rising above it at both extremes. For Muon, the pattern is different: MuonW's (yellow) loss decreases roughly linearly with increasing step size, while MuonH (blue) curves downward then upward more sharply. MuonW reaches a lower minimum at a higher learning rate.
+
+For Adam, the lowest point is with Hyperball at $\eta \approx 5.69 \times 10^{-3}$ (compared to AdamW at $\approx 3.59 \times 10^{-4}$). For Muon, the lowest point is generally achieved with weight decay at the higher end of tested learning rates, scaling up to $\eta \approx 2.27 \times 10^{-2}$. This disparity highlights a key distinction: while Adam's coordinate-wise updates become highly unstable at large learning rates, Muon's whitened updates, when unconstrained by a fixed norm, can safely exploit much larger step sizes to drive down the loss.
+
+The heatmaps\footnote{Each heatmap uses its own color scale, so the same shade of green or red can represent different magnitudes across panels. Pay attention to the individual legends.} give us a clearer picture of where Hyperball has the advantage over weight decay. For Adam, the advantage is scale-dependent: at width 512, the heatmap is mostly yellow (roughly even), but at width 2048, AdamH shows a noticeably stronger advantage. For Muon, the scale dependence runs in the opposite direction. At width 512, Hyperball is competitive; by width 2048 the picture inverts, with weight decay winning by up to $\sim$4.5\% at the higher learning rates late in training. This suggests that the spectral squeeze (described in Section~\ref{sec:spectral}) worsens with scale.
+
+\subsection{Cross-optimizer comparison}
+
+Finally, we compare the two best configurations head-to-head: MuonW against AdamH (Figures~\ref{fig:cross-optimizer-heatmap}--\ref{fig:cross-optimizer-sweep} in Appendix~\ref{app:figures}). Even at width 512, MuonW eventually pulls away; the curves track each other at lower learning rates, but MuonW pulls away at higher learning rates. What changes with scale is \emph{consistency}: at width 1024 and especially 2048, AdamH holds the advantage across the broader low/mid range, while MuonW dominates the high learning rate extremes by a massive margin.
+
+
+% ============================================================
+\section{Spectral Analysis}
+\label{sec:spectral}
+% ============================================================
+
+To understand \emph{why} Muon with independent weight decay (MuonW) outperforms its constrained counterpart (MuonH), we examine the spectral properties of the learned representations. Following the eigenspectral framework of NerVE~\citep{nerve}\footnote{NerVE originally applies these metrics to track activation dynamics through FFN layers, but the same spectral measures are equally well defined for weight matrices.}, we track two key metrics for the weight matrices:
+\begin{itemize}
+  \item \textbf{Spectral Entropy:} A measure of how uniformly variance is distributed across singular values. Values near $1.0$ indicate a ``full rank'', diverse representation, while values near $0$ indicate rank collapse.
+  \item \textbf{Participation Ratio (PR):} The effective rank of the matrix. We normalize the PR to get the ratio of the effective rank to full rank.
+\end{itemize}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.85\linewidth]{images/svd_entropy_mean_ffn_L3.png}
+  \caption{SVD Entropy for FFN Layer~3. \textbf{Blue:} MuonW, \textbf{Red:} MuonH, \textbf{Orange:} AdamW, \textbf{Green:} AdamH. MuonH (Red) collapses to a low entropy state, while MuonW (Blue) maintains high capacity. All weight matrices exhibited similar patterns; we show only one here for simplicity.}
+  \label{fig:spectral-entropy}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.85\linewidth]{images/pr_mean_ffn_L3.png}
+  \caption{Participation Ratio for FFN Layer~3 (same color coding as Figure~\ref{fig:spectral-entropy}). MuonH's effective rank shrinks over training, consistent with spectral collapse.}
+  \label{fig:spectral-pr}
+\end{figure}
+
+The weights of MuonW (Blue) and MuonH (Red) both start with high spectral entropy ($\approx 0.98$), but their trajectories diverge sharply. MuonW's entropy decreases only slightly and stabilizes near $\approx 0.93$, indicating that the weight matrices maintain a near-uniform singular value distribution throughout training. MuonH (Red), by contrast, steadily collapses from $\approx 0.98$ to $\approx 0.68$, with the participation ratio falling in tandem (Figure~\ref{fig:spectral-pr}): a strong rank/entropy collapse signature that could indicate representational degeneration~\citep{repdeg}. The critical observation is the \emph{divergence} between Blue and Red: both use the same Muon whitening, yet MuonH's spectrum degrades while MuonW's does not. This is strongly consistent with the Hyperball constraint driving the degradation.
+
+\begin{tcolorbox}[colback=optionalboxbg, colframe=optionalboxborder, sharp corners, boxrule=0.6pt, left=6pt, right=6pt, top=4pt, bottom=4pt]
+\textbf{Why isn't Muon's $\Delta W$ always full-rank with entropy 1?} -- see Appendix~\ref{app:delta-w-rank}.
+\end{tcolorbox}
+
+\subsection{Uniform Rescaling and the Spectral Squeeze}
+
+MuonH (Red) constrains $\|W\|_F = R$ at every step by multiplying every singular value by the same factor $c = R/\|W_t + U_t\|_F$. The large singular values survive this downscaling; the small ones (which Muon's whitening tried to grow) cannot, because the uniform rescaling pulls them back down before they accumulate meaningful energy. Over many steps this concentrates the spectrum into fewer dominant modes, erasing the weak regulatory signals in the tail.
+
+This effect is compounded on the \emph{update} side. Recall that Muon's NS${}_5$ whitening is imperfect: it pushes singular values toward $1$ but lands in roughly $[0.7, 1.3]$, not exactly at $1$. For MuonW (Blue), these small imperfections are benign; the weight matrix is free to absorb them, and the $\Delta W$ spectral entropy stays high ($\approx 0.95$) throughout training. For MuonH (Red), one plausible mechanism is a feedback loop: as the weight spectrum collapses, the gradients computed at $W_t$ become increasingly anisotropic, which flows into the momentum buffer. Imperfect NS${}_5$ whitening may be insufficient to fully recover a uniform spectrum from this biased input, so the update itself becomes progressively less whitened.
+
+In contrast, MuonW (Blue) imposes no hard constraint on the weight norm, so there is no uniform rescaling step and no feedback loop. MuonW shows sustained higher spectral entropy and participation ratio, suggesting a more distributed use of singular directions; we hypothesize this helps increase capacity and retain combinatorial regulatory structure.
+
+\begin{tcolorbox}[colback=optionalboxbg, colframe=optionalboxborder, sharp corners, boxrule=0.6pt, left=6pt, right=6pt, top=4pt, bottom=4pt]
+\textbf{Note on Adam} -- see Appendix~\ref{app:note-adam}.
+\end{tcolorbox}
+
+\subsection{Implicit Annealing and Relative Step Size}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.65\linewidth]{images/relative_step_size.png}
+  \caption{Relative Step Size ($\|\Delta W\|/\|W\|$). MuonW (Blue) shows a decaying relative step size as the weight norm grows, while MuonH (Red) plateaus. The initial ramp-up corresponds to the learning rate warmup schedule.}
+  \label{fig:dynamics-stepsize}
+\end{figure}
+
+The second piece of the puzzle lies in the relative step size, $\|\Delta W\|/\|W\|$. MuonW's (Blue) weight norm grows monotonically throughout training. The update norm $\|\Delta W\|$ is roughly constant post-warmup, but the weight denominator $\|W\|$ balloons, causing the relative step size to decrease over training (Figure~\ref{fig:dynamics-stepsize}; see also Figure~\ref{fig:dynamics-norms} in Appendix~\ref{app:figures}). Although independent weight decay should theoretically bound the norm at an equilibrium~\citep{wdeq,hyperball}, the norm continues to grow long after the nucleotide loss has begun to plateau. This decaying relative step size may act like an implicit annealing schedule that helps the model refine its solution in later stages.
+
+For MuonH (Red), the weight norm $\|W\|$ is fixed. The relative step size flattens out and never decays. We suspect this limits fine-grained convergence by preventing late-stage refinement.
+
+\subsection{Activation Hacking: The Logit Inflation ``Cheat''}
+
+There is an alternative, less flattering interpretation of MuonW's success: fit the cross-entropy loss by simply inflating the logits. In classification tasks, the cross-entropy loss can be decreased by sharpening the probability distribution (making the model more ``confident''), even if the ranking of classes doesn't change.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.85\linewidth]{images/OutputLogits.png}
+  \caption{Distribution of output logits during training. MuonW (Blue) logits grow significantly larger than MuonH (Red), leading to sharper softmax distributions.}
+  \label{fig:logits}
+\end{figure}
+
+As noted above, MuonW's weight norm grows monotonically throughout training. While the RMSNorm-sandwiched hidden layers are scale invariant (Appendix~\ref{app:scale-inv}), the final output projection is \emph{not}. There is no normalization between the last linear layer and the softmax. This means the runaway norm growth could potentially inflate the magnitude of the output logits, sharpening the softmax distribution and pushing the model toward higher confidence predictions.
+
+This acts exactly like \emph{lowering the softmax temperature}. Whether this ``activation hacking'' helps or hurts depends on the task. DNA has a vocabulary of just 4 bases, and in regulatory regions the correct nucleotide often dominates its context window. Sharper predictions on a tiny, low entropy vocabulary are frequently correct, so inflated logits often reduce cross-entropy loss in this setting. Natural language, by contrast, has a vocabulary of $\sim$100k tokens with genuinely ambiguous contexts where probability mass must be spread across many plausible continuations\footnote{Quantitatively, consider the softmax function $\sigma(\mathbf{z})_i = \frac{e^{z_i}}{\sum_{j=1}^K e^{z_j}}$. If we multiply the logits by a large factor $k$, the terms become $e^{k z_i}$. Since the exponential function grows incredibly fast, even a small difference in raw logits becomes a massive difference after exponentiation. The largest logit $z_i$ will dominate the sum in the denominator, pushing the probability $\sigma(\mathbf{z})_i$ towards 1. For DNA ($K=4$), there are only 3 other terms to compete with. For NLP ($K \approx 100{,}000$), the denominator sums over 100,000 other terms, acting as a ``drag'' that prevents the correct token from dominating purely through scaling.}.
+
+This means that part of MuonW's \emph{training loss} advantage may be an artifact of the domain: the optimizer exploits the low cardinality and low entropy of the DNA vocabulary to ``hack'' the loss via logit scaling, rather than learning richer internal representations. MuonH (Red), with its strict norm constraint, is mathematically forbidden from using this trick, which may partially explain its higher training loss despite learning a ``cleaner'' low-rank representation. Disentangling this effect from the genuine spectral capacity gains discussed above is an important open question, and one that a controlled comparison with a fixed norm output head could help resolve.
+
+\begin{tcolorbox}[colback=optionalboxbg, colframe=optionalboxborder, sharp corners, boxrule=0.6pt, left=6pt, right=6pt, top=4pt, bottom=4pt]
+\textbf{Why don't AdamW's logits grow?} -- see Appendix~\ref{app:adamw-logits}.
+\end{tcolorbox}
+
+
+% ============================================================
+\section{Next Steps}
+\label{sec:next-steps}
+% ============================================================
+
+The results presented here reflect relative optimizer comparisons at a fixed compute budget, not the absolute frontier of model quality. Next, we plan to:
+\begin{itemize}
+  \item \textbf{Run the full sweep with SSO:} repeat the Adam/Muon $\times$ Hyperball sweeps using the Spectral Sphere Optimizer (SSO)~\citep{sso} to test whether controlling $\sigma_1$ of the weight matrix directly improves stability and performance compared to Frobenius norm control.
+  \item \textbf{Explore hybrid optimizers:} evaluate combinations of Muon and Adam updates (like PRISM~\citep{prism} and variants~\citep{shampoo-prism}) and compare against these results.
+  \item \textbf{Evaluate on biological downstream tasks:} measure whether perplexity gains translate to improvements on tasks that matter for biology, such as transcription factor motif recovery, and sequence generation.
+\end{itemize}
+
+
+% ============================================================
+\appendix
+% ============================================================
+
+\section{Adam Overview}
+\label{app:adam}
+
+Let $g_t = \nabla_W \mathcal{L}(W_t)$ denote the gradient at step $t$. Adam maintains two exponential moving averages (EMAs):
+\begin{itemize}
+  \item a \emph{first moment} estimate (mean) $m_t$,
+  \item a \emph{second moment} estimate (uncentered variance) $v_t$.
+\end{itemize}
+Specifically, with hyperparameters $\beta_1,\beta_2 \in [0,1)$ and initialization $m_0 = 0$, $v_0 = 0$:
+\begin{align}
+m_t &= \beta_1 m_{t-1} + (1-\beta_1) g_t, \label{eq:adam-m}\\
+v_t &= \beta_2 v_{t-1} + (1-\beta_2) g_t^2, \label{eq:adam-v}
+\end{align}
+where $g_t^2$ denotes elementwise squaring.
+
+Because both EMAs start at zero, they are biased toward $0$ early in training. Adam, therefore, uses bias corrected estimates
+\[
+\hat m_t = \frac{m_t}{1-\beta_1^t},
+\qquad
+\hat v_t = \frac{v_t}{1-\beta_2^t}.
+\]
+The vanilla Adam update is then,
+\[
+W_{t+1} = W_t - \eta\, \frac{\hat m_t}{\sqrt{\hat v_t}+\varepsilon},
+\]
+with learning rate $\eta$ and small $\varepsilon > 0$ for numerical stability.
+
+\paragraph{Weight decay (AdamW).}
+Soft L2 regularization can be implemented by adding $\lambda W_t$ to the gradient, but AdamW instead \emph{decouples} weight decay from the adaptive gradient step. In its common form:
+\[
+W_{t+1} = (1-\eta\lambda)\,W_t \; - \; \eta\, \frac{\hat m_t}{\sqrt{\hat v_t}+\varepsilon},
+\]
+so weight decay shrinks parameters directly (multiplicatively), while the Adam step uses the adaptive per parameter scaling.
+
+\paragraph{Independent weight decay.}
+In our setting, we use \emph{independent} weight decay: the shrinkage is applied as a separate step, not through the gradient, and is not tied to the learning rate. Concretely, if $U_t$ denotes the optimizer's proposed parameter update (e.g., the Adam step $U_t=-\eta\, \hat m_t/(\sqrt{\hat v_t}+\varepsilon)$), then independent weight decay applies
+\[
+W_{t+1} = (1-\lambda)\,W_t + U_t.
+\]
+So the decay rate $\lambda$ is not multiplied by the learning rate and can be scheduled separately.
+
+
+\section{SVD Overview}
+\label{app:svd}
+
+\paragraph{Singular value decomposition (SVD).}
+For any real matrix $A \in \mathbb{R}^{m\times n}$, the SVD factorizes $A$ into
+\[
+A = U\Sigma V^\top,
+\]
+where $U\in\mathbb{R}^{m\times m}$ and $V\in\mathbb{R}^{n\times n}$ are orthogonal matrices (their columns form orthonormal bases), and $\Sigma\in\mathbb{R}^{m\times n}$ is diagonal (rectangular) with nonnegative entries $\sigma_1\ge \sigma_2\ge \cdots \ge 0$ called the \emph{singular values}. Geometrically, $V^\top$ rotates (or reflects) the input space, $\Sigma$ scales along the orthogonal axes, and $U$ rotates (or reflects) the output space.
+
+\paragraph{What are singular values?}
+The singular values of matrix $A$ are the square roots of the eigenvalues of $A^\top A$. Concretely, for eigenpairs $(\lambda_i, v_i)$ of $A^\top A$,
+\[
+A^\top A v_i = \lambda_i v_i, \qquad \sigma_i = \sqrt{\lambda_i}.
+\]
+They quantify how much $A$ \emph{stretches} vectors: along the right singular direction $v_i$, the mapping scales by exactly $\sigma_i$. The largest singular value is the \emph{maximum stretch} induced by $A$ on any unit vector:
+\[
+\sigma_1 = \max_{\|x\|=1}\|Ax\|.
+\]
+Note that $\sigma_2$ is the maximum stretch orthogonal to $v_1=\arg\max_{\|x\|=1}\|Ax\|$, i.e., $\sigma_2=\max_{x\perp v_1,\,\|x\|=1}\|Ax\|$, and so on\footnote{We can generalize using the min-max theorem: $\sigma_i=\min_{\substack{U\subseteq \mathbb R^n \\ \dim U=n-i+1}}\max_{\substack{x\in U \\ \|x\|=1}}\|Ax\|$.}.
+
+\paragraph{Why are they special?}
+They control several important properties at once:
+\begin{itemize}
+  \item \textbf{Spectral norm/stability:} The spectral norm is defined as $\|\cdot\|_2=\sigma_1(\cdot)$ on matrix inputs. It is the operator norm\footnote{Formally, the operator norm $\|\cdot\|_p$ is defined for $A\in \mathbb R^{m\times n}$ as $\|A\|_p=\max\{\|Ax\|_p:x\in \mathbb R^n, \|x\|_p\le 1\}$, where we apply the $\ell_p$ norm to the vectors.} induced by the vector $\ell_2$ norm. $\sigma_1(A) = \|A\|_2$ is the maximum amplification (or stretch) of $A$; this is important for Lipschitz bounds~\citep{spectral}.
+  \item \textbf{Rank / effective dimension:} the number of nonzero $\sigma_i$ equals $\mathrm{rank}(A)$; many tiny $\sigma_i$ indicates a nearly low rank map.
+  \item \textbf{Conditioning:} the ratio $\sigma_1/\sigma_r$ (for $\sigma_r = \min_{\neq 0}\sigma_i$) measures how unevenly $A$ scales different directions; large ratios can hurt optimization and numerical stability.
+\end{itemize}
+
+
+\section{Muon Overview}
+\label{app:muon}
+
+While Adam~\citep{adamw} (see Appendix~\ref{app:adam}) updates can lead to weight stagnation~\citep{lazy,ntk} and uneven signal propagation, Muon mitigates this by treating layers as matrices and ``whitening'', or spreading out updates across singular dimensions to ensure all directions are learned with equal priority. Unlike Adam, which treats weights as flat vectors and risks remaining within the initialization neighborhood (closer to the NTK regime~\citep{ntk}), Muon forces weights to diverge from their starting points by distributing updates across the matrix space, thereby erasing initial distributions~\citep{erasure}. This is achieved by constraining all singular values of the weight updates to be close to $1$, effectively ``whitening'' the update to distribute the learning signal evenly~\citep{cesista}.
+
+Just like Adam, we first form a momentum like exponential moving average of gradients, denoted by $u_t$:
+\[
+u_t = \beta\,u_{t-1} + (1-\beta)\,g_t,
+\]
+(with $u_0=0$). This plays the same role as Adam's first moment estimate $m_t$, but is then processed using matrix structure. In our implementation we use Nesterov momentum\footnote{Concretely, the input fed into the NS${}_5$ orthogonalization is not the raw gradient $g_t$ but the lerp $(1-\beta)\,g_t + \beta\,u_{t}$. This Nesterov interpolation means the matrix that NS${}_5$ whitens is already a lookahead blend of the current gradient and the previous momentum buffer, not the gradient at $W_t$ alone.}, so the input to the NS${}_5$ normalization is a lookahead lerp between the gradient and the momentum buffer, rather than the gradient at $W_t$ alone.
+
+We apply the SVD (see Appendix~\ref{app:svd}) to the (momentum) update matrix $u_t$:
+\[
+u_t = U\Sigma V^\top.
+\]
+Muon constructs an update whose singular vectors match those of $u_t$, but whose singular values are pushed toward $1$:
+\[
+\tilde u_t = U\,\tilde\Sigma\,V^\top,
+\]
+where $\tilde\Sigma$ is a diagonal matrix with entries close to $1$ (typically in $[0.7, 1.3]$), projecting the update toward the Stiefel manifold~\citep{muon}\footnote{The Stiefel manifold is the set of matrices with orthonormal columns (all singular values exactly equal to $1$). In practice, finite Newton--Schulz iterations only push singular values \emph{toward} $1$, not exactly to it. This is a stricter constraint than the Spectral Sphere, where only $\sigma_1=1$ is constrained.} ``whitening'' or ``equalizing'' the update across singular dimensions.
+
+Intuitively, this prevents a few directions from dominating the step, and encourages motion in many independent directions of the layer's matrix space. In contrast to optimizers that treat parameters as a flat vector, Muon explicitly uses matrix structure, which can help avoid updates that remain concentrated near the initialization subspace.
+
+In practice, the resulting parameter update has the form
+\[
+W_{t+1} = W_t + U_t, \qquad U_t = -\eta\,\tilde u_t,
+\]
+(with optional weight decay applied as described in Appendix~\ref{app:adam}).
+
+\subsection{Connecting Muon to norm control}
+
+Muon already manipulates singular values of the \emph{update} (by pushing those of $\tilde u_t$ toward $1$), which suggests a different view of regularization than standard weight decay. Classical weight decay controls the $\ell_2$ or Frobenius norm of the weight matrices (defined as $\|W\|_F =\|\vec W\|_2= \sqrt{\sum_{i}\sum_jw_{ij}^2}$\footnote{It also happens to be the case that $\|W\|_F=\sqrt{\sum_i \sigma_i^2}$, but this is a bit of a digression and we will not prove this here.}), but in a matrix aware setting one can instead target properties tied to singular values:
+\begin{itemize}
+  \item \textbf{Rank / intrinsic dimension:} shaping the smaller singular values can encourage using many subspaces of the hidden stream, rather than collapsing the layer to an effectively low rank map.
+  \item \textbf{Stability:} bounding the largest singular value (the spectral norm) controls the layer Lipschitz constant, and helps prevent activation and gradient blowups~\citep{spectral,cesista}\footnote{Concretely, if all singular values of the update equal $1$, then $\tilde u_t$ is orthogonal and $\|\tilde u_t\, x\| = \|x\|$ for every input $x$ (provided $\tilde u_t$ is square). More generally, $\|\tilde u_t\, x\| \leq \sigma_1(\tilde u_t)\,\|x\|$, so pushing $\sigma_1$ toward $1$ directly caps the maximum activation amplification per layer.}.
+\end{itemize}
+This perspective is especially relevant for high dimensional, structured sequence representations like DNA. The combinatorial grammar of regulatory motifs demands that many spectral dimensions remain active; a low rank collapse in the update would erase the subtle, distributed signals that distinguish functional sequences from background.
+
+
+\section{Concentration of Measure in the Hyperball}
+\label{app:concentration}
+
+Let $B_n(R)=\{x\in\mathbb{R}^n:\|x\|\le R\}$ be the Euclidean $n$-ball of radius $R$, and let $0 < \varepsilon < R$. Define the outer shell
+\[
+S_{n}(R,\varepsilon)=\{x\in\mathbb{R}^n: R-\varepsilon \le \|x\|\le R\}.
+\]
+Then the fraction of volume in the shell satisfies
+\[
+\frac{\mathrm{Vol}(S_{n}(R,\varepsilon))}{\mathrm{Vol}(B_n(R))}
+= 1 - \left(1-\frac{\varepsilon}{R}\right)^{n}
+\xrightarrow[n\to\infty]{} 1.
+\]
+Equivalently, the ``interior'' ball $B_n(R-\varepsilon)$ contains an asymptotically negligible fraction of the total volume.
+
+\begin{proof}
+The volume of an $n$-ball scales like $R^n$: there is a constant $c_n=\mathrm{Vol}(B_n(1))$ such that
+\[
+\mathrm{Vol}(B_n(R)) = c_n R^n.
+\]
+Therefore, the shell volume is
+\[
+\mathrm{Vol}(S_n(R,\varepsilon))
+= \mathrm{Vol}(B_n(R)) - \mathrm{Vol}(B_n(R-\varepsilon))
+= c_n(R^n-(R-\varepsilon)^n).
+\]
+Dividing by $\mathrm{Vol}(B_n(R))=c_nR^n$ gives
+\[
+\frac{\mathrm{Vol}(S_n(R,\varepsilon))}{\mathrm{Vol}(B_n(R))}
+= 1-\left(\frac{R-\varepsilon}{R}\right)^n
+= 1-\left(1-\frac{\varepsilon}{R}\right)^n.
+\]
+Since $0< 1-\varepsilon /R< 1$, the term $(1-\varepsilon/R)^n\to 0$ as $n\to\infty$, so the ratio tends to $1$.
+\end{proof}
+
+Suppose the equilibrium norm is $N$, and the norm `hovers' within just $0<\varepsilon\ll N$ of this equilibrium, taking values in $[N-\varepsilon, N+\varepsilon]$. If we set $R = N+\varepsilon$ and $\delta = 2\varepsilon$, this range is exactly the shell $S_n(R, \delta)$. No matter how small we make $\varepsilon> 0$, the fraction of volume in this shell is $1-\left(1-\frac{2\varepsilon}{R}\right)^n$, which still approaches $1$ for large $n$. Therefore, we will still have to consider a relatively large space of values near the equilibrium hypersphere (especially as the matrix dimension is roughly $O(d^2)$ where $d$ is the hidden size of the model).
+
+
+\section{Full Derivation of the Relative Step Size}
+\label{app:derivation}
+
+The Hyperball retraction maps $W_t + U_t$ back onto the hypersphere of radius $R$. The geometry is captured by two triangles in the vectorized matrix space:
+\begin{enumerate}
+  \item \textbf{Triangle $O$-$A$-$B$:} where $O$ is the origin, $A = W_t$ lies on the sphere, and $B = W_t + U_t$ is the pre-retraction sum (generally off the sphere). Sides: $\|OA\|=R$, $\|AB\|=\eta R$, $\|OB\|=c$. Interior angle at $A$: $\pi-\theta$.
+  \item \textbf{Triangle $O$-$A$-$C$:} where $C = W_{t+1} = R\,\mathrm{Normalize}(W_t+U_t)$ is the retracted weight, also on the sphere. This is an isosceles triangle with $\|OA\|=\|OC\|=R$, chord $\|AC\|=x=\|\Delta W\|$, and apex angle $\phi$.
+\end{enumerate}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.75\linewidth]{images/hyperball_cross_section.png}
+\caption{2D cross-section of the hyperball retraction geometry. All lengths and angles used in the derivation are labeled.}
+\label{fig:retraction-geometry}
+\end{figure}
+
+We now derive the exact step size. Using the cosine rule on triangle $O$-$A$-$B$ (where $O$ is the origin, $A = W_t$, and $B = W_t + U_t$), noting that the interior angle at $A$ is $\pi - \theta$:
+
+\[
+\begin{aligned}
+\|W_t+U_t\|^2
+&= R^2 + \eta^2 R^2 - 2\eta R^2\cos(\pi-\theta) \\
+&= R^2 + \eta^2 R^2 + 2\eta R^2\cos\theta.
+\end{aligned}
+\]
+Hence the pre-retraction length is
+$c := \|W_t+U_t\| = R \sqrt{1 + \eta^2+ 2\eta \cos\theta}$.
+
+Since $W_{t+1}$ lies on the ray from $O$ through $B$, the angular change $\phi := \angle(\vec W_t, \vec W_{t+1})$ equals $\angle AOB$. Applying the sine rule to $\triangle OAB$:
+\[
+\frac{\sin\phi}{\|U_t\|}
+  =\frac{\sin(\pi-\theta)}{\|W_t+U_t\|}
+  \;\implies\;
+\sin\phi
+  =\frac{\eta R}{c}\sqrt{1-\gamma^2},
+\]
+and therefore
+\[
+\cos\phi
+  =\sqrt{1-\sin^2\phi}
+  =\sqrt{1-\frac{\eta^2(1-\gamma^2)}{1+\eta^2+2\eta\gamma}}.
+\]
+
+Finally, $W_t$ and $W_{t+1}$ both lie on the sphere of radius $R$, so we apply the cosine rule to the isosceles triangle $\triangle OAC$:
+
+\[
+\begin{aligned}
+\|\Delta W\|^2 &= R^2+R^2-2R^2\cos\phi,\\
+x := \|\Delta W\| &= R\sqrt{2}\sqrt{1-\cos\phi}\\
+&= R\sqrt{2}\sqrt{1-\sqrt{1-\frac{\eta^2(1-\gamma^2)}{1+\eta^2+2\eta\gamma}}}.
+\end{aligned}
+\]
+
+
+\section{Bounds on the Relative Step Size}
+\label{app:bounds}
+
+Now, suppose we know that $\gamma,\eta\in(0,1)$. We can infer from this that:
+
+\[
+\begin{aligned}
+&\min_{\gamma,\eta\in[0,1]} \frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma} = 0
+\;\implies\;
+\inf_{\gamma,\eta\in(0,1)} \frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma} = 0 \\
+&\arg\max_{\gamma,\eta\in[0,1]} \frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma} =
+(0,1)\\
+&\quad\implies
+\sup_{\gamma,\eta\in(0,1)}\frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}=\tfrac{1}{2}
+\end{aligned}
+\]
+From this we obtain
+\[
+\begin{aligned}
+&\frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}\in (0,\tfrac{1}{2})
+\;\implies\;
+\sqrt{1-\frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}}\in
+(\tfrac{1}{\sqrt2},1)\\
+&\implies
+1-\sqrt{\cdots}\in
+(0,1-\tfrac{1}{\sqrt2})
+\;\implies\;
+\sqrt{1-\sqrt{\cdots}}\in
+(0,\sqrt{1-\tfrac{1}{\sqrt2}})\\
+&\implies x\in \bigl(0,\; R\sqrt{2-\sqrt{2}}\bigr)
+\approx (0,\; 0.765R)\\
+&\implies \frac{x}{\|W_t\|}\in (0,\;\sqrt{2-\sqrt{2}})\approx (0,\; 0.765)
+\end{aligned}
+\]
+
+This is the tightest bound on the relative step size obtainable without knowledge of $\gamma$. Computing $\gamma$ analytically remains an open question, as the repeated retractions onto the hypersphere make it difficult to translate previous arguments involving momentum and weight decay~\citep{hyperball}. Unfortunately, this bound is not particularly informative: the lower bound is vacuous, and the upper bound is substantially looser than the ideal $O(\eta)$. Now, if, for instance, we input our tried and tested range $\sim\eta\in (10^{-4},10^{-1})$ and fix $\gamma=0$, we get a slightly tighter bound of $(0.0001, 0.0996)$, where a higher learning rate corresponds to a higher step size. For a higher dot product like $\gamma=0.5$, we get a bound of $(0.0000866, 0.0823)$, which is lower.
+
+
+\section{Enforcing Scale Invariance}
+\label{app:scale-inv}
+
+A key ingredient is RMSNorm~\citep{rmsnorm}, which rescales a vector by its root-mean-square (RMS) magnitude. Given an activation vector $x\in\mathbb{R}^d$, RMSNorm computes
+\[
+\mathrm{RMSNorm}(x) = g\odot \frac{x}{\sqrt{\frac{1}{d}\sum_{i=1}^d x_i^2 + \varepsilon}},
+\]
+where $g\in\mathbb{R}^d$ is a learned per coordinate gain, $\varepsilon>0$ is for numerical stability, and $\odot$ is the Hadamard product (element wise multiplication).
+
+\paragraph{Rescaling property.}
+Ignoring $\varepsilon$ (or when $\|x\|$ is not tiny), RMSNorm is \emph{scale invariant}: for any scalar $\alpha>0$,
+\[
+\mathrm{RMSNorm}(\alpha x)= \mathrm{RMSNorm}(x).
+\]
+Intuitively, scaling the input by $\alpha$ scales the denominator by the same $\alpha$, so the normalized direction stays the same.
+
+\paragraph{Why this makes weight matrices scale invariant.}
+Consider a linear map $y = Wx$. If the model applies RMSNorm before the next computation (pre-norm, post-norm, or both), then multiplying the weight matrix by a scalar often has little effect on the downstream activations:
+\[
+\mathrm{RMSNorm}((\alpha W)x) = \mathrm{RMSNorm}(\alpha (Wx)) = \mathrm{RMSNorm}(Wx).
+\]
+So for these ``RMSNorm sandwiched'' layers, scale doesn't matter as the RMSNorm layer itself learns the scaling factor necessary for the output.
+
+In Axis, our original model architecture, we used MuP initialization and layer pre-normalization, but that wasn't enough to enforce scale invariance in our model. To further enforce it, we added a layer post-norm and then QK-norm (like Gemma~3's architecture~\citep{gemma}), which seemed to be enough to enforce scale invariance (although, it seems like only adding the post-norm was sufficient for our model; the QK-norm was added for completeness).
+
+
+\section{Why Gradient Statistics Differ}
+\label{app:gradient-stats}
+
+Consider a vocabulary of $K$ tokens with marginal frequencies $p_1\ge p_2\ge\cdots\ge p_K$. In a mini-batch of $B$ tokens drawn i.i.d.\ from $p$, the expected count of token $k$ is $n_k=B\,p_k$. The gradient of the loss decomposes as
+\[
+g = \frac{1}{B}\sum_{k=1}^{K} n_k\,\bar g_k
+  = \sum_{k=1}^{K} p_k\,\bar g_k,
+\]
+where $\bar g_k$ is the mean gradient contribution conditioned on token $k$. We can say that Adam's (see more in Appendix~\ref{app:adam}) running second moment for parameters associated with token $k$ accumulates as $v_k\propto p_k\,\mathbb{E}[\|\bar g_k\|^2]+(1-p_k)\,\bar 0=p_k\,\mathbb{E}[\|\bar g_k\|^2]$. The ratio of the largest to smallest second moment therefore scales with the frequency ratio of the most to least common token
+$\frac{v_1}{v_K}\;\propto\;\frac{p_1\,\mathbb{E}[\|\bar g_1\|^2]}{p_K\,\mathbb{E}[\|\bar g_K\|^2]}$.
+If we assume that $\frac{\mathbb{E}[\|\bar g_1\|^2]}{\mathbb{E}[\|\bar g_K\|^2]}\approx O(1)$, then:
+\[
+\frac{v_1}{v_K}\;\propto\;\frac{p_1}{p_K}
+\]
+
+\textbf{Zipf (NLP):} With $p_k\propto 1/k$ and $K\approx 100{,}000$, the dynamic range is $p_1/p_K\approx K\approx 10^5$. Adam's per-coordinate $1/\sqrt{v_k}$ scaling spans \emph{orders of magnitude}, providing substantial per-direction adaptation that compensates for the wildly uneven gradient contributions of frequent vs.\ rare tokens.
+
+\textbf{DNA:} With $K=4$ and $p_k\approx 1/4$, the dynamic range is $p_1/p_K\approx 1$. Adam's adaptive denominator $\sqrt{v_k}$ is nearly identical across all tokens, reducing the coordinate-wise scaling to an approximately uniform scalar. The per-direction adaptation that makes Adam powerful in NLP provides \emph{negligible benefit} here, while Muon's whitened, scale-free updates are naturally suited to this near-isotropic landscape.
+
+
+\section{Why Does Hyperball Worsen Muon?}
+\label{app:hyperball-worsen}
+
+We hypothesize that this is because Hyperball's re-projection scales all singular values of the weight matrix by the \emph{same} multiplicative factor. When Hyperball maps $W_{t+1} = R\,(W_t + U_t)/\|W_t + U_t\|_F$, it shrinks every singular direction of $W$ equally\footnote{It is actually possible to be on both the Frobenius and Spectral sphere at once as they DO intersect, but our algorithm does not guarantee that we enter the intersection. As a clarification: There exists an inequality $\|W\|_2\le \|W\|_F\le \sqrt{\min(m, n)}\|W\|_2$, so one might believe that $\|W\|_F\in[1,\sqrt{\min(m, n)}]$ guarantees that $W$ lies in the intersection, but this is a necessary condition, not a sufficient one (think of a rank 1 matrix within this range)!}. The dominant singular values of $W$, being large, survive this downscaling, and they remain the dominant share of the fixed energy budget $\|W\|_F^2 = \sum_i \sigma_i^2 = R^2$. The smaller singular values of $W$, however, cannot: Muon's whitening of the update matrix tries to grow them step after step by distributing the learning signal equally across all singular directions, but the uniform rescaling of the weight matrix pulls them back down proportionally each time. Because they never accumulate enough energy to matter, the small directions effectively die while the large ones persist, concentrating the spectrum into fewer and fewer dominant modes. The spectral metrics in Section~\ref{sec:spectral} support this: MuonH's spectral entropy and participation ratio collapse over training, consistent with the small singular directions being progressively eroded by the uniform rescaling.
+
+Adam under the same Hyperball constraint does not suffer this fate, because without whitening the spectrum is already concentrated in the task-relevant directions; the uniform rescaling therefore does comparatively little damage. Weight decay, on the other hand, does \emph{not} alter the Muon update at all, it only decays the matrix the update is added to, so the whitening and the regularizer rarely conflict.
+
+
+\section{Why Isn't Muon's Update Full-Rank?}
+\label{app:delta-w-rank}
+
+One might expect Muon's whitening step to produce a perfectly uniform spectrum, but in practice the Newton--Schulz iterations used to approximate the polar factor are finite (typically 5 iterations), pushing singular values only \emph{toward} 1 rather than exactly to 1 (roughly into $[0.7, 1.3]$). More importantly, if the underlying momentum matrix has near-zero singular values, finite iterations cannot lift those values appreciably. Additionally, our Nesterov momentum means NS${}_5$ whitens a lookahead lerp of the gradient and the momentum buffer, not the gradient at $W_t$ itself, so the spectral structure of $U_t$ already reflects a blended signal. Finally, note that $\Delta W \neq U_t$: with independent weight decay, $\Delta W = W_{t+1} - W_t = U_t - \lambda W_t$, so the actual weight change includes a decay term $-\lambda W_t$ whose spectral structure is that of the current weights, not the whitened update.
+
+
+\section{Note on Adam's Spectral Entropy}
+\label{app:note-adam}
+
+AdamW (Orange) maintains high entropy (relative to AdamH and MuonH), potentially because coordinate-wise updates can sustain activity in smaller singular directions by injecting noise. MuonW achieves high entropy through `clean' whitened updates that amplify rare directions. This distinction aligns with NerVE's~\citep{nerve} finding that stable spectral signatures correlate with generalization ability and respond predictably to optimizer design choices.
+
+
+\section{Why Don't AdamW's Logits Grow?}
+\label{app:adamw-logits}
+
+Adam's update for each parameter is proportional to $m_t / \sqrt{v_t}$, where $m_t$ is the gradient EMA and $v_t$ the EMA of squared gradients. In DNA modeling, where batches are likely dominated by shifting, independent 6--20\,bp motifs, the gradients could fluctuate significantly from step to step. The first moment $m_t$ may suffer \emph{destructive} interference as positive and negative gradients cancel, while the second moment $v_t$, which averages strictly positive squared values, would not suffer from sign cancellation and could remain relatively stable and large. This would cause the ratio to shrink, making Adam's steps progressively smaller.
+
+Muon may sidestep this issue. Its Newton--Schulz whitening discards the per-element scale and forces a fixed-norm update at every step, so temporal noise would not suppress the step size. This could explain why MuonW is able to push larger updates through the output projection, overcoming weight decay to inflate logits, while AdamW may be constrained by its own variance denominator.
+
+
+% ============================================================
+\section{Additional Figures}
+\label{app:figures}
+% ============================================================
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.85\linewidth]{images/zipfs_law.png}
+  \caption{Zipf's law on a linear (left) and log-log (right) scale. The straight line on the log-log plot is the signature of a power-law distribution. Source: Statology~\citep{zipf}.}
+  \label{fig:zipf}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \begin{subfigure}[t]{0.3\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{images/nucleotide_K562_pie.png}
+  \end{subfigure}\hfill
+  \begin{subfigure}[t]{0.3\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{images/nucleotide_HepG2_pie.png}
+  \end{subfigure}\hfill
+  \begin{subfigure}[t]{0.3\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{images/nucleotide_SKNSH_pie.png}
+  \end{subfigure}
+  \caption{Nucleotide frequencies across the three cell lines in our training set.}
+  \label{fig:nucleotide-dist}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \begin{subfigure}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{images/perplexity_progression_lr_9em05.png}
+    \caption*{By checkpoint}
+  \end{subfigure}\hfill
+  \begin{subfigure}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{images/perplexity_progression_lr_9em05_flops.png}
+    \caption*{By FLOPS}
+  \end{subfigure}
+  \\[2pt]
+  {\small lr $\approx 9.00\times10^{-5}$}
+
+  \medskip
+  \begin{subfigure}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{images/perplexity_progression_lr_0p00035857.png}
+  \end{subfigure}\hfill
+  \begin{subfigure}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{images/perplexity_progression_lr_0p00035857_flops.png}
+  \end{subfigure}
+  \\[2pt]
+  {\small lr $\approx 3.59\times10^{-4}$}
+
+  \medskip
+  \begin{subfigure}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{images/perplexity_progression_lr_0p0014287.png}
+  \end{subfigure}\hfill
+  \begin{subfigure}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{images/perplexity_progression_lr_0p0014287_flops.png}
+  \end{subfigure}
+  \\[2pt]
+  {\small lr $\approx 1.43\times10^{-3}$}
+
+  \caption{Mean validation perplexity over training checkpoints (left) and FLOPS (right). Lower is better. (Part 1 of 2.)}
+  \label{fig:perp-by-lr-1}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \begin{subfigure}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{images/perplexity_progression_lr_0p0056924.png}
+    \caption*{By checkpoint}
+  \end{subfigure}\hfill
+  \begin{subfigure}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{images/perplexity_progression_lr_0p0056924_flops.png}
+    \caption*{By FLOPS}
+  \end{subfigure}
+  \\[2pt]
+  {\small lr $\approx 5.69\times10^{-3}$}
+
+  \medskip
+  \begin{subfigure}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{images/perplexity_progression_lr_0p022681.png}
+  \end{subfigure}\hfill
+  \begin{subfigure}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{images/perplexity_progression_lr_0p022681_flops.png}
+  \end{subfigure}
+  \\[2pt]
+  {\small lr $\approx 2.27\times10^{-2}$}
+
+  \caption{Mean validation perplexity over training checkpoints (left) and FLOPS (right). Lower is better. (Part 2 of 2.)}
+  \label{fig:perp-by-lr-2}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \begin{subfigure}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{images/perplexity_progression_AdamH.png}
+    \caption*{By checkpoint}
+  \end{subfigure}\hfill
+  \begin{subfigure}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{images/perplexity_progression_AdamH_flops.png}
+    \caption*{By FLOPS}
+  \end{subfigure}
+  \\[2pt]
+  {\small AdamH}
+
+  \medskip
+  \begin{subfigure}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{images/perplexity_progression_AdamW.png}
+  \end{subfigure}\hfill
+  \begin{subfigure}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{images/perplexity_progression_AdamW_flops.png}
+  \end{subfigure}
+  \\[2pt]
+  {\small AdamW}
+
+  \caption{Mean validation perplexity for Adam variants over checkpoints (left) and FLOPS (right), across five learning rates.}
+  \label{fig:perp-by-optimizer-adam}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \begin{subfigure}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{images/perplexity_progression_MuonH.png}
+    \caption*{By checkpoint}
+  \end{subfigure}\hfill
+  \begin{subfigure}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{images/perplexity_progression_MuonH_flops.png}
+    \caption*{By FLOPS}
+  \end{subfigure}
+  \\[2pt]
+  {\small MuonH}
+
+  \medskip
+  \begin{subfigure}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{images/perplexity_progression_MuonW.png}
+  \end{subfigure}\hfill
+  \begin{subfigure}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{images/perplexity_progression_MuonW_flops.png}
+  \end{subfigure}
+  \\[2pt]
+  {\small MuonW}
+
+  \caption{Mean validation perplexity for Muon variants over checkpoints (left) and FLOPS (right), across five learning rates.}
+  \label{fig:perp-by-optimizer-muon}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.85\linewidth]{images/adam_comparison.png}
+  \caption{Sweep losses: AdamW vs AdamH.}
+  \label{fig:sweep-losses-adam}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.85\linewidth]{images/muon_comparison.png}
+  \caption{Sweep losses: MuonW vs MuonH.}
+  \label{fig:sweep-losses-muon}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.85\linewidth]{images/adam_heatmap.png}
+  \caption{Heatmap: AdamW vs AdamH.}
+  \label{fig:heatmap-adam}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.85\linewidth]{images/muon_heatmap.png}
+  \caption{Heatmap: MuonW vs MuonH.}
+  \label{fig:heatmap-muon}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.85\linewidth]{images/muonw_adamh_heatmap.png}
+  \caption{Heatmap of \% advantage: green = AdamH better, red = MuonW better.}
+  \label{fig:cross-optimizer-heatmap}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.85\linewidth]{images/muonw_adamh_comparison.png}
+  \caption{Sweep losses for MuonW vs AdamH across widths.}
+  \label{fig:cross-optimizer-sweep}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.85\linewidth]{images/weight_frobenius_norm.png}\\[0.5em]
+  \includegraphics[width=0.85\linewidth]{images/delta_W_mean_frobenius_norm.png}
+  \caption{Top: Weight Frobenius Norm. Bottom: Update Mean Frobenius Norm. MuonW (Blue) shows monotonically increasing weight norm with roughly constant update norm.}
+  \label{fig:dynamics-norms}
+\end{figure}
+
+% ============================================================
+% References
+% ============================================================
+\clearpage
+\bibliographystyle{unsrtnat}
+\bibliography{references}
+
+\end{document}
