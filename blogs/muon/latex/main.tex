@@ -33,7 +33,7 @@
 \definecolor{optionalboxbg}{HTML}{FAFAF9}
 \definecolor{optionalboxborder}{HTML}{D6D3D1}
 
-\title{Does Muon Improve Regulatory DNA Learning? Part 1.}
+\title{Does Muon Improve Regulatory DNA Learning?}
 
 \author{%
   Viraj Doshi \\
@@ -46,7 +46,7 @@
 \maketitle
 
 \begin{abstract}
-We benchmark Muon and Adam, each paired with decoupled weight decay or Hyperball norm control, for regulatory DNA sequence modeling on candidate cis-regulatory elements from ENCODE. Muon with weight decay (MuonW) reaches target validation perplexity with approximately 37\% fewer FLOPs than the best Adam configuration. We perform a spectral analysis of the learned weight matrices and find that Hyperball's uniform rescaling causes progressive rank collapse under Muon, while weight decay preserves the distributed spectral structure that Muon's whitened updates create.
+Regulatory DNA differs fundamentally from natural language (a vocabulary of 4 near-uniformly distributed nucleotides versus ${\sim}$100k Zipf-distributed tokens) making it unclear whether optimizer gains from NLP transfer. We benchmark Muon and Adam, each paired with decoupled weight decay or Hyperball norm control, for regulatory DNA sequence modeling on candidate cis-regulatory elements from ENCODE. Muon with weight decay (MuonW) reaches target validation perplexity with approximately 37\% fewer FLOPs than the best Adam configuration. We perform a spectral analysis of the learned weight matrices and find that Hyperball's uniform rescaling causes progressive rank collapse under Muon, while weight decay preserves the distributed spectral structure that Muon's whitened updates create.
 \end{abstract}
 
 Adam~\citep{adamw} variants dominate DNA sequence modeling (AlphaGenome~\citep{alphagenome}, Enformer~\citep{enformer}, Evo~2~\citep{evo}). Muon~\citep{muon} achieves faster convergence in NLP, but the transfer to nucleotide modeling is not obvious: DNA has a vocabulary of 4 tokens with near-uniform frequencies versus Zipf-distributed ${\sim}$100k tokens in language~\citep{zipf-review}, and the dominant syntax consists of local 6--20\,bp transcription-factor binding motifs rather than long-range dependencies. These differences fundamentally alter the gradient statistics and loss landscape curvature that optimizers exploit (Section~\ref{sec:distribution}).
@@ -198,7 +198,7 @@ We can quantify optimization efficiency by measuring the training FLOPs required
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.85\linewidth]{images/loss_curves_nucleotide_loss.png}
+  \includegraphics[width=0.6\linewidth]{images/loss_curves_nucleotide_loss.png}
   \caption{Learning curves for the most optimal runs for all 4 optimizer combinations: AdamW, AdamH, MuonW, MuonH. Loss axis is nucleotide cross-entropy loss.}
   \label{fig:loss-curves}
 \end{figure}
@@ -231,19 +231,13 @@ To understand \emph{why} Muon with independent weight decay (MuonW) outperforms 
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.85\linewidth]{images/svd_entropy_mean_ffn_L3.png}
-  \caption{SVD Entropy for FFN Layer~3. \textbf{Blue:} MuonW, \textbf{Red:} MuonH, \textbf{Orange:} AdamW, \textbf{Green:} AdamH. MuonH (Red) collapses to a low entropy state, while MuonW (Blue) maintains high capacity. All weight matrices exhibited similar patterns; we show only one here for simplicity.}
-  \label{fig:spectral-entropy}
+  \includegraphics[width=0.6\linewidth]{images/svd_entropy_mean_ffn_L3.png}\\[0.5em]
+  \includegraphics[width=0.6\linewidth]{images/pr_mean_ffn_L3.png}
+  \caption{Spectral metrics for FFN Layer~3. Top: SVD Entropy. Bottom: Participation Ratio. \textbf{Blue:} MuonW, \textbf{Red:} MuonH, \textbf{Orange:} AdamW, \textbf{Green:} AdamH. MuonH (Red) collapses to a low-entropy, low-rank state, while MuonW (Blue) maintains high capacity throughout training. All weight matrices exhibited similar patterns; we show only one here for simplicity.}
+  \label{fig:spectral}
 \end{figure}
 
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=0.85\linewidth]{images/pr_mean_ffn_L3.png}
-  \caption{Participation Ratio for FFN Layer~3 (same color coding as Figure~\ref{fig:spectral-entropy}). MuonH's effective rank shrinks over training, consistent with spectral collapse.}
-  \label{fig:spectral-pr}
-\end{figure}
-
-The weights of MuonW (Blue) and MuonH (Red) both start with high spectral entropy ($\approx 0.98$), but their trajectories diverge sharply. MuonW's entropy decreases only slightly and stabilizes near $\approx 0.93$, indicating that the weight matrices maintain a near-uniform singular value distribution throughout training. MuonH (Red), by contrast, steadily collapses from $\approx 0.98$ to $\approx 0.68$, with the participation ratio falling in tandem (Figure~\ref{fig:spectral-pr}): a strong rank/entropy collapse signature that could indicate representational degeneration~\citep{repdeg}. The critical observation is the \emph{divergence} between Blue and Red: both use the same Muon whitening, yet MuonH's spectrum degrades while MuonW's does not. This is strongly consistent with the Hyperball constraint driving the degradation.
+The weights of MuonW (Blue) and MuonH (Red) both start with high spectral entropy ($\approx 0.98$), but their trajectories diverge sharply. MuonW's entropy decreases only slightly and stabilizes near $\approx 0.93$, indicating that the weight matrices maintain a near-uniform singular value distribution throughout training. MuonH (Red), by contrast, steadily collapses from $\approx 0.98$ to $\approx 0.68$, with the participation ratio falling in tandem (Figure~\ref{fig:spectral}): a strong rank/entropy collapse signature that could indicate representational degeneration~\citep{repdeg}. The critical observation is the \emph{divergence} between Blue and Red: both use the same Muon whitening, yet MuonH's spectrum degrades while MuonW's does not. This is strongly consistent with the Hyperball constraint driving the degradation.
 
 \begin{tcolorbox}[colback=optionalboxbg, colframe=optionalboxborder, sharp corners, boxrule=0.6pt, left=6pt, right=6pt, top=4pt, bottom=4pt]
 \textbf{Why isn't Muon's $\Delta W$ always full-rank with entropy 1?} -- see Appendix~\ref{app:delta-w-rank}.
@@ -265,7 +259,7 @@ In contrast, MuonW (Blue) imposes no hard constraint on the weight norm, so ther
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.65\linewidth]{images/relative_step_size.png}
+  \includegraphics[width=0.6\linewidth]{images/relative_step_size.png}
   \caption{Relative Step Size ($\|\Delta W\|/\|W\|$). MuonW (Blue) shows a decaying relative step size as the weight norm grows, while MuonH (Red) plateaus. The initial ramp-up corresponds to the learning rate warmup schedule.}
   \label{fig:dynamics-stepsize}
 \end{figure}
@@ -280,7 +274,7 @@ There is an alternative, less flattering interpretation of MuonW's success: fit 
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.85\linewidth]{images/OutputLogits.png}
+  \includegraphics[width=0.6\linewidth]{images/OutputLogits.png}
   \caption{Distribution of output logits during training. MuonW (Blue) logits grow significantly larger than MuonH (Red), leading to sharper softmax distributions.}
   \label{fig:logits}
 \end{figure}
@@ -310,7 +304,9 @@ The results presented here reflect relative optimizer comparisons at a fixed com
 
 
 % ============================================================
+\clearpage
 \appendix
+\section*{Appendix}
 % ============================================================
 
 \section{Adam Overview}
