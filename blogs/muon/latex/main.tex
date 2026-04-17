@@ -5,6 +5,8 @@
 
 \documentclass{article}
 
+% Use numerical citations instead of author-year
+\PassOptionsToPackage{numbers, compress}{natbib}
 \usepackage[preprint]{neurips_2026}
 
 \usepackage[utf8]{inputenc}
@@ -125,11 +127,22 @@ x := \|\Delta W\| = R\sqrt{2}\sqrt{1 - \cos\phi}, \quad\text{where}\quad \cos\ph
 
 When $\gamma,\eta\in(0,1)$, a careful bounding argument (Appendix~\ref{app:bounds}) shows that the relative step size lies in $\frac{x}{\|W_t\|}\in (0,\sqrt{2-\sqrt{2}})\approx (0, 0.765)$. This is quite loose without knowing $\gamma$; as an example, for practical learning rates $\eta\in(10^{-4},10^{-1})$ with an ideal $\gamma=0$, the bound tightens to roughly $(0.0001, 0.0996)$.
 
-\subsection{Estimations for low \texorpdfstring{$\eta$}{eta}}
+\subsection{Relative step size is linear in the learning rate}
+\label{sec:linear-step}
 
-Knowing that our practical learning rates are such that $\eta^2\ll1$ and $\gamma\eta\ll 1$, we can make some estimations, like $1+\eta^2+2\eta\gamma\approx1$, so we get $x\approx R\sqrt{2}\sqrt{1-\sqrt{1-(\eta^2-\gamma^2\eta^2)}}$. Using $\sqrt{1-z}\approx 1-z/2$ we can see $x\approx R\sqrt2\sqrt{1-(1-(\eta^2-\gamma^2\eta^2)/2)}=R\eta\sqrt{1-\gamma^2}=R\eta\sin\theta$, which is just a tangent space approximation of the step size! This would make the relative step size $\frac{x}{\|W_t\|}\approx\eta\sqrt{1-\gamma^2}$, and we get something very similar to our initial estimate of $O(\eta)$. In fact, for $\gamma=0$, we get $\frac{x}{\|W_t\|}\approx \eta$!
+The core practical payoff of the Hyperball construction is that, in the regime where we actually train, the relative step size is \emph{directly proportional to the learning rate}. Our practical learning rates satisfy $\eta^2\ll 1$ and $\gamma\eta\ll 1$, so $1+\eta^2+2\eta\gamma\approx 1$ and $x\approx R\sqrt{2}\sqrt{1-\sqrt{1-\eta^2(1-\gamma^2)}}$. Applying $\sqrt{1-z}\approx 1-z/2$ yields
+\[
+x \;\approx\; R\sqrt{2}\sqrt{1-\bigl(1-\tfrac{1}{2}\eta^2(1-\gamma^2)\bigr)} \;=\; R\,\eta\sqrt{1-\gamma^2} \;=\; R\,\eta\sin\theta,
+\]
+which is exactly the tangent-space approximation of the step on the sphere. In terms of the relative step size,
+\[
+\frac{x}{\|W_t\|} \;\approx\; \eta\,\sqrt{1-\gamma^2},
+\]
+and when the update is orthogonal to the current weights ($\gamma=0$), this collapses to the remarkably clean $\frac{x}{\|W_t\|}\approx \eta$. In other words, \emph{$\eta$ acts directly as a relative-step-size dial}: doubling the learning rate doubles the effective movement on the sphere.
 
-It is very `nice' that $\frac{x}{\|W_t\|}\propto\eta$, because when we have a weight decay instead, the effective step size is a nonlinear function of $\eta$ and $\lambda$~\citep{hyperball}, which adds another layer of complexity to the solution space.
+\paragraph{Contrast with weight decay.} This is a meaningful departure from the standard weight-decay regime, where the relative step size is a highly nonlinear function of multiple interacting variables: the learning rate $\eta$, the decay coefficient $\lambda$, the momentum coefficient(s), the optimizer's running statistics, and the elapsed training step $t$ (since the equilibrium is only reached asymptotically). The literature does not converge on a single equation for this quantity; instead, different works express the idea through different proxies and approximations~\citep{wdeq,hyperball,wdnorm}. The shared takeaway across these analyses is that no single hyperparameter can be tuned in isolation to achieve a target effective step size, which forces practitioners to co-tune $\eta$ and $\lambda$ jointly.
+
+Hyperball eliminates this coupling: $\|W_t\|=R$ is fixed by construction, $\|U_t\|=\eta R$ is fixed by construction, and the retraction introduces only a mild $\sqrt{1-\gamma^2}$ correction. The learning-rate dial and the effective-step-size dial are (approximately) the same knob, which simplifies the hyperparameter search from a joint sweep over $(\eta,\lambda)$ to a single sweep over $\eta$. This contrast is borne out empirically in our runs: MuonW's relative step size decays over training as $\|W_t\|$ grows on its slow approach to equilibrium, while MuonH's remains flat at the level set by $\eta$ (Figures~\ref{fig:dynamics-stepsize} and~\ref{fig:dynamics-norms} in Appendix~\ref{app:figures}).
 
 
 % ============================================================
@@ -624,6 +637,73 @@ Adam's update for each parameter is proportional to $m_t / \sqrt{v_t}$, where $m
 Muon may sidestep this issue. Its Newton--Schulz whitening discards the per-element scale and forces a fixed-norm update at every step, so temporal noise would not suppress the step size. This could explain why MuonW is able to push larger updates through the output projection, overcoming weight decay to inflate logits, while AdamW may be constrained by its own variance denominator.
 
 
+\section{FLOPs Accounting}
+\label{app:flops}
+
+Each FLOPS-axis plot uses a per-optimizer cost model that accounts for both the per-token forward/backward compute and the per-step optimizer update. Let
+\begin{itemize}
+  \item $L$: sequence length (tokens per sequence),
+  \item $B$: batch size (sequences per step),
+  \item $N$: total sequences in the dataset,
+  \item $P_{\text{2D}}$: total 2D parameters (linear weights and embeddings); optimized by Muon/MuonH in mixed mode and dominating forward/backward matmul compute,
+  \item $P_{\text{non-2D}}$: total non-2D parameters (RMSNorm scales, any biases); under the mixed-Muon optimizers (MuonW and MuonH) these are handled by an AdamW sub-optimizer, while under plain AdamW or AdamH all parameters share the top-level optimizer,
+  \item $d$: hidden dimension,
+  \item $C_{\text{opt}}$: per-parameter FLOP cost of a single optimizer step.
+\end{itemize}
+
+Total FLOPs for one epoch decompose into a \emph{base compute} term (forward/backward, incurred once per token) and an \emph{optimizer overhead} term (incurred once per batch step). We use the standard $6\,P_{\text{2D}}$-FLOPs-per-token matmul proxy for the base compute, which ignores non-matmul ops (attention softmax/mask, activations, norms, embedding lookups) contributing a few percent at $L = 352$, $d = 2048$:
+\begin{align*}
+\text{Base compute} &\approx 6\,P_{\text{2D}}\,(N\,L), \\
+\text{Optimizer overhead} &\approx \bigl(P_{\text{2D}}\,C_{\text{opt}}^{\text{Muon}} + P_{\text{non-2D}}\,C_{\text{opt}}^{\text{AdamW}}\bigr)\,(N/B).
+\end{align*}
+In our architecture $P_{\text{non-2D}} \ll P_{\text{2D}}$ (under $1\%$ of total parameters), so we drop the non-2D overhead contribution and factor $P_{\text{2D}}\,N$ out of the master formula. For brevity we write $P$ for $P_{\text{2D}}$ for the remainder of this appendix:
+\[
+F(L, B, N) \;\approx\; P\,N\!\left(6L + \frac{C_{\text{opt}}}{B}\right).
+\]
+
+\paragraph{Per-optimizer step costs.} Applying this to our four optimizers (with $C_{\text{opt}}$ derived by counting scalar FLOPs per parameter for each kernel in the \texttt{step()} method of the PyTorch implementation, under our fused SwiGLU architecture):
+\begin{align*}
+\text{AdamW}\quad & C_{\text{opt}} = \underbrace{3}_{m_1} + \underbrace{4}_{m_2} + \underbrace{3}_{\text{denom}} + \underbrace{1}_{\lambda} + \underbrace{3}_{\text{step}} = 14, \\
+\text{AdamH}\quad & C_{\text{opt}} = \underbrace{3}_{m_1} + \underbrace{4}_{m_2} + \underbrace{3}_{\text{denom}} + \underbrace{2}_{\hat m_1} + \underbrace{8}_{\text{HB}} = 20, \\
+\text{MuonW}\quad & C_{\text{opt}} = \underbrace{6}_{\text{lerps}} + \underbrace{3}_{\text{spec-norm}} + \underbrace{23.125\,d + \tfrac{445}{28}}_{\text{5 NS}} + \underbrace{3}_{\text{step}} \;=\; 23.125\,d + \tfrac{781}{28} \;\approx\; 23.125\,d + 27.89, \\
+\text{MuonH}\quad & C_{\text{opt}} = \underbrace{6}_{\text{lerps}} + \underbrace{3}_{\text{spec-norm}} + \underbrace{23.125\,d + \tfrac{445}{28}}_{\text{5 NS}} + \underbrace{8}_{\text{HB}} \;=\; 23.125\,d + \tfrac{921}{28} \;\approx\; 23.125\,d + 32.89.
+\end{align*}
+Each component counts the per-parameter FLOPs of one PyTorch kernel in the step (under the conventions $a\mathbin{{+}{=}}\alpha b$ = 2 FLOPs/elt, \texttt{addcmul\_} and \texttt{addcdiv\_} = 3 FLOPs/elt, and $\|\cdot\|_F$ = 2 FLOPs/elt). For Adam, $m_1$ is the first-moment EMA ($\texttt{mul\_}+$axpy), $m_2$ is the second-moment EMA ($\texttt{mul\_}+\texttt{addcmul\_}$), and ``denom'' is $(\sqrt{\hat v_t}/\sqrt{b_2})+\varepsilon$; the AdamW tail is a decoupled weight-decay scale $\lambda$ plus a fused \texttt{addcdiv\_} ``step'' ($1+3$), whereas AdamH replaces it with a bias-correction divide $\hat m_1$ ($\texttt{exp\_avg}/b_1$, 2) and an 8-FLOP \emph{Hyperball} (HB) projection $\{\,u\leftarrow m/\text{denom},\ \|u\|_F,\ u\!\cdot\!R/\|u\|_F,\ p\mathrel{{+}{=}}\!-\eta u,\ \|p\|_F,\ p\!\cdot\!R/\|p\|_F\,\}$. For Muon, the 6-FLOP ``lerps'' are the in-place momentum-buffer update \texttt{buf.lerp\_(grad,\ 1-m)} and the out-of-place Nesterov lookahead \texttt{update\ =\ grad.lerp(buf,\ m)} (3 FLOPs each: one \texttt{mul\_} plus one axpy); the 3-FLOP ``spec-norm'' is the Frobenius pre-divide $\tilde U\leftarrow U/\|U\|_F$ that feeds Newton--Schulz; the MuonW/MuonH tails are identical to the AdamW/AdamH tails above (``step'' = weight decay + scaled add, $1+2=3$; ``HB'' = same 8-FLOP projection).
+
+\paragraph{Deriving the Muon Newton--Schulz cost.} The $d$-dependent $23.125\,d + \tfrac{445}{28}$ term sums the five Newton--Schulz iterations across all Muon-eligible weights in one transformer layer. Each iteration performs three matrix ops on a single weight of shape $[m, n]$ with $m \le n$ (the code transposes if $m > n$): a Gram product $G \leftarrow \tilde U \tilde U^\top$ ($2 m^2 n$ matmul FLOPs), a cubic \texttt{addmm} $G \leftarrow b G + c G^2$ ($2 m^3 + 3 m^2$), and a final \texttt{addmm} $\tilde U \leftarrow a \tilde U + G \tilde U$ ($2 m^2 n + 2 m n$). Per parameter, 5 iterations cost $20 m + 10\,m^2/n$ matmul FLOPs and $10 + 15\,m/n$ scaling FLOPs, so the cost depends on each weight's post-transpose aspect ratio $r = m/n$. Summing over the six per-layer Muon-eligible weights of a grouped-query-attention ($g \equiv \text{num\_kv\_groups}/\text{num\_heads} = 2/8 = 1/4$) + SwiGLU block with $d_{\text{ff}} = 8 d/3$:
+
+\begin{center}
+\begin{tabular}{l c c r r r}
+\toprule
+Weight & $[m, n]$ & $r$ & Params & 5-step matmul & 5-step scaling \\
+\midrule
+$W_q, \text{out\_proj}$ (each) & $[d, d]$ & $1$ & $d^2$ & $30\,d^3$ & $25\,d^2$ \\
+$W_k, W_v$ (each) & $[d/4, d]$ & $1/4$ & $d^2/4$ & $45\,d^3/32$ & $55\,d^2/16$ \\
+\texttt{up\_proj} & $[d, 16d/3]$ & $3/16$ & $16\,d^2/3$ & $350\,d^3/3$ & $205\,d^2/3$ \\
+\texttt{down\_proj} & $[d, 8d/3]$ & $3/8$ & $8\,d^2/3$ & $190\,d^3/3$ & $125\,d^2/3$ \\
+\midrule
+\textbf{Per-layer total} & & & $10.5\,d^2$ & $242.8125\,d^3$ & $166.875\,d^2$ \\
+\textbf{Per parameter} & & & & $23.125\,d$ & $\tfrac{445}{28} \approx 15.89$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+These per-parameter averages are \emph{exact} under the combination of grouped-query attention with $g = 1/4$ and $d_{\text{ff}} = 8 d / 3$ SwiGLU. For a uniformly-square set of weights the cost would be the cleaner $30 d + 25$; the $[d/4, d]$ shape of $W_k, W_v$ and the $8/3$ MLP expansion both pull the matmul coefficient down from $30 d$ to $23.125\,d$ and the constant from $25$ to $445/28$.
+
+For our concrete architecture ($d = 2048$), MuonW's and MuonH's step costs evaluate to $47{,}387.89$ and $47{,}392.89$ FLOPs per parameter, respectively.
+
+\paragraph{Checkpoint-to-FLOPs conversion.} The FLOPS axis in Figures~\ref{fig:perp-by-lr-1}--\ref{fig:perp-by-optimizer-muon} maps a checkpoint index $t$ (a training step) to cumulative FLOPs via
+\[
+\mathrm{FLOPs}(t, \text{opt}) \;=\; t\,P\!\left(6BL + C_{\text{opt}}^{\text{opt}}\right).
+\]
+
+\paragraph{Overhead ratio.} The fraction of compute consumed by the optimizer step relative to the base forward/backward pass is
+\[
+\frac{C_{\text{opt}}/B}{6L} \;=\; \frac{C_{\text{opt}}}{6\,B\,L},
+\]
+which is independent of the dataset size $N$. For our largest configuration ($L = 352$, $B = 1920$, $d = 2048$), MuonH's $C_{\text{opt}} \approx 47{,}392.89$ yields an overhead of roughly $1.17\%$, confirming that Muon's Newton--Schulz orthogonalization step is a small fraction of total training FLOPs despite its $O(d)$ scaling in $C_{\text{opt}}$.
+
+
 % ============================================================
 \section{Additional Figures}
 \label{app:figures}
@@ -693,7 +773,7 @@ Muon may sidestep this issue. Its Newton--Schulz whitening discards the per-elem
   \\[2pt]
   {\small lr $\approx 1.43\times10^{-3}$}
 
-  \caption{Mean validation perplexity over training checkpoints (left) and FLOPS (right). Lower is better. (Part 1 of 2.)}
+  \caption{Mean validation perplexity over training checkpoints (left) and FLOPS (right). Lower is better. (Part 1 of 2.) See Appendix~\ref{app:flops} for the FLOP accounting used to map checkpoints to cumulative FLOPs.}
   \label{fig:perp-by-lr-1}
 \end{figure}
 
@@ -724,7 +804,7 @@ Muon may sidestep this issue. Its Newton--Schulz whitening discards the per-elem
   \\[2pt]
   {\small lr $\approx 2.27\times10^{-2}$}
 
-  \caption{Mean validation perplexity over training checkpoints (left) and FLOPS (right). Lower is better. (Part 2 of 2.)}
+  \caption{Mean validation perplexity over training checkpoints (left) and FLOPS (right). Lower is better. (Part 2 of 2.) See Appendix~\ref{app:flops} for the FLOP accounting used to map checkpoints to cumulative FLOPs.}
   \label{fig:perp-by-lr-2}
 \end{figure}
 
@@ -755,7 +835,7 @@ Muon may sidestep this issue. Its Newton--Schulz whitening discards the per-elem
   \\[2pt]
   {\small AdamW}
 
-  \caption{Mean validation perplexity for Adam variants over checkpoints (left) and FLOPS (right), across five learning rates.}
+  \caption{Mean validation perplexity for Adam variants over checkpoints (left) and FLOPS (right), across five learning rates. See Appendix~\ref{app:flops} for the FLOP accounting used to map checkpoints to cumulative FLOPs.}
   \label{fig:perp-by-optimizer-adam}
 \end{figure}
 
@@ -786,7 +866,7 @@ Muon may sidestep this issue. Its Newton--Schulz whitening discards the per-elem
   \\[2pt]
   {\small MuonW}
 
-  \caption{Mean validation perplexity for Muon variants over checkpoints (left) and FLOPS (right), across five learning rates.}
+  \caption{Mean validation perplexity for Muon variants over checkpoints (left) and FLOPS (right), across five learning rates. See Appendix~\ref{app:flops} for the FLOP accounting used to map checkpoints to cumulative FLOPs.}
   \label{fig:perp-by-optimizer-muon}
 \end{figure}
 
