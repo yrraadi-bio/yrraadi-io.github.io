@@ -24,6 +24,8 @@
 \usepackage[most]{tcolorbox}
 \usepackage{float}
 
+\DeclareMathOperator*{\argmax}{arg\,max}
+
 \renewcommand{\topfraction}{0.9}
 \renewcommand{\bottomfraction}{0.9}
 \renewcommand{\textfraction}{0.1}
@@ -51,7 +53,7 @@
 Regulatory DNA differs fundamentally from natural language (a vocabulary of 4 near-uniformly distributed nucleotides versus ${\sim}$100k Zipf-distributed tokens) making it unclear whether optimizer gains from NLP transfer. We benchmark Muon and Adam, each paired with decoupled weight decay or Hyperball norm control, for regulatory DNA sequence modeling on candidate cis-regulatory elements from ENCODE. Muon with weight decay (MuonW) reaches target validation perplexity with approximately 37\% fewer FLOPs than the best Adam configuration. We perform a spectral analysis of the learned weight matrices and find that Hyperball's uniform rescaling causes progressive rank collapse under Muon, while weight decay preserves the distributed spectral structure that Muon's whitened updates create.
 \end{abstract}
 
-Adam~\citep{adamw} variants dominate DNA sequence modeling (AlphaGenome~\citep{alphagenome}, Enformer~\citep{enformer}, Evo~2~\citep{evo}). Muon~\citep{muon} achieves faster convergence in NLP, but the transfer to nucleotide modeling is not obvious: DNA has a vocabulary of 4 tokens with near-uniform frequencies versus Zipf-distributed ${\sim}$100k tokens in language~\citep{zipf-review}, and the dominant syntax consists of local 6--20\,bp transcription-factor binding motifs rather than long-range dependencies. These differences fundamentally alter the gradient statistics and loss landscape curvature that optimizers exploit (Section~\ref{sec:distribution}).
+Adam~\citep{adam,adamw} variants dominate DNA sequence modeling (AlphaGenome~\citep{alphagenome}, Enformer~\citep{enformer}, Evo~2~\citep{evo}). Muon~\citep{muon} achieves faster convergence in NLP, but the transfer to nucleotide modeling is not obvious: DNA has a vocabulary of 4 tokens with near-uniform frequencies versus Zipf-distributed ${\sim}$100k tokens in language~\citep{zipf-review}, and the dominant syntax consists of local 6--20\,bp transcription-factor binding motifs rather than long-range dependencies. These differences fundamentally alter the gradient statistics and loss landscape curvature that optimizers exploit (Section~\ref{sec:distribution}).
 
 Unlike code or mathematics, where outputs can be validated in seconds, biological predictions require wet-lab experiments (like DNA synthesis, cloning, cell culture, sequencing, and downstream assays) spanning weeks to months and costing thousands of dollars per iteration. Compute savings during training therefore have outsized impact: every unit of compute saved can be redirected toward experimental validation, making optimizer efficiency not just an engineering concern but a direct accelerant for translating models to real-world biology.
 
@@ -109,7 +111,7 @@ W_{t+1} = R\,\mathrm{Normalize}(W_t + U_t).
 \]
 What makes this optimization special is that it can be wrapped around any optimizer update, so it works with Adam and Muon (using it alongside weight decay would be useless, as we hard-set the weight norms in the wrapper function).
 
-Note that not only do we set the weight norm to be $R$, but the update vector norm is set to $\eta R$. Let $\Delta W = W_{t+1}-W_t$, if we make the generous assumption that $\|\Delta W\|_F = O(\|U_t\|_F)$, we can see that we have a relative step size of:
+Note that not only do we set the weight norm to be $R$, but the update vector norm is set to $\eta R$. Let $\Delta W = W_{t+1}-W_t$. If we make the generous assumption that $\|\Delta W\|_F = O(\|U_t\|_F)$, we can see that we have a relative step size of:
 \[
 \frac{\|\Delta W\|_F}{\|W_t\|_F}=\frac{O(\|U_t\|_F)}{\|W_t\|_F}=O(\eta)
 \]
@@ -180,15 +182,15 @@ The dynamics for the Muon optimizers are perfectly inverted: Hyperball dominates
 
 \subsection{Overall findings}
 
-These validation results, together with the training loss curves (Section~\ref{sec:training}), paint a consistent picture: the Hyperball constraint does not uniformly improve both optimizers, and the best overall configuration is Muon with independent weight decay (MuonW)\footnote{The Hyperball blog~\citep{hyperball} actually shows that for Muon, the losses are comparable for models with $\le$~500M parameters, and Hyperball dominates for the largest model of $>$1B parameters. Our largest model is actually $\sim$420M parameters large (as we are somewhat compute bound), so it is still possible for MuonH to outperform MuonW at a larger scale.}.
+These validation results, together with the training loss curves (Section~\ref{sec:training}), paint a consistent picture: the Hyperball constraint does not uniformly improve both optimizers, and the best overall configuration is Muon with independent weight decay (MuonW)\footnote{The Hyperball blog~\citep{hyperball} actually shows that for Muon, the losses are comparable for models with $\le$~500M parameters, and Hyperball dominates for the largest model of $>$1B parameters. Our largest model is actually $\sim$420M parameters large (as we are somewhat compute-bound), so it is still possible for MuonH to outperform MuonW at a larger scale.}.
 
 \begin{tcolorbox}[colback=optionalboxbg, colframe=optionalboxborder, sharp corners, boxrule=0.6pt, left=6pt, right=6pt, top=4pt, bottom=4pt]
 \textbf{Why does Hyperball worsen Muon?} -- see Appendix~\ref{app:hyperball-worsen}.
 \end{tcolorbox}
 
-\subsection{Perplexity progression by checkpoint and FLOPS}
+\subsection{Perplexity progression by checkpoint and FLOPs}
 
-To understand the temporal dynamics behind the final results, we track the mean validation perplexity over the 20 checkpoints. We present each progression in two views: by training step (checkpoint) and by total FLOPS. The FLOPS axis accounts for the per-step compute cost of each optimizer, including forward/backward passes and the optimizer update itself (e.g.\ Muon's SVD is more expensive per step than Adam's elementwise update). The full set of per-learning-rate and per-optimizer progression curves is provided in Figures~\ref{fig:perp-by-lr-1}--\ref{fig:perp-by-optimizer-muon} in Appendix~\ref{app:figures}.
+To understand the temporal dynamics behind the final results, we track the mean validation perplexity over the 20 checkpoints. We present each progression in two views: by training step (checkpoint) and by total FLOPs. The FLOPs axis accounts for the per-step compute cost of each optimizer, including forward/backward passes and the optimizer update itself (e.g.\ Muon's update is an approximate $\mathrm{msign}$ map and is more expensive per step than Adam's elementwise update). The full set of per-learning-rate and per-optimizer progression curves is provided in Figures~\ref{fig:perp-by-lr-1}--\ref{fig:perp-by-optimizer-muon} in Appendix~\ref{app:figures}.
 
 Analyzing these cross-sections reveals a clear shifting of the guard as the step size scales up:
 \begin{itemize}
@@ -201,7 +203,7 @@ Viewing the optimizers individually clarifies these dynamics. For AdamH, the int
 
 \subsection{Time-to-target: FLOP efficiency}
 
-We can quantify optimization efficiency by measuring the training FLOPs required to cross a specific validation target. We use a target of 2.51, the lowest perplexity reached by an optimizer candidate (specifically AdamW). MuonW at its optimal learning rate crosses this threshold by checkpoint 12, while AdamH at its optimal configuration only reaches it around checkpoint 19. This means MuonW reaches the target in roughly 37\% fewer steps (and 37\% fewer training tokens). Because the forward and backward passes dominate per-step FLOPs, Muon's SVD-based update adds only a small overhead relative to the total step cost, so the 37\% step reduction translates to a comparable reduction in total training FLOPs.
+We can quantify optimization efficiency by measuring the training FLOPs required to cross a specific validation target. We use a target of 2.51, the lowest perplexity reached by an optimizer candidate (specifically AdamW). MuonW at its optimal learning rate crosses this threshold by checkpoint 12, while AdamH at its optimal configuration only reaches it around checkpoint 19. This means MuonW reaches the target in roughly 37\% fewer steps (and 37\% fewer training tokens). Because the forward and backward passes dominate per-step FLOPs, Muon's approximate-$\mathrm{msign}$ update adds only a small overhead relative to the total step cost, so the 37\% step reduction translates to a comparable reduction in total training FLOPs.
 
 
 % ============================================================
@@ -246,7 +248,7 @@ To understand \emph{why} Muon with independent weight decay (MuonW) outperforms 
   \centering
   \includegraphics[width=0.6\linewidth]{images/svd_entropy_mean_ffn_L3.png}\\[0.5em]
   \includegraphics[width=0.6\linewidth]{images/pr_mean_ffn_L3.png}
-  \caption{Spectral metrics for FFN Layer~3. Top: SVD Entropy. Bottom: Participation Ratio. \textbf{Blue:} MuonW, \textbf{Red:} MuonH, \textbf{Orange:} AdamW, \textbf{Green:} AdamH. MuonH (Red) collapses to a low-entropy, low-rank state, while MuonW (Blue) maintains high capacity throughout training. All weight matrices exhibited similar patterns; we show only one here for simplicity.}
+  \caption{Spectral metrics for FFN Layer~3. Top: SVD Entropy. Bottom: Participation Ratio. \textbf{Blue:} MuonW, \textbf{Red:} MuonH, \textbf{Orange:} AdamW, \textbf{Green:} AdamH. MuonH (Red) collapses to a low-entropy, low-rank state, while MuonW (Blue) retains substantially higher spectral entropy and participation ratio throughout training. All weight matrices exhibited similar patterns; we show only one here for simplicity.}
   \label{fig:spectral}
 \end{figure}
 
@@ -354,7 +356,7 @@ Soft L2 regularization can be implemented by adding $\lambda W_t$ to the gradien
 \[
 W_{t+1} = (1-\eta\lambda)\,W_t \; - \; \eta\, \frac{\hat m_t}{\sqrt{\hat v_t}+\varepsilon},
 \]
-so weight decay shrinks parameters directly (multiplicatively), while the Adam step uses the adaptive per parameter scaling.
+so weight decay shrinks parameters directly (multiplicatively), while the Adam step uses the adaptive per-parameter scaling.
 
 \paragraph{Independent weight decay.}
 In our setting, we use \emph{independent} weight decay: the shrinkage is applied as a separate step, not through the gradient, and is not tied to the learning rate. Concretely, if $U_t$ denotes the optimizer's proposed parameter update (e.g., the Adam step $U_t=-\eta\, \hat m_t/(\sqrt{\hat v_t}+\varepsilon)$), then independent weight decay applies
@@ -383,7 +385,7 @@ They quantify how much $A$ \emph{stretches} vectors: along the right singular di
 \[
 \sigma_1 = \max_{\|x\|=1}\|Ax\|.
 \]
-Note that $\sigma_2$ is the maximum stretch orthogonal to $v_1=\arg\max_{\|x\|=1}\|Ax\|$, i.e., $\sigma_2=\max_{x\perp v_1,\,\|x\|=1}\|Ax\|$, and so on\footnote{We can generalize using the min-max theorem: $\sigma_i=\min_{\substack{U\subseteq \mathbb R^n \\ \dim U=n-i+1}}\max_{\substack{x\in U \\ \|x\|=1}}\|Ax\|$.}.
+Note that $\sigma_2$ is the maximum stretch orthogonal to $v_1=\argmax_{\|x\|=1}\|Ax\|$, i.e., $\sigma_2=\max_{x\perp v_1,\,\|x\|=1}\|Ax\|$, and so on\footnote{We can generalize using the min-max theorem: $\sigma_i=\min_{\substack{U\subseteq \mathbb R^n \\ \dim U=n-i+1}}\max_{\substack{x\in U \\ \|x\|=1}}\|Ax\|$.}.
 
 \paragraph{Why are they special?}
 They control several important properties at once:
@@ -397,9 +399,9 @@ They control several important properties at once:
 \section{Muon Overview}
 \label{app:muon}
 
-While Adam~\citep{adamw} (see Appendix~\ref{app:adam}) updates can lead to weight stagnation~\citep{lazy,ntk} and uneven signal propagation, Muon mitigates this by treating layers as matrices and ``whitening'', or spreading out updates across singular dimensions to ensure all directions are learned with equal priority. Unlike Adam, which treats weights as flat vectors and risks remaining within the initialization neighborhood (closer to the NTK regime~\citep{ntk}), Muon forces weights to diverge from their starting points by distributing updates across the matrix space, thereby erasing initial distributions~\citep{erasure}. This is achieved by constraining all singular values of the weight updates to be close to $1$, effectively ``whitening'' the update to distribute the learning signal evenly~\citep{cesista}.
+While Adam~\citep{adam} (see Appendix~\ref{app:adam}) updates can lead to weight stagnation~\citep{lazy,ntk} and uneven signal propagation, Muon mitigates this by treating layers as matrices and ``whitening'', or spreading out updates across singular dimensions to ensure all directions are learned with equal priority. Unlike Adam, which treats weights as flat vectors and risks remaining within the initialization neighborhood (closer to the NTK regime~\citep{ntk}), Muon forces weights to diverge from their starting points by distributing updates across the matrix space, thereby erasing initial distributions~\citep{erasure}. This is achieved by constraining all singular values of the weight updates to be close to $1$, effectively ``whitening'' the update to distribute the learning signal evenly~\citep{cesista}.
 
-Just like Adam, we first form a momentum like exponential moving average of gradients, denoted by $u_t$:
+Just like Adam, we first form a momentum-like exponential moving average of gradients, denoted by $u_t$:
 \[
 u_t = \beta\,u_{t-1} + (1-\beta)\,g_t,
 \]
@@ -413,7 +415,7 @@ Muon constructs an update whose singular vectors match those of $u_t$, but whose
 \[
 \tilde u_t = U\,\tilde\Sigma\,V^\top,
 \]
-where $\tilde\Sigma$ is a diagonal matrix with entries close to $1$ (typically in $[0.7, 1.3]$), projecting the update toward the Stiefel manifold~\citep{muon}\footnote{The Stiefel manifold is the set of matrices with orthonormal columns (all singular values exactly equal to $1$). In practice, finite Newton--Schulz iterations only push singular values \emph{toward} $1$, not exactly to it. This is a stricter constraint than the Spectral Sphere, where only $\sigma_1=1$ is constrained.} ``whitening'' or ``equalizing'' the update across singular dimensions.
+where $\tilde\Sigma$ is a diagonal matrix with entries close to $1$ (typically in $[0.7, 1.3]$), projecting the update toward the Stiefel manifold~\citep{muon}\footnote{The Stiefel manifold is the set of matrices with orthonormal columns (for tall or square $m\ge n$), equivalently matrices whose nonzero singular values are all exactly $1$; for fat $m<n$ the analogous constraint is orthonormal rows. In practice, finite Newton--Schulz iterations only push singular values \emph{toward} $1$, not exactly to it. This is a stricter constraint than the Spectral Sphere, where only $\sigma_1=1$ is constrained.}, thereby ``whitening'' or ``equalizing'' the update across singular dimensions.
 
 Intuitively, this prevents a few directions from dominating the step, and encourages motion in many independent directions of the layer's matrix space. In contrast to optimizers that treat parameters as a flat vector, Muon explicitly uses matrix structure, which can help avoid updates that remain concentrated near the initialization subspace.
 
@@ -425,7 +427,7 @@ W_{t+1} = W_t + U_t, \qquad U_t = -\eta\,\tilde u_t,
 
 \subsection{Connecting Muon to norm control}
 
-Muon already manipulates singular values of the \emph{update} (by pushing those of $\tilde u_t$ toward $1$), which suggests a different view of regularization than standard weight decay. Classical weight decay controls the $\ell_2$ or Frobenius norm of the weight matrices (defined as $\|W\|_F =\|\vec W\|_2= \sqrt{\sum_{i}\sum_jw_{ij}^2}$\footnote{It also happens to be the case that $\|W\|_F=\sqrt{\sum_i \sigma_i^2}$, but this is a bit of a digression and we will not prove this here.}), but in a matrix aware setting one can instead target properties tied to singular values:
+Muon already manipulates singular values of the \emph{update} (by pushing those of $\tilde u_t$ toward $1$), which suggests a different view of regularization than standard weight decay. Classical weight decay controls the $\ell_2$ or Frobenius norm of the weight matrices (defined as $\|W\|_F =\|\vec W\|_2= \sqrt{\sum_{i}\sum_j w_{ij}^2}$\footnote{It also happens to be the case that $\|W\|_F=\sqrt{\sum_i \sigma_i^2}$, but this is a bit of a digression and we will not prove this here.}), but in a matrix-aware setting one can instead target properties tied to singular values:
 \begin{itemize}
   \item \textbf{Rank / intrinsic dimension:} shaping the smaller singular values can encourage using many subspaces of the hidden stream, rather than collapsing the layer to an effectively low rank map.
   \item \textbf{Stability:} bounding the largest singular value (the spectral norm) controls the layer Lipschitz constant, and helps prevent activation and gradient blowups~\citep{spectral,cesista}\footnote{Concretely, if all singular values of the update equal $1$, then $\tilde u_t$ is orthogonal and $\|\tilde u_t\, x\| = \|x\|$ for every input $x$ (provided $\tilde u_t$ is square). More generally, $\|\tilde u_t\, x\| \leq \sigma_1(\tilde u_t)\,\|x\|$, so pushing $\sigma_1$ toward $1$ directly caps the maximum activation amplification per layer.}.
@@ -532,12 +534,11 @@ Now, suppose we know that $\gamma,\eta\in(0,1)$. We can infer from this that:
 
 \[
 \begin{aligned}
-&\min_{\gamma,\eta\in[0,1]} \frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma} = 0
-\;\implies\;
+\min_{\gamma,\eta\in[0,1]} \frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma} = 0
+\;&\implies\;
 \inf_{\gamma,\eta\in(0,1)} \frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma} = 0 \\
-&\arg\max_{\gamma,\eta\in[0,1]} \frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma} =
-(0,1)\\
-&\quad\implies
+\argmax_{\gamma,\eta\in[0,1]} \frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma} =
+(0,1)\;&\implies\;
 \sup_{\gamma,\eta\in(0,1)}\frac{\eta^2-\gamma^2\eta^2}{1+\eta^2+2\eta\gamma}=\tfrac{1}{2}
 \end{aligned}
 \]
@@ -570,7 +571,7 @@ A key ingredient is RMSNorm~\citep{rmsnorm}, which rescales a vector by its root
 \[
 \mathrm{RMSNorm}(x) = g\odot \frac{x}{\sqrt{\frac{1}{d}\sum_{i=1}^d x_i^2 + \varepsilon}},
 \]
-where $g\in\mathbb{R}^d$ is a learned per coordinate gain, $\varepsilon>0$ is for numerical stability, and $\odot$ is the Hadamard product (element wise multiplication).
+where $g\in\mathbb{R}^d$ is a learned per-coordinate gain, $\varepsilon>0$ is for numerical stability, and $\odot$ is the Hadamard product (element-wise multiplication).
 
 \paragraph{Rescaling property.}
 Ignoring $\varepsilon$ (or when $\|x\|$ is not tiny), RMSNorm is \emph{scale invariant}: for any scalar $\alpha>0$,
@@ -640,7 +641,7 @@ Muon may sidestep this issue. Its Newton--Schulz whitening discards the per-elem
 \section{FLOPs Accounting}
 \label{app:flops}
 
-Each FLOPS-axis plot uses a per-optimizer cost model that accounts for both the per-token forward/backward compute and the per-step optimizer update. Let
+Each FLOPs-axis plot uses a per-optimizer cost model that accounts for both the per-token forward/backward compute and the per-step optimizer update. Let
 \begin{itemize}
   \item $L$: sequence length (tokens per sequence),
   \item $B$: batch size (sequences per step),
@@ -677,7 +678,7 @@ Each component counts the per-parameter FLOPs of one PyTorch kernel in the step 
 \toprule
 Weight & $[m, n]$ & $r$ & Params & 5-step matmul & 5-step scaling \\
 \midrule
-$W_q, \text{out\_proj}$ (each) & $[d, d]$ & $1$ & $d^2$ & $30\,d^3$ & $25\,d^2$ \\
+$W_q, \texttt{out\_proj}$ (each) & $[d, d]$ & $1$ & $d^2$ & $30\,d^3$ & $25\,d^2$ \\
 $W_k, W_v$ (each) & $[d/4, d]$ & $1/4$ & $d^2/4$ & $45\,d^3/32$ & $55\,d^2/16$ \\
 \texttt{up\_proj} & $[d, 16d/3]$ & $3/16$ & $16\,d^2/3$ & $350\,d^3/3$ & $205\,d^2/3$ \\
 \texttt{down\_proj} & $[d, 8d/3]$ & $3/8$ & $8\,d^2/3$ & $190\,d^3/3$ & $125\,d^2/3$ \\
@@ -692,7 +693,7 @@ These per-parameter averages are \emph{exact} under the combination of grouped-q
 
 For our concrete architecture ($d = 2048$), MuonW's and MuonH's step costs evaluate to $47{,}387.89$ and $47{,}392.89$ FLOPs per parameter, respectively.
 
-\paragraph{Checkpoint-to-FLOPs conversion.} The FLOPS axis in Figures~\ref{fig:perp-by-lr-1}--\ref{fig:perp-by-optimizer-muon} maps a checkpoint index $t$ (a training step) to cumulative FLOPs via
+\paragraph{Checkpoint-to-FLOPs conversion.} The FLOPs axis in Figures~\ref{fig:perp-by-lr-1}--\ref{fig:perp-by-optimizer-muon} maps a checkpoint index $t$ (a training step) to cumulative FLOPs via
 \[
 \mathrm{FLOPs}(t, \text{opt}) \;=\; t\,P\!\left(6BL + C_{\text{opt}}^{\text{opt}}\right).
 \]
@@ -744,7 +745,7 @@ which is independent of the dataset size $N$. For our largest configuration ($L 
   \begin{subfigure}[t]{0.48\linewidth}
     \centering
     \includegraphics[width=\linewidth]{images/perplexity_progression_lr_9em05_flops.png}
-    \caption*{By FLOPS}
+    \caption*{By FLOPs}
   \end{subfigure}
   \\[2pt]
   {\small lr $\approx 9.00\times10^{-5}$}
@@ -773,7 +774,7 @@ which is independent of the dataset size $N$. For our largest configuration ($L 
   \\[2pt]
   {\small lr $\approx 1.43\times10^{-3}$}
 
-  \caption{Mean validation perplexity over training checkpoints (left) and FLOPS (right). Lower is better. (Part 1 of 2.) See Appendix~\ref{app:flops} for the FLOP accounting used to map checkpoints to cumulative FLOPs.}
+  \caption{Mean validation perplexity over training checkpoints (left) and FLOPs (right). Lower is better. (Part 1 of 2.) See Appendix~\ref{app:flops} for the FLOP accounting used to map checkpoints to cumulative FLOPs.}
   \label{fig:perp-by-lr-1}
 \end{figure}
 
@@ -787,7 +788,7 @@ which is independent of the dataset size $N$. For our largest configuration ($L 
   \begin{subfigure}[t]{0.48\linewidth}
     \centering
     \includegraphics[width=\linewidth]{images/perplexity_progression_lr_0p0056924_flops.png}
-    \caption*{By FLOPS}
+    \caption*{By FLOPs}
   \end{subfigure}
   \\[2pt]
   {\small lr $\approx 5.69\times10^{-3}$}
@@ -804,7 +805,7 @@ which is independent of the dataset size $N$. For our largest configuration ($L 
   \\[2pt]
   {\small lr $\approx 2.27\times10^{-2}$}
 
-  \caption{Mean validation perplexity over training checkpoints (left) and FLOPS (right). Lower is better. (Part 2 of 2.) See Appendix~\ref{app:flops} for the FLOP accounting used to map checkpoints to cumulative FLOPs.}
+  \caption{Mean validation perplexity over training checkpoints (left) and FLOPs (right). Lower is better. (Part 2 of 2.) See Appendix~\ref{app:flops} for the FLOP accounting used to map checkpoints to cumulative FLOPs.}
   \label{fig:perp-by-lr-2}
 \end{figure}
 
@@ -818,7 +819,7 @@ which is independent of the dataset size $N$. For our largest configuration ($L 
   \begin{subfigure}[t]{0.48\linewidth}
     \centering
     \includegraphics[width=\linewidth]{images/perplexity_progression_AdamH_flops.png}
-    \caption*{By FLOPS}
+    \caption*{By FLOPs}
   \end{subfigure}
   \\[2pt]
   {\small AdamH}
@@ -835,7 +836,7 @@ which is independent of the dataset size $N$. For our largest configuration ($L 
   \\[2pt]
   {\small AdamW}
 
-  \caption{Mean validation perplexity for Adam variants over checkpoints (left) and FLOPS (right), across five learning rates. See Appendix~\ref{app:flops} for the FLOP accounting used to map checkpoints to cumulative FLOPs.}
+  \caption{Mean validation perplexity for Adam variants over checkpoints (left) and FLOPs (right), across five learning rates. See Appendix~\ref{app:flops} for the FLOP accounting used to map checkpoints to cumulative FLOPs.}
   \label{fig:perp-by-optimizer-adam}
 \end{figure}
 
@@ -849,7 +850,7 @@ which is independent of the dataset size $N$. For our largest configuration ($L 
   \begin{subfigure}[t]{0.48\linewidth}
     \centering
     \includegraphics[width=\linewidth]{images/perplexity_progression_MuonH_flops.png}
-    \caption*{By FLOPS}
+    \caption*{By FLOPs}
   \end{subfigure}
   \\[2pt]
   {\small MuonH}
@@ -866,7 +867,7 @@ which is independent of the dataset size $N$. For our largest configuration ($L 
   \\[2pt]
   {\small MuonW}
 
-  \caption{Mean validation perplexity for Muon variants over checkpoints (left) and FLOPS (right), across five learning rates. See Appendix~\ref{app:flops} for the FLOP accounting used to map checkpoints to cumulative FLOPs.}
+  \caption{Mean validation perplexity for Muon variants over checkpoints (left) and FLOPs (right), across five learning rates. See Appendix~\ref{app:flops} for the FLOP accounting used to map checkpoints to cumulative FLOPs.}
   \label{fig:perp-by-optimizer-muon}
 \end{figure}
 
