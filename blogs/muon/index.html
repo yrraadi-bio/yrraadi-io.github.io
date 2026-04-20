@@ -1018,7 +1018,7 @@
                         for MuonH also holds across scales, hinting that Hyperball&rsquo;s fixed-norm
                         constraint limits how much Muon can exploit larger step sizes.</p>
 
-                    <p>For Adam, the lowest point is with Hyperball at \(\eta \approx 5.69 \times 10^{-3}\) (compared to AdamW at \(\approx 3.59 \times 10^{-4}\)). For Muon, the lowest point is generally achieved with weight decay at the higher end of tested learning rates, scaling up to \(\eta \approx 2.27 \times 10^{-2}\) (although Hyperball reaches its optimum earlier at \(\eta \approx 1.43 \times 10^{-3}\)). This disparity highlights a key distinction: while Adam's coordinate-wise updates become highly unstable at large learning rates, Muon's whitened updates, when unconstrained by a fixed norm, can safely exploit much larger step sizes to drive down the loss.</p>
+                    <p>For Adam, the lowest point is with Hyperball at \(\eta \approx 5.69 \times 10^{-3}\) (compared to AdamW at \(\approx 3.59 \times 10^{-4}\)). For Muon, the lowest point is generally achieved with weight decay at the higher end of tested learning rates, scaling up to \(\eta \approx 5.69 \times 10^{-3}\) (although Hyperball reaches its optimum earlier at \(\eta \approx 1.43 \times 10^{-3}\)). This disparity highlights a key distinction: while Adam's coordinate-wise updates become highly unstable at large learning rates, Muon's whitened updates, when unconstrained by a fixed norm, can safely exploit much larger step sizes to drive down the loss.</p>
 
                     <figure class="blog-image">
                         <img src="/blogs/muon/assets/adam_heatmap.png" alt="Adam sweep summary"
