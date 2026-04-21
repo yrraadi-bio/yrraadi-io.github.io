@@ -53,7 +53,7 @@
 Regulatory DNA differs fundamentally from natural language (a vocabulary of 4 near-uniformly distributed nucleotides versus ${\sim}$100k Zipf-distributed tokens) making it unclear whether optimizer gains from NLP transfer. We benchmark Muon and Adam, each paired with decoupled weight decay or Hyperball norm control, for regulatory DNA sequence modeling on candidate cis-regulatory elements from ENCODE. Muon with weight decay (MuonW) reaches target validation perplexity with approximately 37\% fewer FLOPs than the best Adam configuration. We perform a spectral analysis of the learned weight matrices and find that Hyperball's uniform rescaling causes progressive rank collapse under Muon, while weight decay preserves the distributed spectral structure that Muon's whitened updates create.
 \end{abstract}
 
-Adam~\citep{adam,adamw} variants dominate DNA sequence modeling (AlphaGenome~\citep{alphagenome}, Enformer~\citep{enformer}, Evo~2~\citep{evo}). Muon~\citep{muon} achieves faster convergence in NLP, but the transfer to nucleotide modeling is not obvious: DNA has a vocabulary of 4 tokens with near-uniform frequencies versus Zipf-distributed ${\sim}$100k tokens in language~\citep{zipf-review}, and the dominant syntax consists of local 6--20\,bp transcription-factor binding motifs rather than long-range dependencies. These differences fundamentally alter the gradient statistics and loss landscape curvature that optimizers exploit (Section~\ref{sec:distribution}).
+Adam~\citep{adam,adamw} variants dominate DNA sequence modeling (AlphaGenome~\citep{alphagenome}, Enformer~\citep{enformer}, Evo~2~\citep{evo}), while Muon~\citep{muon} achieves faster convergence in NLP. Whether Muon's gains transfer to nucleotide modeling is not obvious (Section~\ref{sec:distribution}).
 
 Unlike code or mathematics, where outputs can be validated in seconds, biological predictions require wet-lab experiments (like DNA synthesis, cloning, cell culture, sequencing, and downstream assays) spanning weeks to months and costing thousands of dollars per iteration. Compute savings during training therefore have outsized impact: every unit of compute saved can be redirected toward experimental validation, making optimizer efficiency not just an engineering concern but a direct accelerant for translating models to real-world biology.
 
@@ -62,6 +62,8 @@ Unlike code or mathematics, where outputs can be validated in seconds, biologica
 \section{Distribution Differences}
 \label{sec:distribution}
 % ============================================================
+
+DNA has a vocabulary of 4 tokens with near-uniform frequencies versus Zipf-distributed ${\sim}$100k tokens in language~\citep{zipf-review}, and the dominant syntax consists of local 6--20\,bp transcription-factor binding motifs rather than long-range dependencies. These differences fundamentally alter the gradient statistics and loss landscape curvature that optimizers exploit.
 
 \subsection{Zipf's law in natural language}
 
