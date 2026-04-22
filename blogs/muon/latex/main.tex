@@ -55,9 +55,28 @@
 Regulatory DNA differs fundamentally from natural language (a vocabulary of 4 near-uniformly distributed nucleotides versus ${\sim}$100k Zipf-distributed tokens), making it unclear whether optimizer gains from NLP transfer should carry over. We benchmark Adam and Muon, each paired with independent weight decay (AdamW/MuonW) or Hyperball norm control, for regulatory DNA sequence modeling on candidate cis-regulatory elements from ENCODE. In our sweep, MuonW reaches a target test perplexity with approximately 37\% fewer FLOPs than the best Adam configuration. We also analyze the learned weight spectra and observe that, under Muon, Hyperball is associated with progressive rank collapse, whereas independent weight decay preserves a more distributed spectral structure.
 \end{abstract}
 
+% ============================================================
+\section{Introduction}
+\label{sec:intro}
+% ============================================================
+
 Adam~\citep{adam,adamw} variants dominate DNA sequence modeling in systems such as AlphaGenome~\citep{alphagenome}, Enformer~\citep{enformer}, and Borzoi~\citep{borzoi}, while Muon~\citep{muon} has shown faster convergence in NLP. Throughout, AdamW denotes Adam plus independent weight decay, and MuonW denotes Muon plus independent weight decay. Whether Muon's gains transfer to nucleotide modeling is not obvious (Section~\ref{sec:distribution}).
 
 Unlike domains where outputs can be checked quickly, biological validation often requires wet-lab work such as DNA synthesis, cloning, cell culture, and sequencing over timescales of weeks to months. For this reason, reducing training compute is valuable in its own right: compute not spent on optimization can instead be redirected toward biological work.
+
+
+% ============================================================
+\section{Related Work}
+\label{sec:related-work}
+% ============================================================
+
+We are aware of two recent works that train or fine-tune DNA models with both Adam(W) and Muon, neither of which reports a controlled FLOP-efficiency comparison or a substantive performance gap between the two optimizers.
+
+\paragraph{Pre-training genomic language models with variants~\citep{ukbiobert}.} Liu \emph{et al.} pre-train UKBioBERT (a DNABERT-2-initialized genomic language model) on UK Biobank variants and fine-tune downstream sequence-to-function models (UKBioFormer, UKBioZoi) for individualized gene-expression and eQTL prediction. As part of an ablation over the UKBioFormer fine-tuning recipe, the authors swap the default Adam optimizer for AdamW and Muon while holding all other settings fixed and report that ``alternating optimizers (AdamW or MUON) [\ldots] [did] not [yield] significant improvements,'' so the released model reverts to Adam. The comparison is conducted only at a single fine-tuning configuration, on a single downstream metric (PCC for individualized expression), and at a single learning rate per optimizer; no FLOP- or token-efficiency curves are reported, and there is no analysis of how the optimizer choice interacts with weight-norm control, learning-rate sweeps, or scale.
+
+\paragraph{Foundation models for perturbation response~\citep{fmpert}.} Cole \emph{et al.} benchmark over 600 models for predicting cellular responses to genetic and chemical perturbations, using DNA foundation-model embeddings (e.g., AIDO.DNA) among other modalities. In their indexing-mode and in-silico knockout heads, the authors ``explored both the Adam and Muon optimizers but did not observe a significant difference in performance,'' and tune only the learning rate over $\{10^{-2},10^{-3},10^{-4},10^{-5}\}$. As above, no FLOP-efficiency analysis is performed, the comparison is single-configuration, and there is no separation of optimizer behavior from weight-decay or norm-control choices.
+
+\paragraph{What this paper adds.} Both prior works draw the same null conclusion, no significant difference between Adam(W) and Muon, from a single-point comparison. Our contribution is twofold. First, we run a controlled $2\times 2$ sweep over \{Adam, Muon\} $\times$ \{independent weight decay, Hyperball norm control\} across five learning rates and three model widths, which exposes a real and structured optimizer gap (Section~\ref{sec:results}). Second, we measure efficiency in FLOPs rather than steps or final loss, which makes the gap actionable: at our best configurations, MuonW reaches AdamW's best test perplexity with approximately $37\%$ fewer training FLOPs (Section~\ref{sec:results}, Appendix~\ref{app:flops}). The takeaway is that the apparent ``no-difference'' reported in prior DNA-modeling work appears to be an artifact of (i) coupling each optimizer to a single weight-regularization choice and (ii) reporting only converged metrics rather than FLOP-to-target.
 
 
 % ============================================================
@@ -98,7 +117,7 @@ Our results extend this observation to genomics. The near-uniform token distribu
 
 Without weight decay, the norm of the weight matrices grows $\propto \sqrt{t}$ as training progresses~\citep{hyperball}. This unchecked growth inflates the parameter scale relative to the step size, effectively shrinking the learning signal and hindering convergence~\citep{spectral-fl}. Weight decay counteracts this by imposing an $\ell_2$ bias that drives the norm toward an equilibrium value~\citep{wdeq,adamw,hyperball}, and empirically, adding decay improves both Adam and Muon~\citep{hyperball,adamw,wdeq}. The reason is a clean separation of concerns: the optimizer determines \emph{directional} update structure (moments for Adam, singular direction shaping for Muon), while decay provides a control knob on overall parameter scale~\citep{wdeq}.
 
-Although weight decay drives the norm toward an equilibrium, the weights only ``hover'' near it, and the optimizer must still search the space created by these fluctuations. Even if the norm `hovers' within just $0<\varepsilon\ll N$ of the equilibrium $N$ (or in the range $[N-\varepsilon, N+\varepsilon]$), we still have to consider a relatively large space of values within the hyperball. By Appendix~\ref{app:concentration}, nearly all of this volume lies in a thin shell at the boundary.
+Although weight decay drives the norm toward an equilibrium, the weights only ``hover'' near it, and the optimizer must still search the space created by these fluctuations. Even if the norm `hovers' within just $0<\varepsilon\ll N$ of the equilibrium $N$ (or in the range $[N-\varepsilon, N+\varepsilon]$), we still have to consider a relatively large space of values within the hyperball. By concentration of measure, nearly all of this volume lies in a thin shell at the boundary (Appendix~\ref{app:concentration}).
 
 Crucially, with correctly placed RMSNorms, these matrices become \emph{scale invariant} (Appendix~\ref{app:scale-inv}); their scale does not impact capacity, only direction. Since scale is irrelevant, wouldn't it be more efficient to fix the norm (set $\varepsilon=0$) and let the update focus solely on direction?
 
@@ -121,7 +140,7 @@ Note that not only do we set the weight norm to be $R$, but the update vector no
 \]
 which is an easily adjustable hyperparameter.
 
-Now, this \emph{is} a generous assumption, so we can make better estimates. Let us use the Frobenius norm throughout the next calculation; suppose that we know the expected normalized dot product\footnote{The Frobenius inner product $\langle A, B\rangle_F=\operatorname{Tr}(A^TB)=\langle\vec A,\vec B\rangle=\sum_{i,j}a_{ij}b_{ij}$ is the sum of the element wise product of the matrices $A$ and $B$.} $\gamma=\frac{\langle W_t, U_t\rangle_F}{\|U_t\|_F\|W_t\|_F}=\frac{\langle W_t, U_t\rangle_F}{\eta R^2}=\cos\theta$, where $\theta:=\angle(\vec W_t, \vec U_t)$\footnote{$\vec W$ denotes the vectorized form of matrix $W$; if $W=[c_1, c_2, \dots, c_n]$ where $c_i$ is the $i$th column of $W$, then $\vec W=\begin{bmatrix} c_1\\c_2\\\vdots\\c_n \end{bmatrix}$.}. By applying the cosine and sine rules to the triangle formed by the origin, $W_t$, and $W_t+U_t$ (see the 2D diagram in Appendix~\ref{app:derivation} for the full derivation), we obtain the exact step size:
+Now, this \emph{is} a generous assumption, so we can make better estimates. Let us use the Frobenius norm throughout the next calculation; suppose that we know the expected normalized dot product\footnote{The Frobenius inner product $\langle A, B\rangle_F=\operatorname{Tr}(A^TB)=\langle\vec A,\vec B\rangle=\sum_{i,j}a_{ij}b_{ij}$ is the sum of the element wise product of the matrices $A$ and $B$.} $\gamma=\frac{\langle W_t, U_t\rangle_F}{\|U_t\|_F\|W_t\|_F}=\frac{\langle W_t, U_t\rangle_F}{\eta R^2}=\cos\theta$, where $\theta:=\angle(\vec W_t, \vec U_t)$\footnote{$\vec W$ denotes the vectorized form of matrix $W$; if $W=[c_1, c_2, \dots, c_n]$ where $c_i$ is the $i$th column of $W$, then $\vec W=\begin{bmatrix} c_1\\c_2\\\vdots\\c_n \end{bmatrix}$.}. By applying the cosine and sine rules to the triangle formed by the origin, $W_t$, and $W_t+U_t$ (see Figure~\ref{fig:retraction-geometry} in Appendix~\ref{app:derivation} for the full derivation), we obtain the exact step size:
 
 \[
 x := \|\Delta W\| = R\sqrt{2}\sqrt{1 - \cos\phi}, \quad\text{where}\quad \cos\phi = \sqrt{1-\frac{\eta^2(1-\gamma^2)}{1+\eta^2+2\eta\gamma}}.
@@ -131,7 +150,7 @@ x := \|\Delta W\| = R\sqrt{2}\sqrt{1 - \cos\phi}, \quad\text{where}\quad \cos\ph
 
 \medskip
 
-When $\gamma,\eta\in(0,1)$, a careful bounding argument (Appendix~\ref{app:bounds}) shows that the relative step size lies in $\frac{x}{\|W_t\|}\in (0,\sqrt{2-\sqrt{2}})\approx (0, 0.765)$. This is quite loose without knowing $\gamma$; as an example, for practical learning rates $\eta\in(10^{-4},10^{-1})$ with an ideal $\gamma=0$, the bound tightens to roughly $(0.0001, 0.0996)$.
+When $\gamma,\eta\in(0,1)$, a careful bounding argument (Appendix~\ref{app:bounds}) shows that the relative step size lies in $\frac{x}{\|W_t\|}\in (0,\sqrt{2-\sqrt{2}})\approx (0, 0.765)$. The $\gamma\in(-1,0)$ case follows by replacing $\gamma\to|\gamma|$ in every step (the formula is dominated by $\gamma^2$, and the linear $2\eta\gamma$ term in the denominator only tightens the bound when $\gamma<0$). This is quite loose without knowing $\gamma$; as an example, for practical learning rates $\eta\in(10^{-4},10^{-1})$ with an ideal $\gamma=0$, the bound tightens to roughly $(0.0001, 0.0996)$.
 
 \subsection{Relative step size is linear in the learning rate}
 \label{sec:linear-step}
@@ -194,7 +213,7 @@ These test results, together with the training loss curves (Section~\ref{sec:tra
 
 \subsection{Perplexity progression by checkpoint and FLOPs}
 
-To understand the temporal dynamics behind the final results, we track the mean test perplexity over the 20 checkpoints. We present each progression in two views: by training step (checkpoint) and by total FLOPs. The FLOPs axis accounts for the per-step compute cost of each optimizer, including forward/backward passes and the optimizer update itself (e.g.\ Muon's update is an approximate $\mathrm{msign}$ map and is more expensive per step than Adam's elementwise update). The full set of per-learning-rate and per-optimizer progression curves is provided in Figures~\ref{fig:perp-by-lr-1}--\ref{fig:perp-by-optimizer-muon} in Appendix~\ref{app:figures}.
+To understand the temporal dynamics behind the final results, we track the mean test perplexity over the 20 checkpoints. We present each progression in two views: by training step (checkpoint) and by total FLOPs. The FLOPs axis accounts for the per-step compute cost of each optimizer, including forward/backward passes and the optimizer update itself (e.g.\ Muon's update is an approximate matrix-sign ($\mathrm{msign}$) map (the polar factor $UV^\top$ of the momentum buffer's SVD $U\Sigma V^\top$, computed via Newton--Schulz; see Appendix~\ref{app:muon}) and is more expensive per step than Adam's elementwise update). The full set of per-learning-rate and per-optimizer progression curves is provided in Figures~\ref{fig:perp-by-lr-1}--\ref{fig:perp-by-optimizer-muon} in Appendix~\ref{app:figures}.
 
 Across checkpoints, the same broad trends appear in both the step-based and FLOP-based views. At the low end of the learning-rate sweep, fixed-norm variants improve more quickly early in training. In the mid-range, AdamH is competitive with AdamW and MuonW overtakes MuonH. At the high end, MuonW remains the strongest configuration, while both Hyperball variants become less stable. The appendix provides the full per-learning-rate curves and optimizer-specific views.
 
@@ -243,7 +262,7 @@ To investigate why Muon with independent weight decay (MuonW) outperforms its co
   \centering
   \includegraphics[width=0.6\linewidth]{images/svd_entropy_mean_ffn_L3.png}\\[0.5em]
   \includegraphics[width=0.6\linewidth]{images/pr_mean_ffn_L3.png}
-  \caption{Spectral metrics for FFN Layer~3. Top: SVD Entropy. Bottom: Participation Ratio. \textbf{Blue:} MuonW, \textbf{Red:} MuonH, \textbf{Orange:} AdamW, \textbf{Green:} AdamH. MuonH (Red) collapses to a low-entropy, low-rank state, while MuonW (Blue) retains substantially higher spectral entropy and participation ratio throughout training. All weight matrices exhibited similar patterns; we show only one here for simplicity.}
+  \caption{Spectral metrics for FFN Layer~3. Top: Spectral Entropy. Bottom: Participation Ratio. \textbf{Blue:} MuonW, \textbf{Red:} MuonH, \textbf{Orange:} AdamW, \textbf{Green:} AdamH. MuonH (Red) collapses to a low-entropy, low-rank state, while MuonW (Blue) retains substantially higher spectral entropy and participation ratio throughout training. All weight matrices exhibited similar patterns; we show only one here for simplicity.}
   \label{fig:spectral}
 \end{figure}
 
@@ -525,7 +544,7 @@ x := \|\Delta W\| &= R\sqrt{2}\sqrt{1-\cos\phi}\\
 \section{Bounds on the Relative Step Size}
 \label{app:bounds}
 
-Now, suppose we know that $\gamma,\eta\in(0,1)$. We can infer from this that:
+We restrict to $\gamma,\eta\in(0,1)$ throughout this appendix; the $\gamma\in(-1,0)$ case follows by replacing $\gamma\to|\gamma|$ in every step (the formula is dominated by $\gamma^2$, and the linear $2\eta\gamma$ term in the denominator only tightens the bound when $\gamma<0$). Now, suppose we know that $\gamma,\eta\in(0,1)$. We can infer from this that:
 
 \[
 \begin{aligned}
