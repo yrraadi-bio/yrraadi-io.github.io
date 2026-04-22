@@ -47,6 +47,12 @@
 
 \title{Does Muon Improve Regulatory DNA Learning?}
 
+\author{%
+  Viraj Doshi \\
+  Origin Bio \\
+  \texttt{viraj@origin.bio} \\
+}
+
 \begin{document}
 
 \maketitle
@@ -124,7 +130,7 @@ Crucially, with correctly placed RMSNorms, these matrices become \emph{scale inv
 \subsection{The Hyperball update}
 \label{sec:hyperball}
 
-The intuition of Hyperball~\citep{hyperball} is to, for a weight matrix $W$, simply fix the Frobenius norm of $W$ to the initial radius $R := \|W_0\|_F$, and the norm of update $U$ to $\eta R$. Rather confusingly, this confines the weight matrix to a hypersphere of radius $R$, not a ball\footnote{Note that a hypersphere and hyperball are not the same thing. A `ball' refers to the entire solid object, but a `sphere' refers only to the shell/boundary of said ball.}, but let us ignore this superficial detail. Suppose $\mathrm{Normalize}(A):=A/\|{A}\|_F$. Given an optimizer's proposed update step $\tilde u_t$, let the actual update be:
+The intuition of Hyperball~\citep{hyperball} is to, for a weight matrix $W$, simply fix the Frobenius norm of $W$ to the initial radius $R := \|W_0\|_F$, and the norm of update $U$ to $\eta R$. This confines the weight matrix to a hypersphere of radius $R$. Suppose $\mathrm{Normalize}(A):=A/\|{A}\|_F$. Given an optimizer's proposed update step $\tilde u_t$, let the actual update be:
 \[
 U_t = -\eta R\,\mathrm{Normalize}(\tilde u_t),
 \]
@@ -132,7 +138,7 @@ then let
 \[
 W_{t+1} = R\,\mathrm{Normalize}(W_t + U_t).
 \]
-What makes this optimization special is that it can be wrapped around any optimizer update, so it works with Adam and Muon (using it alongside weight decay would be useless, as we hard-set the weight norms in the wrapper function).
+What makes this optimization special is that it can be wrapped around any optimizer update, so it works with Adam and Muon (using it alongside weight decay would be redundant, because we strictly constrain the norm in the update rule).
 
 Note that not only do we set the weight norm to be $R$, but the update vector norm is set to $\eta R$. Let $\Delta W = W_{t+1}-W_t$. If we make the generous assumption that $\|\Delta W\|_F = O(\|U_t\|_F)$, we can see that we have a relative step size of:
 \[
@@ -140,7 +146,7 @@ Note that not only do we set the weight norm to be $R$, but the update vector no
 \]
 which is an easily adjustable hyperparameter.
 
-Now, this \emph{is} a generous assumption, so we can make better estimates. Let us use the Frobenius norm throughout the next calculation; suppose that we know the expected normalized dot product\footnote{The Frobenius inner product $\langle A, B\rangle_F=\operatorname{Tr}(A^TB)=\langle\vec A,\vec B\rangle=\sum_{i,j}a_{ij}b_{ij}$ is the sum of the element wise product of the matrices $A$ and $B$.} $\gamma=\frac{\langle W_t, U_t\rangle_F}{\|U_t\|_F\|W_t\|_F}=\frac{\langle W_t, U_t\rangle_F}{\eta R^2}=\cos\theta$, where $\theta:=\angle(\vec W_t, \vec U_t)$\footnote{$\vec W$ denotes the vectorized form of matrix $W$; if $W=[c_1, c_2, \dots, c_n]$ where $c_i$ is the $i$th column of $W$, then $\vec W=\begin{bmatrix} c_1\\c_2\\\vdots\\c_n \end{bmatrix}$.}. By applying the cosine and sine rules to the triangle formed by the origin, $W_t$, and $W_t+U_t$ (see Figure~\ref{fig:retraction-geometry} in Appendix~\ref{app:derivation} for the full derivation), we obtain the exact step size:
+Now, this \emph{is} a generous assumption, so we can make better estimates. Let us use the Frobenius norm throughout the next calculation; suppose that we know the expected normalized dot product\footnote{The Frobenius inner product $\langle A, B\rangle_F=\operatorname{Tr}(A^\top B)=\langle\vec A,\vec B\rangle=\sum_{i,j}a_{ij}b_{ij}$ is the sum of the element wise product of the matrices $A$ and $B$.} $\gamma=\frac{\langle W_t, U_t\rangle_F}{\|U_t\|_F\|W_t\|_F}=\frac{\langle W_t, U_t\rangle_F}{\eta R^2}=\cos\theta$, where $\theta:=\angle(\vec W_t, \vec U_t)$\footnote{$\vec W$ denotes the vectorized form of matrix $W$; if $W=[c_1, c_2, \dots, c_n]$ where $c_i$ is the $i$th column of $W$, then $\vec W=\begin{bmatrix} c_1\\c_2\\\vdots\\c_n \end{bmatrix}$.}. By applying the cosine and sine rules to the triangle formed by the origin, $W_t$, and $W_t+U_t$ (see Figure~\ref{fig:retraction-geometry} in Appendix~\ref{app:derivation} for the full derivation), we obtain the exact step size:
 
 \[
 x := \|\Delta W\| = R\sqrt{2}\sqrt{1 - \cos\phi}, \quad\text{where}\quad \cos\phi = \sqrt{1-\frac{\eta^2(1-\gamma^2)}{1+\eta^2+2\eta\gamma}}.
@@ -175,7 +181,9 @@ Hyperball eliminates this coupling: $\|W_t\|=R$ is fixed by construction, $\|U_t
 \label{sec:results}
 % ============================================================
 
-To isolate the effect of the optimizer, we hold model architecture, dataset, training duration, and all non-optimizer hyperparameters constant across runs, varying only the optimizer and learning rate. We use test perplexity on a held-out test split as the primary measure of sequence modeling performance.\footnote{The model is our model architecture, trained on candidate cis-regulatory elements (cCREs) from the ENCODE v4 registry that are specific to one of three cell lines: K562, HepG2, and SK-N-SH. Its size is in the same general few-hundred-million-parameter regime as AlphaGenome, Enformer, and Borzoi.} Our goal is to determine which optimizer reaches lower test perplexity faster at a fixed compute budget, since compute saved during training can be reallocated to biological work.
+\subsection{Experimental Setup}
+
+To isolate the effect of the optimizer, we hold model architecture, dataset, training duration, and all non-optimizer hyperparameters constant across runs, varying only the optimizer and learning rate. The model is our model architecture, trained on candidate cis-regulatory elements (cCREs) from the ENCODE v4 registry that are specific to one of three cell lines: K562, HepG2, and SK-N-SH. Its size is in the same general few-hundred-million-parameter regime as AlphaGenome, Enformer, and Borzoi. We use test perplexity on a held-out test split as the primary measure of sequence modeling performance. Our goal is to determine which optimizer reaches lower test perplexity faster at a fixed compute budget, since compute saved during training can be reallocated to biological work.
 
 \subsection{Test perplexity across learning rates}
 
@@ -276,7 +284,7 @@ The weights of MuonW (Blue) and MuonH (Red) both start with high spectral entrop
 
 MuonH (Red) constrains $\|W\|_F = R$ at every step by multiplying every singular value by the same factor $c = R/\|W_t + U_t\|_F$. A plausible consequence is that large singular values survive this downscaling more readily than small ones, because the uniform rescaling can pull weak directions back down before they accumulate meaningful energy. Over many steps, this could concentrate the spectrum into fewer dominant modes.
 
-This effect is compounded on the \emph{update} side. Recall that Muon's NS${}_5$ whitening is imperfect: it pushes singular values toward $1$ but lands in roughly $[0.7, 1.3]$, not exactly at $1$. For MuonW (Blue), these small imperfections are benign; the weight matrix is free to absorb them, and the $\Delta W$ spectral entropy stays high ($\approx 0.95$) throughout training. For MuonH (Red), one plausible mechanism is a feedback loop: as the weight spectrum collapses, the gradients computed at $W_t$ become increasingly anisotropic, which flows into the momentum buffer. Imperfect NS${}_5$ whitening may be insufficient to fully recover a uniform spectrum from this biased input, so the update itself becomes progressively less whitened.
+This effect is compounded on the \emph{update} side. Recall that Muon's whitening, which uses 5 steps of Newton-Schulz iteration (NS${}_5$), is imperfect: it pushes singular values toward $1$ but lands in roughly $[0.7, 1.3]$, not exactly at $1$. For MuonW (Blue), these small imperfections are benign; the weight matrix is free to absorb them, and the $\Delta W$ spectral entropy stays high ($\approx 0.95$) throughout training. For MuonH (Red), one plausible mechanism is a feedback loop: as the weight spectrum collapses, the gradients computed at $W_t$ become increasingly anisotropic, which flows into the momentum buffer. Imperfect NS${}_5$ whitening may be insufficient to fully recover a uniform spectrum from this biased input, so the update itself becomes progressively less whitened.
 
 In contrast, MuonW (Blue) imposes no hard constraint on the weight norm, so there is no uniform rescaling step and no corresponding feedback loop of this form. MuonW shows sustained higher spectral entropy and participation ratio, suggesting a more distributed use of singular directions; this could help preserve capacity and combinatorial regulatory structure.
 
@@ -318,6 +326,13 @@ This means that part of MuonW's \emph{training loss} advantage may be an artifac
 \textbf{Possible Explanation for AdamW's lack of Logit Growth} -- see Appendix~\ref{app:adamw-logits}.
 \end{tcolorbox}
 
+
+% ============================================================
+\section{Conclusion}
+\label{sec:conclusion}
+% ============================================================
+
+We have demonstrated that the choice of optimizer and weight regularization strategy substantially impacts the efficiency of training DNA sequence models. While previous studies reported no significant difference between Adam and Muon for DNA modeling, our controlled sweep reveals that Muon with independent weight decay (MuonW) achieves the lowest test perplexity and reaches target performance in approximately 37\% fewer FLOPs than the best Adam configuration. Our spectral analysis suggests that fixed-norm constraints like Hyperball can induce progressive rank collapse under Muon, whereas independent weight decay preserves a distributed representation. These findings underscore the importance of evaluating optimizers across multiple learning rates and regularization schemes, and highlight MuonW as a highly efficient choice for biological sequence modeling.
 
 % ============================================================
 \section{Limitations}
