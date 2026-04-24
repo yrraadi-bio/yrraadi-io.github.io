@@ -58,7 +58,7 @@
 \maketitle
 
 \begin{abstract}
-AI models trained on regulatory DNA are increasingly used to score regulatory elements and guide which biological hypotheses are worth testing next, but training these models is expensive and every wasted run competes with downstream experimental work. This raises a practical question: can regulatory DNA models be trained more compute-efficiently by changing the optimizer rather than the architecture? That question is nontrivial because regulatory DNA is a substantially different training domain from NLP, even if both are modeled as sequences. We study this question on regulatory DNA sequence modeling over ENCODE candidate cis-regulatory elements, training the same model family with Adam or Muon and pairing each optimizer with either independent weight decay or Hyperball norm control. We include both forms of weight regularization because they control effective step size in different ways and therefore change what a hyperparameter sweep can teach us about optimizer behavior. Under that controlled comparison, MuonW reaches a fixed target test perplexity with approximately 37\% fewer FLOPs than the best Adam configuration. Weight regularization is therefore part of the optimizer story rather than a side detail: it materially changes the compute-efficiency ranking.
+Training regulatory DNA models is expensive, so optimizer choice matters if it can reduce compute without changing the architecture. We study this on ENCODE candidate cis-regulatory elements, comparing Adam and Muon under two norm-control schemes: independent weight decay and Hyperball. This comparison is nontrivial because regulatory DNA differs substantially from NLP, where most optimizer results are established. Under a controlled sweep, MuonW reaches a fixed target test perplexity with approximately 37\% fewer FLOPs than the best Adam configuration, and the regularization choice materially changes the ranking.
 \end{abstract}
 
 % ============================================================
@@ -66,9 +66,9 @@ AI models trained on regulatory DNA are increasingly used to score regulatory el
 \label{sec:intro}
 % ============================================================
 
-AI models trained on regulatory DNA now sit upstream of expensive biological decision-making. Systems such as AlphaGenome~\citep{alphagenome}, Enformer~\citep{enformer}, and Borzoi~\citep{borzoi} learn from sequence to predict regulatory behavior, and in practice their outputs help determine which elements, perturbations, or hypotheses are worth following up experimentally. But unlike many ML domains, success is not measured only by a benchmark number: downstream validation can require DNA synthesis, cloning, cell culture, sequencing, and weeks to months of wet-lab work. If model training can be made more compute-efficient, those saved resources can be redirected toward biological experiments rather than GPU time.
+AI models trained on regulatory DNA now sit upstream of expensive biological follow-up. Systems such as AlphaGenome~\citep{alphagenome}, Enformer~\citep{enformer}, and Borzoi~\citep{borzoi} train on regulatory DNA and help prioritize which elements or hypotheses to test, and downstream validation can require DNA synthesis, cloning, cell culture, and sequencing. If training can be made more compute-efficient, those resources can be redirected toward experiments rather than GPU time.
 
-This motivates a simple question: can an alternative optimizer make regulatory DNA training materially more efficient? We study that question by training the same regulatory DNA sequence model on ENCODE candidate cis-regulatory elements while varying only the optimizer and its weight-regularization scheme. Regulatory DNA is still a sequence modeling problem, but it is different enough from NLP that optimizer gains should be verified in-domain rather than assumed to transfer. Specifically, we compare Adam and Muon, each paired with either independent weight decay or Hyperball norm control, across five learning rates and three model widths. We include both regularization schemes for a principled reason: the optimizer comparison is only informative if scale is controlled well enough for the sweep to reflect optimizer behavior rather than uncontrolled norm drift. The main empirical result is that MuonW, Muon with independent weight decay, reaches AdamW's target quality with approximately 37\% fewer training FLOPs than AdamH. More broadly, the sweep shows that weight regularization materially changes optimizer behavior, so conclusions about ``which optimizer is better'' should not be drawn from a single norm-control recipe.
+This motivates a simple question: can an alternative optimizer train regulatory DNA models more efficiently? We test this by training the same sequence model on ENCODE candidate cis-regulatory elements while varying only the optimizer and the norm-control scheme. Because regulatory DNA differs from NLP, optimizer gains should be verified in-domain rather than assumed to transfer. We therefore compare Adam and Muon, each paired with either independent weight decay or Hyperball, across five learning rates and three model widths. MuonW reaches AdamW's target quality with approximately 37\% fewer training FLOPs, and the sweep shows that the regularization choice materially changes optimizer behavior.
 
 
 % ============================================================
@@ -78,11 +78,11 @@ This motivates a simple question: can an alternative optimizer make regulatory D
 
 We are aware of two recent works that train or fine-tune DNA models with both Adam(W) and Muon, neither of which reports a controlled FLOP-efficiency comparison or a substantive performance gap between the two optimizers.
 
-\paragraph{Pre-training genomic language models with variants~\citep{ukbiobert}.} Liu \emph{et al.} pre-train UKBioBERT (a DNABERT-2-initialized genomic language model) on UK Biobank variants and fine-tune downstream sequence-to-function models (UKBioFormer, UKBioZoi) for individualized gene-expression and eQTL prediction. As part of an ablation over the UKBioFormer fine-tuning recipe, the authors swap the default Adam optimizer for AdamW and Muon while holding all other settings fixed and report that ``alternating optimizers (AdamW or MUON) [\ldots] [did] not [yield] significant improvements,'' so the released model reverts to Adam. The comparison is conducted only at a single fine-tuning configuration, on a single downstream metric (PCC for individualized expression), and at a single learning rate per optimizer; no FLOP- or token-efficiency curves are reported, and there is no analysis of how the optimizer choice interacts with weight-norm control, learning-rate sweeps, or scale.
+\paragraph{Pre-training genomic language models with variants~\citep{ukbiobert}.} Liu \emph{et al.} compare AdamW and Muon in a fine-tuning ablation for UKBioFormer and report no significant improvement from changing optimizers. The comparison is single-configuration: one downstream task, one metric, and one learning rate per optimizer, with no FLOP-efficiency analysis and no separation between optimizer choice and norm-control choice.
 
-\paragraph{Foundation models for perturbation response~\citep{fmpert}.} Cole \emph{et al.} benchmark over 600 models for predicting cellular responses to genetic and chemical perturbations, using DNA foundation-model embeddings (e.g., AIDO.DNA) among other modalities. In their indexing-mode and in-silico knockout heads, the authors ``explored both the Adam and Muon optimizers but did not observe a significant difference in performance,'' and tune only the learning rate over $\{10^{-2},10^{-3},10^{-4},10^{-5}\}$. As above, no FLOP-efficiency analysis is performed, the comparison is single-configuration, and there is no separation of optimizer behavior from weight-decay or norm-control choices.
+\paragraph{Foundation models for perturbation response~\citep{fmpert}.} Cole \emph{et al.} also report no significant difference between Adam and Muon, but again the comparison is narrow: only the learning rate is tuned, no FLOP-efficiency analysis is reported, and optimizer behavior is not separated from norm-control choices.
 
-\paragraph{What this paper adds.} Both prior works draw the same null conclusion, no significant difference between Adam(W) and Muon, from a single-point comparison. Our contribution is twofold. First, we run a controlled $2\times 2$ sweep over \{Adam, Muon\} $\times$ \{independent weight decay, Hyperball norm control\} across five learning rates and three model widths. This is not just an ablation grid: both regularization schemes are included because they control parameter scale and effective step size in different ways, which makes the optimizer comparison more informative. Second, we evaluate the sweep using FLOP-to-target rather than converged loss, which makes the comparison actionable for biological model development. At our best configurations, MuonW reaches AdamW's target quality with approximately $37\%$ fewer training FLOPs (Section~\ref{sec:results}, Appendix~\ref{app:flops}). The takeaway is that the apparent ``no-difference'' reported in prior DNA-modeling work appears to be an artifact of (i) coupling each optimizer to a single weight-regularization choice and (ii) not measuring compute efficiency directly.
+\paragraph{What this paper adds.} Both prior works draw the same null conclusion. From a single point comparison. We replace that single-point comparison with a controlled $2\times 2$ sweep over \{Adam, Muon\} $\times$ \{independent weight decay, Hyperball\} across five learning rates and three model widths, and we measure FLOP-to-target rather than converged loss. Under this comparison, MuonW reaches AdamW's target quality with approximately $37\%$ fewer training FLOPs (Section~\ref{sec:results}, Appendix~\ref{app:flops}). The main methodological point is that optimizer conclusions change once norm control and compute efficiency are evaluated explicitly.
 
 
 % ============================================================
@@ -94,11 +94,11 @@ DNA has a vocabulary of 4 tokens with near-uniform frequencies versus Zipf-distr
 
 \subsection{DNA and language have different local structure}
 
-Nearly all modern optimizer benchmarks are run on natural language data, where token frequencies follow Zipf's law~\citep{zipf-review,zipf}: the $k$-th most common token appears with frequency $f(k)\propto 1/k^{\alpha}$ ($\alpha\approx 1$). A handful of tokens (``the'', ``a'', ``is'') dominate, while the vast majority of the $\sim$100k vocabulary is rarely seen (see Figure~\ref{fig:zipf} in Appendix~\ref{app:figures}). Regulatory DNA looks very different. It has a vocabulary of just 4 nucleotides, and in our training data (candidate cis-regulatory elements from ENCODE cell lines) the marginal frequencies are strikingly close to uniform (Figure~\ref{fig:nucleotide-dist} in Appendix~\ref{app:figures}). K562 and HepG2 are nearly uniform; SK-N-SH shows a moderate GC bias (28.3\% each vs 21.7\% for A/T).
+Nearly all modern optimizer benchmarks are run on natural language data, where token frequencies follow Zipf's law, with the $k$-th most common token appearing with frequency $f(k)\propto 1/k^{\alpha}$ ($\alpha\approx 1$)~\citep{zipf-review,zipf}. Regulatory DNA looks very different: it has a vocabulary of 4 nucleotides, and in our training data the marginal frequencies are close to uniform (Figure~\ref{fig:nucleotide-dist} in Appendix~\ref{app:figures}).
 
-Just as importantly, the useful context in regulatory DNA is often highly local. Many predictive signals are carried by short motif-scale patterns, typically on the order of 6--20 base pairs, that correspond to transcription-factor binding preferences or nearby combinations of such motifs. Long-range genomic context can still matter, but the day-to-day statistical structure the model sees during next-token training is much more strongly shaped by these small local nucleotide neighborhoods than by the kind of broad lexical hierarchy common in NLP.
+Much of the useful context in regulatory DNA is local. Many predictive signals are carried by motif-scale patterns, typically 6--20 base pairs, corresponding to transcription-factor binding sites or nearby motif combinations. Long-range context can still matter, but the dominant training signal is much more local than in NLP.
 
-The entropy of DNA's token distribution sits near its theoretical maximum: $H_{\text{DNA}}\approx\log_2 4=2$ bits. Natural language, despite its vastly larger vocabulary, has \emph{lower} normalized entropy because Zipf's heavy tail concentrates probability mass on a small fraction of tokens. This distinction has concrete consequences for how optimizers see gradients, meaning the gradient statistics across tokens behave very differently numerically.
+The entropy of DNA's token distribution is therefore close to its maximum, unlike language where Zipf concentration creates strong token imbalance. This implies different gradient statistics, so optimizer rankings established on language corpora may not transfer cleanly.
 
 \begin{tcolorbox}[colback=optionalboxbg, colframe=optionalboxborder, sharp corners, boxrule=0.6pt, left=6pt, right=6pt, top=4pt, bottom=4pt]
 \textbf{Gradient-Statistic Intuition} -- see Appendix~\ref{app:gradient-stats}.
@@ -106,9 +106,9 @@ The entropy of DNA's token distribution sits near its theoretical maximum: $H_{\
 
 \subsection{Optimizer performance is distribution-dependent}
 
-\citet{wilson} demonstrated empirically that the relative ranking of optimizers changes across domains: adaptive methods (Adam, AdaGrad, RMSProp) find solutions that generalize \emph{worse} than SGD on image classification tasks, despite converging faster. Yet these same adaptive methods dominate SGD in language modeling, consistent with the classical No Free Lunch theorems~\citep{nfl}, which prove that no single optimization algorithm is universally superior, and performance is always relative to the structure of the problem.
+\citet{wilson} showed that optimizer rankings change across domains: adaptive methods underperform SGD on some vision tasks despite converging faster, yet dominate SGD in language modeling. This is consistent with the No Free Lunch view~\citep{nfl} that optimizer performance depends on problem structure.
 
-Our results extend this observation to genomics. The near-uniform token distribution of DNA removes the statistical asymmetry that adaptive methods exploit in NLP, while the low cardinality ($K=4$) and positional grammar of regulatory sequences create a loss landscape with different curvature. This suggests that optimizer rankings established on language corpora may not transfer cleanly.
+Our results extend this observation to genomics. Regulatory DNA is different enough from language that optimizer rankings from NLP should not be assumed to transfer.
 
 
 % ============================================================
@@ -119,18 +119,18 @@ Our results extend this observation to genomics. The near-uniform token distribu
 \subsection{Why weight regularization belongs in the optimizer comparison}
 \label{sec:weight-decay}
 
-If the goal is to learn which optimizer is more compute-efficient, then weight regularization is not optional. Without some form of norm control, the norm of the weight matrices grows $\propto \sqrt{t}$ as training progresses~\citep{hyperball}. This unchecked growth inflates parameter scale relative to the step size, effectively shrinking the learning signal and hindering convergence~\citep{spectral-fl}. In that regime, a sweep is no longer telling us only about Adam versus Muon; it is also reflecting uncontrolled drift in the scale of the parameters. Any conclusion about optimizer quality is therefore entangled with a second question: how is weight scale being controlled?
+If the goal is to compare optimizers, then weight regularization is not optional. Without norm control, weight norms grow $\propto \sqrt t$ during training~\citep{hyperball}, changing parameter scale relative to step size and confounding the comparison~\citep{spectral-fl}. A sweep would then mix optimizer effects with uncontrolled norm drift.
 
-Independent weight decay is the standard answer. It imposes an $\ell_2$ bias that drives the norm toward an equilibrium value~\citep{wdeq,adamw,hyperball}, and empirically, adding decay improves both Adam and Muon~\citep{hyperball,adamw,wdeq}. Conceptually, it creates a useful separation of concerns: the optimizer determines the \emph{directional} structure of the update (moments for Adam, singular direction shaping for Muon), while decay provides a control knob on overall parameter scale~\citep{wdeq}. This matters for hyperparameter transfer as well. When norm growth is moderated, learning-rate sweeps become easier to interpret, and for AdamW there is direct evidence that properly scaled independent weight decay improves transfer across model and dataset scale~\citep{wdtransfer}.
+Independent weight decay is the standard answer. It drives the norm toward an equilibrium value~\citep{wdeq,adamw,hyperball}, separating update \emph{direction} from overall parameter scale~\citep{wdeq}. It also matters for transfer: for AdamW, properly scaled independent weight decay improves transfer across model and dataset scale~\citep{wdtransfer}.
 
-Independent weight decay is not the only way to get this benefit. Although it drives the norm toward an equilibrium, the weights still ``hover'' near that equilibrium, and the optimizer must search the space created by those fluctuations. Even if the norm hovers within just $0<\varepsilon\ll N$ of the equilibrium $N$ (or in the range $[N-\varepsilon, N+\varepsilon]$), we still have to consider a relatively large space of values within the hyperball. By concentration of measure, nearly all of this volume lies in a thin shell at the boundary (Appendix~\ref{app:concentration}).
+Independent weight decay is not the only way to control scale. Although it drives the norm toward an equilibrium, the optimizer must search the space created by those fluctuations. Even if the norm hovers within just $0<\varepsilon\ll N$ of the equilibrium $N$ (or in the range $[N-\varepsilon, N+\varepsilon]$), we still have to consider a relatively large space of values within the hyperball. By concentration of measure, nearly all of this volume lies in a thin shell at the boundary (Appendix~\ref{app:concentration}).
 
-Crucially, with correctly placed RMSNorms, these matrices become \emph{scale invariant} (Appendix~\ref{app:scale-inv}); their scale does not impact capacity, only direction. That observation suggests a natural alternative to weight decay. If scale itself is not the object we want to learn, why not fix the norm and let the update focus entirely on direction? This is the motivation for Hyperball~\citep{hyperball}, and it is why we sweep both independent weight decay and Hyperball in this paper: independent weight decay supports transfer across scale~\citep{wdtransfer}, while Hyperball provides a fixed-norm alternative.
+With correctly placed RMSNorms, these matrices are effectively scale invariant (Appendix~\ref{app:scale-inv}); scale affects optimization more than capacity. That suggests a direct alternative to weight decay: fix the norm and optimize only direction. This is the motivation for Hyperball~\citep{hyperball}.
 
 \subsection{The Hyperball update}
 \label{sec:hyperball}
 
-Hyperball~\citep{hyperball} is the clean alternative to weight decay in this setting. Instead of softly biasing the weights toward an equilibrium radius, it fixes the Frobenius norm of each weight matrix $W$ to the initial radius $R := \|W_0\|_F$ and sets the norm of the update $U$ to $\eta R$. This confines the weight matrix to a hypersphere of radius $R$. Suppose $\mathrm{Normalize}(A):=A/\|{A}\|_F$. Given an optimizer's proposed update step $\tilde u_t$, let the actual update be:
+Hyperball~\citep{hyperball} fixes the Frobenius norm of each weight matrix $W$ to the initial radius $R := \|W_0\|_F$ and sets the norm of the update $U$ to $\eta R$. This confines the weight matrix to a hypersphere of radius $R$. Suppose $\mathrm{Normalize}(A):=A/\|{A}\|_F$. Given an optimizer's proposed update step $\tilde u_t$, let the actual update be:
 \[
 U_t = -\eta R\,\mathrm{Normalize}(\tilde u_t),
 \]
@@ -138,7 +138,7 @@ then let
 \[
 W_{t+1} = R\,\mathrm{Normalize}(W_t + U_t).
 \]
-What makes this construction especially useful for our purposes is that it can be wrapped around any optimizer update, so it works with Adam and Muon alike (using it alongside weight decay would be redundant, because we strictly constrain the norm in the update rule). This lets us ask whether an optimizer advantage is robust to \emph{how} scale is controlled, rather than baking a single norm-control choice into the conclusion.
+This construction can be wrapped around any optimizer update, so it works with Adam and Muon alike. That lets us test whether an optimizer advantage survives a different norm-control rule.
 
 Note that not only do we set the weight norm to be $R$, but the update vector norm is set to $\eta R$. Let $\Delta W = W_{t+1}-W_t$. If we make the generous assumption that $\|\Delta W\|_F = O(\|U_t\|_F)$, we can see that we have a relative step size of:
 \[
@@ -171,7 +171,7 @@ which is exactly the tangent-space approximation of the step on the sphere. In t
 \]
 and when the update is orthogonal to the current weights ($\gamma=0$), this collapses to the remarkably clean $\frac{x}{\|W_t\|}\approx \eta$. In other words, \emph{$\eta$ acts directly as a relative-step-size dial}: doubling the learning rate doubles the effective movement on the sphere.
 
-\paragraph{Contrast with weight decay.} This is a meaningful departure from the standard weight-decay regime, where the relative step size is a highly nonlinear function of multiple interacting variables: the learning rate $\eta$, the decay coefficient $\lambda$, the momentum coefficient(s), the optimizer's running statistics, and the elapsed training step $t$ (since the equilibrium is only reached asymptotically). The literature does not converge on a single equation for this quantity; instead, different works express the idea through different proxies and approximations~\citep{wdeq,hyperball,wdnorm}. The shared takeaway across these analyses is that no single hyperparameter can be tuned in isolation to achieve a target effective step size, which makes hyperparameter transfer harder and forces practitioners to co-tune $\eta$ and $\lambda$ jointly~\citep{wdtransfer}.
+\paragraph{Contrast with weight decay.} Under weight decay, the relative step size depends on several coupled quantities, including the learning rate, decay coefficient, momentum coefficient(s), the optimizer state, and training time~\citep{wdeq,hyperball,wdnorm}. In practice this makes $\eta$ and $\lambda$ harder to tune independently and complicates transfer~\citep{wdtransfer}.
 
 Hyperball eliminates this coupling: $\|W_t\|=R$ is fixed by construction, $\|U_t\|=\eta R$ is fixed by construction, and the retraction introduces only a mild $\sqrt{1-\gamma^2}$ correction. The learning-rate dial and the effective-step-size dial are therefore approximately the same knob. In our runs, MuonW's relative step size decreases over training as $\|W_t\|$ grows, while MuonH's remains flatter at the level set by $\eta$ (Figures~\ref{fig:dynamics-stepsize} and~\ref{fig:dynamics-norms} in Appendix~\ref{app:figures}).
 
@@ -207,13 +207,13 @@ Figure~\ref{fig:final-perplexity} shows the final test perplexity (at the last c
   \label{fig:final-perplexity}
 \end{figure}
 
-For Adam variants, applying the Hyperball constraint improves peak performance but narrows the stable operating window. AdamH reaches the lowest test perplexity within the Adam family ($\sim$2.485) at a moderate learning rate of $\sim 5.69 \times 10^{-3}$, whereas AdamW is more robust at the extremes of the sweep.
+For Adam, Hyperball improves peak performance but narrows the stable window. AdamH is best near $\sim 5.69 \times 10^{-3}$, while AdamW is more robust at the edges of the sweep.
 
-For Muon variants, the trend differs. MuonH performs better at the smallest learning rates, while MuonW improves as the learning rate increases and attains the lowest test perplexity in the sweep ($\sim$2.464) at $\sim 2.27 \times 10^{-2}$. One possible interpretation is that MuonW benefits from implicit annealing: as the weight norm grows, the relative step size decreases over training. MuonH, by contrast, fixes the norm, so although its relative step size still scales with the learning rate, it does not exhibit the same time-dependent annealing.
+For Muon, the trend reverses. MuonH is better at the smallest learning rates, while MuonW improves with learning rate and reaches the best value in the sweep ($\sim$2.464) at $\sim 2.27 \times 10^{-2}$. A likely reason is implicit annealing: MuonW's growing norm reduces relative step size over training, whereas MuonH does not.
 
 \subsection{Overall findings}
 
-These test results, together with the training loss curves (Section~\ref{sec:training}), indicate that the Hyperball constraint does not uniformly improve both optimizers, and that MuonW is the strongest configuration within the present sweep.
+Hyperball does not uniformly improve both optimizers, and MuonW is the strongest configuration in the present sweep.
 
 \begin{tcolorbox}[colback=optionalboxbg, colframe=optionalboxborder, sharp corners, boxrule=0.6pt, left=6pt, right=6pt, top=4pt, bottom=4pt]
 \textbf{Possible Mechanism for Muon under Hyperball} -- see Appendix~\ref{app:hyperball-worsen}.
@@ -221,13 +221,13 @@ These test results, together with the training loss curves (Section~\ref{sec:tra
 
 \subsection{Progression to target quality}
 
-To understand the temporal dynamics behind the final results, we track the mean test perplexity over the 20 checkpoints. We present each progression in two views: by training step (checkpoint) and by total FLOPs. The FLOPs axis accounts for the per-step compute cost of each optimizer, including forward/backward passes and the optimizer update itself (e.g.\ Muon's update is an approximate matrix-sign ($\mathrm{msign}$) map (the polar factor $UV^\top$ of the momentum buffer's SVD $U\Sigma V^\top$, computed via Newton--Schulz; see Appendix~\ref{app:muon}) and is more expensive per step than Adam's elementwise update). The full set of per-learning-rate and per-optimizer progression curves is provided in Figures~\ref{fig:perp-by-lr-1}--\ref{fig:perp-by-optimizer-muon} in Appendix~\ref{app:figures}.
+To understand the temporal dynamics behind the final results, we track the mean test perplexity over the 20 checkpoints. We present each progression in two views: by training step (checkpoint) and by total FLOPs. The FLOPs axis accounts for the per-step compute cost of each optimizer, including forward/backward passes and the optimizer update itself (see Appendix~\ref{app:muon}) and is more expensive per step than Adam's elementwise update. The full set of per-learning-rate and per-optimizer progression curves is provided in Figures~\ref{fig:perp-by-lr-1}--\ref{fig:perp-by-optimizer-muon} in Appendix~\ref{app:figures}.
 
-Across checkpoints, the same broad trends appear in both the step-based and FLOP-based views, but the FLOP view sharpens the practical ranking. At the low end of the learning-rate sweep, fixed-norm variants improve more quickly early in training. In the mid-range, AdamH is competitive with AdamW and MuonW overtakes MuonH. At the high end, MuonW remains the strongest configuration, while both Hyperball variants become less stable. The appendix provides the full per-learning-rate curves and optimizer-specific views.
+The same trends appear in both views, but FLOPs give the practical ranking. Fixed-norm variants improve quickly at low learning rates, AdamH is competitive in the middle, and MuonW is strongest at the high end while both Hyperball variants become less stable.
 
 \subsection{Time-to-target: FLOP efficiency}
 
-We quantify optimization efficiency by measuring the training FLOPs required to cross a fixed test perplexity target. We use a target of 2.51, the lowest perplexity reached by AdamW in the sweep, and ask which alternative reaches that same quality level most cheaply. MuonW at its optimal learning rate crosses this threshold by checkpoint 12, while AdamH at its optimal configuration reaches it around checkpoint 19. This corresponds to roughly 37\% fewer steps (and 37\% fewer training tokens). Because the forward and backward passes dominate per-step FLOPs, Muon's approximate-$\mathrm{msign}$ update adds only a small overhead relative to the total step cost, so the step reduction translates to a comparable reduction in total training FLOPs (Appendix~\ref{app:flops}).
+We quantify optimization efficiency by measuring the FLOPs required to cross a fixed test-perplexity target. Using 2.51, the best value reached by AdamW, MuonW crosses the threshold by checkpoint 12 while AdamH reaches it around checkpoint 19. That is roughly 37\% fewer steps and, because optimizer overhead is small relative to forward/backward cost, roughly 37\% fewer training FLOPs (Appendix~\ref{app:flops}).
 
 
 % ============================================================
@@ -242,17 +242,17 @@ We quantify optimization efficiency by measuring the training FLOPs required to 
   \label{fig:loss-curves}
 \end{figure}
 
-Consistent with existing literature~\citep{muon,hyperball}, Muon reaches a lower training loss than Adam in the runs shown here. The loss curves are consistent with the ranking established by the test perplexity (Section~\ref{sec:results}): MuonW converges fastest, followed by MuonH, AdamH, and AdamW.
+Consistent with existing literature~\citep{muon,hyperball}, Muon reaches lower training loss than Adam in the runs shown here. The diagnostic ranking matches the main result: MuonW converges fastest, followed by MuonH, AdamH, and AdamW.
 
 \subsection{Learning-rate sweep trends}
 
-The learning-rate sweep loss curves and advantage heatmaps are shown in Figures~\ref{fig:sweep-losses-adam}--\ref{fig:heatmap-muon} (Appendix~\ref{app:figures}). In broad terms, AdamH is most competitive in a mid-range learning-rate window, whereas AdamW is more stable at the ends of the sweep. For Muon, the opposite trend is more apparent: MuonH is competitive at smaller learning rates, while MuonW improves toward the upper end of the tested range.
+The sweep loss curves and advantage heatmaps are shown in Figures~\ref{fig:sweep-losses-adam}--\ref{fig:heatmap-muon} (Appendix~\ref{app:figures}). AdamH is most competitive in a mid-range learning-rate window, whereas AdamW is more stable at the ends. For Muon, MuonH is competitive at smaller learning rates, while MuonW improves toward the upper end.
 
-The heatmaps suggest that this difference becomes more pronounced at larger widths, with MuonW gaining more advantage at high learning rates and MuonH losing ground as scale increases.
+This difference becomes more pronounced at larger widths, with MuonW gaining more advantage at high learning rates.
 
 \subsection{Cross-optimizer comparison}
 
-Comparing the strongest configurations head-to-head, MuonW and AdamH are relatively close at smaller widths and in the lower-to-mid learning-rate regime, but MuonW gains a clearer advantage at higher learning rates. This contrast also becomes more consistent as width increases, where AdamH remains competitive over a narrower portion of the sweep and MuonW performs better at the high-learning-rate end (Figures~\ref{fig:cross-optimizer-heatmap}--\ref{fig:cross-optimizer-sweep} in Appendix~\ref{app:figures}).
+Comparing the strongest configurations head-to-head, MuonW and AdamH are relatively close at smaller widths and lower-to-mid learning rates, but MuonW gains a clearer advantage at higher learning rates and larger widths (Figures~\ref{fig:cross-optimizer-heatmap}--\ref{fig:cross-optimizer-sweep} in Appendix~\ref{app:figures}).
 
 
 % ============================================================
@@ -274,7 +274,7 @@ To investigate why Muon with independent weight decay (MuonW) outperforms its co
   \label{fig:spectral}
 \end{figure}
 
-The weights of MuonW (Blue) and MuonH (Red) both start with high spectral entropy ($\approx 0.98$), but their trajectories diverge sharply. MuonW's entropy decreases only slightly and stabilizes near $\approx 0.93$, indicating that the weight matrices maintain a near-uniform singular value distribution throughout training. MuonH (Red), by contrast, declines from $\approx 0.98$ to $\approx 0.68$, with the participation ratio falling in tandem (Figure~\ref{fig:spectral}): a rank/entropy collapse signature that could indicate representational degeneration~\citep{repdeg}. The key observation is the \emph{divergence} between Blue and Red: both use the same Muon whitening, yet MuonH's spectrum degrades while MuonW's does not. This is consistent with the Hyperball constraint contributing to the degradation.
+MuonW and MuonH start with similarly high spectral entropy ($\approx 0.98$), but they diverge sharply. MuonW stays near $\approx 0.93$, while MuonH falls to $\approx 0.68$ and its participation ratio drops in tandem (Figure~\ref{fig:spectral}). Since both use the same Muon whitening, this divergence is consistent with the Hyperball constraint contributing to rank collapse~\citep{repdeg}.
 
 \begin{tcolorbox}[colback=optionalboxbg, colframe=optionalboxborder, sharp corners, boxrule=0.6pt, left=6pt, right=6pt, top=4pt, bottom=4pt]
 \textbf{On the Rank of Muon's $\Delta W$} -- see Appendix~\ref{app:delta-w-rank}.
@@ -282,11 +282,11 @@ The weights of MuonW (Blue) and MuonH (Red) both start with high spectral entrop
 
 \subsection{Uniform Rescaling and the Spectral Squeeze}
 
-MuonH (Red) constrains $\|W\|_F = R$ at every step by multiplying every singular value by the same factor $c = R/\|W_t + U_t\|_F$. A plausible consequence is that large singular values survive this downscaling more readily than small ones, because the uniform rescaling can pull weak directions back down before they accumulate meaningful energy. Over many steps, this could concentrate the spectrum into fewer dominant modes.
+MuonH constrains $\|W\|_F = R$ at every step by uniformly rescaling all singular values. A plausible consequence is that weak directions are repeatedly pushed down before they accumulate, concentrating the spectrum into fewer dominant modes.
 
-This effect is compounded on the \emph{update} side. Recall that Muon's whitening, which uses 5 steps of Newton-Schulz iteration (NS${}_5$), is imperfect: it pushes singular values toward $1$ but lands in roughly $[0.7, 1.3]$, not exactly at $1$. For MuonW (Blue), these small imperfections are benign; the weight matrix is free to absorb them, and the $\Delta W$ spectral entropy stays high ($\approx 0.95$) throughout training. For MuonH (Red), one plausible mechanism is a feedback loop: as the weight spectrum collapses, the gradients computed at $W_t$ become increasingly anisotropic, which flows into the momentum buffer. Imperfect NS${}_5$ whitening may be insufficient to fully recover a uniform spectrum from this biased input, so the update itself becomes progressively less whitened.
+This may be compounded by imperfect whitening on the update side. Muon's 5-step Newton--Schulz iteration only approximately whitens the update, so if the weight spectrum becomes increasingly anisotropic under Hyperball, the update can inherit that bias instead of correcting it.
 
-In contrast, MuonW (Blue) imposes no hard constraint on the weight norm, so there is no uniform rescaling step and no corresponding feedback loop of this form. MuonW shows sustained higher spectral entropy and participation ratio, suggesting a more distributed use of singular directions; this could help preserve capacity and combinatorial regulatory structure.
+MuonW has no such hard rescaling step and maintains substantially higher spectral entropy and participation ratio throughout training.
 
 \begin{tcolorbox}[colback=optionalboxbg, colframe=optionalboxborder, sharp corners, boxrule=0.6pt, left=6pt, right=6pt, top=4pt, bottom=4pt]
 \textbf{Interpretation for Adam} -- see Appendix~\ref{app:note-adam}.
@@ -301,13 +301,13 @@ In contrast, MuonW (Blue) imposes no hard constraint on the weight norm, so ther
   \label{fig:dynamics-stepsize}
 \end{figure}
 
-The second piece of the puzzle lies in the relative step size, $\|\Delta W\|/\|W\|$. MuonW's (Blue) weight norm grows monotonically throughout training. The update norm $\|\Delta W\|$ is roughly constant post-warmup, but the weight denominator $\|W\|$ grows, causing the relative step size to decrease over training (Figure~\ref{fig:dynamics-stepsize}; see also Figure~\ref{fig:dynamics-norms} in Appendix~\ref{app:figures}). This decaying relative step size may act like an implicit annealing schedule that helps the model refine its solution in later stages.
+The second piece is the relative step size, $\|\Delta W\|/\|W\|$. Under MuonW the weight norm grows over training, so the relative step size decays even when $\|\Delta W\|$ stays roughly constant (Figure~\ref{fig:dynamics-stepsize}, Figure~\ref{fig:dynamics-norms} in Appendix~\ref{app:figures}). This may act like an implicit annealing schedule.
 
-For MuonH (Red), the weight norm $\|W\|$ is fixed. The relative step size flattens out and does not show the same decay. This may limit late-stage refinement.
+For MuonH, $\|W\|$ is fixed, so the relative step size does not show the same decay. This may limit late-stage refinement.
 
 \subsection{Output-Logit Scaling as a Possible Confound}
 
-There is an alternative interpretation of MuonW's success: part of the cross-entropy improvement may arise from logit growth rather than from uniformly better internal representations. In classification tasks, the cross-entropy loss can decrease when the predicted distribution sharpens, even if the class ranking does not change.
+There is an alternative interpretation of MuonW's success: part of the cross-entropy improvement may come from logit growth rather than uniformly better internal representations.
 
 \begin{figure}[htbp]
   \centering
@@ -316,11 +316,11 @@ There is an alternative interpretation of MuonW's success: part of the cross-ent
   \label{fig:logits}
 \end{figure}
 
-As noted above, MuonW's weight norm grows monotonically throughout training. While the RMSNorm-sandwiched hidden layers are scale invariant (Appendix~\ref{app:scale-inv}), the final output projection is \emph{not}. There is no normalization between the last linear layer and the softmax. This means the runaway norm growth could potentially inflate the magnitude of the output logits, sharpening the softmax distribution and pushing the model toward higher confidence predictions.
+MuonW's weight norm grows throughout training. While the RMSNorm-sandwiched hidden layers are scale invariant (Appendix~\ref{app:scale-inv}), the final output projection is not. Norm growth there can inflate output logits and sharpen the softmax.
 
-This acts like \emph{lowering the softmax temperature}. Whether this effect helps or hurts depends on the task. DNA has a vocabulary of just 4 bases, and in regulatory regions the correct nucleotide often dominates its context window. Sharper predictions on a small, low-entropy vocabulary can therefore reduce cross-entropy loss in this setting. Natural language, by contrast, has a vocabulary of $\sim$100k tokens with genuinely ambiguous contexts where probability mass must be spread across many plausible continuations\footnote{Quantitatively, consider the softmax function $\sigma(\mathbf{z})_i = \frac{e^{z_i}}{\sum_{j=1}^K e^{z_j}}$. If we multiply the logits by a large factor $k$, the terms become $e^{k z_i}$. Since the exponential function grows very quickly, even a small difference in raw logits becomes a large difference after exponentiation. The largest logit $z_i$ will dominate the sum in the denominator, pushing the probability $\sigma(\mathbf{z})_i$ towards 1. For DNA ($K=4$), there are only 3 other terms to compete with. For NLP ($K \approx 100{,}000$), the denominator sums over many alternative terms, which makes pure scaling less decisive.}.
+This acts like lowering the softmax temperature. On a 4-token DNA vocabulary, sharper predictions can reduce cross-entropy more easily than in NLP, where the vocabulary is much larger and contexts are often more ambiguous.\footnote{Quantitatively, consider the softmax function $\sigma(\mathbf{z})_i = \frac{e^{z_i}}{\sum_{j=1}^K e^{z_j}}$. If we multiply the logits by a large factor $k$, the terms become $e^{k z_i}$. Since the exponential function grows very quickly, even a small difference in raw logits becomes a large difference after exponentiation. The largest logit $z_i$ will dominate the sum in the denominator, pushing the probability $\sigma(\mathbf{z})_i$ towards 1. For DNA ($K=4$), there are only 3 other terms to compete with. For NLP ($K \approx 100{,}000$), the denominator sums over many alternative terms, which makes pure scaling less decisive.}
 
-This means that part of MuonW's \emph{training loss} advantage may be an artifact of the domain: the optimizer may exploit the low cardinality and low entropy of the DNA vocabulary through logit scaling, rather than solely through richer internal representations. MuonH (Red), with its strict norm constraint, cannot exploit the same degree of growth in the output projection, which may partially explain its higher training loss. We therefore treat this as a possible confound rather than a settled explanation.
+Part of MuonW's training-loss advantage may therefore be domain specific: it may benefit from logit scaling on a small vocabulary, not only from better internal representations. We treat this as a possible confound rather than a settled explanation.
 
 \begin{tcolorbox}[colback=optionalboxbg, colframe=optionalboxborder, sharp corners, boxrule=0.6pt, left=6pt, right=6pt, top=4pt, bottom=4pt]
 \textbf{Possible Explanation for AdamW's lack of Logit Growth} -- see Appendix~\ref{app:adamw-logits}.
@@ -332,7 +332,7 @@ This means that part of MuonW's \emph{training loss} advantage may be an artifac
 \label{sec:conclusion}
 % ============================================================
 
-We have demonstrated that the choice of optimizer and weight regularization strategy substantially impacts the compute efficiency of training DNA sequence models. While previous studies reported no significant difference between Adam and Muon for DNA modeling, our controlled sweep reveals that Muon with independent weight decay (MuonW) reaches AdamW's target quality in approximately 37\% fewer FLOPs. Just as importantly, the paper argues that weight regularization must be part of the optimizer comparison itself. Independent weight decay and Hyperball interact differently with optimizer dynamics, so a conclusion drawn under only one norm-control recipe can be misleading. Our spectral analysis suggests that fixed-norm constraints like Hyperball can induce progressive rank collapse under Muon, whereas independent weight decay preserves a more distributed representation. Taken together, these findings support MuonW as the most compute-efficient configuration for biological sequence modeling.
+Optimizer choice and weight regularization substantially affect the compute efficiency of regulatory DNA training. In our controlled sweep, MuonW reaches AdamW's target quality in approximately 37\% fewer FLOPs. Optimizer comparisons also change when norm control is varied explicitly rather than fixed. In this setting, independent weight decay pairs better with Muon than Hyperball, and MuonW is the most compute-efficient configuration we tested.
 
 % ============================================================
 \section{Limitations}
