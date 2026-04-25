@@ -58,7 +58,7 @@
 \maketitle
 
 \begin{abstract}
-Training regulatory DNA models is expensive, so optimizer choice matters if it can reduce compute without changing the architecture. We study this on ENCODE candidate cis-regulatory elements, comparing Adam and Muon under two norm-control schemes: independent weight decay and Hyperball. This comparison is nontrivial because regulatory DNA differs substantially from NLP, where most optimizer results are established. Under a controlled sweep, MuonW reaches a fixed target test perplexity with approximately 37\% fewer FLOPs than the best Adam configuration, and the regularization choice materially changes the ranking.
+Regulatory DNA models increasingly guide expensive biological testing, including candidate selection for gene therapy and other perturbation experiments. That makes training compute an upstream cost in the experimental pipeline, not just a modeling expense. We study whether optimizer choice can make this stage more compute-efficient by training the same ENCODE cCRE model with Adam or Muon under two practical norm-control schemes: independent weight decay and Hyperball. In a controlled sweep, MuonW reaches a fixed target test perplexity with approximately 37\% fewer FLOPs than the best Adam configuration. The result is not just that Muon can work on regulatory DNA, but that optimizer and norm-control choices materially change the cost of reaching a useful model.
 \end{abstract}
 
 % ============================================================
@@ -66,9 +66,9 @@ Training regulatory DNA models is expensive, so optimizer choice matters if it c
 \label{sec:intro}
 % ============================================================
 
-AI models trained on regulatory DNA now sit upstream of expensive biological follow-up. Systems such as AlphaGenome~\citep{alphagenome}, Enformer~\citep{enformer}, and Borzoi~\citep{borzoi} train on regulatory DNA and help prioritize which elements or hypotheses to test, and downstream validation can require DNA synthesis, cloning, cell culture, and sequencing. If training can be made more compute-efficient, those resources can be redirected toward experiments rather than GPU time.
+AI models trained on regulatory DNA now help prioritize variants, cis-regulatory elements, and gene-therapy design hypotheses before expensive biological follow-up. Systems such as AlphaGenome~\citep{alphagenome}, Enformer~\citep{enformer}, and Borzoi~\citep{borzoi} train on regulatory DNA and help decide which elements or perturbations are worth testing, while downstream validation can require DNA synthesis, cloning, cell culture, and sequencing. Training compute is therefore upstream of costly experimental decisions: making this stage more efficient can shift resources from compute toward biological testing.
 
-This motivates a simple question: can an alternative optimizer train regulatory DNA models more efficiently? We test this by training the same sequence model on ENCODE candidate cis-regulatory elements while varying only the optimizer and the norm-control scheme. Because regulatory DNA differs from NLP, optimizer gains should be verified in-domain rather than assumed to transfer. We therefore compare Adam and Muon, each paired with either independent weight decay or Hyperball, across five learning rates and three model widths. MuonW reaches AdamW's target quality with approximately 37\% fewer training FLOPs, and the sweep shows that the regularization choice materially changes optimizer behavior.
+This is where optimizer choice becomes a very practical lever. Rather than changing the architecture or dataset, we ask whether the same regulatory DNA model can reach a useful quality level with fewer training FLOPs. We test this by training on ENCODE candidate cis-regulatory elements while varying only the optimizer and the norm-control scheme. Because regulatory DNA differs from NLP, optimizer gains should be verified in-domain rather than assumed to transfer. We therefore compare Adam and Muon, each paired with either independent weight decay or Hyperball, across five learning rates and three model widths. MuonW reaches AdamW's target quality with approximately 37\% fewer training FLOPs, and the sweep shows that regularization choice materially changes optimizer behavior.
 
 
 % ============================================================
@@ -82,7 +82,7 @@ We are aware of two recent works that train or fine-tune DNA models with both Ad
 
 \paragraph{Foundation models for perturbation response~\citep{fmpert}.} Cole \emph{et al.} also report no significant difference between Adam and Muon, but again the comparison is narrow: only the learning rate is tuned, no FLOP-efficiency analysis is reported, and optimizer behavior is not separated from norm-control choices.
 
-\paragraph{What this paper adds.} Both prior works draw the same null conclusion. From a single point comparison. We replace that single-point comparison with a controlled $2\times 2$ sweep over \{Adam, Muon\} $\times$ \{independent weight decay, Hyperball\} across five learning rates and three model widths, and we measure FLOP-to-target rather than converged loss. Under this comparison, MuonW reaches AdamW's target quality with approximately $37\%$ fewer training FLOPs (Section~\ref{sec:results}, Appendix~\ref{app:flops}). The main methodological point is that optimizer conclusions change once norm control and compute efficiency are evaluated explicitly.
+\paragraph{What this paper adds.} Both prior works draw the same null conclusion from single-point comparisons. We replace that design with a controlled $2\times 2$ sweep over \{Adam, Muon\} $\times$ \{independent weight decay, Hyperball\} across five learning rates and three model widths, and we measure FLOP-to-target rather than converged loss alone. Under this comparison, MuonW reaches AdamW's target quality with approximately $37\%$ fewer training FLOPs (Section~\ref{sec:results}, Appendix~\ref{app:flops}). The main methodological point is that optimizer conclusions change once norm control and compute efficiency are evaluated explicitly.
 
 
 % ============================================================
@@ -116,18 +116,16 @@ Our results extend this observation to genomics. Regulatory DNA is different eno
 \label{sec:weight-reg}
 % ============================================================
 
-\subsection{Why weight regularization belongs in the optimizer comparison}
+\subsection{Weight regularization controls optimizer capacity}
 \label{sec:weight-decay}
 
 If the goal is to compare optimizers, then weight regularization is not optional. Without norm control, weight norms grow $\propto \sqrt t$ during training~\citep{hyperball}, changing parameter scale relative to step size and confounding the comparison~\citep{spectral-fl}. A sweep would then mix optimizer effects with uncontrolled norm drift.
 
-Independent weight decay is the standard answer. It drives the norm toward an equilibrium value~\citep{wdeq,adamw,hyperball}, separating update \emph{direction} from overall parameter scale~\citep{wdeq}. It also matters for transfer: for AdamW, properly scaled independent weight decay improves transfer across model and dataset scale~\citep{wdtransfer}.
+Independent weight decay is the standard practical answer. It drives the norm toward an equilibrium value~\citep{wdeq,adamw,hyperball}, separating update \emph{direction} from overall parameter scale~\citep{wdeq}. We use independent rather than learning-rate-coupled decay because it is the variant explicitly designed for hyperparameter transfer: the decay coefficient can be tuned as its own knob instead of being implicitly retuned whenever the learning rate changes~\citep{wdtransfer}. This matters for the comparison. If an optimizer only wins under a norm-control rule that is brittle to scale or learning-rate transfer, the result is less useful in real training pipelines.
 
-Independent weight decay is not the only way to control scale. Although it drives the norm toward an equilibrium, the optimizer must search the space created by those fluctuations. Even if the norm hovers within just $0<\varepsilon\ll N$ of the equilibrium $N$ (or in the range $[N-\varepsilon, N+\varepsilon]$), we still have to consider a relatively large space of values within the hyperball. By concentration of measure, nearly all of this volume lies in a thin shell at the boundary (Appendix~\ref{app:concentration}).
+Independent weight decay is also not the only plausible answer. Although it drives the norm toward an equilibrium, the optimizer must still search over the shell created by those fluctuations. Even if the norm hovers within just $0<\varepsilon\ll N$ of the equilibrium $N$, concentration of measure implies that nearly all of the volume lies near the boundary in high dimension (Appendix~\ref{app:concentration}). For RMSNorm-sandwiched layers (scale invariant layers), where scale affects optimization more than representational capacity (Appendix~\ref{app:scale-inv}), this motivates a sharper alternative: fix the norm and optimize only direction.
 
-With correctly placed RMSNorms, these matrices are effectively scale invariant (Appendix~\ref{app:scale-inv}); scale affects optimization more than capacity. That suggests a direct alternative to weight decay: fix the norm and optimize only direction. This is the motivation for Hyperball~\citep{hyperball}.
-
-\subsection{The Hyperball update}
+\subsection{Hyperball as a practical comparison point}
 \label{sec:hyperball}
 
 Hyperball~\citep{hyperball} fixes the Frobenius norm of each weight matrix $W$ to the initial radius $R := \|W_0\|_F$ and sets the norm of the update $U$ to $\eta R$. This confines the weight matrix to a hypersphere of radius $R$. Suppose $\mathrm{Normalize}(A):=A/\|{A}\|_F$. Given an optimizer's proposed update step $\tilde u_t$, let the actual update be:
@@ -140,40 +138,13 @@ W_{t+1} = R\,\mathrm{Normalize}(W_t + U_t).
 \]
 This construction can be wrapped around any optimizer update, so it works with Adam and Muon alike. That lets us test whether an optimizer advantage survives a different norm-control rule.
 
-Note that not only do we set the weight norm to be $R$, but the update vector norm is set to $\eta R$. Let $\Delta W = W_{t+1}-W_t$. If we make the generous assumption that $\|\Delta W\|_F = O(\|U_t\|_F)$, we can see that we have a relative step size of:
-\[
-\frac{\|\Delta W\|_F}{\|W_t\|_F}=\frac{O(\|U_t\|_F)}{\|W_t\|_F}=O(\eta)
-\]
-which is an easily adjustable hyperparameter.
-
-Now, this \emph{is} a generous assumption, so we can make better estimates. Let us use the Frobenius norm throughout the next calculation; suppose that we know the expected normalized dot product\footnote{The Frobenius inner product $\langle A, B\rangle_F=\operatorname{Tr}(A^\top B)=\langle\vec A,\vec B\rangle=\sum_{i,j}a_{ij}b_{ij}$ is the sum of the element wise product of the matrices $A$ and $B$.} $\gamma=\frac{\langle W_t, U_t\rangle_F}{\|U_t\|_F\|W_t\|_F}=\frac{\langle W_t, U_t\rangle_F}{\eta R^2}=\cos\theta$, where $\theta:=\angle(\vec W_t, \vec U_t)$\footnote{$\vec W$ denotes the vectorized form of matrix $W$; if $W=[c_1, c_2, \dots, c_n]$ where $c_i$ is the $i$th column of $W$, then $\vec W=\begin{bmatrix} c_1\\c_2\\\vdots\\c_n \end{bmatrix}$.}. By applying the cosine and sine rules to the triangle formed by the origin, $W_t$, and $W_t+U_t$ (see Figure~\ref{fig:retraction-geometry} in Appendix~\ref{app:derivation} for the full derivation), we obtain the exact step size:
-
-\[
-x := \|\Delta W\| = R\sqrt{2}\sqrt{1 - \cos\phi}, \quad\text{where}\quad \cos\phi = \sqrt{1-\frac{\eta^2(1-\gamma^2)}{1+\eta^2+2\eta\gamma}}.
-\]
-
 \supplementarylinknote
 
 \medskip
 
-When $\gamma,\eta\in(0,1)$, a careful bounding argument (Appendix~\ref{app:bounds}) shows that the relative step size lies in $\frac{x}{\|W_t\|}\in (0,\sqrt{2-\sqrt{2}})\approx (0, 0.765)$. The $\gamma\in(-1,0)$ case follows by replacing $\gamma\to|\gamma|$ in every step (the formula is dominated by $\gamma^2$, and the linear $2\eta\gamma$ term in the denominator only tightens the bound when $\gamma<0$). This is quite loose without knowing $\gamma$; as an example, for practical learning rates $\eta\in(10^{-4},10^{-1})$ with an ideal $\gamma=0$, the bound tightens to roughly $(0.0001, 0.0996)$.
+The useful takeaway is that Hyperball makes the learning rate an approximate relative-step-size dial: when the learning rate is small, $\|\Delta W\|/\|W_t\|\approx \eta\sqrt{1-\gamma^2}$, and this becomes $\approx\eta$ when the update is nearly orthogonal to the current weights. Appendix~\ref{app:derivation} derives the exact expression and approximation, and Appendix~\ref{app:bounds} gives the corresponding bounds. 
 
-\subsection{Relative step size is linear in the learning rate}
-\label{sec:linear-step}
-
-The core practical payoff of the Hyperball construction is that, in the regime where we actually train, the relative step size is \emph{directly proportional to the learning rate}. Our practical learning rates satisfy $\eta^2\ll 1$ and $\gamma\eta\ll 1$, so $1+\eta^2+2\eta\gamma\approx 1$ and $x\approx R\sqrt{2}\sqrt{1-\sqrt{1-\eta^2(1-\gamma^2)}}$. Applying $\sqrt{1-z}\approx 1-z/2$ yields
-\[
-x \;\approx\; R\sqrt{2}\sqrt{1-\bigl(1-\tfrac{1}{2}\eta^2(1-\gamma^2)\bigr)} \;=\; R\,\eta\sqrt{1-\gamma^2} \;=\; R\,\eta\sin\theta,
-\]
-which is exactly the tangent-space approximation of the step on the sphere. In terms of the relative step size,
-\[
-\frac{x}{\|W_t\|} \;\approx\; \eta\,\sqrt{1-\gamma^2},
-\]
-and when the update is orthogonal to the current weights ($\gamma=0$), this collapses to the remarkably clean $\frac{x}{\|W_t\|}\approx \eta$. In other words, \emph{$\eta$ acts directly as a relative-step-size dial}: doubling the learning rate doubles the effective movement on the sphere.
-
-\paragraph{Contrast with weight decay.} Under weight decay, the relative step size depends on several coupled quantities, including the learning rate, decay coefficient, momentum coefficient(s), the optimizer state, and training time~\citep{wdeq,hyperball,wdnorm}. In practice this makes $\eta$ and $\lambda$ harder to tune independently and complicates transfer~\citep{wdtransfer}.
-
-Hyperball eliminates this coupling: $\|W_t\|=R$ is fixed by construction, $\|U_t\|=\eta R$ is fixed by construction, and the retraction introduces only a mild $\sqrt{1-\gamma^2}$ correction. The learning-rate dial and the effective-step-size dial are therefore approximately the same knob. In our runs, MuonW's relative step size decreases over training as $\|W_t\|$ grows, while MuonH's remains flatter at the level set by $\eta$ (Figures~\ref{fig:dynamics-stepsize} and~\ref{fig:dynamics-norms} in Appendix~\ref{app:figures}).
+\paragraph{Contrast with weight decay.} Under weight decay, by contrast, the relative step size depends on the learning rate, decay coefficient, optimizer state, momentum coefficients, and training time~\citep{wdeq,hyperball,wdnorm}; Hyperball removes most of that coupling by fixing $\|W_t\|=R$ and $\|U_t\|=\eta R$. In our runs, MuonW's relative step size decreases as $\|W_t\|$ grows, while MuonH remains flatter at the level set by $\eta$ (Figures~\ref{fig:dynamics-stepsize} and~\ref{fig:dynamics-norms} in Appendix~\ref{app:figures}).
 
 
 % ============================================================
@@ -183,7 +154,17 @@ Hyperball eliminates this coupling: $\|W_t\|=R$ is fixed by construction, $\|U_t
 
 \subsection{Experimental Setup}
 
-To isolate the effect of the optimizer, we hold model architecture, dataset, training duration, and all non-optimizer hyperparameters constant across runs, varying the optimizer, the norm-control scheme, and the learning rate. The model is our model architecture, trained on candidate cis-regulatory elements (cCREs) from the ENCODE v4 registry that are specific to one of three cell lines: K562, HepG2, and SK-N-SH. Its size is in the same general few-hundred-million-parameter regime as AlphaGenome, Enformer, and Borzoi. Our primary outcome is not final loss by itself, but compute efficiency: how many training FLOPs are required to reach a fixed target quality level on the held-out test set. We use test perplexity only to define that quality target. This is also why we sweep both independent weight decay and Hyperball: comparing optimizers under both gives a cleaner picture of which optimizer is actually more compute-efficient.
+To isolate the effect of the optimizer, we hold model architecture, dataset, training duration, and all non-optimizer hyperparameters constant across runs, varying the optimizer, the norm-control scheme, and the learning rate. We train a transformer-style sequence model on candidate cis-regulatory elements (cCREs) from the ENCODE v4 registry that are specific to one of three cell lines: K562, HepG2, and SK-N-SH. Its size is in the same general few-hundred-million-parameter regime as AlphaGenome, Enformer, and Borzoi. Our primary outcome is compute efficiency: how many training FLOPs are required to reach a fixed test-perplexity target on the held-out set.
+
+\subsection{Main result: FLOP efficiency}
+
+MuonW reaches the target quality substantially earlier than the best Adam configuration. Using 2.51, the best value reached by AdamW, MuonW crosses the threshold by checkpoint 12 while AdamH reaches it around checkpoint 19. That is roughly 37\% fewer steps and, because optimizer overhead is small relative to forward/backward cost, roughly 37\% fewer training FLOPs (Appendix~\ref{app:flops}).
+
+This is the central result: the benefit is measured in the unit that matters for model development, not only in final perplexity. Since these models sit upstream of expensive wet-lab decisions, reducing FLOPs-to-target is a direct way to make the modeling stage more cost-efficient without changing the architecture or dataset.
+
+\subsection{Scaling across widths}
+
+The advantage is not confined to a single model width. Comparing the strongest configurations head-to-head, MuonW and AdamH are relatively close at smaller widths and lower-to-mid learning rates, but MuonW gains a clearer advantage at higher learning rates and larger widths (Figures~\ref{fig:cross-optimizer-heatmap}--\ref{fig:cross-optimizer-sweep} in Appendix~\ref{app:figures}). This scaling trend is important because it is the setting where training compute becomes most consequential: optimizer choice matters more, not less, as the model moves toward the regime used by modern regulatory DNA systems.
 
 \subsection{Test perplexity across learning rates}
 
@@ -211,7 +192,7 @@ For Adam, Hyperball improves peak performance but narrows the stable window. Ada
 
 For Muon, the trend reverses. MuonH is better at the smallest learning rates, while MuonW improves with learning rate and reaches the best value in the sweep ($\sim$2.464) at $\sim 2.27 \times 10^{-2}$. A likely reason is implicit annealing: MuonW's growing norm reduces relative step size over training, whereas MuonH does not.
 
-\subsection{Overall findings}
+\subsection{Norm control changes the optimizer ranking}
 
 Hyperball does not uniformly improve both optimizers, and MuonW is the strongest configuration in the present sweep.
 
@@ -224,10 +205,6 @@ Hyperball does not uniformly improve both optimizers, and MuonW is the strongest
 To understand the temporal dynamics behind the final results, we track the mean test perplexity over the 20 checkpoints. We present each progression in two views: by training step (checkpoint) and by total FLOPs. The FLOPs axis accounts for the per-step compute cost of each optimizer, including forward/backward passes and the optimizer update itself (see Appendix~\ref{app:muon}) and is more expensive per step than Adam's elementwise update. The full set of per-learning-rate and per-optimizer progression curves is provided in Figures~\ref{fig:perp-by-lr-1}--\ref{fig:perp-by-optimizer-muon} in Appendix~\ref{app:figures}.
 
 The same trends appear in both views, but FLOPs give the practical ranking. Fixed-norm variants improve quickly at low learning rates, AdamH is competitive in the middle, and MuonW is strongest at the high end while both Hyperball variants become less stable.
-
-\subsection{Time-to-target: FLOP efficiency}
-
-We quantify optimization efficiency by measuring the FLOPs required to cross a fixed test-perplexity target. Using 2.51, the best value reached by AdamW, MuonW crosses the threshold by checkpoint 12 while AdamH reaches it around checkpoint 19. That is roughly 37\% fewer steps and, because optimizer overhead is small relative to forward/backward cost, roughly 37\% fewer training FLOPs (Appendix~\ref{app:flops}).
 
 
 % ============================================================
@@ -325,6 +302,16 @@ Part of MuonW's training-loss advantage may therefore be domain specific: it may
 \begin{tcolorbox}[colback=optionalboxbg, colframe=optionalboxborder, sharp corners, boxrule=0.6pt, left=6pt, right=6pt, top=4pt, bottom=4pt]
 \textbf{Possible Explanation for AdamW's lack of Logit Growth} -- see Appendix~\ref{app:adamw-logits}.
 \end{tcolorbox}
+
+
+% ============================================================
+\section{Discussion}
+\label{sec:discussion}
+% ============================================================
+
+The main practical conclusion is that optimizer choice is a compute-efficiency lever for regulatory DNA training. MuonW reaches the AdamW target with approximately 37\% fewer training FLOPs, and its advantage becomes clearer at larger widths and higher learning rates. For models used upstream of costly biological experiments, this means cheaper model iteration can translate into more budget for candidate screening and validation.
+
+The norm-control comparison is deliberate. Independent weight decay is the transfer-friendly practical baseline because its decay coefficient is not tied to the learning rate, while Hyperball tests the stronger hypothesis that scale should be removed from the search space entirely. In this sweep, that choice changes the ranking: Hyperball helps Adam near its best learning rate, but independent weight decay pairs better with Muon and gives the strongest FLOP-to-target result.
 
 
 % ============================================================
@@ -554,6 +541,30 @@ x := \|\Delta W\| &= R\sqrt{2}\sqrt{1-\cos\phi}\\
 &= R\sqrt{2}\sqrt{1-\sqrt{1-\frac{\eta^2(1-\gamma^2)}{1+\eta^2+2\eta\gamma}}}.
 \end{aligned}
 \]
+
+This exact expression also recovers the intuitive $O(\eta)$ relative-step-size argument. Hyperball sets both $\|W_t\|=R$ and $\|U_t\|=\eta R$. If $\|\Delta W\|_F$ is on the same order as $\|U_t\|_F$, then
+\[
+\frac{\|\Delta W\|_F}{\|W_t\|_F}
+=\frac{O(\|U_t\|_F)}{\|W_t\|_F}
+=O(\eta).
+\]
+The exact formula above refines this by accounting for the alignment between $W_t$ and $U_t$.
+
+\paragraph{Small-learning-rate regime.} In our practical training regime, $\eta^2\ll 1$ and $\gamma\eta\ll 1$, so $1+\eta^2+2\eta\gamma\approx 1$ and
+\[
+x\approx R\sqrt{2}\sqrt{1-\sqrt{1-\eta^2(1-\gamma^2)}}.
+\]
+Applying $\sqrt{1-z}\approx 1-z/2$ yields
+\[
+x \;\approx\; R\sqrt{2}\sqrt{1-\bigl(1-\tfrac{1}{2}\eta^2(1-\gamma^2)\bigr)}
+\;=\; R\,\eta\sqrt{1-\gamma^2}
+\;=\; R\,\eta\sin\theta.
+\]
+Since $\|W_t\|=R$, the relative step size is
+\[
+\frac{x}{\|W_t\|} \;\approx\; \eta\,\sqrt{1-\gamma^2}.
+\]
+When the update is orthogonal to the current weights ($\gamma=0$), this collapses to $\frac{x}{\|W_t\|}\approx \eta$. Thus, in this regime, doubling the learning rate approximately doubles the effective movement on the sphere.
 
 
 \section{Bounds on the Relative Step Size}
