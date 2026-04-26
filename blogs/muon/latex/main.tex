@@ -160,7 +160,7 @@ To isolate the effect of the optimizer, we hold model architecture, dataset, tra
 
 MuonW reaches the target quality substantially earlier than the best Adam configuration. Using the lowest Adam perplexity in Figure~\ref{fig:final-perplexity}, approximately 2.51 from AdamH at checkpoint 19, MuonW crosses the same threshold by checkpoint 13. That is a savings of $6/19 \approx 31.6\%$ of the training steps and, because optimizer overhead is small relative to forward/backward cost, approximately 31.6\% fewer training FLOPs (Appendix~\ref{app:flops}).
 
-This is the central result: the benefit is measured in the unit that matters for model development, not only in final perplexity. Since these models sit upstream of expensive wet-lab decisions, reducing FLOPs-to-target is a direct way to make the modeling stage more cost-efficient without changing the architecture or dataset.
+This is the central result: the benefit is measured in the unit that matters for model development, not only in final perplexity. The same FLOP-efficiency pattern appears across all three model widths, not only in the largest-scale summary plot. Since these models sit upstream of expensive wet-lab decisions, reducing FLOPs-to-target is a direct way to make the modeling stage more cost-efficient without changing the architecture or dataset.
 
 \subsection{Scaling across widths}
 
@@ -177,7 +177,7 @@ Figure~\ref{fig:final-perplexity} shows mean test perplexity over training FLOPs
   \label{fig:final-perplexity}
 \end{figure}
 
-The optimizer-level view includes SGD as a baseline and shows a clear separation: SGD remains far above the Adam and Muon curves, Adam improves steadily, and the best Muon configuration reaches lower perplexity at the same compute budget. Aggregating by optimizer family gives the same ordering (Figure~\ref{fig:family-flop-efficiency}, left). When we compare Muon to Adam at matched Adam perplexity levels, Muon typically reaches the same quality with roughly 30--45\% fewer FLOPs after the earliest checkpoints (Figure~\ref{fig:family-flop-efficiency}, right).
+The optimizer-level view includes SGD as a baseline and shows a clear separation: SGD remains far above the Adam and Muon curves, Adam improves steadily, and the best Muon configuration reaches lower perplexity at the same compute budget. Aggregating by optimizer family gives the same ordering (Figure~\ref{fig:family-flop-efficiency}, left). The right panel visualizes this largest-scale advantage, but the same qualitative FLOP-improvement pattern is visible across the smaller widths as well.
 
 \begin{figure}[htbp]
   \centering
