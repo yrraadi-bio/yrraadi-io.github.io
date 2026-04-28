@@ -96,9 +96,9 @@ DNA has a vocabulary of 4 tokens with near-uniform frequencies versus Zipf-distr
 
 \subsection{DNA and language have different local structure}
 
-Nearly all modern optimizer benchmarks are run on natural language data, where token frequencies follow Zipf's law, with the $k$-th most common token appearing with frequency $f(k)\propto 1/k^{\alpha}$ ($\alpha\approx 1$)~\citep{zipf-review,zipf}. Regulatory DNA looks very different: it has a vocabulary of 4 nucleotides, and in our training data the marginal frequencies are close to uniform (Figure~\ref{fig:nucleotide-dist} in Appendix~\ref{app:figures}).
+Nearly all modern optimizer benchmarks are run on natural language data, where token frequencies follow Zipf's law, with the $k$-th most common token appearing with frequency $f(k)\propto 1/k^{\alpha}$ ($\alpha\approx 1$)~\citep{zipf-review,zipf}. Regulatory DNA looks very different: it has a vocabulary of 4 nucleotides, and in our training data the marginal frequencies are close to uniform (Figure~\ref{fig:nucleotide-dist}).
 
-The entropy of DNA's token distribution is therefore likely close to its maximum, unlike language where Zipf concentration creates strong token imbalance. This implies different gradient statistics, so optimizer rankings established on language corpora may not transfer cleanly. For gradient-statistic intuition, see Appendix~\ref{app:gradient-stats}.
+The entropy of DNA's token distribution is therefore likely close to its maximum, unlike language where Zipf concentration creates strong token imbalance. This changes the gradient statistics seen by adaptive optimizers. If token $k$ appears with marginal frequency $p_k$, Adam's second-moment (variance) estimate for parameters tied to that token scales roughly with $p_k$ times the token-conditioned gradient variance. The dynamic range of this variance is then $\propto p_1/p_K$, in Zipf-distributed language it can be on the order of $10^5$, so Adam's adaptive denominator varies across orders of magnitude. In four-token DNA with near-uniform frequencies, $p_1/p_K\approx 1$, so the adaptive denominator is much closer to a uniform scalar. Optimizer rankings established on language corpora therefore may not transfer cleanly.
 
 Language modeling is built around long-context disambiguation. A token's meaning often depends on entities, syntax, discourse state, and topic information introduced many tokens earlier; predicting the next word in ``the bank'' depends on whether the surrounding passage is about rivers, finance, or memory systems. This makes long-range attention a central source of useful signal in NLP.
 
@@ -116,7 +116,7 @@ If the goal is to compare optimizers, then effect of different weight regulariza
 
 Our first choice of regularization is weight decay, specifically independent weight decay, as opposed to learning-rate-coupled decay. It drives the norm toward an equilibrium value~\citep{wdeq,adamw,hyperball}, separating update \emph{direction} from overall parameter scale~\citep{wdeq}. We use independent rather than learning-rate-coupled decay because it is the variant explicitly designed for hyperparameter transfer~\citep{wdtransfer}, an important mechanism in real train pipelines so that tuning can be done swiftly and economically.
 
-Independent weight decay is also not the only plausible answer. Although it drives the norm toward an equilibrium, the optimizer must still search over the shell created by those fluctuations. Even if the norm hovers within just $0<\varepsilon\ll N$ of the equilibrium $N$, concentration of measure implies that nearly all of the volume lies near the boundary in high dimension (Appendix~\ref{app:concentration}), so we still search a substantial volume within the hyperball. For RMSNorm-sandwiched layers (scale invariant layers), where scale affects optimization more than representational capacity (Appendix~\ref{app:scale-inv}), this motivates a sharper alternative: fix the norm and optimize only direction.
+Independent weight decay is also not the only plausible answer. Although it drives the norm toward an equilibrium, the optimizer must still search over the shell created by those fluctuations. In an $n$-dimensional ball of radius $R$, the fraction of volume in an outer shell of thickness $\varepsilon$ is $1-(1-\varepsilon/R)^n$, which tends to $1$ as $n$ grows (Appendix~\ref{app:concentration}). Thus, even small norm fluctuations can leave a very large high-dimensional search region near the boundary. For RMSNorm-sandwiched layers, scalar rescaling of a weight matrix is also partly washed out by normalization: $\mathrm{RMSNorm}(\alpha Wx)\approx \mathrm{RMSNorm}(Wx)$ for $\alpha>0$ when numerical epsilons are negligible (Appendix~\ref{app:scale-inv}). That makes direction more important than scale and motivates a sharper alternative: fix the norm and optimize only direction.
 
 \subsection{Hyperball as a norm control method}
 \label{sec:hyperball}
@@ -135,9 +135,9 @@ This construction can be wrapped around any optimizer update, so it works with A
 
 \medskip
 
-The useful takeaway is that Hyperball makes the learning rate an approximate relative-step-size dial: when the learning rate is small, $\|\Delta W\|/\|W_t\|\approx \eta\sqrt{1-\gamma^2}$, where $\gamma$ is the cosine similarity between the current weights and the constrained Hyperball update. This becomes $\approx\eta$ when the update is nearly orthogonal to the current weights ($\gamma\approx 0$). Appendix~\ref{app:derivation} derives the exact expression and approximation, and Appendix~\ref{app:bounds} gives the corresponding bounds.
+The useful takeaway is that Hyperball makes the learning rate an approximate relative-step-size dial. Hyperball fixes $\|W_t\|=R$, sets $\|U_t\|=\eta R$, and then retracts $W_t+U_t$ back to the radius-$R$ sphere. If $\gamma$ is the cosine similarity between $W_t$ and $U_t$, in the small-learning-rate regime, this simplifies to $\|\Delta W\|/\|W_t\|\approx \eta\sqrt{1-\gamma^2}$, which becomes $\approx\eta$ when the update is nearly orthogonal to the current weights (Appendix~\ref{app:derivation}).
 
-\paragraph{Relative step size of weight decay.} Under weight decay, by contrast, the relative step size depends on the learning rate, decay coefficient, optimizer state, momentum coefficients, and training time~\citep{wdeq,hyperball,wdnorm}; Hyperball removes most of that coupling by fixing $\|W_t\|=R$ and $\|U_t\|=\eta R$. In our runs, MuonW's relative step size decreases as $\|W_t\|$ grows, while MuonH remains flatter at the level set by $\eta$ (Figures~\ref{fig:dynamics-stepsize} and~\ref{fig:dynamics-norms} in Appendix~\ref{app:figures}).
+\paragraph{Relative step size of weight decay.} Under weight decay, by contrast, the relative step size depends on the learning rate, decay coefficient, optimizer state, momentum coefficients, and training time~\citep{wdeq,hyperball,wdnorm}; Hyperball removes most of that coupling by fixing $\|W_t\|=R$ and $\|U_t\|=\eta R$. In our runs, MuonW's relative step size decreases as $\|W_t\|$ grows, while MuonH remains flatter at the level set by $\eta$ (Figures~\ref{fig:dynamics-stepsize} and~\ref{fig:dynamics-norms}).
 
 
 % ============================================================
@@ -192,7 +192,7 @@ Every run uses the same input pipeline, shared encoder, and two output heads. Th
 
 \subsection{Muon reaches Adam's lowest test perplexity with 31.6\% fewer flops}
 
-Muon reaches target quality substantially earlier than the best Adam configuration. Using the lowest Adam perplexity in Figure~\ref{fig:final-perplexity} from the best Adam run at checkpoint 19, the best Muon run crosses the same threshold by checkpoint 13. That is a savings of $6/19 \approx 31.6\%$ of the training steps and, because optimizer overhead is small relative to forward/backward cost, approximately 31.6\% fewer training FLOPs (Appendix~\ref{app:flops}).
+Muon reaches target quality substantially earlier than the best Adam configuration. Using the lowest Adam perplexity in Figure~\ref{fig:final-perplexity} from the best Adam run at checkpoint 19, the best Muon run crosses the same threshold by checkpoint 13. That is a savings of $6/19 \approx 31.6\%$ of the training steps. Our FLOP axis includes both forward/backward compute and optimizer-step overhead ; the latter is small at this scale, so the step savings translate almost directly into approximately 31.6\% fewer training FLOPs.
 
 \begin{figure}[htbp]
   \centering
@@ -201,11 +201,11 @@ Muon reaches target quality substantially earlier than the best Adam configurati
   \label{fig:final-perplexity}
 \end{figure}
 
-Figure~\ref{fig:final-perplexity} shows mean test perplexity over training FLOPs for the strongest largest-scale configurations from each optimizer variant. Lower perplexity indicates superior probability mass placement on the target DNA sequence. The FLOPs axis accounts for the per-step compute cost of each optimizer, including forward/backward passes and the optimizer update itself (Appendix~\ref{app:flops}). The optimizer-level view includes SGD as a baseline and shows a clear separation: SGD remains far above the Adam and Muon curves, Adam improves steadily, and the best Muon configuration reaches its lowest perplexity on a smaller compute budget. The full per-learning-rate and per-optimizer progression curves are provided in Figures~\ref{fig:perp-by-lr-1}--\ref{fig:perp-by-optimizer-muon} in Appendix~\ref{app:figures}.
+Figure~\ref{fig:final-perplexity} shows mean test perplexity over training FLOPs for the strongest largest-scale configurations from each optimizer variant. Lower perplexity indicates superior probability mass placement on the target DNA sequence. The FLOP conversion uses a base forward/backward term proportional to $6PBL$ per step, plus a per-optimizer update term; for the largest setting, Muon's Newton--Schulz update adds only about $1.17\%$ overhead relative to the base forward/backward pass (Appendix~\ref{app:flops}). The optimizer-level view includes SGD as a baseline and shows a clear separation: SGD remains far above the Adam and Muon curves, Adam improves steadily, and the best Muon configuration reaches its lowest perplexity on a smaller compute budget. The full per-learning-rate and per-optimizer progression curves are provided in Figures~\ref{fig:perp-by-lr-1}--\ref{fig:perp-by-optimizer-muon}.
 
 \subsection{Test perplexity across sweep grid}
 
-Aggregating by optimizer family gives the same ordering at the largest scale (Figure~\ref{fig:family-flop-efficiency}, left), and the qualitative FLOP-improvement pattern as well (right). Comparing MuonW and AdamH directly, they are relatively comparable at smaller widths and lower-to-mid learning rates, but MuonW separates more clearly at higher learning rates and larger widths (Figures~\ref{fig:cross-optimizer-heatmap}--\ref{fig:cross-optimizer-sweep} in Appendix~\ref{app:figures}). This scaling trend is important because optimizer choice matters more, not less, as the model moves toward the regime where training compute dominates iteration cost.
+Aggregating by optimizer family gives the same ordering at the largest scale (Figure~\ref{fig:family-flop-efficiency}, left), and the qualitative FLOP-improvement pattern as well (right). Comparing MuonW and AdamH directly, they are relatively comparable at smaller widths and lower-to-mid learning rates, but MuonW separates more clearly at higher learning rates and larger widths (Figures~\ref{fig:cross-optimizer-heatmap}--\ref{fig:cross-optimizer-sweep}). This scaling trend is important because optimizer choice matters more, not less, as the model moves toward the regime where training compute dominates iteration cost.
 
 \begin{figure}[htbp]
   \centering
@@ -231,7 +231,7 @@ After the first few matched-perplexity points, Muon's advantage stabilizes rathe
 
 Hyperball does not uniformly improve both optimizers, and MuonW is the strongest configuration in the present sweep. The interesting failure mode is that Hyperball and Muon seem to want opposite things from the spectrum. Muon whitens the update, trying to spread learning signal across singular directions; Hyperball then projects the whole matrix back to a fixed Frobenius radius by multiplying every singular value by the same scalar.
 
-That uniform projection is harmless if the useful spectrum is already concentrated, but it can be hostile to Muon's attempt to keep small directions alive. Large singular values survive each projection because they already occupy most of the fixed energy budget, while small singular values are repeatedly pulled back before they can accumulate. In this view, MuonH is not simply ``Muon plus better norm control''; it is Muon with a constraint that may erase the very directions Muon is trying to open. Appendix~\ref{app:hyperball-worsen} gives the fuller version of this mechanism.
+That uniform projection is harmless if the useful spectrum is already concentrated, but it can be hostile to Muon's attempt to keep small directions alive. Hyperball maps $W_{t+1}=R(W_t+U_t)/\|W_t+U_t\|_F$, so every singular direction is scaled by the same factor. Large singular values survive because they already occupy most of the fixed energy budget $\sum_i\sigma_i^2=R^2$, while smaller singular values are repeatedly pulled back before they accumulate. In this view, MuonH is not simply ``Muon plus better norm control''; it is Muon with a constraint that may erase the very directions Muon is trying to open.
 
 \begin{figure}[htbp]
   \centering
@@ -262,7 +262,7 @@ The training-loss sweep adds one nuance to the perplexity result. MuonW's lowest
 
 \subsection{Learning-rate sweep trends}
 
-The sweep loss curves and advantage heatmaps are shown in Figures~\ref{fig:sweep-losses-adam}--\ref{fig:cross-optimizer-sweep} (Appendix~\ref{app:figures}). AdamH is most competitive in a mid-range learning-rate window, whereas AdamW is more stable at the ends. For Muon, MuonH is competitive at smaller learning rates, while MuonW improves toward the upper end.
+The sweep loss curves and advantage heatmaps are shown in Figures~\ref{fig:sweep-losses-adam}--\ref{fig:cross-optimizer-sweep}. AdamH is most competitive in a mid-range learning-rate window, whereas AdamW is more stable at the ends. For Muon, MuonH is competitive at smaller learning rates, while MuonW improves toward the upper end.
 
 Across optimizers, the same pattern becomes more pronounced with width. MuonW and AdamH are relatively close at smaller widths and lower-to-mid learning rates, but MuonW gains a clearer advantage at higher learning rates and larger widths. This is the useful interpretation of the learning-rate sweep: Muon's best region shifts upward in learning rate, and that high-learning-rate region becomes more valuable as scale increases.
 
@@ -285,7 +285,7 @@ To investigate why Muon with independent weight decay (MuonW) outperforms its co
   \label{fig:spectral}
 \end{figure}
 
-MuonW and MuonH start with similarly high spectral entropy ($\approx 0.98$), but they diverge sharply. MuonW stays near $\approx 0.93$, while MuonH falls to $\approx 0.68$ and its participation ratio drops in tandem (Figure~\ref{fig:spectral}). Since both use the same Muon whitening, this divergence is consistent with the Hyperball constraint contributing to rank collapse~\citep{repdeg}. All weight matrices exhibited similar patterns; we show only one here for simplicity. For discussion of the rank of Muon's $\Delta W$, see Appendix~\ref{app:delta-w-rank}.
+MuonW and MuonH start with similarly high spectral entropy ($\approx 0.98$), but they diverge sharply. MuonW stays near $\approx 0.93$, while MuonH falls to $\approx 0.68$ and its participation ratio drops in tandem (Figure~\ref{fig:spectral}). Since both use the same Muon whitening, this divergence is consistent with the Hyperball constraint contributing to rank collapse~\citep{repdeg}. Muon's whitening is not perfectly full-rank in practice: five Newton--Schulz iterations push singular values toward $1$ rather than exactly to $1$, near-zero singular values in the momentum matrix remain hard to revive, and independent weight decay means the actual $\Delta W$ also includes a $-\lambda W_t$ term. All weight matrices exhibited similar patterns; we show only one here for simplicity.
 
 \subsection{Uniform Rescaling and the Spectral Squeeze}
 
@@ -293,7 +293,7 @@ MuonH constrains $\|W\|_F = R$ at every step by uniformly rescaling all singular
 
 This may be compounded by imperfect whitening on the update side. Muon's 5-step Newton--Schulz iteration only approximately whitens the update, so if the weight spectrum becomes increasingly anisotropic under Hyperball, the update can inherit that bias instead of correcting it.
 
-MuonW has no such hard rescaling step and maintains substantially higher spectral entropy and participation ratio throughout training. For the corresponding interpretation for Adam, see Appendix~\ref{app:note-adam}.
+MuonW has no such hard rescaling step and maintains substantially higher spectral entropy and participation ratio throughout training. AdamW also maintains relatively high entropy compared with AdamH and MuonH, but likely through a different mechanism: coordinate-wise updates can keep smaller singular directions active through noisier per-parameter adaptation, whereas MuonW does so through matrix-whitened updates that deliberately spread signal across directions. This distinction matches the broader NerVE view that stable spectral signatures track optimizer design choices~\citep{nerve}.
 
 \subsection{Implicit Annealing and Relative Step Size}
 
@@ -304,7 +304,7 @@ MuonW has no such hard rescaling step and maintains substantially higher spectra
   \label{fig:dynamics-stepsize}
 \end{figure}
 
-The second piece is the relative step size, $\|\Delta W\|/\|W\|$. MuonW shows a decaying relative step size as the weight norm grows, while MuonH plateaus. The initial ramp-up corresponds to the learning-rate warmup schedule. Under MuonW the weight norm grows over training, so the relative step size decays even when $\|\Delta W\|$ stays roughly constant (Figure~\ref{fig:dynamics-stepsize}, Figure~\ref{fig:dynamics-norms} in Appendix~\ref{app:figures}). This may act like an implicit annealing schedule.
+The second piece is the relative step size, $\|\Delta W\|/\|W\|$. MuonW shows a decaying relative step size as the weight norm grows, while MuonH plateaus. The initial ramp-up corresponds to the learning-rate warmup schedule. Under MuonW the weight norm grows over training, so the relative step size decays even when $\|\Delta W\|$ stays roughly constant (Figures~\ref{fig:dynamics-stepsize} and~\ref{fig:dynamics-norms}). This may act like an implicit annealing schedule.
 
 For MuonH, $\|W\|$ is fixed, so the relative step size does not show the same decay. This may limit late-stage refinement.
 
@@ -437,7 +437,7 @@ In practice, the resulting parameter update has the form
 \[
 W_{t+1} = W_t + U_t, \qquad U_t = -\eta\,\tilde u_t,
 \]
-(with optional weight decay applied as described in Appendix~\ref{app:adam}).
+(with optional independent weight decay applied as described above).
 
 \subsection{Connecting Muon to norm control}
 
@@ -638,7 +638,7 @@ Consider a vocabulary of $K$ tokens with marginal frequencies $p_1\ge p_2\ge\cdo
 g = \frac{1}{B}\sum_{k=1}^{K} n_k\,\bar g_k
   = \sum_{k=1}^{K} p_k\,\bar g_k,
 \]
-where $\bar g_k$ is the mean gradient contribution conditioned on token $k$. We can say that Adam's (see more in Appendix~\ref{app:adam}) running second moment for parameters associated with token $k$ accumulates as $v_k\propto p_k\,\mathbb{E}[\|\bar g_k\|^2]+(1-p_k)\,\bar 0=p_k\,\mathbb{E}[\|\bar g_k\|^2]$. The ratio of the largest to smallest second moment therefore scales with the frequency ratio of the most to least common token
+where $\bar g_k$ is the mean gradient contribution conditioned on token $k$. We can say that Adam's running second moment for parameters associated with token $k$ accumulates as $v_k\propto p_k\,\mathbb{E}[\|\bar g_k\|^2]+(1-p_k)\,\bar 0=p_k\,\mathbb{E}[\|\bar g_k\|^2]$. The ratio of the largest to smallest second moment therefore scales with the frequency ratio of the most to least common token
 $\frac{v_1}{v_K}\;\propto\;\frac{p_1\,\mathbb{E}[\|\bar g_1\|^2]}{p_K\,\mathbb{E}[\|\bar g_K\|^2]}$.
 If we assume that $\frac{\mathbb{E}[\|\bar g_1\|^2]}{\mathbb{E}[\|\bar g_K\|^2]}\approx O(1)$, then:
 \[
@@ -814,7 +814,7 @@ The panels show nucleotide frequencies across the three cell lines in our traini
   \label{fig:perp-by-lr-1}
 \end{figure}
 
-The left panels show mean test perplexity over training checkpoints, while the right panels show mean test perplexity over cumulative FLOPs. Lower is better. See Appendix~\ref{app:flops} for the FLOP accounting used to map checkpoints to cumulative FLOPs.
+The left panels show mean test perplexity over training checkpoints, while the right panels show mean test perplexity over cumulative FLOPs. Lower is better; the FLOP accounting follows the conversion defined above.
 
 \begin{figure}[htbp]
   \centering
@@ -847,7 +847,7 @@ The left panels show mean test perplexity over training checkpoints, while the r
   \label{fig:perp-by-lr-2}
 \end{figure}
 
-The left panels show mean test perplexity over training checkpoints, while the right panels show mean test perplexity over cumulative FLOPs. Lower is better. See Appendix~\ref{app:flops} for the FLOP accounting used to map checkpoints to cumulative FLOPs.
+The left panels show mean test perplexity over training checkpoints, while the right panels show mean test perplexity over cumulative FLOPs. Lower is better; the FLOP accounting follows the conversion defined above.
 
 \begin{figure}[htbp]
   \centering
@@ -880,7 +880,7 @@ The left panels show mean test perplexity over training checkpoints, while the r
   \label{fig:perp-by-optimizer-adam}
 \end{figure}
 
-The left panels show mean test perplexity over checkpoints, while the right panels show mean test perplexity over cumulative FLOPs. The plots cover five learning rates. See Appendix~\ref{app:flops} for the FLOP accounting used to map checkpoints to cumulative FLOPs.
+The left panels show mean test perplexity over checkpoints, while the right panels show mean test perplexity over cumulative FLOPs. The plots cover five learning rates, using the FLOP conversion defined above.
 
 \begin{figure}[htbp]
   \centering
@@ -913,7 +913,7 @@ The left panels show mean test perplexity over checkpoints, while the right pane
   \label{fig:perp-by-optimizer-muon}
 \end{figure}
 
-The left panels show mean test perplexity over checkpoints, while the right panels show mean test perplexity over cumulative FLOPs. The plots cover five learning rates. See Appendix~\ref{app:flops} for the FLOP accounting used to map checkpoints to cumulative FLOPs.
+The left panels show mean test perplexity over checkpoints, while the right panels show mean test perplexity over cumulative FLOPs. The plots cover five learning rates, using the FLOP conversion defined above.
 
 \begin{figure}[htbp]
   \centering
