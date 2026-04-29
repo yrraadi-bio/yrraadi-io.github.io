@@ -89,20 +89,9 @@ We are aware of two recent works that train or fine-tune DNA models with both Ad
 % ============================================================
 
 \citet{wilson} showed that optimizer rankings change across domains: adaptive methods underperform SGD on some vision tasks despite converging faster, yet dominate SGD in language modeling. This is consistent with the No Free Lunch view~\citep{nfl} that optimizer performance depends on problem structure.
+Regulatory DNA and natural language present very different sequence-learning problems. In language, much of the modeling burden comes from representing and composing meaning across a large semantic vocabulary. Regulatory DNA instead uses a compact four-letter alphabet whose predictive structure comes from how nucleotides are arranged into biochemical sequence patterns. Regulatory signal is carried by motif identity, motif strength, spacing, orientation, local composition, and combinations of nearby motifs, rather than by the standalone identity of a token. This makes regulatory DNA a distinct distributional setting for optimization: an optimizer that performs well on natural-language corpora is not guaranteed to behave the same way when the training signal comes from regulatory sequence grammar. Sequence-to-function models ultimately supervise on biological readouts such as expression, chromatin accessibility, or variant effects, but those predictions still depend on internal representations of this underlying regulatory sequence context. A nucleotide cross-entropy objective probes that sequence-distribution component directly: it tests how efficiently an optimizer learns the statistical structure of regulatory DNA before any task-specific functional head or supervised biological readout is added. Cross-entropy on regulatory DNA is therefore a relevant in-domain objective for studying optimization, even though downstream sequence-to-function evaluation remains a separate test of biological utility.
 
-Our results extend this observation to genomics. Regulatory DNA is different enough from language that optimizer rankings from NLP should not be assumed to transfer.
-
-DNA has a vocabulary of 4 tokens with near-uniform frequencies versus Zipf-distributed ${\sim}$100k tokens in language~\citep{zipf-review}, and much of its predictive structure is concentrated in short local sequence context such as transcription-factor binding motifs. These differences fundamentally alter the gradient statistics and loss landscape curvature that optimizers exploit.
-
-\subsection{DNA and language have different local structure}
-
-Nearly all modern optimizer benchmarks are run on natural language data, where token frequencies follow Zipf's law, with the $k$-th most common token appearing with frequency $f(k)\propto 1/k^{\alpha}$ ($\alpha\approx 1$)~\citep{zipf-review,zipf}. Regulatory DNA looks very different: it has a vocabulary of 4 nucleotides, and in our training data the marginal frequencies are close to uniform (Figure~\ref{fig:nucleotide-dist}).
-
-The entropy of DNA's token distribution is therefore likely close to its maximum, unlike language where Zipf concentration creates strong token imbalance. This changes the gradient statistics seen by adaptive optimizers. If token $k$ appears with marginal frequency $p_k$, Adam's second-moment (variance) estimate for parameters tied to that token scales roughly with $p_k$ times the token-conditioned gradient variance. The dynamic range of this variance is then $\propto p_1/p_K$, in Zipf-distributed language it can be on the order of $10^5$, so Adam's adaptive denominator varies across orders of magnitude. In four-token DNA with near-uniform frequencies, $p_1/p_K\approx 1$, so the adaptive denominator is much closer to a uniform scalar. Optimizer rankings established on language corpora therefore may not transfer cleanly.
-
-Language modeling is built around long-context disambiguation. A token's meaning often depends on entities, syntax, discourse state, and topic information introduced many tokens earlier; predicting the next word in ``the bank'' depends on whether the surrounding passage is about rivers, finance, or memory systems. This makes long-range attention a central source of useful signal in NLP.
-
-Regulatory DNA has a different shape. Much of the useful context is local: many predictive signals are carried by motif-scale patterns, typically 6--20 base pairs, corresponding to transcription-factor binding sites or nearby motif combinations. Long-range context can still matter through enhancer grammar, spacing, and distal interactions, but the dominant training signal in our setting is much more local than in language. An optimizer tuned for the long-context, heavy-tailed structure of text is therefore not automatically tuned for the short-motif, nearly uniform-token structure of DNA.
+A high-level example of this distributional difference is the marginal token distribution. Nearly all modern optimizer benchmarks are run on natural language data, where token frequencies follow Zipf’s law, with the $k$-th most common token appearing with frequency $f(k) \propto 1/k^\alpha$, typically with $\alpha \approx 1$. This produces a highly skewed vocabulary: a small number of tokens appear extremely often, while a long tail of rare tokens appears infrequently. Regulatory DNA looks very different. It has only four nucleotide tokens, and in our training data the marginal frequencies are close to uniform (Figure 10 in Appendix N). The entropy of the DNA token distribution is therefore close to its maximum, unlike language where Zipf concentration creates strong token imbalance. This changes the gradient statistics seen during training: in language, adaptive methods can benefit from correcting large frequency-driven differences between common and rare token-associated parameters, whereas in regulatory DNA the marginal token frequencies are much closer to isotropic. Optimizer rankings established on language corpora should therefore not be assumed to transfer cleanly to regulatory DNA.
 
 % ============================================================
 \section{Weight Regularization}
@@ -192,7 +181,54 @@ Every run uses the same input pipeline, shared encoder, and two output heads. Th
 
 \subsection{Muon reaches Adam's lowest test perplexity with 31.6\% fewer flops}
 
+Aggregating optimizer variants by family gives the clearest high-level view. Figure~\ref{fig:family-progressions} compares the best Adam and Muon family curves at the largest scale against both FLOPs and wall-clock time. In both views, Muon reaches lower perplexity sooner than Adam.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{subfigure}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{images/perplexity_best_family_largest_scale_flops.png}
+    \caption*{Best family progression by FLOPs}
+  \end{subfigure}\hfill
+  \begin{subfigure}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{images/perplexity_best_family_wall_clock_largest_scale.png}
+    \caption*{Best family progression by wall-clock time}
+  \end{subfigure}
+  \caption{Largest-scale family-level progression efficiency.}
+  \label{fig:family-progressions}
+\end{figure}
+
+The matched-quality advantage plots in Figure~\ref{fig:family-advantages} convert the progression curves into a direct efficiency question: for each Adam perplexity level, how much less compute or wall-clock time does the best Muon run need to reach the same or lower perplexity? Positive values mean Muon reaches the matched target sooner. After the first few matched-perplexity points, Muon's advantage stabilizes rather than appearing as a one-off crossing; across the relevant target range, the FLOP reduction settles around 30--50\%.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{subfigure}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{images/adam_muon_flop_advantage_flops.png}
+    \caption*{Matched-perplexity FLOP advantage}
+  \end{subfigure}\hfill
+  \begin{subfigure}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{images/adam_muon_wall_clock_advantage_largest_scale.png}
+    \caption*{Matched-perplexity wall-clock advantage}
+  \end{subfigure}
+  \caption{Muon advantage at matched Adam perplexity.}
+  \label{fig:family-advantages}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.85\linewidth]{images/adam_muon_lowest_adam_perplexity_advantage_by_scale.png}
+  \caption{Muon FLOP and wall-clock advantage at each scale's lowest Adam perplexity.}
+  \label{fig:scale-advantages}
+\end{figure}
+
 Muon reaches target quality substantially earlier than the best Adam configuration. Using the lowest Adam perplexity in Figure~\ref{fig:final-perplexity} from the best Adam run at checkpoint 19, the best Muon run crosses the same threshold by checkpoint 13. That is a savings of $6/19 \approx 31.6\%$ of the training steps. Our FLOP axis includes both forward/backward compute and optimizer-step overhead ; the latter is small at this scale, so the step savings translate almost directly into approximately 31.6\% fewer training FLOPs.
+
+\subsection{Test perplexity across sweep grid}
+
+Comparing MuonW and AdamH directly, they are relatively comparable at smaller widths and lower-to-mid learning rates, but MuonW separates more clearly at higher learning rates and larger widths (Figures~\ref{fig:cross-optimizer-heatmap}--\ref{fig:cross-optimizer-sweep}). This scaling trend is important because optimizer choice matters more, not less, as the model moves toward the regime where training compute dominates iteration cost.
 
 \begin{figure}[htbp]
   \centering
@@ -202,30 +238,6 @@ Muon reaches target quality substantially earlier than the best Adam configurati
 \end{figure}
 
 Figure~\ref{fig:final-perplexity} shows mean test perplexity over training FLOPs for the strongest largest-scale configurations from each optimizer variant. Lower perplexity indicates superior probability mass placement on the target DNA sequence. The FLOP conversion uses a base forward/backward term proportional to $6PBL$ per step, plus a per-optimizer update term; for the largest setting, Muon's Newton--Schulz update adds only about $1.17\%$ overhead relative to the base forward/backward pass (Appendix~\ref{app:flops}). The optimizer-level view includes SGD as a baseline and shows a clear separation: SGD remains far above the Adam and Muon curves, Adam improves steadily, and the best Muon configuration reaches its lowest perplexity on a smaller compute budget. The full per-learning-rate and per-optimizer progression curves are provided in Figures~\ref{fig:perp-by-lr-1}--\ref{fig:perp-by-optimizer-muon}.
-
-\subsection{Test perplexity across sweep grid}
-
-Aggregating by optimizer family gives the same ordering at the largest scale (Figure~\ref{fig:family-flop-efficiency}, left), and the qualitative FLOP-improvement pattern as well (right). Comparing MuonW and AdamH directly, they are relatively comparable at smaller widths and lower-to-mid learning rates, but MuonW separates more clearly at higher learning rates and larger widths (Figures~\ref{fig:cross-optimizer-heatmap}--\ref{fig:cross-optimizer-sweep}). This scaling trend is important because optimizer choice matters more, not less, as the model moves toward the regime where training compute dominates iteration cost.
-
-\begin{figure}[htbp]
-  \centering
-  \begin{subfigure}[t]{0.48\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{images/perplexity_best_family_largest_scale_flops.png}
-    \caption*{Best perplexity progression by optimizer family}
-  \end{subfigure}\hfill
-  \begin{subfigure}[t]{0.48\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{images/adam_muon_flop_advantage_flops.png}
-    \caption*{Muon FLOP advantage at matched Adam perplexity}
-  \end{subfigure}
-  \caption{Largest-scale family-level FLOP efficiency.}
-  \label{fig:family-flop-efficiency}
-\end{figure}
-
-The left panel shows the best perplexity progression by optimizer family. The right panel shows Muon's FLOP advantage at matched Adam perplexity levels.
-
-After the first few matched-perplexity points, Muon's advantage stabilizes rather than appearing as a one-off crossing. Across the relevant target range, the FLOP reduction settles around 30--40\%.
 
 \subsection{Norm control changes the optimizer ranking}
 
