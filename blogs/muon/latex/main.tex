@@ -240,7 +240,7 @@ Figure~\ref{fig:final-perplexity} shows the underlying optimizer-level trajector
 
 Hyperball does not uniformly improve both optimizers, and MuonW is the strongest configuration in the present sweep. A plausible mechanism is the interaction between Muon's approximate update whitening and Hyperball's Frobenius-norm projection. Muon spreads the proposed update across singular directions, whereas Hyperball maps $W_t+U_t$ back to a fixed Frobenius radius using a single scalar rescaling.
 
-This projection preserves relative singular values while enforcing the energy budget $\sum_i\sigma_i^2=R^2$. Dominant singular modes therefore retain most of the available Frobenius energy, while weaker modes introduced by the update can be attenuated before they accumulate. In this view, MuonH is not simply ``Muon plus stronger norm control''; it is Muon under a global norm constraint that can reduce spectral diversity.
+This projection preserves relative singular values while enforcing the energy budget $\sum_i\sigma_i^2=R^2$. It therefore controls total scale without directly enforcing a broad singular-value distribution. In this view, MuonH is not simply ``Muon plus stronger norm control''; it is Muon under a global norm constraint that changes both the weight spectrum and the relative-step-size trajectory.
 
 \begin{figure}[htbp]
   \centering
@@ -282,9 +282,9 @@ Across optimizers, the same pattern becomes more pronounced with width. MuonW an
 \label{sec:spectral}
 % ============================================================
 
-To investigate why Muon with independent weight decay (MuonW) outperforms its constrained counterpart (MuonH) in this sweep, we examine the spectral properties of the learned representations. Following the eigenspectral framework of NerVE~\citep{nerve}\footnote{NerVE originally applies these metrics to track activation dynamics through FFN layers, but the same spectral measures are equally well defined for weight matrices.}, we track two key metrics for the weight matrices:
+To investigate why Muon with independent weight decay (MuonW) outperforms its constrained counterpart (MuonH) in this sweep, we examine the spectral properties of the learned representations. Following the eigenspectral framework of NerVE~\citep{nerve}\footnote{NerVE originally applies these metrics to track activation dynamics through FFN layers, but the same spectral measures are equally well defined for weight matrices.}, we track two key metrics for the weight matrices and the corresponding parameter updates:
 \begin{itemize}
-  \item \textbf{Spectral Entropy:} A measure of how uniformly variance is distributed across singular values. Values near $1.0$ indicate a ``full rank'', diverse representation, while values near $0$ indicate rank collapse.
+  \item \textbf{Spectral Entropy:} A measure of how uniformly variance is distributed across singular values. Values near $1.0$ indicate a broadly distributed spectrum, while lower values indicate stronger spectral concentration.
   \item \textbf{Participation Ratio (PR):} The effective rank of the matrix. We normalize the PR to get the ratio of the effective rank to full rank.
 \end{itemize}
 
@@ -292,21 +292,23 @@ To investigate why Muon with independent weight decay (MuonW) outperforms its co
   \centering
   \includegraphics[width=\linewidth]{images/svd_entropy_mean_ffn_L3.png}\\[0.85em]
   \includegraphics[width=\linewidth]{images/pr_mean_ffn_L3.png}
-  \caption{Spectral metrics for FFN Layer~3. Top: Spectral Entropy. Bottom: Participation Ratio. \textbf{Blue:} MuonW, \textbf{Red:} MuonH, \textbf{Orange:} AdamW, \textbf{Green:} AdamH.}
+  \caption{Spectral metrics for FFN Layer~3. Top: Spectral Entropy. Bottom: Participation Ratio. Each row shows the spectrum of the weights on the left and the mean update $\Delta W$ on the right. \textbf{Blue:} MuonW, \textbf{Red:} MuonH, \textbf{Orange:} AdamW, \textbf{Green:} AdamH.}
   \label{fig:spectral}
 \end{figure}
 
-MuonW and MuonH start with similarly high spectral entropy ($\approx 0.98$), but they diverge sharply. MuonW stays near $\approx 0.93$, while MuonH falls to $\approx 0.68$ and its participation ratio drops in tandem (Figure~\ref{fig:spectral}). Since both use the same Muon whitening, this divergence is consistent with the Hyperball constraint contributing to rank collapse~\citep{repdeg}. Muon's whitening is not perfectly full-rank in practice: five Newton--Schulz iterations push singular values toward $1$ rather than exactly to $1$, near-zero singular values in the momentum matrix remain hard to revive, and independent weight decay means the actual $\Delta W$ also includes a $-\lambda W_t$ term. All weight matrices exhibited similar patterns; we show only one here for simplicity.
+The spectra show that Hyperball changes Muon's accumulated weight spectrum without eliminating its update diversity. MuonW and MuonH both begin with weight spectral entropy near $0.98$. By the end of training, MuonW remains near $0.95$, while MuonH is lower at approximately $0.93$; the corresponding participation ratios are approximately $0.57$ for MuonW and $0.46$ for MuonH (Figure~\ref{fig:spectral}). AdamW finishes with comparable entropy to MuonW but a lower participation ratio ($\approx 0.36$), while AdamH is the most spectrally concentrated configuration, with entropy near $0.87$ and participation ratio near $0.14$.
+
+The update spectra help separate optimizer behavior from the accumulated weight spectrum. MuonW and MuonH both maintain high update spectral entropy, and their update participation ratios remain much larger than those of AdamW and AdamH. Thus, Hyperball does not appear to eliminate Muon's matrix-whitened update structure. The main difference is instead that the fixed-radius weight constraint yields a lower-diversity weight spectrum than MuonW, while AdamH shows the strongest concentration among the configurations shown.
 
 \subsection{Uniform Rescaling and Spectral Concentration}
 
-MuonH constrains $\|W\|_F = R$ at every step by uniformly rescaling all singular values. The constraint fixes the total singular-value energy but does not guarantee a well-distributed spectrum: a rank-one matrix can satisfy the same Frobenius norm as a full-rank matrix. A plausible consequence is that weak directions are repeatedly pushed down before they accumulate, concentrating the spectrum into fewer dominant modes.
+MuonH constrains $\|W\|_F = R$ at every step by uniformly rescaling all singular values. The constraint fixes the total singular-value energy but does not guarantee a well-distributed spectrum: a rank-one matrix can satisfy the same Frobenius norm as a full-rank matrix. In our runs, MuonH has lower weight-spectrum diversity than MuonW while preserving the high-diversity Muon update spectrum.
 
-This may be compounded by imperfect whitening on the update side. Muon's 5-step Newton--Schulz iteration only approximately whitens the update, so if the weight spectrum becomes increasingly anisotropic under Hyperball, the update can inherit that bias instead of correcting it.
+This interpretation is also consistent with imperfect whitening on the update side. Muon's 5-step Newton--Schulz iteration only approximately whitens the update, near-zero singular values in the momentum matrix remain difficult to revive, and the actual independent-weight-decay update satisfies $\Delta W=U_t-\lambda W_t$ rather than $\Delta W=U_t$.
 
-MuonW has no such hard rescaling step and maintains substantially higher spectral entropy and participation ratio throughout training. Independent weight decay changes the weight matrix that the Muon update is added to, but it does not reproject the post-update matrix onto a fixed-radius sphere. This makes the regularizer less directly coupled to Muon's update whitening.
+MuonW has no hard rescaling step and maintains the highest participation ratio among the weight matrices shown. Independent weight decay changes the weight matrix that the Muon update is added to, but it does not reproject the post-update matrix onto a fixed-radius sphere. This makes the regularizer less directly coupled to Muon's update whitening.
 
-AdamW also maintains relatively high entropy compared with AdamH and MuonH, but likely through a different mechanism: coordinate-wise updates can sustain activity in smaller singular directions through per-parameter adaptation, whereas MuonW does so through matrix-whitened updates that spread signal across singular directions. This distinction matches the broader NerVE view that stable spectral signatures track optimizer design choices~\citep{nerve}.
+AdamW also maintains relatively high spectral entropy, but likely through a different mechanism: coordinate-wise updates can sustain activity across many small directions through per-parameter adaptation, whereas MuonW does so through matrix-whitened updates that spread signal across singular directions. The participation-ratio curves separate these cases: MuonW keeps more effective rank in the weights, while AdamW has a lower effective-rank fraction despite comparable entropy. This distinction matches the broader NerVE view that stable spectral signatures track optimizer design choices~\citep{nerve}.
 
 \subsection{Implicit Annealing and Relative Step Size}
 
@@ -456,7 +458,7 @@ Muon acts on the singular spectrum of the update, while independent weight decay
 \]
 so Hyperball fixes the total singular-value energy of $W$ but does not directly control how that energy is distributed across directions.
 
-This distinction matters when Muon is paired with Hyperball. Muon approximately equalizes the singular values of the proposed update, whereas Hyperball uniformly rescales the post-update weight matrix to satisfy $\|W\|_F=R$. This can preserve dominant singular modes while attenuating smaller modes, motivating the spectral entropy and participation-ratio diagnostics in Section~\ref{sec:spectral}.
+This distinction matters when Muon is paired with Hyperball. Muon approximately equalizes the singular values of the proposed update, whereas Hyperball uniformly rescales the post-update weight matrix to satisfy $\|W\|_F=R$. This can change how singular-value energy is distributed in the weights, motivating the spectral entropy and participation-ratio diagnostics in Section~\ref{sec:spectral}.
 
 
 \section{Concentration of Measure in the Hyperball}
