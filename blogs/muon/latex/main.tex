@@ -43,7 +43,7 @@
 }
 \makeatother
 
-\title{Muon Reduces Training Cost in Regulatory DNA Transformers}
+\title{Muon Reduces Training Cost of Regulatory DNA Transformers}
 
 \author{%
   Viraj Doshi \\
@@ -65,7 +65,7 @@
 
 Regulatory sequence choice is a central design problem in gene therapy: the same therapeutic payload can behave very differently depending on the regulatory elements that control its expression. Models trained on regulatory DNA can help narrow this design space by scoring variants, cis-regulatory elements, and candidate sequences before they enter biological testing. Systems such as AlphaGenome~\citep{alphagenome}, Enformer~\citep{enformer}, and Borzoi~\citep{borzoi} illustrate the growing role of learned sequence models in this prioritization step. The predictions made by these models sit upstream of an expensive experimental path: biological validation involves DNA synthesis, cloning, cell culture, sequencing, and functional screening. Training compute is therefore tied to the same constrained discovery pipeline rather than being an isolated modeling expense.
 
-This makes optimizer choice more than an implementation detail. If one optimizer reaches the same held-out quality target with fewer FLOPs and less Wall-Clock time, the saved resources can support larger candidate screens, additional assays, more cell contexts, and broader follow-up validation. We study this question for regulatory DNA Transformers by comparing Adam and Muon under matched test-perplexity targets. AdamW is widely used for genomic sequence models, but regulatory DNA differs from natural language in vocabulary size, token-frequency structure, and the biochemical grammar carried by motifs, spacing, orientation, and local sequence composition. Optimizer gains should therefore be evaluated in-domain rather than inferred from NLP. We train a Transformer model on ENCODE candidate cis-regulatory sequences while holding architecture, data, and non-optimizer hyperparameters fixed, and vary optimizer family, norm-control scheme, learning rate, and model width. We pair Adam and Muon with either independent weight decay or Hyperball. At the largest scale, Muon reaches the best Adam target quality with a median FLOP improvement of 35.4\% and a median Wall-Clock improvement of 38.5\%. The comparison also shows that norm control changes the optimizer ranking: independent weight decay pairs more favorably with Muon than Hyperball in this setting. These results motivate optimizer and norm-control choice as practical levers for reducing the training cost of regulatory DNA Transformers.
+This makes optimizer choice more than an implementation detail. If one optimizer reaches the same held-out quality target with fewer FLOPs and less Wall-Clock time, the saved resources can support larger candidate screens, additional assays, more cell contexts, and broader follow-up validation. We study this question for regulatory DNA Transformers by comparing Adam and Muon under matched test-perplexity targets. AdamW is widely used for genomic sequence models, but regulatory DNA differs from natural language in vocabulary size, token-frequency structure, and the biochemical grammar carried by motifs, spacing, orientation, and local sequence composition. Optimizer gains should therefore be evaluated in-domain rather than inferred from NLP. We train a Transformer model on ENCODE candidate cis-regulatory sequences while holding architecture, data, and non-optimizer hyperparameters fixed, and vary optimizer family, norm-control scheme, learning rate, and model width. We pair Adam and Muon with either independent weight decay or Hyperball, denoting Muon with independent weight decay as MuonW and Muon with Hyperball as MuonH. At the largest scale, Muon reaches the best Adam target quality with a median FLOP improvement of 35.4\% and a median Wall-Clock improvement of 38.5\%. The comparison also shows that norm control changes the optimizer ranking: independent weight decay pairs more favorably with Muon than Hyperball in this setting. These results motivate optimizer and norm-control choice as practical levers for reducing the training cost of regulatory DNA Transformers.
 
 
 % ============================================================
@@ -91,7 +91,7 @@ Recent genomic modeling papers have started to include Muon, but mostly as a sma
 
 Regulatory DNA and natural language present very different sequence-learning problems. In language, much of the modeling burden comes from representing and composing meaning across a large semantic vocabulary. Regulatory DNA instead uses a compact four-letter alphabet whose predictive structure comes from how nucleotides are arranged into biochemical sequence patterns. Regulatory signal is carried by motif identity, motif strength, spacing, orientation, local composition, and combinations of nearby motifs, rather than by the standalone identity of a token. This makes regulatory DNA a distinct distributional setting for optimization: an optimizer that performs well on natural-language corpora is not guaranteed to behave the same way when the training signal comes from regulatory sequence grammar. Sequence-to-function models ultimately supervise on biological readouts such as expression, chromatin accessibility, or variant effects, but those predictions still depend on internal representations of this underlying regulatory sequence context. A nucleotide cross-entropy objective probes that sequence-distribution component directly: it tests how efficiently an optimizer learns the statistical structure of regulatory DNA before any task-specific functional head or supervised biological readout is added. Cross-entropy on regulatory DNA is therefore a relevant in-domain objective for studying optimization. This relationship between pretraining loss and biological utility is supported by recent foundation models. For instance, the Evo~2 model~\citep{evo2} demonstrated that scaling model parameters lowers validation loss, which in turn translates to broad improvements in zero-shot downstream performance across various genomic and molecular tasks.
 
-A high-level example of this distributional difference is the marginal token distribution. Nearly all modern optimizer benchmarks are run on natural language data, where token frequencies follow Zipf's law, with the $k$-th most common token appearing with frequency $f(k) \propto 1/k^\alpha$, typically with $\alpha \approx 1$. This produces a highly skewed vocabulary: a small number of tokens appear extremely often, while a long tail of rare tokens appears infrequently. In a large language-model vocabulary, the most common token can be orders of magnitude more frequent than a rare token. Regulatory DNA looks very different. It has only four nucleotide tokens, and in our training data the marginal frequencies across cell lines are close to uniform (Figure~\ref{fig:nucleotide-dist}). The entropy of the DNA token distribution is therefore close to its maximum, unlike language where Zipf concentration creates strong token imbalance.
+A high-level example of this distributional difference is the marginal token distribution. Nearly all modern optimizer benchmarks are run on natural language data, where token frequencies follow Zipf's law, with the $k$-th most common token appearing with frequency $f(k) \propto 1/k^\alpha$, typically with $\alpha \approx 1$. This produces a highly skewed vocabulary: a small number of tokens appear extremely often, while a long tail of rare tokens appears infrequently. In a large language-model vocabulary, the most common token can be orders of magnitude more frequent than a rare token. Regulatory DNA looks very different. It has only four nucleotide tokens, and in our training data the marginal frequencies across cell lines are close to uniform (Figure~\ref{fig:nucleotide-dist}). The entropy of the DNA token distribution is therefore close to its maximum, unlike language where Zipf concentration creates strong token imbalance. This also changes the gradient statistics seen by adaptive optimizers: in a Zipfian vocabulary, Adam's second moments can vary by orders of magnitude across token-associated directions, whereas near-uniform DNA tokens make those denominators much closer to a shared scale (Appendix~\ref{app:gradient-stats}).
 
 % ============================================================
 \section{Weight Regularization}
@@ -140,25 +140,30 @@ To isolate the effect of the optimizer, we hold the architecture family, dataset
   \centering
   \resizebox{\linewidth}{!}{%
   \begin{tikzpicture}[
-    node distance=0.7cm and 0.9cm,
-    box/.style={draw, rounded corners, align=center, minimum height=0.8cm, inner xsep=8pt, font=\small},
-    dna/.style={box, fill=green!8, draw=green!45!black},
-    model/.style={box, fill=blue!6, draw=blue!45!black},
-    head/.style={box, fill=purple!7, draw=purple!55!black},
-    data/.style={box, fill=teal!7, draw=teal!55!black},
+    node distance=0.75cm and 1.0cm,
+    box/.style={draw, align=center, minimum height=0.9cm, inner xsep=9pt, inner ysep=7pt, font=\small},
+    inputbox/.style={box, fill=green!8, draw=green!45!black, minimum width=3.4cm},
+    model/.style={box, fill=blue!6, draw=blue!50!black},
+    stack/.style={box, fill=violet!8, draw=violet!65!black, minimum width=3.7cm, minimum height=2.15cm},
+    head/.style={box, fill=teal!7, draw=teal!55!black},
+    data/.style={box, fill=orange!7, draw=orange!55!black},
     arrow/.style={-{Latex[length=2mm]}, thick}
   ]
-    \node[dna] (input) {\textbf{Input tokens}\\cCRE DNA sequence\\masked nucleotides};
-    \node[model, right=of input] (embed) {Token\\embedding};
-    \node[model, right=of embed, minimum width=3.0cm] (encoder) {\textbf{Shared encoder}\\non-causal transformer\\RoPE attention + SwiGLU FFN};
-    \node[head, above right=0.25cm and 0.9cm of encoder] (mlm) {Nucleotide head\\MLM logits};
-    \node[head, below right=0.25cm and 0.9cm of encoder] (modality) {Modality head\\DNase-seq tracks};
+    \node[inputbox] (input) {\begin{tabular}{c}
+      \textbf{Nucleotide input}\\[-1pt]
+      {\scriptsize\fbox{\texttt{A}}\;\fbox{\texttt{C}}\;\fbox{\texttt{G}}\;\fbox{\texttt{T}}\;\fbox{\texttt{[MASK]}}\;\fbox{\texttt{G}}\;\fbox{\texttt{A}}}\\[-1pt]
+      {\scriptsize real cCRE DNA tokens}
+    \end{tabular}};
+    \node[model, right=of input, minimum width=2.0cm] (embed) {\textbf{Embedding}\\token + position};
+    \node[stack, right=of embed] (encoder) {\textbf{Transformer encoder stack}\\[2pt]non-causal self-attention\\RoPE + SwiGLU FFN};
+    \node[head, right=1.1cm of encoder, yshift=0.65cm] (mlm) {\textbf{Nucleotide head}\\MLM logits};
+    \node[head, right=1.1cm of encoder, yshift=-0.65cm] (modality) {\textbf{Modality head}\\DNase-seq tracks};
     \node[data, right=1.0cm of mlm] (ce) {Held-out\\CE loss};
     \node[data, right=1.0cm of modality] (dnase) {Auxiliary\\DNase loss};
     \draw[arrow] (input) -- (embed);
     \draw[arrow] (embed) -- (encoder);
-    \draw[arrow] (encoder) -- (mlm);
-    \draw[arrow] (encoder) -- (modality);
+    \draw[arrow] (encoder.east) -- ++(0.45,0) |- (mlm.west);
+    \draw[arrow] (encoder.east) -- ++(0.45,0) |- (modality.west);
     \draw[arrow] (mlm) -- (ce);
     \draw[arrow] (modality) -- (dnase);
   \end{tikzpicture}%
@@ -194,7 +199,7 @@ Aggregating optimizer variants by family gives the clearest high-level view. In 
   \label{fig:family-progressions}
 \end{figure}
 
-The matched-quality advantage plots in Figure~\ref{fig:family-advantages} convert the progression curves into a direct efficiency comparison. For each Adam checkpoint, we use its held-out perplexity as the target, then find the furthest Muon checkpoint, moving from high to low compute, whose perplexity is still below that Adam target. The plotted value is the corresponding FLOP or Wall-Clock reduction relative to the Adam checkpoint. Positive values therefore mean that Muon reaches the same target perplexity with less compute or time. After the first few targets, Muon's advantage stabilizes rather than appearing as a one-off crossing; across the relevant target range, the FLOP and Wall-Clock reduction settles around 30--50\%.
+The matched-quality advantage plots in Figure~\ref{fig:family-advantages} convert the progression curves into a direct efficiency comparison. For each Adam checkpoint, we use its held-out perplexity as the target, then find the furthest Muon checkpoint, moving from high to low compute, whose perplexity is still below that Adam target. The plotted value is the corresponding FLOP or Wall-Clock reduction relative to the Adam checkpoint. Positive values therefore mean that Muon reaches the same target perplexity with less compute or time. After the first few targets, Muon's advantage stabilizes rather than appearing as a one-off crossing; across the relevant target range, the FLOP and Wall-Clock reduction range between 30--50\%.
 
 \begin{figure}[htbp]
   \centering
@@ -219,7 +224,7 @@ The matched-quality advantage plots in Figure~\ref{fig:family-advantages} conver
   \label{fig:scale-advantages}
 \end{figure}
 
-Figure~\ref{fig:scale-advantages} summarizes this matched-target comparison across model scales using the median Muon improvement. The plot reports a median Muon improvement across all scales, proving this is a real trend that would apply to models of all sizes.
+Figure~\ref{fig:scale-advantages} summarizes this matched-target comparison across model scales using the median Muon improvement. The plot reports a median Muon improvement across all scales, suggesting this is a trend that would apply to models of all sizes.
 
 \subsection{Test perplexity across sweep grid}
 
@@ -239,12 +244,19 @@ Figure~\ref{fig:final-perplexity} shows mean test perplexity over training FLOPs
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=\linewidth]{images/loss_curves_nucleotide_loss.png}
-  \caption{Training-loss diagnostics.}
-  \label{fig:loss-curves}
+  \makebox[\linewidth][c]{\includegraphics[width=1.06\linewidth]{images/adam_comparison.png}}
+  \caption{AdamW--AdamH training-loss sweep.}
+  \label{fig:sweep-losses-adam}
 \end{figure}
 
-Figure~\ref{fig:loss-curves} shows learning curves for the perplexity-selected runs for all four optimizer combinations, with nucleotide cross-entropy loss on the vertical axis.
+\begin{figure}[htbp]
+  \centering
+  \makebox[\linewidth][c]{\includegraphics[width=1.06\linewidth]{images/muon_comparison.png}}
+  \caption{MuonW--MuonH training-loss sweep.}
+  \label{fig:sweep-losses-muon}
+\end{figure}
+
+Figures~\ref{fig:sweep-losses-adam} and~\ref{fig:sweep-losses-muon} show the training-loss sweeps for the within-optimizer norm-control comparisons, with nucleotide cross-entropy loss on the vertical axis. The aggregate learning curves for the perplexity-selected runs are provided in Figure~\ref{fig:loss-curves}.
 
 Consistent with existing literature~\citep{muon,hyperball}, Muon reaches lower training loss than Adam in the runs shown here. The diagnostic ranking matches the main result: MuonW converges fastest, followed by MuonH, AdamH, and AdamW.
 
@@ -252,15 +264,7 @@ The training-loss sweep adds one nuance to the perplexity result. MuonW's lowest
 
 \subsection{Learning-rate sweep trends}
 
-The sweep loss curves and advantage heatmaps are shown in Figures~\ref{fig:sweep-losses-adam}--\ref{fig:cross-optimizer-sweep}. AdamH is most competitive in a mid-range learning-rate window, whereas AdamW is more stable at the ends. For Muon, MuonH is competitive at smaller learning rates, while MuonW improves toward the upper end.
-
-Across optimizers, the same pattern becomes more pronounced with width. MuonW and AdamH are relatively close at smaller widths and lower-to-mid learning rates, but MuonW gains a clearer advantage at higher learning rates and larger widths. This is the useful interpretation of the learning-rate sweep: Muon's best region shifts upward in learning rate, and that high-learning-rate region becomes more valuable as scale increases.
-
-\subsection{Norm control changes the optimizer ranking}
-
-Hyperball does not uniformly improve both optimizers, and MuonW is the strongest configuration in the present sweep. A plausible mechanism is the interaction between Muon's approximate update whitening and Hyperball's Frobenius-norm projection. Muon spreads the proposed update across singular directions, whereas Hyperball maps $W_t+U_t$ back to a fixed Frobenius radius using a single scalar rescaling.
-
-This projection preserves relative singular values while enforcing the energy budget $\sum_i\sigma_i^2=R^2$. It therefore controls total scale without directly enforcing a broad singular-value distribution. In this view, MuonH is not simply ``Muon plus stronger norm control''; it is Muon under a global norm constraint that changes both the weight spectrum and the relative-step-size trajectory.
+The sweep loss curves and advantage heatmaps are shown in Figures~\ref{fig:sweep-losses-adam}--\ref{fig:cross-optimizer-heatmap}. AdamH is most competitive in a mid-range learning-rate window, whereas AdamW is more stable at the ends. For Muon, MuonH is competitive at smaller learning rates, while MuonW improves toward the upper end.
 
 \begin{figure}[htbp]
   \centering
@@ -269,9 +273,12 @@ This projection preserves relative singular values while enforcing the energy bu
   \label{fig:muonw-adamh-sweep-loss}
 \end{figure}
 
-Comparing MuonW and AdamH directly, they are relatively comparable at smaller widths and lower-to-mid learning rates, but MuonW separates more clearly at higher learning rates and larger widths (Figures~\ref{fig:cross-optimizer-heatmap}--\ref{fig:cross-optimizer-sweep}). This scaling trend is important because optimizer choice matters more, not less, as the model moves toward the regime where training compute dominates iteration cost.
+Across optimizers, the same pattern becomes more pronounced with width. MuonW and AdamH are relatively close at smaller widths and lower-to-mid learning rates, but MuonW gains a clearer advantage at higher learning rates and larger widths (Figures~\ref{fig:cross-optimizer-heatmap} and~\ref{fig:muonw-adamh-sweep-loss}). This is the useful interpretation of the learning-rate sweep: Muon's best region shifts upward in learning rate, and that high-learning-rate region becomes more valuable as scale increases. This scaling trend is important because optimizer choice matters more, not less, as the model moves toward the regime where training compute dominates iteration cost.
 
-At the end of training, MuonW becomes strongest toward the higher-learning-rate side of the grid, while AdamH is more competitive in the lower-to-mid range.
+\subsection{Norm control changes the optimizer ranking}
+\label{sec:norm-control-ranking}
+
+Hyperball does not uniformly improve both optimizers, and MuonW is the strongest configuration in the present sweep. A plausible mechanism behind why MuonH underperforms MuonW is the confounding interaction between Muon's approximate update whitening and Hyperball's Frobenius-norm projection. Muon's 5-step Newton--Schulz iteration only approximately whitens the update, near-zero singular values in the momentum matrix remain difficult to revive. Muon spreads the proposed update across singular directions, whereas Hyperball maps $W_t+U_t$ back to a fixed Frobenius radius by multiplying all singular values by the same scalar. This preserves their relative ordering while enforcing the energy budget $\sum_i\sigma_i^2=R^2$ every update step. Over the course of training, this could cause dominant singular values remain dominant and keep most of the fixed energy, while smaller singular values are repeatedly scaled down before they can accumulate much mass. Hyperball controls total scale without directly enforcing a broad singular-value distribution, counteracting the Muon update's orthorgonalization efforts.
 
 % ============================================================
 \section{Spectral Analysis}
@@ -280,7 +287,7 @@ At the end of training, MuonW becomes strongest toward the higher-learning-rate 
 
 To investigate why Muon with independent weight decay (MuonW) outperforms its constrained counterpart (MuonH) in this sweep, we examine the spectral properties of the learned representations. Following the eigenspectral framework of NerVE~\citep{nerve}\footnote{NerVE originally applies these metrics to track activation dynamics through FFN layers, but the same spectral measures are equally well defined for weight matrices.}, we track two key metrics for the weight matrices and the corresponding parameter updates:
 \begin{itemize}
-  \item \textbf{Spectral Entropy:} A measure of how uniformly variance is distributed across singular values. Values near $1.0$ indicate a broadly distributed spectrum, while lower values indicate stronger spectral concentration.
+  \item \textbf{Spectral Entropy (SE):} A measure of how uniformly variance is distributed across singular values. Values near $1.0$ indicate a broadly distributed spectrum, while lower values indicate stronger spectral concentration.
   \item \textbf{Participation Ratio (PR):} The effective rank of the matrix. We normalize the PR to get the ratio of the effective rank to full rank.
 \end{itemize}
 
@@ -298,11 +305,7 @@ The update spectra help separate optimizer behavior from the accumulated weight 
 
 \subsection{Uniform Rescaling and Spectral Concentration}
 
-MuonH constrains $\|W\|_F = R$ at every step by uniformly rescaling all singular values. The constraint fixes the total singular-value energy but does not guarantee a well-distributed spectrum: a rank-one matrix can satisfy the same Frobenius norm as a full-rank matrix. In our runs, MuonH has lower weight-spectrum diversity than MuonW while preserving the high-diversity Muon update spectrum.
-
-This interpretation is also consistent with imperfect whitening on the update side. Muon's 5-step Newton--Schulz iteration only approximately whitens the update, near-zero singular values in the momentum matrix remain difficult to revive, and the actual independent-weight-decay update satisfies $\Delta W=U_t-\lambda W_t$ rather than $\Delta W=U_t$.
-
-MuonW has no hard rescaling step and maintains the highest participation ratio among the weight matrices shown. Independent weight decay changes the weight matrix that the Muon update is added to, but it does not reproject the post-update matrix onto a fixed-radius sphere. This makes the regularizer less directly coupled to Muon's update whitening.
+Consistent with the norm-control mechanism in Section~\ref{sec:norm-control-ranking}, MuonH has lower weight-spectrum diversity than MuonW. However, Figure~\ref{fig:spectral} suggests that it preserves the high-diversity Muon update spectrum, since it still has higher PR and SE than Adam. MuonW has no hard rescaling step and maintains the highest participation ratio among the weight matrices shown: independent weight decay changes the weight matrix that the Muon update is added to, but it does not reproject the post-update matrix onto a fixed-radius sphere. This makes the regularizer less directly coupled to Muon's update whitening.
 
 AdamW also maintains relatively high spectral entropy, but likely through a different mechanism: coordinate-wise updates can sustain activity across many small directions through per-parameter adaptation, whereas MuonW does so through matrix-whitened updates that spread signal across singular directions. The participation-ratio curves separate these cases: MuonW keeps more effective rank in the weights, while AdamW has a lower effective-rank fraction despite comparable entropy. This distinction matches the broader NerVE view that stable spectral signatures track optimizer design choices~\citep{nerve}.
 
@@ -352,114 +355,6 @@ The results presented here should be interpreted with several limitations in min
 \label{app:data}
 
 We construct the dataset from the AlphaGenome~\citep{alphagenome} ENCODE candidate cis-regulatory element data. Starting from the AlphaGenome cCRE set, we filter for examples whose DNase-seq activity is specific to exactly one of the seven cell lines used in our experiments(A549, HEK293T, HepG2, Jurkat, Clone E6-1, K562, SK-N-SH, endothelial cell of, umbilical vein, skeletal muscle myoblast). This yields regulatory sequences with a single active DNase track among the selected cell contexts, which supports the auxiliary modality-prediction objective while keeping the training distribution focused on cell-type-specific regulatory activity.
-
-\section{Adam Overview}
-\label{app:adam}
-
-Let $g_t = \nabla_W \mathcal{L}(W_t)$ denote the gradient at step $t$. Adam maintains two exponential moving averages (EMAs):
-\begin{itemize}
-  \item a \emph{first moment} estimate (mean) $m_t$,
-  \item a \emph{second moment} estimate (uncentered variance) $v_t$.
-\end{itemize}
-Specifically, with hyperparameters $\beta_1,\beta_2 \in [0,1)$ and initialization $m_0 = 0$, $v_0 = 0$:
-\begin{align}
-m_t &= \beta_1 m_{t-1} + (1-\beta_1) g_t, \label{eq:adam-m}\\
-v_t &= \beta_2 v_{t-1} + (1-\beta_2) g_t^2, \label{eq:adam-v}
-\end{align}
-where $g_t^2$ denotes elementwise squaring.
-
-Because both EMAs start at zero, they are biased toward $0$ early in training. Adam, therefore, uses bias corrected estimates
-\[
-\hat m_t = \frac{m_t}{1-\beta_1^t},
-\qquad
-\hat v_t = \frac{v_t}{1-\beta_2^t}.
-\]
-The vanilla Adam update is then,
-\[
-W_{t+1} = W_t - \eta\, \frac{\hat m_t}{\sqrt{\hat v_t}+\varepsilon},
-\]
-with learning rate $\eta$ and small $\varepsilon > 0$ for numerical stability.
-
-\paragraph{Weight decay (AdamW).}
-Soft L2 regularization can be implemented by adding $\lambda W_t$ to the gradient, but AdamW instead \emph{decouples} weight decay from the adaptive gradient step. In its common form:
-\[
-W_{t+1} = (1-\eta\lambda)\,W_t \; - \; \eta\, \frac{\hat m_t}{\sqrt{\hat v_t}+\varepsilon},
-\]
-so weight decay shrinks parameters directly (multiplicatively), while the Adam step uses the adaptive per-parameter scaling.
-
-\paragraph{Independent weight decay.}
-In our setting, we use \emph{independent} weight decay: the shrinkage is applied as a separate step, not through the gradient, and is not tied to the learning rate. Concretely, if $U_t$ denotes the optimizer's proposed parameter update (e.g., the Adam step $U_t=-\eta\, \hat m_t/(\sqrt{\hat v_t}+\varepsilon)$), then independent weight decay applies
-\[
-W_{t+1} = (1-\lambda)\,W_t + U_t.
-\]
-So the decay rate $\lambda$ is not multiplied by the learning rate and can be scheduled separately. Throughout the paper, we use AdamW to denote Adam plus this independent weight decay, and MuonW to denote Muon plus this independent weight decay.
-
-
-\section{SVD Overview}
-\label{app:svd}
-
-\paragraph{Singular value decomposition (SVD).}
-For any real matrix $A \in \mathbb{R}^{m\times n}$, the SVD factorizes $A$ into
-\[
-A = U\Sigma V^\top,
-\]
-where $U\in\mathbb{R}^{m\times m}$ and $V\in\mathbb{R}^{n\times n}$ are orthogonal matrices (their columns form orthonormal bases), and $\Sigma\in\mathbb{R}^{m\times n}$ is diagonal (rectangular) with nonnegative entries $\sigma_1\ge \sigma_2\ge \cdots \ge 0$ called the \emph{singular values}. Geometrically, $V^\top$ rotates (or reflects) the input space, $\Sigma$ scales along the orthogonal axes, and $U$ rotates (or reflects) the output space.
-
-\paragraph{Singular values.}
-The singular values of matrix $A$ are the square roots of the eigenvalues of $A^\top A$. Concretely, for eigenpairs $(\lambda_i, v_i)$ of $A^\top A$,
-\[
-A^\top A v_i = \lambda_i v_i, \qquad \sigma_i = \sqrt{\lambda_i}.
-\]
-They quantify how much $A$ \emph{stretches} vectors: along the right singular direction $v_i$, the mapping scales by exactly $\sigma_i$. The largest singular value is the \emph{maximum stretch} induced by $A$ on any unit vector:
-\[
-\sigma_1 = \max_{\|x\|=1}\|Ax\|.
-\]
-Note that $\sigma_2$ is the maximum stretch orthogonal to $v_1=\argmax_{\|x\|=1}\|Ax\|$, i.e., $\sigma_2=\max_{x\perp v_1,\,\|x\|=1}\|Ax\|$, and so on\footnote{We can generalize using the min-max theorem: $\sigma_i=\min_{\substack{U\subseteq \mathbb R^n \\ \dim U=n-i+1}}\max_{\substack{x\in U \\ \|x\|=1}}\|Ax\|$.}.
-
-\paragraph{Spectral properties.}
-They control several important properties at once:
-\begin{itemize}
-  \item \textbf{Spectral norm/stability:} The spectral norm is defined as $\|\cdot\|_2=\sigma_1(\cdot)$ on matrix inputs. It is the operator norm\footnote{Formally, the operator norm $\|\cdot\|_p$ is defined for $A\in \mathbb R^{m\times n}$ as $\|A\|_p=\max\{\|Ax\|_p:x\in \mathbb R^n, \|x\|_p\le 1\}$, where we apply the $\ell_p$ norm to the vectors.} induced by the vector $\ell_2$ norm. $\sigma_1(A) = \|A\|_2$ is the maximum amplification (or stretch) of $A$; this is important for Lipschitz bounds~\citep{spectral}.
-  \item \textbf{Rank / effective dimension:} the number of nonzero $\sigma_i$ equals $\mathrm{rank}(A)$; many tiny $\sigma_i$ indicates a nearly low rank map.
-  \item \textbf{Conditioning:} the ratio $\sigma_1/\sigma_r$ (for $\sigma_r = \min_{\neq 0}\sigma_i$) measures how unevenly $A$ scales different directions; large ratios can hurt optimization and numerical stability.
-\end{itemize}
-
-
-\section{Muon Overview}
-\label{app:muon}
-
-Muon~\citep{muon} is a matrix-aware optimizer for two-dimensional parameters. It first forms a momentum buffer
-\[
-u_t = \beta\,u_{t-1} + (1-\beta)\,g_t,
-\]
-with $u_0=0$. In our implementation, the momentum buffer $u_t$ is passed directly to Newton--Schulz orthogonalization.
-
-For a momentum update matrix $M_t$ with singular value decomposition
-\[
-M_t = P\Sigma Q^\top,
-\]
-Muon approximates the polar factor $PQ^\top$. Equivalently, it preserves the singular directions of the update while pushing the nonzero singular values toward $1$:
-\[
-\tilde u_t = P\,\tilde\Sigma\,Q^\top,
-\]
-where the diagonal entries of $\tilde\Sigma$ are close to $1$. The finite NS${}_5$ approximation used here does not produce an exact polar factor; it only moves singular values toward this target.
-
-In practice, the resulting parameter update has the form
-\[
-W_{t+1} = W_t + U_t, \qquad U_t = -\eta\,\tilde u_t,
-\]
-(with independent weight decay or Hyperball applied as described in the main text).
-
-\subsection{Connecting Muon to norm control}
-
-Muon acts on the singular spectrum of the update, while independent weight decay and Hyperball act on the norm of the weights. These are different constraints. The Frobenius norm satisfies
-\[
-\|W\|_F = \sqrt{\sum_i \sigma_i(W)^2},
-\]
-so Hyperball fixes the total singular-value energy of $W$ but does not directly control how that energy is distributed across directions.
-
-This distinction matters when Muon is paired with Hyperball. Muon approximately equalizes the singular values of the proposed update, whereas Hyperball uniformly rescales the post-update weight matrix to satisfy $\|W\|_F=R$. This can change how singular-value energy is distributed in the weights, motivating the spectral entropy and participation-ratio diagnostics in Section~\ref{sec:spectral}.
-
 
 \section{Concentration of Measure in the Hyperball}
 \label{app:concentration}
@@ -736,41 +631,37 @@ which is independent of the dataset size $N$. For our largest configuration ($L 
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.85\linewidth]{images/zipfs_law.png}
-  \caption{Zipf's law.}
+  \includegraphics[width=\linewidth]{images/zipfs_law.png}
+  \caption{Zipf's law. The left panel shows Zipf's law on a linear scale, and the right panel shows it on a log-log scale. The straight line on the log-log plot is the signature of a power-law distribution. Source: Statology~\citep{zipf}.}
   \label{fig:zipf}
 \end{figure}
 
-The left panel shows Zipf's law on a linear scale, and the right panel shows it on a log-log scale. The straight line on the log-log plot is the signature of a power-law distribution. Source: Statology~\citep{zipf}.
-
 \begin{figure}[htbp]
   \centering
-  \begin{subfigure}[t]{0.3\linewidth}
+  \begin{subfigure}[t]{0.32\linewidth}
     \centering
     \includegraphics[width=\linewidth]{images/nucleotide_K562_pie.png}
   \end{subfigure}\hfill
-  \begin{subfigure}[t]{0.3\linewidth}
+  \begin{subfigure}[t]{0.32\linewidth}
     \centering
     \includegraphics[width=\linewidth]{images/nucleotide_HepG2_pie.png}
   \end{subfigure}\hfill
-  \begin{subfigure}[t]{0.3\linewidth}
+  \begin{subfigure}[t]{0.32\linewidth}
     \centering
     \includegraphics[width=\linewidth]{images/nucleotide_SKNSH_pie.png}
   \end{subfigure}
-  \caption{Nucleotide frequencies.}
+  \caption{Nucleotide frequencies. The panels show nucleotide frequencies across the three cell lines in our training set.}
   \label{fig:nucleotide-dist}
 \end{figure}
 
-The panels show nucleotide frequencies across the three cell lines in our training set.
-
 \begin{figure}[htbp]
   \centering
-  \begin{subfigure}[t]{0.48\linewidth}
+  \begin{subfigure}[t]{0.49\linewidth}
     \centering
     \includegraphics[width=\linewidth]{images/perplexity_progression_lr_9em05.png}
     \caption*{By checkpoint}
   \end{subfigure}\hfill
-  \begin{subfigure}[t]{0.48\linewidth}
+  \begin{subfigure}[t]{0.49\linewidth}
     \centering
     \includegraphics[width=\linewidth]{images/perplexity_progression_lr_9em05_flops.png}
     \caption*{By FLOPs}
@@ -779,11 +670,11 @@ The panels show nucleotide frequencies across the three cell lines in our traini
   {\small lr $\approx 9.00\times10^{-5}$}
 
   \medskip
-  \begin{subfigure}[t]{0.48\linewidth}
+  \begin{subfigure}[t]{0.49\linewidth}
     \centering
     \includegraphics[width=\linewidth]{images/perplexity_progression_lr_0p00035857.png}
   \end{subfigure}\hfill
-  \begin{subfigure}[t]{0.48\linewidth}
+  \begin{subfigure}[t]{0.49\linewidth}
     \centering
     \includegraphics[width=\linewidth]{images/perplexity_progression_lr_0p00035857_flops.png}
   \end{subfigure}
@@ -791,31 +682,29 @@ The panels show nucleotide frequencies across the three cell lines in our traini
   {\small lr $\approx 3.59\times10^{-4}$}
 
   \medskip
-  \begin{subfigure}[t]{0.48\linewidth}
+  \begin{subfigure}[t]{0.49\linewidth}
     \centering
     \includegraphics[width=\linewidth]{images/perplexity_progression_lr_0p0014287.png}
   \end{subfigure}\hfill
-  \begin{subfigure}[t]{0.48\linewidth}
+  \begin{subfigure}[t]{0.49\linewidth}
     \centering
     \includegraphics[width=\linewidth]{images/perplexity_progression_lr_0p0014287_flops.png}
   \end{subfigure}
   \\[2pt]
   {\small lr $\approx 1.43\times10^{-3}$}
 
-  \caption{Learning-rate sweep perplexity, part 1.}
+  \caption{Learning-rate sweep perplexity, part 1. The left panels show mean test perplexity over training checkpoints, while the right panels show mean test perplexity over cumulative FLOPs. Lower is better; the FLOP accounting follows the conversion defined above.}
   \label{fig:perp-by-lr-1}
 \end{figure}
 
-The left panels show mean test perplexity over training checkpoints, while the right panels show mean test perplexity over cumulative FLOPs. Lower is better; the FLOP accounting follows the conversion defined above.
-
 \begin{figure}[htbp]
   \centering
-  \begin{subfigure}[t]{0.48\linewidth}
+  \begin{subfigure}[t]{0.49\linewidth}
     \centering
     \includegraphics[width=\linewidth]{images/perplexity_progression_lr_0p0056924.png}
     \caption*{By checkpoint}
   \end{subfigure}\hfill
-  \begin{subfigure}[t]{0.48\linewidth}
+  \begin{subfigure}[t]{0.49\linewidth}
     \centering
     \includegraphics[width=\linewidth]{images/perplexity_progression_lr_0p0056924_flops.png}
     \caption*{By FLOPs}
@@ -824,31 +713,29 @@ The left panels show mean test perplexity over training checkpoints, while the r
   {\small lr $\approx 5.69\times10^{-3}$}
 
   \medskip
-  \begin{subfigure}[t]{0.48\linewidth}
+  \begin{subfigure}[t]{0.49\linewidth}
     \centering
     \includegraphics[width=\linewidth]{images/perplexity_progression_lr_0p022681.png}
   \end{subfigure}\hfill
-  \begin{subfigure}[t]{0.48\linewidth}
+  \begin{subfigure}[t]{0.49\linewidth}
     \centering
     \includegraphics[width=\linewidth]{images/perplexity_progression_lr_0p022681_flops.png}
   \end{subfigure}
   \\[2pt]
   {\small lr $\approx 2.27\times10^{-2}$}
 
-  \caption{Learning-rate sweep perplexity, part 2.}
+  \caption{Learning-rate sweep perplexity, part 2. The left panels show mean test perplexity over training checkpoints, while the right panels show mean test perplexity over cumulative FLOPs. Lower is better; the FLOP accounting follows the conversion defined above.}
   \label{fig:perp-by-lr-2}
 \end{figure}
 
-The left panels show mean test perplexity over training checkpoints, while the right panels show mean test perplexity over cumulative FLOPs. Lower is better; the FLOP accounting follows the conversion defined above.
-
 \begin{figure}[htbp]
   \centering
-  \begin{subfigure}[t]{0.48\linewidth}
+  \begin{subfigure}[t]{0.49\linewidth}
     \centering
     \includegraphics[width=\linewidth]{images/perplexity_progression_AdamH.png}
     \caption*{By checkpoint}
   \end{subfigure}\hfill
-  \begin{subfigure}[t]{0.48\linewidth}
+  \begin{subfigure}[t]{0.49\linewidth}
     \centering
     \includegraphics[width=\linewidth]{images/perplexity_progression_AdamH_flops.png}
     \caption*{By FLOPs}
@@ -857,31 +744,29 @@ The left panels show mean test perplexity over training checkpoints, while the r
   {\small AdamH}
 
   \medskip
-  \begin{subfigure}[t]{0.48\linewidth}
+  \begin{subfigure}[t]{0.49\linewidth}
     \centering
     \includegraphics[width=\linewidth]{images/perplexity_progression_AdamW.png}
   \end{subfigure}\hfill
-  \begin{subfigure}[t]{0.48\linewidth}
+  \begin{subfigure}[t]{0.49\linewidth}
     \centering
     \includegraphics[width=\linewidth]{images/perplexity_progression_AdamW_flops.png}
   \end{subfigure}
   \\[2pt]
   {\small AdamW}
 
-  \caption{Adam variant perplexity.}
+  \caption{Adam variant perplexity. The left panels show mean test perplexity over checkpoints, while the right panels show mean test perplexity over cumulative FLOPs. The plots cover five learning rates, using the FLOP conversion defined above.}
   \label{fig:perp-by-optimizer-adam}
 \end{figure}
 
-The left panels show mean test perplexity over checkpoints, while the right panels show mean test perplexity over cumulative FLOPs. The plots cover five learning rates, using the FLOP conversion defined above.
-
 \begin{figure}[htbp]
   \centering
-  \begin{subfigure}[t]{0.48\linewidth}
+  \begin{subfigure}[t]{0.49\linewidth}
     \centering
     \includegraphics[width=\linewidth]{images/perplexity_progression_MuonH.png}
     \caption*{By checkpoint}
   \end{subfigure}\hfill
-  \begin{subfigure}[t]{0.48\linewidth}
+  \begin{subfigure}[t]{0.49\linewidth}
     \centering
     \includegraphics[width=\linewidth]{images/perplexity_progression_MuonH_flops.png}
     \caption*{By FLOPs}
@@ -890,76 +775,56 @@ The left panels show mean test perplexity over checkpoints, while the right pane
   {\small MuonH}
 
   \medskip
-  \begin{subfigure}[t]{0.48\linewidth}
+  \begin{subfigure}[t]{0.49\linewidth}
     \centering
     \includegraphics[width=\linewidth]{images/perplexity_progression_MuonW.png}
   \end{subfigure}\hfill
-  \begin{subfigure}[t]{0.48\linewidth}
+  \begin{subfigure}[t]{0.49\linewidth}
     \centering
     \includegraphics[width=\linewidth]{images/perplexity_progression_MuonW_flops.png}
   \end{subfigure}
   \\[2pt]
   {\small MuonW}
 
-  \caption{Muon variant perplexity.}
+  \caption{Muon variant perplexity. The left panels show mean test perplexity over checkpoints, while the right panels show mean test perplexity over cumulative FLOPs. The plots cover five learning rates, using the FLOP conversion defined above.}
   \label{fig:perp-by-optimizer-muon}
 \end{figure}
 
-The left panels show mean test perplexity over checkpoints, while the right panels show mean test perplexity over cumulative FLOPs. The plots cover five learning rates, using the FLOP conversion defined above.
-
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.85\linewidth]{images/adam_comparison.png}
-  \caption{Sweep losses: AdamW vs AdamH.}
-  \label{fig:sweep-losses-adam}
-\end{figure}
-
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=0.85\linewidth]{images/muon_comparison.png}
-  \caption{Sweep losses: MuonW vs MuonH.}
-  \label{fig:sweep-losses-muon}
-\end{figure}
-
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=0.85\linewidth]{images/adam_heatmap.png}
+  \makebox[\linewidth][c]{\includegraphics[width=1.12\linewidth]{images/adam_heatmap.png}}
   \caption{Heatmap: AdamW vs AdamH.}
   \label{fig:heatmap-adam}
 \end{figure}
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.85\linewidth]{images/muon_heatmap.png}
+  \makebox[\linewidth][c]{\includegraphics[width=1.12\linewidth]{images/muon_heatmap.png}}
   \caption{Heatmap: MuonW vs MuonH.}
   \label{fig:heatmap-muon}
 \end{figure}
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.85\linewidth]{images/muonw_adamh_heatmap.png}
-  \caption{MuonW--AdamH advantage heatmap.}
+  \makebox[\linewidth][c]{\includegraphics[width=1.12\linewidth]{images/muonw_adamh_heatmap.png}}
+  \caption{MuonW--AdamH advantage heatmap. Green indicates AdamH better, and red indicates MuonW better.}
   \label{fig:cross-optimizer-heatmap}
 \end{figure}
 
-Green indicates AdamH better, and red indicates MuonW better.
-
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.85\linewidth]{images/muonw_adamh_comparison.png}
-  \caption{Sweep losses for MuonW vs AdamH across widths.}
-  \label{fig:cross-optimizer-sweep}
+  \includegraphics[width=\linewidth]{images/loss_curves_nucleotide_loss.png}
+  \caption{Aggregate training-loss curves for the perplexity-selected runs across optimizer combinations.}
+  \label{fig:loss-curves}
 \end{figure}
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.85\linewidth]{images/weight_frobenius_norm.png}\\[0.5em]
-  \includegraphics[width=0.85\linewidth]{images/delta_W_mean_frobenius_norm.png}
-  \caption{Weight and update norms.}
+  \includegraphics[width=\linewidth]{images/weight_frobenius_norm.png}\\[0.5em]
+  \includegraphics[width=\linewidth]{images/delta_W_mean_frobenius_norm.png}
+  \caption{Weight and update norms. The top panel shows weight Frobenius norm, and the bottom panel shows update mean Frobenius norm. MuonW shows monotonically increasing weight norm with roughly constant update norm.}
   \label{fig:dynamics-norms}
 \end{figure}
-
-The top panel shows weight Frobenius norm, and the bottom panel shows update mean Frobenius norm. MuonW shows monotonically increasing weight norm with roughly constant update norm.
 
 % ============================================================
 % References
