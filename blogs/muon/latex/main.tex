@@ -43,7 +43,7 @@
 }
 \makeatother
 
-\title{Muon Reduces Training Cost of Regulatory DNA Transformers}
+\title{Muon Reduces the Training Cost of Regulatory DNA Transformers}
 
 \author{%
   Viraj Doshi \\
@@ -73,9 +73,9 @@ This makes optimizer choice more than an implementation detail. If one optimizer
 \label{sec:related-work}
 % ============================================================
 
-Recent genomic modeling papers have started to include Muon, but mostly as a small optimizer ablation: replace Adam(W) and report the final metric. That design is useful for checking whether Muon improves a particular endpoint, but it leaves most of the optimizer behavior unmeasured. It does not show how quickly each optimizer improves during training, whether advantages appear only at some quality thresholds, whether FLOP gains agree with Wall-Clock gains, or whether the conclusion depends on norm control.
+Recent biological foundation-model papers have started to include Muon, but mostly as a small optimizer ablation: replace Adam(W) and report the final metric. That design is useful for checking whether Muon improves a particular endpoint, but it leaves most of the optimizer behavior unmeasured. It does not show how quickly each optimizer improves during training, whether advantages appear only at some quality thresholds, whether FLOP gains agree with Wall-Clock gains, or whether the conclusion depends on norm control.
 
-\paragraph{Pre-training genomic language models with variants~\citep{ukbiobert}.} Liu \emph{et al.} compare AdamW and Muon in a UKBioFormer fine-tuning ablation and report no significant improvement from changing optimizers. The comparison is intentionally narrow: one downstream task, one metric, and one learning-rate setting per optimizer. It therefore does not resolve whether Muon changes the training trajectory, FLOPs-to-target, or Wall-Clock time-to-target in regulatory DNA learning.
+\paragraph{Pre-training genomic language models with variants~\citep{ukbiobert}.} Liu \emph{et al.} include Muon in a UKBioFormer hyperparameter ablation for gene-expression prediction. Their default setting uses Adam, and replacing the optimizer with AdamW or Muon does not significantly improve performance. The comparison is useful as an endpoint ablation, but it is not designed to measure optimizer dynamics, FLOPs-to-target, Wall-Clock time-to-target, or interactions between optimizer family and norm control.
 
 \paragraph{Foundation models for perturbation response~\citep{fmpert}.} Cole \emph{et al.} also report no significant difference between Adam and Muon. Their comparison tunes the learning rate, but still treats the optimizer result as an endpoint comparison. It does not factor norm control separately from optimizer family, and it does not analyze the spectral or relative-step-size behavior that could explain when Muon helps or fails.
 
@@ -138,26 +138,32 @@ To isolate the effect of the optimizer, we hold the architecture family, dataset
 
 \begin{figure}[htbp]
   \centering
-  \resizebox{\linewidth}{!}{%
+  \makebox[\linewidth][c]{\resizebox{1.15\linewidth}{!}{%
   \begin{tikzpicture}[
     node distance=0.75cm and 1.0cm,
-    box/.style={draw, align=center, minimum height=0.9cm, inner xsep=9pt, inner ysep=7pt, font=\small},
-    inputbox/.style={box, fill=green!8, draw=green!45!black, minimum width=3.4cm},
-    model/.style={box, fill=blue!6, draw=blue!50!black},
-    stack/.style={box, fill=violet!8, draw=violet!65!black, minimum width=3.7cm, minimum height=2.15cm},
-    head/.style={box, fill=teal!7, draw=teal!55!black},
-    data/.style={box, fill=orange!7, draw=orange!55!black},
+    box/.style={draw, align=center, minimum height=1.05cm, inner xsep=11pt, inner ysep=8pt, font=\normalsize},
+    inputbox/.style={box, fill=green!8, draw=green!45!black, minimum width=4.35cm},
+    model/.style={box, fill=blue!6, draw=blue!50!black, minimum width=2.65cm},
+    stack/.style={box, fill=violet!8, draw=violet!65!black, minimum width=4.65cm, minimum height=2.35cm},
+    head/.style={box, fill=teal!7, draw=teal!55!black, minimum width=4.35cm, minimum height=1.15cm},
+    data/.style={box, fill=orange!7, draw=orange!55!black, minimum width=2.45cm},
     arrow/.style={-{Latex[length=2mm]}, thick}
   ]
     \node[inputbox] (input) {\begin{tabular}{c}
       \textbf{Nucleotide input}\\[-1pt]
-      {\scriptsize\fbox{\texttt{A}}\;\fbox{\texttt{C}}\;\fbox{\texttt{G}}\;\fbox{\texttt{T}}\;\fbox{\texttt{[MASK]}}\;\fbox{\texttt{G}}\;\fbox{\texttt{A}}}\\[-1pt]
-      {\scriptsize real cCRE DNA tokens}
+      {\footnotesize\fbox{\texttt{A}}\;\fbox{\texttt{C}}\;\fbox{\texttt{G}}\;\fbox{\texttt{T}}\;\fbox{\texttt{[MASK]}}\;\fbox{\texttt{G}}\;\fbox{\texttt{A}}}\\[-1pt]
+      {\footnotesize real cCRE DNA tokens}
     \end{tabular}};
-    \node[model, right=of input, minimum width=2.0cm] (embed) {\textbf{Embedding}\\token + position};
+    \node[model, right=of input] (embed) {\textbf{Embedding}\\token + position};
     \node[stack, right=of embed] (encoder) {\textbf{Transformer encoder stack}\\[2pt]non-causal self-attention\\RoPE + SwiGLU FFN};
-    \node[head, right=1.1cm of encoder, yshift=0.65cm] (mlm) {\textbf{Nucleotide head}\\MLM logits};
-    \node[head, right=1.1cm of encoder, yshift=-0.65cm] (modality) {\textbf{Modality head}\\DNase-seq tracks};
+    \node[head, right=1.15cm of encoder, yshift=0.95cm] (mlm) {\begin{tabular}{c}
+      \textbf{Nucleotide head}\\[-1pt]
+      {\footnotesize\fbox{\texttt{A}}\;\fbox{\texttt{C}}\;\fbox{\texttt{G}}\;\fbox{\texttt{T}}\;\fbox{\texttt{[G]}}\;\fbox{\texttt{G}}\;\fbox{\texttt{A}}}
+    \end{tabular}};
+    \node[head, right=1.15cm of encoder, yshift=-0.95cm] (modality) {\begin{tabular}{c}
+      \textbf{Assay head}\\[-1pt]
+      {\footnotesize\texttt{0.12,\ 0.3,\ 1.4, 2.1\ ...}}
+    \end{tabular}};
     \node[data, right=1.0cm of mlm] (ce) {Held-out\\CE loss};
     \node[data, right=1.0cm of modality] (dnase) {Auxiliary\\DNase loss};
     \draw[arrow] (input) -- (embed);
@@ -167,7 +173,7 @@ To isolate the effect of the optimizer, we hold the architecture family, dataset
     \draw[arrow] (mlm) -- (ce);
     \draw[arrow] (modality) -- (dnase);
   \end{tikzpicture}%
-  }
+  }}
   \caption{Model Architecture.}
   \label{fig:experimental-setup}
 \end{figure}
@@ -224,7 +230,7 @@ The matched-quality advantage plots in Figure~\ref{fig:family-advantages} conver
   \label{fig:scale-advantages}
 \end{figure}
 
-Figure~\ref{fig:scale-advantages} summarizes this matched-target comparison across model scales using the median Muon improvement. The plot reports a median Muon improvement across all scales, suggesting this is a trend that would apply to models of all sizes.
+Figure~\ref{fig:scale-advantages} summarizes this matched-target comparison across model scales using the median Muon improvement. The plot reports a median Muon improvement across all scales, suggesting that this is a trend that holds across models of all sizes.
 
 \subsection{Test perplexity across sweep grid}
 
@@ -235,12 +241,19 @@ Figure~\ref{fig:scale-advantages} summarizes this matched-target comparison acro
   \label{fig:final-perplexity}
 \end{figure}
 
-Figure~\ref{fig:final-perplexity} shows mean test perplexity over training FLOPs for the strongest largest-scale configurations from each optimizer variant, complementing the Wall-Clock matched-target comparison above. The optimizer-level view includes SGD as a baseline and shows a clear separation: SGD remains far above the Adam and Muon curves, Adam improves steadily, and the best Muon configuration reaches its lowest perplexity on a smaller compute and Wall-Clock budget. Runs were chosen by picking the ones with lowest ema perplexity at the end of training. The full per-learning-rate and per-optimizer progression curves are provided in Figures~\ref{fig:perp-by-lr-1}--\ref{fig:perp-by-optimizer-muon}.
+Figure~\ref{fig:final-perplexity} shows mean test perplexity over training FLOPs for the strongest largest-scale configurations from each optimizer variant, complementing the Wall-Clock matched-target comparison above. The optimizer-level view includes SGD as a baseline and shows a clear separation: SGD remains far above the Adam and Muon curves, Adam improves steadily, and the best Muon configuration reaches its lowest perplexity on a smaller compute and Wall-Clock budget. The selected Muon configuration also uses an optimal learning rate roughly an order of magnitude higher than the selected Adam configuration, consistent with Muon's best region shifting upward in learning rate. Runs were chosen by picking the ones with lowest EMA perplexity at the end of training. The full per-learning-rate and per-optimizer progression curves are provided in Figures~\ref{fig:perp-by-lr-1}--\ref{fig:perp-by-optimizer-muon}.
 
+
+\subsection{Norm control changes the optimizer ranking}
+\label{sec:norm-control-ranking}
+
+Hyperball does not uniformly improve both optimizers, and MuonW is the strongest configuration in the present sweep. A plausible mechanism behind why MuonH underperforms MuonW is the confounding interaction between Muon's approximate update whitening and Hyperball's Frobenius-norm projection. Muon's 5-step Newton--Schulz iteration only approximately whitens the update, near-zero singular values in the momentum matrix remain difficult to revive. Muon spreads the proposed update across singular directions, whereas Hyperball maps $W_t+U_t$ back to a fixed Frobenius radius by multiplying all singular values by the same scalar. This preserves their relative ordering while enforcing the energy budget $\sum_i\sigma_i^2=R^2$ every update step. Over the course of training, this could cause dominant singular values remain dominant and keep most of the fixed energy, while smaller singular values are repeatedly scaled down before they can accumulate much mass. Hyperball controls total scale without directly enforcing a broad singular-value distribution, counteracting the Muon update's orthorgonalization efforts.
 % ============================================================
 \section{Training dynamics}
 \label{sec:training}
 % ============================================================
+
+The matched-target results show that Muon can reach useful held-out perplexity levels with less compute and time, but they do not by themselves explain where the advantage comes from. We will analyze training dynamics to explain these advantages.
 
 \begin{figure}[htbp]
   \centering
@@ -258,14 +271,6 @@ Figure~\ref{fig:final-perplexity} shows mean test perplexity over training FLOPs
 
 Figures~\ref{fig:sweep-losses-adam} and~\ref{fig:sweep-losses-muon} show the training-loss sweeps for the within-optimizer norm-control comparisons, with nucleotide cross-entropy loss on the vertical axis. The aggregate learning curves for the perplexity-selected runs are provided in Figure~\ref{fig:loss-curves}.
 
-Consistent with existing literature~\citep{muon,hyperball}, Muon reaches lower training loss than Adam in the runs shown here. The diagnostic ranking matches the main result: MuonW converges fastest, followed by MuonH, AdamH, and AdamW.
-
-The training-loss sweep adds one nuance to the perplexity result. MuonW's lowest-loss region is closer to $\sim 5.69 \times 10^{-3}$ than to the perplexity-selected $\sim 2.27 \times 10^{-2}$, but the two MuonW training losses are nearly tied. We therefore treat training loss as a diagnostic rather than the selection rule: the main claim is about held-out perplexity, FLOPs-to-target, and Wall-Clock time-to-target, while this loss view only shows that the larger MuonW learning rate does not buy its perplexity result by obviously dominating every training-loss slice.
-
-\subsection{Learning-rate sweep trends}
-
-The sweep loss curves and advantage heatmaps are shown in Figures~\ref{fig:sweep-losses-adam}--\ref{fig:cross-optimizer-heatmap}. AdamH is most competitive in a mid-range learning-rate window, whereas AdamW is more stable at the ends. For Muon, MuonH is competitive at smaller learning rates, while MuonW improves toward the upper end.
-
 \begin{figure}[htbp]
   \centering
   \makebox[\linewidth][c]{\includegraphics[width=1.06\linewidth]{images/muonw_adamh_comparison.png}}
@@ -273,12 +278,12 @@ The sweep loss curves and advantage heatmaps are shown in Figures~\ref{fig:sweep
   \label{fig:muonw-adamh-sweep-loss}
 \end{figure}
 
+Consistent with existing literature~\citep{muon,hyperball}, Muon reaches lower training loss than Adam in the runs shown here. The diagnostic ranking matches the main result: MuonW converges fastest, followed by MuonH, AdamH, and AdamW.
+
+The training-loss sweep adds one nuance to the perplexity result. The within-optimizer sweep loss curves are shown in Figures~\ref{fig:sweep-losses-adam} and~\ref{fig:sweep-losses-muon}, with the corresponding advantage heatmaps in Figures~\ref{fig:heatmap-adam} and~\ref{fig:heatmap-muon}. In the Adam comparison, AdamH is most competitive in a mid-range learning-rate window, whereas AdamW is more stable at the ends (Figures~\ref{fig:sweep-losses-adam} and~\ref{fig:heatmap-adam}). In the Muon comparison, MuonH is competitive at smaller learning rates, while MuonW improves toward the upper end (Figures~\ref{fig:sweep-losses-muon} and~\ref{fig:heatmap-muon}). MuonW's lowest-loss region is closer to $\sim 5.69 \times 10^{-3}$ than to the perplexity-selected $\sim 2.27 \times 10^{-2}$, but the two MuonW training losses are nearly tied. We therefore treat training loss as a diagnostic rather than the selection rule: the main claim is about held-out perplexity, FLOPs-to-target, and Wall-Clock time-to-target, while this loss view only shows that the larger MuonW learning rate does not buy its perplexity result by obviously dominating every training-loss slice.
+
 Across optimizers, the same pattern becomes more pronounced with width. MuonW and AdamH are relatively close at smaller widths and lower-to-mid learning rates, but MuonW gains a clearer advantage at higher learning rates and larger widths (Figures~\ref{fig:cross-optimizer-heatmap} and~\ref{fig:muonw-adamh-sweep-loss}). This is the useful interpretation of the learning-rate sweep: Muon's best region shifts upward in learning rate, and that high-learning-rate region becomes more valuable as scale increases. This scaling trend is important because optimizer choice matters more, not less, as the model moves toward the regime where training compute dominates iteration cost.
 
-\subsection{Norm control changes the optimizer ranking}
-\label{sec:norm-control-ranking}
-
-Hyperball does not uniformly improve both optimizers, and MuonW is the strongest configuration in the present sweep. A plausible mechanism behind why MuonH underperforms MuonW is the confounding interaction between Muon's approximate update whitening and Hyperball's Frobenius-norm projection. Muon's 5-step Newton--Schulz iteration only approximately whitens the update, near-zero singular values in the momentum matrix remain difficult to revive. Muon spreads the proposed update across singular directions, whereas Hyperball maps $W_t+U_t$ back to a fixed Frobenius radius by multiplying all singular values by the same scalar. This preserves their relative ordering while enforcing the energy budget $\sum_i\sigma_i^2=R^2$ every update step. Over the course of training, this could cause dominant singular values remain dominant and keep most of the fixed energy, while smaller singular values are repeatedly scaled down before they can accumulate much mass. Hyperball controls total scale without directly enforcing a broad singular-value distribution, counteracting the Muon update's orthorgonalization efforts.
 
 % ============================================================
 \section{Spectral Analysis}
@@ -299,13 +304,11 @@ To investigate why Muon with independent weight decay (MuonW) outperforms its co
   \label{fig:spectral}
 \end{figure}
 
-The spectra show that Hyperball changes Muon's accumulated weight spectrum without eliminating its update diversity. MuonW and MuonH both begin with weight spectral entropy near $0.98$. By the end of training, MuonW remains near $0.95$, while MuonH is lower at approximately $0.93$; the corresponding participation ratios are approximately $0.57$ for MuonW and $0.46$ for MuonH (Figure~\ref{fig:spectral}). AdamW finishes with comparable entropy to MuonW but a lower participation ratio ($\approx 0.36$), while AdamH is the most spectrally concentrated configuration, with entropy near $0.87$ and participation ratio near $0.14$.
-
-The update spectra help separate optimizer behavior from the accumulated weight spectrum. MuonW and MuonH both maintain high update spectral entropy, and their update participation ratios remain much larger than those of AdamW and AdamH. Thus, Hyperball does not appear to eliminate Muon's matrix-whitened update structure. The main difference is instead that the fixed-radius weight constraint yields a lower-diversity weight spectrum than MuonW, while AdamH shows the strongest concentration among the configurations shown.
+The spectra show that Hyperball changes Muon's accumulated weight spectrum without eliminating its update diversity. MuonW and MuonH both begin with weight spectral entropy near $0.98$. By the end of training, MuonW remains near $0.95$, while MuonH is lower at approximately $0.93$; the corresponding participation ratios are approximately $0.57$ for MuonW and $0.46$ for MuonH (Figure~\ref{fig:spectral}). AdamW finishes with comparable entropy to MuonW but a lower participation ratio ($\approx 0.36$), while AdamH is the most spectrally concentrated configuration, with entropy near $0.87$ and participation ratio near $0.14$. These trends show us that high SE and PR in model weights correlate with a lower perplexity.
 
 \subsection{Uniform Rescaling and Spectral Concentration}
 
-Consistent with the norm-control mechanism in Section~\ref{sec:norm-control-ranking}, MuonH has lower weight-spectrum diversity than MuonW. However, Figure~\ref{fig:spectral} suggests that it preserves the high-diversity Muon update spectrum, since it still has higher PR and SE than Adam. MuonW has no hard rescaling step and maintains the highest participation ratio among the weight matrices shown: independent weight decay changes the weight matrix that the Muon update is added to, but it does not reproject the post-update matrix onto a fixed-radius sphere. This makes the regularizer less directly coupled to Muon's update whitening.
+Consistent with the norm-control mechanism in Section~\ref{sec:norm-control-ranking}, MuonH has lower weight-spectrum diversity than MuonW. The update spectra help separate optimizer behavior from the accumulated weight spectrum: MuonW and MuonH both maintain high update SE, and their update PR remain much larger than those of AdamW and AdamH (Figure~\ref{fig:spectral}). Thus, Hyperball does not appear to eliminate Muon's matrix-whitened update structure. The main difference is instead that the fixed-radius weight constraint yields a lower-diversity weight spectrum than MuonW, worsening model performance, while AdamH shows the strongest concentration among the configurations shown. MuonW has no hard rescaling step and maintains the highest participation ratio among the weight matrices shown: independent weight decay changes the weight matrix that the Muon update is added to, but it does not reproject the post-update matrix onto a fixed-radius sphere. This makes the regularizer less directly coupled to Muon's update whitening.
 
 AdamW also maintains relatively high spectral entropy, but likely through a different mechanism: coordinate-wise updates can sustain activity across many small directions through per-parameter adaptation, whereas MuonW does so through matrix-whitened updates that spread signal across singular directions. The participation-ratio curves separate these cases: MuonW keeps more effective rank in the weights, while AdamW has a lower effective-rank fraction despite comparable entropy. This distinction matches the broader NerVE view that stable spectral signatures track optimizer design choices~\citep{nerve}.
 
@@ -324,7 +327,7 @@ For MuonH, $\|W\|$ is fixed, so the relative step size does not show the same de
 
 
 % ============================================================
-\section{Discussion and Conclusion}
+\section{Discussion}
 \label{sec:discussion}
 % ============================================================
 
@@ -656,42 +659,44 @@ which is independent of the dataset size $N$. For our largest configuration ($L 
 
 \begin{figure}[htbp]
   \centering
-  \begin{subfigure}[t]{0.49\linewidth}
+  \makebox[\linewidth][c]{\begin{minipage}{1.14\linewidth}
+  \begin{subfigure}[t]{0.495\linewidth}
     \centering
     \includegraphics[width=\linewidth]{images/perplexity_progression_lr_9em05.png}
     \caption*{By checkpoint}
   \end{subfigure}\hfill
-  \begin{subfigure}[t]{0.49\linewidth}
+  \begin{subfigure}[t]{0.495\linewidth}
     \centering
     \includegraphics[width=\linewidth]{images/perplexity_progression_lr_9em05_flops.png}
     \caption*{By FLOPs}
   \end{subfigure}
   \\[2pt]
-  {\small lr $\approx 9.00\times10^{-5}$}
+  \begin{center}{\small lr $\approx 9.00\times10^{-5}$}\end{center}
 
   \medskip
-  \begin{subfigure}[t]{0.49\linewidth}
+  \begin{subfigure}[t]{0.495\linewidth}
     \centering
     \includegraphics[width=\linewidth]{images/perplexity_progression_lr_0p00035857.png}
   \end{subfigure}\hfill
-  \begin{subfigure}[t]{0.49\linewidth}
+  \begin{subfigure}[t]{0.495\linewidth}
     \centering
     \includegraphics[width=\linewidth]{images/perplexity_progression_lr_0p00035857_flops.png}
   \end{subfigure}
   \\[2pt]
-  {\small lr $\approx 3.59\times10^{-4}$}
+  \begin{center}{\small lr $\approx 3.59\times10^{-4}$}\end{center}
 
   \medskip
-  \begin{subfigure}[t]{0.49\linewidth}
+  \begin{subfigure}[t]{0.495\linewidth}
     \centering
     \includegraphics[width=\linewidth]{images/perplexity_progression_lr_0p0014287.png}
   \end{subfigure}\hfill
-  \begin{subfigure}[t]{0.49\linewidth}
+  \begin{subfigure}[t]{0.495\linewidth}
     \centering
     \includegraphics[width=\linewidth]{images/perplexity_progression_lr_0p0014287_flops.png}
   \end{subfigure}
   \\[2pt]
-  {\small lr $\approx 1.43\times10^{-3}$}
+  \begin{center}{\small lr $\approx 1.43\times10^{-3}$}\end{center}
+  \end{minipage}}
 
   \caption{Learning-rate sweep perplexity, part 1. The left panels show mean test perplexity over training checkpoints, while the right panels show mean test perplexity over cumulative FLOPs. Lower is better; the FLOP accounting follows the conversion defined above.}
   \label{fig:perp-by-lr-1}
@@ -699,30 +704,32 @@ which is independent of the dataset size $N$. For our largest configuration ($L 
 
 \begin{figure}[htbp]
   \centering
-  \begin{subfigure}[t]{0.49\linewidth}
+  \makebox[\linewidth][c]{\begin{minipage}{1.14\linewidth}
+  \begin{subfigure}[t]{0.495\linewidth}
     \centering
     \includegraphics[width=\linewidth]{images/perplexity_progression_lr_0p0056924.png}
     \caption*{By checkpoint}
   \end{subfigure}\hfill
-  \begin{subfigure}[t]{0.49\linewidth}
+  \begin{subfigure}[t]{0.495\linewidth}
     \centering
     \includegraphics[width=\linewidth]{images/perplexity_progression_lr_0p0056924_flops.png}
     \caption*{By FLOPs}
   \end{subfigure}
   \\[2pt]
-  {\small lr $\approx 5.69\times10^{-3}$}
+  \begin{center}{\small lr $\approx 5.69\times10^{-3}$}\end{center}
 
   \medskip
-  \begin{subfigure}[t]{0.49\linewidth}
+  \begin{subfigure}[t]{0.495\linewidth}
     \centering
     \includegraphics[width=\linewidth]{images/perplexity_progression_lr_0p022681.png}
   \end{subfigure}\hfill
-  \begin{subfigure}[t]{0.49\linewidth}
+  \begin{subfigure}[t]{0.495\linewidth}
     \centering
     \includegraphics[width=\linewidth]{images/perplexity_progression_lr_0p022681_flops.png}
   \end{subfigure}
   \\[2pt]
-  {\small lr $\approx 2.27\times10^{-2}$}
+  \begin{center}{\small lr $\approx 2.27\times10^{-2}$}\end{center}
+  \end{minipage}}
 
   \caption{Learning-rate sweep perplexity, part 2. The left panels show mean test perplexity over training checkpoints, while the right panels show mean test perplexity over cumulative FLOPs. Lower is better; the FLOP accounting follows the conversion defined above.}
   \label{fig:perp-by-lr-2}
