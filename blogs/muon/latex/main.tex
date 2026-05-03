@@ -132,7 +132,7 @@ The useful takeaway is that Hyperball makes the learning rate an approximate rel
 \label{sec:experimental-setup}
 % ============================================================
 
-To isolate the effect of the optimizer, we hold the architecture family, dataset, processed-token budget, input pipeline, output heads, and all non-optimizer hyperparameters constant across runs, varying only optimizer family, norm-control scheme, learning rate, and model width. We train a Transformer model on candidate cis-regulatory elements (cCREs) from the ENCODE v4 registry~\citep{encode-v4} that are specific to one of seven cell lines (see Appendix~\ref{app:data}). All runs were executed on 8 NVIDIA H100 GPUs. We tokenize at single-nucleotide resolution and train with a masked language modeling (MLM) objective. The nucleotide head supplies the held-out CE-loss and perplexity metric, while the modality head supplies an auxiliary DNase-seq prediction objective using a factorized Poisson and multinomial loss.
+To isolate the effect of the optimizer, we hold the architecture family, dataset, processed-token budget, input pipeline, output heads, and all non-optimizer hyperparameters constant across runs, varying only optimizer family, norm-control scheme, learning rate, and model width. We train a Transformer model on candidate cis-regulatory elements (cCREs) from the ENCODE v4 registry~\citep{encode-v4} that are specific to one of seven cell lines (see Appendix~\ref{app:data}). We use three model widths: hs512, hs1024, and hs2048, corresponding to approximately 26M, 105M, and 420M parameters. All runs were executed on 8 NVIDIA H100 GPUs. We tokenize at single-nucleotide resolution and train with a masked language modeling (MLM) objective. The nucleotide head supplies the held-out CE-loss and perplexity metric, while the modality head supplies an auxiliary DNase-seq prediction objective using a factorized Poisson and multinomial loss.
 
 \begin{figure}[htbp]
   \centering
@@ -235,11 +235,11 @@ Figure~\ref{fig:scale-advantages} summarizes the matched-target comparison acros
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=0.85\linewidth]{images/perplexity_best_optimizer_progression_largest_scale_flops.png}
-  \caption{Largest-scale optimizer progression.}
+  \caption{Largest-scale (hs2048) optimizer progression.}
   \label{fig:final-perplexity}
 \end{figure}
 
-Figure~\ref{fig:final-perplexity} gives an optimizer-level view at the largest scale, using the run with the lowest final EMA perplexity for each optimizer variant. This complements the matched-target Wall-Clock analysis above by showing mean test perplexity as a function of training FLOPs. The curves separate clearly: SGD remains well above the Adam and Muon variants, Adam improves steadily, and the best Muon configuration reaches its lowest perplexity on a smaller compute and Wall-Clock budget. The selected Muon run also uses an optimal learning rate roughly an order of magnitude larger than the selected Adam run, suggesting that Muon's update geometry permits a larger stable effective step size and therefore faster progress toward the same held-out perplexity target. Full per-learning-rate and per-optimizer progression curves are provided in Figures~\ref{fig:perp-by-lr-1}--\ref{fig:perp-by-optimizer-muon}.
+Figure~\ref{fig:final-perplexity} gives an optimizer-level view at the largest scale, using the run with the lowest final EMA perplexity for each optimizer variant; the EMA values used for this selection are tabulated in Appendix~\ref{app:ema-perplexity}. This complements the matched-target Wall-Clock analysis above by showing mean test perplexity as a function of training FLOPs. The curves separate clearly: SGD remains well above the Adam and Muon variants, Adam improves steadily, and the best Muon configuration reaches its lowest perplexity on a smaller compute and Wall-Clock budget. The selected Muon run also uses an optimal learning rate roughly an order of magnitude larger than the selected Adam run, suggesting that Muon's update geometry permits a larger stable effective step size and therefore faster progress toward the same held-out perplexity target.
 
 
 \subsection{Norm control changes the optimizer ranking}
@@ -571,7 +571,7 @@ These per-parameter averages are \emph{exact} under the combination of grouped-q
 
 For our concrete architecture ($d = 2048$), MuonW's and MuonH's step costs evaluate to $47{,}384.89$ and $47{,}389.89$ FLOPs per parameter, respectively.
 
-\paragraph{Checkpoint-to-FLOPs conversion.} The FLOPs axis in Figures~\ref{fig:perp-by-lr-1}--\ref{fig:perp-by-optimizer-muon} maps a checkpoint index $t$ (a training step) to cumulative FLOPs via
+\paragraph{Checkpoint-to-FLOPs conversion.} The FLOPs-axis plots map a checkpoint index $t$ (a training step) to cumulative FLOPs via
 \[
 \mathrm{FLOPs}(t, \text{opt}) \;=\; t\,P\!\left(6BL + C_{\text{opt}}^{\text{opt}}\right).
 \]
@@ -582,6 +582,152 @@ For our concrete architecture ($d = 2048$), MuonW's and MuonH's step costs evalu
 \]
 which is independent of the dataset size $N$. For our largest configuration ($L = 352$, $B = 2400$, $d = 2048$), MuonH's $C_{\text{opt}} \approx 47{,}389.89$ yields an overhead of roughly $0.94\%$, confirming that Muon's Newton--Schulz orthogonalization step is a small fraction of total training FLOPs despite its $O(d)$ scaling in $C_{\text{opt}}$.
 
+
+\section{EMA Perplexity Values}
+\label{app:ema-perplexity}
+
+The optimizer-level progression in Figure~\ref{fig:final-perplexity} selects one run per optimizer variant using the final exponential moving average (EMA) of checkpoint perplexities. The EMA decay is $0.9$ and is applied over the sequence of checkpoint-level mean perplexities. This dampens batch-level and checkpoint-level noise: an isolated unusually easy or hard evaluation checkpoint changes the EMA by only $10\%$ of its deviation from the previous smoothed value, while persistent improvements continue to accumulate across checkpoints. For Figure~\ref{fig:final-perplexity}, the selected largest-scale runs are the minima in the hs2048 columns below; these selections match the figure legend.
+\begin{center}
+  \textbf{AdamH}\\[0.4em]
+  \begin{tabular}{@{}r@{\hspace{0.35em}}r@{}@{\hspace{0.25em}}|@{\hspace{0.25em}}@{}r@{\hspace{0.35em}}r@{}@{\hspace{0.25em}}|@{\hspace{0.25em}}@{}r@{\hspace{0.35em}}r@{}}
+  \hline
+  \multicolumn{2}{c}{hs512} & \multicolumn{2}{c}{hs1024} & \multicolumn{2}{c}{hs2048} \\
+  LR & EMA PPL & LR & EMA PPL & LR & EMA PPL \\
+  \hline
+  9.0e-05 & 2.6635 & 9.0e-05 & 2.6453 & 9.0e-05 & 2.6266 \\
+  3.6e-04 & 2.6199 & 3.6e-04 & 2.6108 & 3.6e-04 & 2.5919 \\
+  1.4e-03 & 2.5895 & 1.4e-03 & 2.5710 & 1.4e-03 & 2.5620 \\
+  5.7e-03 & 2.5668 & 5.7e-03 & 2.5644 & 5.7e-03 & \textbf{2.5579} \\
+  2.3e-02 & 2.5878 & 2.3e-02 & 2.5888 & 2.3e-02 & 2.5856 \\
+  \hline
+  \end{tabular}
+  \end{center}
+  
+  \begin{center}
+  \textbf{AdamW}\\[0.4em]
+  \begin{tabular}{@{}r@{\hspace{0.35em}}r@{\hspace{0.35em}}r@{}@{\hspace{0.25em}}|@{\hspace{0.25em}}@{}r@{\hspace{0.35em}}r@{\hspace{0.35em}}r@{}@{\hspace{0.25em}}|@{\hspace{0.25em}}@{}r@{\hspace{0.35em}}r@{\hspace{0.35em}}r@{}}
+  \hline
+  \multicolumn{3}{c}{hs512} & \multicolumn{3}{c}{hs1024} & \multicolumn{3}{c}{hs2048} \\
+  LR & WD & EMA PPL & LR & WD & EMA PPL & LR & WD & EMA PPL \\
+  \hline
+  9.0e-05 & 1.0e-06 & 2.6355 & 9.0e-05 & 1.0e-06 & 2.6120 & 9.0e-05 & 1.0e-06 & 2.5873 \\
+  9.0e-05 & 1.0e-05 & 2.6328 & 9.0e-05 & 1.0e-05 & 2.6116 & 9.0e-05 & 1.0e-05 & 2.5896 \\
+  9.0e-05 & 1.0e-04 & 2.6337 & 9.0e-05 & 1.0e-04 & 2.6090 & 9.0e-05 & 1.0e-04 & 2.5856 \\
+  9.0e-05 & 1.0e-03 & 2.7537 & 9.0e-05 & 1.0e-03 & 2.7143 & 9.0e-05 & 1.0e-03 & 2.6584 \\
+  3.6e-04 & 1.0e-06 & 2.5977 & 3.6e-04 & 1.0e-06 & 2.5881 & 3.6e-04 & 1.0e-06 & 2.5714 \\
+  3.6e-04 & 1.0e-05 & 2.5987 & 3.6e-04 & 1.0e-05 & 2.5865 & 3.6e-04 & 1.0e-05 & 2.5761 \\
+  3.6e-04 & 1.0e-04 & 2.5969 & 3.6e-04 & 1.0e-04 & 2.5797 & 3.6e-04 & 1.0e-04 & \textbf{2.5680} \\
+  3.6e-04 & 1.0e-03 & 2.6388 & 3.6e-04 & 1.0e-03 & 2.6110 & 3.6e-04 & 1.0e-03 & 2.5947 \\
+  1.4e-03 & 1.0e-06 & 2.5837 & 1.4e-03 & 1.0e-06 & 2.5791 & 1.4e-03 & 1.0e-06 & 2.5915 \\
+  1.4e-03 & 1.0e-05 & 2.5870 & 1.4e-03 & 1.0e-05 & 2.5931 & 1.4e-03 & 1.0e-05 & 2.5977 \\
+  1.4e-03 & 1.0e-04 & 2.5830 & 1.4e-03 & 1.0e-04 & 2.5848 & 1.4e-03 & 1.0e-04 & 2.5902 \\
+  1.4e-03 & 1.0e-03 & 2.5881 & 1.4e-03 & 1.0e-03 & 2.5812 & 1.4e-03 & 1.0e-03 & 2.5739 \\
+  5.7e-03 & 1.0e-06 & 2.5894 & 5.7e-03 & 1.0e-06 & 2.5846 & 5.7e-03 & 1.0e-06 & 2.5858 \\
+  5.7e-03 & 1.0e-05 & 2.5927 & 5.7e-03 & 1.0e-05 & 2.5825 & 5.7e-03 & 1.0e-05 & 2.5931 \\
+  5.7e-03 & 1.0e-04 & 2.5931 & 5.7e-03 & 1.0e-04 & 2.5841 & 5.7e-03 & 1.0e-04 & 2.5995 \\
+  5.7e-03 & 1.0e-03 & 2.5887 & 5.7e-03 & 1.0e-03 & 2.5798 & 5.7e-03 & 1.0e-03 & 2.5763 \\
+  2.3e-02 & 1.0e-06 & 2.5903 & 2.3e-02 & 1.0e-06 & 2.5965 & 2.3e-02 & 1.0e-06 & 2.6022 \\
+  2.3e-02 & 1.0e-05 & 2.5884 & 2.3e-02 & 1.0e-05 & 2.5908 & 2.3e-02 & 1.0e-05 & 2.5963 \\
+  2.3e-02 & 1.0e-04 & 2.5858 & 2.3e-02 & 1.0e-04 & 2.5981 & 2.3e-02 & 1.0e-04 & 2.5982 \\
+  2.3e-02 & 1.0e-03 & 2.5953 & 2.3e-02 & 1.0e-03 & 2.5916 & 2.3e-02 & 1.0e-03 & 2.5912 \\
+  \hline
+  \end{tabular}
+  \end{center}
+  
+  \begin{center}
+  \textbf{MuonH}\\[0.4em]
+  \begin{tabular}{@{}r@{\hspace{0.35em}}r@{}@{\hspace{0.25em}}|@{\hspace{0.25em}}@{}r@{\hspace{0.35em}}r@{}@{\hspace{0.25em}}|@{\hspace{0.25em}}@{}r@{\hspace{0.35em}}r@{}}
+  \hline
+  \multicolumn{2}{c}{hs512} & \multicolumn{2}{c}{hs1024} & \multicolumn{2}{c}{hs2048} \\
+  LR & EMA PPL & LR & EMA PPL & LR & EMA PPL \\
+  \hline
+  9.0e-05 & 2.6496 & 9.0e-05 & 2.6306 & 9.0e-05 & 2.6156 \\
+  3.6e-04 & 2.6096 & 3.6e-04 & 2.5993 & 3.6e-04 & 2.5841 \\
+  1.4e-03 & 2.5837 & 1.4e-03 & 2.5675 & 1.4e-03 & 2.5538 \\
+  5.7e-03 & 2.5654 & 5.7e-03 & 2.5476 & 5.7e-03 & \textbf{2.5474} \\
+  2.3e-02 & 2.5957 & 2.3e-02 & 2.5924 & 2.3e-02 & 2.5952 \\
+  \hline
+  \end{tabular}
+  \end{center}
+  
+  \begin{center}
+  \textbf{MuonW}\\[0.4em]
+  \begin{tabular}{@{}r@{\hspace{0.35em}}r@{\hspace{0.35em}}r@{}@{\hspace{0.25em}}|@{\hspace{0.25em}}@{}r@{\hspace{0.35em}}r@{\hspace{0.35em}}r@{}@{\hspace{0.25em}}|@{\hspace{0.25em}}@{}r@{\hspace{0.35em}}r@{\hspace{0.35em}}r@{}}
+  \hline
+  \multicolumn{3}{c}{hs512} & \multicolumn{3}{c}{hs1024} & \multicolumn{3}{c}{hs2048} \\
+  LR & WD & EMA PPL & LR & WD & EMA PPL & LR & WD & EMA PPL \\
+  \hline
+  9.0e-05 & 1.0e-06 & 2.6919 & 9.0e-05 & 1.0e-06 & 2.6803 & 9.0e-05 & 1.0e-06 & 2.6716 \\
+  9.0e-05 & 1.0e-05 & 2.6902 & 9.0e-05 & 1.0e-05 & 2.6818 & 9.0e-05 & 1.0e-05 & 2.6721 \\
+  9.0e-05 & 1.0e-04 & 2.6933 & 9.0e-05 & 1.0e-04 & 2.6798 & 9.0e-05 & 1.0e-04 & 2.6736 \\
+  9.0e-05 & 1.0e-03 & 2.8029 & 9.0e-05 & 1.0e-03 & 2.7939 & 9.0e-05 & 1.0e-03 & 2.7826 \\
+  3.6e-04 & 1.0e-06 & 2.6326 & 3.6e-04 & 1.0e-06 & 2.6256 & 3.6e-04 & 1.0e-06 & 2.6161 \\
+  3.6e-04 & 1.0e-05 & 2.6335 & 3.6e-04 & 1.0e-05 & 2.6262 & 3.6e-04 & 1.0e-05 & 2.6161 \\
+  3.6e-04 & 1.0e-04 & 2.6330 & 3.6e-04 & 1.0e-04 & 2.6241 & 3.6e-04 & 1.0e-04 & 2.6145 \\
+  3.6e-04 & 1.0e-03 & 2.7089 & 3.6e-04 & 1.0e-03 & 2.6668 & 3.6e-04 & 1.0e-03 & 2.6428 \\
+  1.4e-03 & 1.0e-06 & 2.5987 & 1.4e-03 & 1.0e-06 & 2.5847 & 1.4e-03 & 1.0e-06 & 2.5750 \\
+  1.4e-03 & 1.0e-05 & 2.5987 & 1.4e-03 & 1.0e-05 & 2.5848 & 1.4e-03 & 1.0e-05 & 2.5724 \\
+  1.4e-03 & 1.0e-04 & 2.5958 & 1.4e-03 & 1.0e-04 & 2.5813 & 1.4e-03 & 1.0e-04 & 2.5721 \\
+  1.4e-03 & 1.0e-03 & 2.5973 & 1.4e-03 & 1.0e-03 & 2.5763 & 1.4e-03 & 1.0e-03 & 2.5602 \\
+  5.7e-03 & 1.0e-06 & 2.5676 & 5.7e-03 & 1.0e-06 & 2.5536 & 5.7e-03 & 1.0e-06 & 2.5353 \\
+  5.7e-03 & 1.0e-05 & 2.5708 & 5.7e-03 & 1.0e-05 & 2.5492 & 5.7e-03 & 1.0e-05 & 2.5359 \\
+  5.7e-03 & 1.0e-04 & 2.5696 & 5.7e-03 & 1.0e-04 & 2.5501 & 5.7e-03 & 1.0e-04 & 2.5337 \\
+  5.7e-03 & 1.0e-03 & 2.5584 & 5.7e-03 & 1.0e-03 & 2.5470 & 5.7e-03 & 1.0e-03 & 2.5308 \\
+  2.3e-02 & 1.0e-06 & 2.5499 & 2.3e-02 & 1.0e-06 & 2.5374 & 2.3e-02 & 1.0e-06 & 2.5323 \\
+  2.3e-02 & 1.0e-05 & 2.5550 & 2.3e-02 & 1.0e-05 & 2.5345 & 2.3e-02 & 1.0e-05 & 2.5306 \\
+  2.3e-02 & 1.0e-04 & 2.5524 & 2.3e-02 & 1.0e-04 & 2.5382 & 2.3e-02 & 1.0e-04 & \textbf{2.5274} \\
+  2.3e-02 & 1.0e-03 & 2.5548 & 2.3e-02 & 1.0e-03 & 2.5416 & 2.3e-02 & 1.0e-03 & 2.5337 \\
+  \hline
+  \end{tabular}
+  \end{center}
+  
+  \begin{center}
+  \textbf{SgdH}\\[0.4em]
+  \begin{tabular}{@{}r@{\hspace{0.35em}}r@{}@{\hspace{0.25em}}|@{\hspace{0.25em}}@{}r@{\hspace{0.35em}}r@{}@{\hspace{0.25em}}|@{\hspace{0.25em}}@{}r@{\hspace{0.35em}}r@{}}
+  \hline
+  \multicolumn{2}{c}{hs512} & \multicolumn{2}{c}{hs1024} & \multicolumn{2}{c}{hs2048} \\
+  LR & EMA PPL & LR & EMA PPL & LR & EMA PPL \\
+  \hline
+  9.0e-05 & 2.7320 & 9.0e-05 & 2.7202 & 9.0e-05 & 2.7151 \\
+  3.6e-04 & 2.7088 & 3.6e-04 & 2.7011 & 3.6e-04 & 2.7035 \\
+  1.4e-03 & 2.6903 & 1.4e-03 & 2.6881 & 1.4e-03 & 2.6724 \\
+  5.7e-03 & \textbf{2.6402} & 5.7e-03 & 2.6467 & 5.7e-03 & 2.6907 \\
+  2.3e-02 & 2.6894 & 2.3e-02 & 2.7326 & 2.3e-02 & 2.8241 \\
+  \hline
+  \end{tabular}
+  \end{center}
+  
+  \begin{center}
+  \textbf{SgdW}\\[0.4em]
+  \begin{tabular}{@{}r@{\hspace{0.35em}}r@{\hspace{0.35em}}r@{}@{\hspace{0.25em}}|@{\hspace{0.25em}}@{}r@{\hspace{0.35em}}r@{\hspace{0.35em}}r@{}@{\hspace{0.25em}}|@{\hspace{0.25em}}@{}r@{\hspace{0.35em}}r@{\hspace{0.35em}}r@{}}
+  \hline
+  \multicolumn{3}{c}{hs512} & \multicolumn{3}{c}{hs1024} & \multicolumn{3}{c}{hs2048} \\
+  LR & WD & EMA PPL & LR & WD & EMA PPL & LR & WD & EMA PPL \\
+  \hline
+  9.0e-05 & 1.0e-06 & 2.8208 & 9.0e-05 & 1.0e-06 & 2.8119 & 9.0e-05 & 1.0e-06 & 2.8053 \\
+  9.0e-05 & 1.0e-05 & 2.8186 & 9.0e-05 & 1.0e-05 & 2.8071 & 9.0e-05 & 1.0e-05 & 2.8024 \\
+  9.0e-05 & 1.0e-04 & 2.8234 & 9.0e-05 & 1.0e-04 & 2.8130 & 9.0e-05 & 1.0e-04 & 2.8077 \\
+  9.0e-05 & 1.0e-03 & 2.8405 & 9.0e-05 & 1.0e-03 & 2.8346 & 9.0e-05 & 1.0e-03 & 2.8304 \\
+  3.6e-04 & 1.0e-06 & 2.8030 & 3.6e-04 & 1.0e-06 & 2.8022 & 3.6e-04 & 1.0e-06 & 2.7974 \\
+  3.6e-04 & 1.0e-05 & 2.8022 & 3.6e-04 & 1.0e-05 & 2.7965 & 3.6e-04 & 1.0e-05 & 2.7914 \\
+  3.6e-04 & 1.0e-04 & 2.8096 & 3.6e-04 & 1.0e-04 & 2.8058 & 3.6e-04 & 1.0e-04 & 2.8021 \\
+  3.6e-04 & 1.0e-03 & 2.8338 & 3.6e-04 & 1.0e-03 & 2.8286 & 3.6e-04 & 1.0e-03 & 2.8259 \\
+  1.4e-03 & 1.0e-06 & 2.7903 & 1.4e-03 & 1.0e-06 & 2.7955 & 1.4e-03 & 1.0e-06 & 2.7929 \\
+  1.4e-03 & 1.0e-05 & 2.7894 & 1.4e-03 & 1.0e-05 & 2.7809 & 1.4e-03 & 1.0e-05 & 2.7839 \\
+  1.4e-03 & 1.0e-04 & 2.7983 & 1.4e-03 & 1.0e-04 & 2.8009 & 1.4e-03 & 1.0e-04 & 2.7990 \\
+  1.4e-03 & 1.0e-03 & 2.8294 & 1.4e-03 & 1.0e-03 & 2.8255 & 1.4e-03 & 1.0e-03 & 2.8242 \\
+  5.7e-03 & 1.0e-06 & 2.7796 & 5.7e-03 & 1.0e-06 & 2.7848 & 5.7e-03 & 1.0e-06 & 2.7819 \\
+  5.7e-03 & 1.0e-05 & 2.7788 & 5.7e-03 & 1.0e-05 & 2.7733 & 5.7e-03 & 1.0e-05 & 2.7743 \\
+  5.7e-03 & 1.0e-04 & 2.7910 & 5.7e-03 & 1.0e-04 & 2.7951 & 5.7e-03 & 1.0e-04 & 2.7968 \\
+  5.7e-03 & 1.0e-03 & 2.8195 & 5.7e-03 & 1.0e-03 & 2.8168 & 5.7e-03 & 1.0e-03 & 2.8149 \\
+  2.3e-02 & 1.0e-06 & 2.7702 & 2.3e-02 & 1.0e-06 & 2.7788 & 2.3e-02 & 1.0e-06 & 2.7956 \\
+  2.3e-02 & 1.0e-05 & \textbf{2.7694} & 2.3e-02 & 1.0e-05 & 2.7921 & 2.3e-02 & 1.0e-05 & 2.7877 \\
+  2.3e-02 & 1.0e-04 & 2.7797 & 2.3e-02 & 1.0e-04 & 2.7925 & 2.3e-02 & 1.0e-04 & 2.8017 \\
+  2.3e-02 & 1.0e-03 & 2.8092 & 2.3e-02 & 1.0e-03 & 2.8108 & 2.3e-02 & 1.0e-03 & 2.8078 \\
+  \hline
+  \end{tabular}
+  \end{center}
+  
 
 % ============================================================
 \section{Additional Figures}
@@ -611,146 +757,6 @@ which is independent of the dataset size $N$. For our largest configuration ($L 
   \end{subfigure}
   \caption{Nucleotide frequencies. The panels show nucleotide frequencies across the three cell lines in our training set.}
   \label{fig:nucleotide-dist}
-\end{figure}
-
-\begin{figure}[htbp]
-  \centering
-  \makebox[\linewidth][c]{\begin{minipage}{1.14\linewidth}
-  \begin{subfigure}[t]{0.495\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{images/perplexity_progression_lr_9em05.png}
-    \caption*{By checkpoint}
-  \end{subfigure}\hfill
-  \begin{subfigure}[t]{0.495\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{images/perplexity_progression_lr_9em05_flops.png}
-    \caption*{By FLOPs}
-  \end{subfigure}
-  \\[2pt]
-  \begin{center}{\small lr $\approx 9.00\times10^{-5}$}\end{center}
-
-  \medskip
-  \begin{subfigure}[t]{0.495\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{images/perplexity_progression_lr_0p00035857.png}
-  \end{subfigure}\hfill
-  \begin{subfigure}[t]{0.495\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{images/perplexity_progression_lr_0p00035857_flops.png}
-  \end{subfigure}
-  \\[2pt]
-  \begin{center}{\small lr $\approx 3.59\times10^{-4}$}\end{center}
-
-  \medskip
-  \begin{subfigure}[t]{0.495\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{images/perplexity_progression_lr_0p0014287.png}
-  \end{subfigure}\hfill
-  \begin{subfigure}[t]{0.495\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{images/perplexity_progression_lr_0p0014287_flops.png}
-  \end{subfigure}
-  \\[2pt]
-  \begin{center}{\small lr $\approx 1.43\times10^{-3}$}\end{center}
-  \end{minipage}}
-
-  \caption{Learning-rate sweep perplexity, part 1. The left panels show mean test perplexity over training checkpoints, while the right panels show mean test perplexity over cumulative FLOPs. Lower is better; the FLOP accounting follows the conversion defined above.}
-  \label{fig:perp-by-lr-1}
-\end{figure}
-
-\begin{figure}[htbp]
-  \centering
-  \makebox[\linewidth][c]{\begin{minipage}{1.14\linewidth}
-  \begin{subfigure}[t]{0.495\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{images/perplexity_progression_lr_0p0056924.png}
-    \caption*{By checkpoint}
-  \end{subfigure}\hfill
-  \begin{subfigure}[t]{0.495\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{images/perplexity_progression_lr_0p0056924_flops.png}
-    \caption*{By FLOPs}
-  \end{subfigure}
-  \\[2pt]
-  \begin{center}{\small lr $\approx 5.69\times10^{-3}$}\end{center}
-
-  \medskip
-  \begin{subfigure}[t]{0.495\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{images/perplexity_progression_lr_0p022681.png}
-  \end{subfigure}\hfill
-  \begin{subfigure}[t]{0.495\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{images/perplexity_progression_lr_0p022681_flops.png}
-  \end{subfigure}
-  \\[2pt]
-  \begin{center}{\small lr $\approx 2.27\times10^{-2}$}\end{center}
-  \end{minipage}}
-
-  \caption{Learning-rate sweep perplexity, part 2. The left panels show mean test perplexity over training checkpoints, while the right panels show mean test perplexity over cumulative FLOPs. Lower is better; the FLOP accounting follows the conversion defined above.}
-  \label{fig:perp-by-lr-2}
-\end{figure}
-
-\begin{figure}[htbp]
-  \centering
-  \begin{subfigure}[t]{0.49\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{images/perplexity_progression_AdamH.png}
-    \caption*{By checkpoint}
-  \end{subfigure}\hfill
-  \begin{subfigure}[t]{0.49\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{images/perplexity_progression_AdamH_flops.png}
-    \caption*{By FLOPs}
-  \end{subfigure}
-  \\[2pt]
-  {\small AdamH}
-
-  \medskip
-  \begin{subfigure}[t]{0.49\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{images/perplexity_progression_AdamW.png}
-  \end{subfigure}\hfill
-  \begin{subfigure}[t]{0.49\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{images/perplexity_progression_AdamW_flops.png}
-  \end{subfigure}
-  \\[2pt]
-  {\small AdamW}
-
-  \caption{Adam variant perplexity. The left panels show mean test perplexity over checkpoints, while the right panels show mean test perplexity over cumulative FLOPs. The plots cover five learning rates, using the FLOP conversion defined above.}
-  \label{fig:perp-by-optimizer-adam}
-\end{figure}
-
-\begin{figure}[htbp]
-  \centering
-  \begin{subfigure}[t]{0.49\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{images/perplexity_progression_MuonH.png}
-    \caption*{By checkpoint}
-  \end{subfigure}\hfill
-  \begin{subfigure}[t]{0.49\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{images/perplexity_progression_MuonH_flops.png}
-    \caption*{By FLOPs}
-  \end{subfigure}
-  \\[2pt]
-  {\small MuonH}
-
-  \medskip
-  \begin{subfigure}[t]{0.49\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{images/perplexity_progression_MuonW.png}
-  \end{subfigure}\hfill
-  \begin{subfigure}[t]{0.49\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{images/perplexity_progression_MuonW_flops.png}
-  \end{subfigure}
-  \\[2pt]
-  {\small MuonW}
-
-  \caption{Muon variant perplexity. The left panels show mean test perplexity over checkpoints, while the right panels show mean test perplexity over cumulative FLOPs. The plots cover five learning rates, using the FLOP conversion defined above.}
-  \label{fig:perp-by-optimizer-muon}
 \end{figure}
 
 \begin{figure}[htbp]
