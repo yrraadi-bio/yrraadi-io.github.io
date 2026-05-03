@@ -183,9 +183,9 @@ To isolate the effect of the optimizer, we hold the architecture family, dataset
 
 \subsection{Muon reaches Adam's lowest test perplexity with 35.4\% fewer FLOPs and 38.5\% less Wall-Clock time}
 
-Lower perplexity indicates superior probability mass placement on the target DNA sequence. The FLOP conversion uses a base forward/backward term proportional to $6PBL$ per step, plus a per-optimizer update term; for the largest setting, Muon's Newton--Schulz update adds only about $1.17\%$ overhead relative to the base forward/backward pass (Appendix~\ref{app:FLOPs}).
+Lower perplexity indicates better probability mass placement on the target DNA sequence. We convert checkpoints to FLOPs using a base forward/backward term proportional to $6PBL$ per step plus a per-optimizer update term; in the largest setting, Muon's Newton--Schulz update adds only about $1.17\%$ overhead relative to the base forward/backward pass (Appendix~\ref{app:FLOPs}).
 
-Aggregating optimizer variants by family gives the clearest high-level view. In Figure~\ref{fig:family-progressions} each run in the sweep was trained for 20 epochs and checkpointed once per epoch. For each optimizer family, each plotted point is the lowest held-out perplexity at that checkpoint (mapped back to FLOPs/Wall-Clock time) among all runs in that family. Across the relevant FLOP and Wall-Clock range, the Muon envelope consistently attains lower held-out perplexity than the Adam envelope, indicating an advantage over many matched-quality targets rather than at a single endpoint.
+We first aggregate optimizer variants by family to show the high-level efficiency trend. In Figure~\ref{fig:family-progressions}, each run is trained for 20 epochs and checkpointed once per epoch. At each checkpoint, the family curve reports the best held-out perplexity achieved by any run in that optimizer family, mapped back to its FLOP and Wall-Clock cost. Across the relevant compute and time range, the Muon envelope stays below the Adam envelope, showing that Muon reaches better held-out perplexity over a broad set of budgets rather than only at a single endpoint.
 
 \begin{figure}[htbp]
   \centering
@@ -203,7 +203,7 @@ Aggregating optimizer variants by family gives the clearest high-level view. In 
   \label{fig:family-progressions}
 \end{figure}
 
-The matched-quality advantage plots in Figure~\ref{fig:family-advantages} convert the progression curves into a direct efficiency comparison. For each Adam checkpoint, we use its held-out perplexity as the target, then find the furthest Muon checkpoint, moving from high to low compute, whose perplexity is still below that Adam target. The plotted value is the corresponding FLOP or Wall-Clock reduction relative to the Adam checkpoint. Positive values therefore mean that Muon reaches the same target perplexity with less compute or time. After the first few targets, Muon's advantage stabilizes rather than appearing as a one-off crossing; across the relevant target range, the FLOP and Wall-Clock reduction range between 30--50\%.
+Figure~\ref{fig:family-advantages} turns these progression curves into a matched-quality efficiency comparison. For each Adam checkpoint, we use its held-out perplexity as the target and find the lowest-cost Muon checkpoint whose perplexity is at least as good. The plotted value is the resulting FLOP or Wall-Clock reduction relative to that Adam checkpoint, so positive values mean that Muon reaches the same target perplexity with less compute or time. After the earliest targets, the advantage stabilizes: across the relevant target range, Muon reduces FLOPs and Wall-Clock time by roughly 30--50\%.
 
 \begin{figure}[htbp]
   \centering
@@ -228,7 +228,7 @@ The matched-quality advantage plots in Figure~\ref{fig:family-advantages} conver
   \label{fig:scale-advantages}
 \end{figure}
 
-Figure~\ref{fig:scale-advantages} summarizes this matched-target comparison across model scales using the median Muon improvement. The plot reports a median Muon improvement across all scales, suggesting that this is a trend that holds across models of all sizes.
+Figure~\ref{fig:scale-advantages} summarizes the matched-target comparison across tested model scales. For each scale, we take the lowest Adam perplexity as the target and report the median Muon reduction needed to reach it. The median advantage is positive across the tested scales, suggesting that Muon's efficiency gain is not confined to one model width.
 
 \subsection{Test perplexity across sweep grid}
 
@@ -239,7 +239,7 @@ Figure~\ref{fig:scale-advantages} summarizes this matched-target comparison acro
   \label{fig:final-perplexity}
 \end{figure}
 
-Figure~\ref{fig:final-perplexity} shows mean test perplexity over training FLOPs for the strongest largest-scale configurations from each optimizer variant, complementing the Wall-Clock matched-target comparison above. The optimizer-level view includes SGD as a baseline and shows a clear separation: SGD remains far above the Adam and Muon curves, Adam improves steadily, and the best Muon configuration reaches its lowest perplexity on a smaller compute and Wall-Clock budget. The selected Muon configuration also uses an optimal learning rate roughly an order of magnitude higher than the selected Adam configuration. One hypothesis is that Muon's update geometry permits a larger effective step size before destabilizing training, allowing faster progress toward the same held-out perplexity target. Runs were chosen by picking the ones with lowest EMA perplexity at the end of training. The full per-learning-rate and per-optimizer progression curves are provided in Figures~\ref{fig:perp-by-lr-1}--\ref{fig:perp-by-optimizer-muon}.
+Figure~\ref{fig:final-perplexity} gives an optimizer-level view at the largest scale, using the run with the lowest final EMA perplexity for each optimizer variant. This complements the matched-target Wall-Clock analysis above by showing mean test perplexity as a function of training FLOPs. The curves separate clearly: SGD remains well above the Adam and Muon variants, Adam improves steadily, and the best Muon configuration reaches its lowest perplexity on a smaller compute and Wall-Clock budget. The selected Muon run also uses an optimal learning rate roughly an order of magnitude larger than the selected Adam run, suggesting that Muon's update geometry permits a larger stable effective step size and therefore faster progress toward the same held-out perplexity target. Full per-learning-rate and per-optimizer progression curves are provided in Figures~\ref{fig:perp-by-lr-1}--\ref{fig:perp-by-optimizer-muon}.
 
 
 \subsection{Norm control changes the optimizer ranking}
