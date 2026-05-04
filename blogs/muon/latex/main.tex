@@ -203,7 +203,7 @@ We first aggregate optimizer variants by family to show the high-level efficienc
   \label{fig:family-progressions}
 \end{figure}
 
-Figure~\ref{fig:family-advantages} turns these progression curves into a matched-quality efficiency comparison. For each Adam checkpoint, we use its held-out perplexity as the target and find the lowest-cost Muon checkpoint whose perplexity is at least as good. The plotted value is the resulting FLOP or Wall-Clock reduction relative to that Adam checkpoint, so positive values mean that Muon reaches the same target perplexity with less compute or time. After the earliest targets, most matched targets show roughly 30--45\% fewer FLOPs and 35--50\% less Wall-Clock time.
+Figure~\ref{fig:family-advantages} turns these progression curves into a matched-quality efficiency comparison. For each Adam checkpoint, we use its held-out perplexity as the target and find the lowest-cost Muon checkpoint whose perplexity is at least as good. The plotted value is the resulting FLOP or Wall-Clock reduction relative to that Adam checkpoint, so positive values mean that Muon reaches the same target perplexity with less compute or time. After the earliest targets, most matched targets show roughly 35--45\% lower FLOPs and Wall-Clock time.
 
 \begin{figure}[htbp]
   \centering
