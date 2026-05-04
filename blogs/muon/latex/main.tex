@@ -239,19 +239,19 @@ Figure~\ref{fig:scale-advantages} summarizes the matched-target comparison acros
   \label{fig:final-perplexity}
 \end{figure}
 
-Figure~\ref{fig:final-perplexity} gives an optimizer-level view at the largest scale, using the run with the lowest final EMA perplexity for each optimizer variant; the EMA values used for this selection are tabulated in Appendix~\ref{app:ema-perplexity}. This complements the matched-target Wall-Clock analysis above by showing mean test perplexity as a function of training FLOPs. The curves separate clearly: SGD remains well above the Adam and Muon variants, Adam improves steadily, and the best Muon configuration reaches its lowest perplexity on a smaller compute and Wall-Clock budget. The selected Muon run also uses an optimal learning rate roughly an order of magnitude larger than the selected Adam run, suggesting that Muon's update geometry permits a larger stable effective step size and therefore faster progress toward the same held-out perplexity target.
+Figure~\ref{fig:final-perplexity} gives an optimizer-level view at the largest scale, using the run with the lowest final EMA perplexity for each optimizer variant; the EMA values used for this selection are tabulated in Appendix~\ref{app:ema-perplexity}. This complements the matched-target Wall-Clock analysis above by showing mean test perplexity as a function of training FLOPs. The curves separate clearly: SGD remains well above the Adam and Muon variants, Adam improves steadily, and the best Muon configuration reaches its lowest perplexity on a smaller compute and Wall-Clock budget. The selected Muon run uses lr $2.27 \times 10^{-2}$, almost an order of magnitude larger than the lr $5.69 \times 10^{-3}$ for the strongest Adam run, suggesting that Muon's update geometry permits a larger stable effective step size and therefore faster progress toward the same held-out perplexity target.
 
 
 \subsection{Norm control changes the optimizer ranking}
 \label{sec:norm-control-ranking}
 
-Hyperball does not uniformly improve both optimizers, and MuonW is the strongest configuration in the present sweep. A plausible explanation is that Muon's raw updates induce a trajectory that promotes a higher-entropy normalized spectrum. Hyperball changes that trajectory by mapping $U_t$ and $W_t+U_t$ back to fixed Frobenius radii, bounding both update and post-update norms. Those Frobenius-norm constraints do not directly optimize Spectral Entropy (Section~\ref{sec:spectral}), and in this sweep they appear to steer Muon toward lower-entropy spectra. Thus, Hyperball may control total norm while counteracting part of Muon's orthogonalizing effect. Section~\ref{sec:spectral} tests this hypothesis spectrally.
+Hyperball does not uniformly improve both optimizers, and MuonW is the strongest configuration in the present sweep. A plausible explanation is that, although Muon's raw updates may induce trajectories that promote higher-entropy normalized spectra, Hyperball modifies those trajectories by projecting both $U_t$ and $W_t+U_t$ back to fixed Frobenius radii. These Frobenius-norm constraints control the total update and post-update norms, but they do not directly optimize Spectral Entropy (Section~\ref{sec:spectral}). In this sweep, they appear to steer Muon toward lower-entropy spectra, partially counteracting Muon's orthogonalizing effect. Section~\ref{sec:spectral} tests this hypothesis spectrally.
 % ============================================================
-\section{Training dynamics}
+\section{Training Dynamics}
 \label{sec:training}
 % ============================================================
 
-The matched-target results show that Muon can reach lower held-out perplexity levels with less compute and time, but they do not by themselves explain where the advantage comes from. We analyze training dynamics to explain these advantages.
+The matched-target results show that Muon reaches lower held-out perplexity levels with less compute and time, but they do not explain the source of this advantage. To probe the mechanism, we analyze training-loss sweeps for the within-optimizer norm-control comparisons in Figures~\ref{fig:sweep-losses-adam} and~\ref{fig:sweep-losses-muon}, with aggregate learning curves for the perplexity-selected runs in Figure~\ref{fig:loss-curves}.
 
 \begin{figure}[htbp]
   \centering
@@ -267,8 +267,6 @@ The matched-target results show that Muon can reach lower held-out perplexity le
   \label{fig:sweep-losses-muon}
 \end{figure}
 
-Figures~\ref{fig:sweep-losses-adam} and~\ref{fig:sweep-losses-muon} show the training-loss sweeps for the within-optimizer norm-control comparisons, with nucleotide cross-entropy loss on the vertical axis. The aggregate learning curves for the perplexity-selected runs are provided in Figure~\ref{fig:loss-curves}.
-
 \begin{figure}[htbp]
   \centering
   \makebox[\linewidth][c]{\includegraphics[width=1.06\linewidth]{images/muonw_adamh_comparison.png}}
@@ -276,11 +274,7 @@ Figures~\ref{fig:sweep-losses-adam} and~\ref{fig:sweep-losses-muon} show the tra
   \label{fig:muonw-adamh-sweep-loss}
 \end{figure}
 
-Consistent with prior work~\citep{muon,hyperball}, Muon reaches lower training loss than Adam. The ranking matches the main result: MuonW converges fastest, followed by MuonH, AdamH, and AdamW.
-
-The sweep shows that the advantage is learning-rate dependent. AdamH is most competitive in the mid-range, while AdamW is more stable at the extremes. MuonH performs best at smaller learning rates, but MuonW improves at higher ones. Across widths, MuonW's lowest training loss occurs at lr $5.69 \times 10^{-3}$, and the loss at the held-out-perplexity-selected lr $2.27 \times 10^{-2}$ is very close to that minimum. We therefore treat training loss as diagnostic rather than decisive; the selection criterion remains held-out perplexity, FLOPs-to-target, and Wall-Clock time-to-target.
-
-With increasing width, this pattern becomes clearer: MuonW separates from AdamH at larger widths and higher learning rates. This supports the step-size hypothesis from Figure~\ref{fig:final-perplexity}: MuonW can use a larger stable effective step size, so the higher-learning-rate regime translates into faster convergence as scale increases.
+Consistent with prior work~\citep{muon,hyperball}, Muon reaches lower training loss than Adam, and the ranking matches the main result: MuonW converges fastest, followed by MuonH, AdamH, and AdamW. The advantage is learning-rate dependent. AdamH is most competitive in the mid-range, AdamW is more stable at the extremes, MuonH performs best at smaller learning rates, and MuonW improves at higher ones. In the MuonW sweep, the training-loss minima occur at lr $\sim 5.69 \times 10^{-3}$ for widths 512 and 2048, and lr $\sim 2.27 \times 10^{-2}$ for width 1024. The largest-width training-loss optimum therefore differs from the held-out-perplexity-selected MuonW run in Figure~\ref{fig:final-perplexity}, which uses lr $2.27 \times 10^{-2}$. We therefore treat training loss as diagnostic rather than decisive; the selection criterion remains held-out perplexity, FLOPs-to-target, and Wall-Clock time-to-target. With increasing width, MuonW separates more clearly from AdamH at larger learning rates, supporting the step-size hypothesis from Figure~\ref{fig:final-perplexity}: MuonW can use a larger stable effective step size, making the high-learning-rate regime increasingly valuable as scale grows.
 
 
 % ============================================================
@@ -467,7 +461,7 @@ From this we obtain
 \end{aligned}
 \]
 
-This is the tightest bound on the relative step size obtainable without knowledge of $\gamma$. Computing $\gamma$ analytically remains an open question, as the repeated retractions onto the hypersphere make it difficult to translate previous arguments involving momentum and weight decay~\citep{hyperball}. Unfortunately, this bound is not particularly informative: the lower bound is vacuous, and the upper bound is substantially looser than the ideal $O(\eta)$. Now, if, for instance, we input our tried and tested range $\sim\eta\in (10^{-4},10^{-1})$ and fix $\gamma=0$, we get a slightly tighter bound of $(0.0001, 0.0996)$, where a higher learning rate corresponds to a higher step size. For a higher dot product like $\gamma=0.5$, we get a bound of $(0.0000866, 0.0823)$, which is lower.
+This is the tightest bound on the relative step size obtainable without knowledge of $\gamma$. Computing $\gamma$ analytically remains an open question, as the repeated retractions onto the hypersphere make it difficult to translate previous arguments involving momentum and weight decay~\citep{hyperball}. Unfortunately, this bound is not particularly informative: the lower bound is vacuous, and the upper bound is substantially looser than the ideal $O(\eta)$. Now, if, for instance, we input a standard range $\sim\eta\in (10^{-4},10^{-1})$ and fix $\gamma=0$, we get a slightly tighter bound of $(0.0001, 0.0996)$, where a higher learning rate corresponds to a higher step size. For a higher dot product like $\gamma=0.5$, we get a bound of $(0.0000866, 0.0823)$, which is lower.
 
 
 \section{Enforcing Scale Invariance}
