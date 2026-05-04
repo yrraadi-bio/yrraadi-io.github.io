@@ -57,7 +57,7 @@
 \maketitle
 
 \begin{abstract}
-  Gene-therapy design depends on identifying regulatory sequences that drive the right level, timing, and cell-type specificity of expression. Regulatory DNA models offer a way to prioritize such sequences computationally before committing candidates to biological testing. Biological validation involves DNA synthesis, cloning, cell culture, sequencing, and functional screening, so training compute is part of the same constrained discovery pipeline rather than an isolated modeling expense. Reducing the compute required to reach a target pre-training quality could shift time and budget toward larger candidate screens, additional assays, more cell contexts, and broader follow-up validation. Although Adam-style optimizers are widely used for training genomic sequence models, we study whether Muon can provide a more compute-efficient alternative for regulatory DNA learning. We provide an in-depth analysis by training a Transformer model on ENCODE cis-regulatory sequences with Adam and Muon while holding architecture, data, and non-optimizer hyperparameters fixed and varying optimizer family, norm-control scheme, learning rate, and model width. In the largest-scale matched-target comparison, Muon reaches Adam perplexity targets with a median FLOP reduction of 35.4\% and a median Wall-Clock reduction of 38.5\%. The analysis further shows that optimizer rankings depend on norm control: independent weight decay pairs more favorably with Muon than Hyperball in this setting. These findings indicate that optimizer geometry and norm-control choices are practical levers for reducing the training resources required to reach matched perplexity targets in regulatory DNA pretraining.\end{abstract}
+Gene-therapy design depends on identifying regulatory sequences that drive the right level, timing, and cell-type specificity of expression. Regulatory DNA models offer a way to prioritize such sequences computationally before committing candidates to biological testing. Biological validation involves DNA synthesis, cloning, cell culture, sequencing, and functional screening, so training compute is part of the same constrained discovery pipeline rather than an isolated modeling expense. Reducing the compute required to reach a target pretraining quality could shift time and budget toward larger candidate screens, additional assays, more cell contexts, and broader follow-up validation. Although Adam-style optimizers are widely used for training genomic sequence models, we study whether Muon can provide a more compute-efficient alternative for regulatory DNA learning. We provide an in-depth analysis by training a Transformer model on ENCODE cis-regulatory sequences with Adam and Muon while holding architecture, data, and non-optimizer hyperparameters fixed and varying optimizer family, norm-control scheme, learning rate, and model width. In the largest-scale matched-target comparison, Muon reaches Adam perplexity targets with a median FLOP reduction of 35.4\% and a median Wall-Clock reduction of 38.5\%. The analysis further shows that optimizer rankings depend on norm control: independent weight decay pairs more favorably with Muon than Hyperball in this setting. These findings indicate that optimizer update structure and norm-control choices are practical levers for reducing the training resources required to reach matched perplexity targets in regulatory DNA pretraining.\end{abstract}
 
 % ============================================================
 \section{Introduction}
@@ -66,7 +66,7 @@
 
 Regulatory sequence choice is a central design problem in gene therapy: the same therapeutic payload can behave very differently depending on the regulatory elements that control its expression. Models trained on regulatory DNA can help narrow this design space by scoring variants, cis-regulatory elements, and candidate sequences before they enter biological testing. Systems such as AlphaGenome~\citep{alphagenome}, Enformer~\citep{enformer}, and Borzoi~\citep{borzoi} illustrate the growing role of learned sequence models in this prioritization step. The predictions made by these models sit upstream of an expensive experimental path: biological validation involves DNA synthesis, cloning, cell culture, sequencing, and functional screening. Training compute is therefore tied to the same constrained discovery pipeline rather than being an isolated modeling expense.
 
-This makes optimizer choice more than an implementation detail. If one optimizer reaches the same held-out quality target with fewer FLOPs and less Wall-Clock time, the saved resources can support larger candidate screens, additional assays, more cell contexts, and broader follow-up validation. We study this question for regulatory DNA Transformers by comparing Adam~\citep{adam} and Muon under matched test-perplexity targets. AdamW is widely used for genomic sequence models, but regulatory DNA differs from natural language in vocabulary size, token-frequency structure, and the biochemical grammar carried by motifs, spacing, orientation, and local sequence composition. Optimizer gains should therefore be evaluated in-domain rather than inferred from NLP. We train a Transformer model on ENCODE candidate cis-regulatory sequences while holding architecture, data, and non-optimizer hyperparameters fixed, and vary optimizer family, norm-control scheme, learning rate, and model width. We pair Adam and Muon with either independent weight decay or Hyperball, denoting Muon with independent weight decay as MuonW and Muon with Hyperball as MuonH. At the largest scale, Muon reaches Adam target quality with a median FLOP improvement of 35.4\% and a median Wall-Clock improvement of 38.5\%. The comparison also shows that norm control changes the optimizer ranking: independent weight decay pairs more favorably with Muon than Hyperball in this setting. These results motivate optimizer and norm-control choice as practical levers for reducing the training cost of regulatory DNA Transformers.
+This makes optimizer choice more than an implementation detail. If one optimizer reaches the same held-out quality target with fewer FLOPs and less Wall-Clock time, the saved resources can support larger candidate screens, additional assays, more cell contexts, and broader follow-up validation. We study this question for regulatory DNA Transformers by comparing Adam~\citep{adam} and Muon under matched test-perplexity targets. Adam-style optimizers are widely used for genomic sequence models, but regulatory DNA differs from natural language in vocabulary size, token-frequency structure, and the biochemical grammar carried by motifs, spacing, orientation, and local sequence composition. Optimizer gains should therefore be evaluated in-domain rather than inferred from NLP. We train a Transformer model on ENCODE candidate cis-regulatory sequences while holding architecture, data, and non-optimizer hyperparameters fixed, and vary optimizer family, norm-control scheme, learning rate, and model width. We pair Adam and Muon with either independent weight decay or Hyperball, denoting Muon with independent weight decay as MuonW and Muon with Hyperball as MuonH. At the largest scale, Muon reaches Adam target quality with a median FLOP improvement of 35.4\% and a median Wall-Clock improvement of 38.5\%. The comparison also shows that norm control changes the optimizer ranking: independent weight decay pairs more favorably with Muon than Hyperball in this setting. These results motivate optimizer and norm-control choice as practical levers for reducing the training cost of regulatory DNA Transformers.
 
 
 % ============================================================
@@ -76,11 +76,11 @@ This makes optimizer choice more than an implementation detail. If one optimizer
 
 Recent biological foundation-model papers have started to include Muon, but mostly as a small optimizer ablation: replace Adam(W) and report the final metric. That design is useful for checking whether Muon improves a particular endpoint, but it leaves most of the optimizer behavior unmeasured. It does not show how quickly each optimizer improves during training, whether advantages appear only at some quality thresholds, whether FLOP gains agree with Wall-Clock gains, or whether the conclusion depends on norm control.
 
-\paragraph{Pre-training genomic language models with variants~\citep{ukbiobert}.} Liu \emph{et al.} include Muon in a UKBioFormer hyperparameter ablation for gene-expression prediction. Their default setting uses Adam, and replacing the optimizer with AdamW or Muon does not significantly improve performance. The comparison is useful as an endpoint ablation, but it is not designed to measure optimizer dynamics, FLOPs-to-target, Wall-Clock time-to-target, or interactions between optimizer family and norm control.
+\paragraph{Pretraining genomic language models with variants~\citep{ukbiobert}.} Liu \emph{et al.} include Muon in a UKBioFormer hyperparameter ablation for gene-expression prediction. Their default setting uses Adam, and replacing the optimizer with AdamW or Muon does not significantly improve performance. The comparison is useful as an endpoint ablation, but it is not designed to measure optimizer dynamics, FLOPs-to-target, Wall-Clock time-to-target, or interactions between optimizer family and norm control.
 
 \paragraph{Foundation models for perturbation response~\citep{fmpert}.} Cole \emph{et al.} also report no significant difference between Adam and Muon. Their comparison tunes the learning rate, but still treats the optimizer result as an endpoint comparison. It does not factor norm control separately from optimizer family, and it does not analyze the spectral or relative-step-size behavior that could explain when Muon helps or fails.
 
-\paragraph{Our Contribution.} We treat Muon not as a single ablation but as the subject of a detailed efficiency and dynamics study. We compare Adam and Muon across norm-control schemes, learning rates, and model widths; evaluate progression across training rather than only final loss; measure FLOPs-to-target and Wall-Clock time-to-target over matched quality levels; and analyze spectral entropy, participation ratio, and relative step size to understand why Muon with independent weight decay behaves differently from Muon with Hyperball. The goal is not only to ask whether Muon wins in one configuration, but to characterize when, how, and under which training dynamics it changes the cost of regulatory DNA learning.
+\paragraph{Our Contribution.} We treat Muon not as a single ablation but as the subject of a detailed efficiency and dynamics study. We compare Adam and Muon across norm-control schemes, learning rates, and model widths; evaluate progression across training rather than only final loss; measure FLOPs-to-target and Wall-Clock time-to-target over matched quality levels; and analyze spectral entropy, participation ratio, and relative step size to understand how Muon with independent weight decay behaves differently from Muon with Hyperball. The goal is not only to ask whether Muon wins in one configuration, but to characterize when, how, and under which training dynamics it changes the cost of regulatory DNA learning.
 
 
 % ============================================================
@@ -133,7 +133,7 @@ The useful takeaway is that Hyperball makes the learning rate an approximate rel
 \label{sec:experimental-setup}
 % ============================================================
 
-To isolate the effect of the optimizer, we hold the architecture family, dataset, processed-token budget, input pipeline, output heads, and all non-optimizer hyperparameters constant across runs, varying only optimizer family, norm-control scheme, learning rate, and model width. We train a Transformer model on candidate cis-regulatory elements (cCREs) from the ENCODE v4 registry~\citep{encode-v4} that are specific to one of seven cell lines (see Appendix~\ref{app:data}). We use three model widths: hs512, hs1024, and hs2048, corresponding to approximately 26M, 105M, and 420M parameters. Runs were executed on 8-GPU nodes using NVIDIA H100s and A100s. We tokenize at single-nucleotide resolution and train with a masked language modeling (MLM) objective. The nucleotide head supplies the held-out CE-loss and perplexity metric, while the modality head supplies an auxiliary DNase-seq prediction objective using a factorized Poisson and multinomial loss.
+To isolate the effect of the optimizer, we hold the architecture family, dataset, processed-token budget, input pipeline, output heads, and all non-optimizer hyperparameters constant across runs, varying only optimizer family, norm-control scheme, learning rate, and model width. We also swept over the weight decay rate, but this dimension of the sweep was split across different types of GPUs, leading to unfair Wall-Clock time comparisons. In the interest of fairness and consistency of results, all the following runs were taken from the same type of node with a weight decay rate of $10^{-5}$. However, using $10^{-4}$ we saw the same optimizer rankings with minor FLOP improvements (Appendix~\ref{app:ema-perplexity}). We train a Transformer model on candidate cis-regulatory elements (cCREs) over 20 epochs of the ENCODE v4 registry~\citep{encode-v4} that are specific to one of seven cell lines (see Appendix~\ref{app:data}). We use three model widths: hs512, hs1024, and hs2048, corresponding to approximately 26M, 105M, and 420M parameters. These runs were executed on 8-GPU nodes using NVIDIA H100s. We tokenize at single-nucleotide resolution and train with a masked language modeling (MLM) objective. The nucleotide head supplies the held-out CE-loss and perplexity metric, while the modality head supplies an auxiliary DNase-seq prediction objective using a factorized Poisson and multinomial loss.
 
 \begin{figure}[htbp]
   \centering
@@ -163,7 +163,7 @@ To isolate the effect of the optimizer, we hold the architecture family, dataset
       \textbf{Assay head}\\[-1pt]
       {\footnotesize\texttt{0.12,\ 0.3,\ 1.4, 2.1\ ...}}
     \end{tabular}};
-    \node[data, right=1.0cm of mlm] (ce) {Held-out\\CE loss};
+    \node[data, right=1.0cm of mlm] (ce) {CE loss};
     \node[data, right=1.0cm of modality] (dnase) {Auxiliary\\DNase loss};
     \draw[arrow] (input) -- (embed);
     \draw[arrow] (embed) -- (encoder);
@@ -184,10 +184,6 @@ To isolate the effect of the optimizer, we hold the architecture family, dataset
 
 \subsection{Muon reaches Adam perplexity targets with 35.4\% fewer FLOPs and 38.5\% less Wall-Clock time}
 
-Lower perplexity indicates better probability mass placement on the target DNA sequence. We convert checkpoints to FLOPs using a base forward/backward term proportional to $6PBL$ per step plus a per-optimizer update term; in the largest setting, Muon's Newton--Schulz update adds only about $0.94\%$ overhead relative to the base forward/backward pass (Appendix~\ref{app:FLOPs}).
-
-We first aggregate optimizer variants by family to show the high-level efficiency trend. In Figure~\ref{fig:family-progressions}, each run is trained for 20 epochs and checkpointed once per epoch. At each checkpoint, the family curve reports the best held-out perplexity achieved by any run in that optimizer family, mapped back to its FLOP and Wall-Clock cost. Across the relevant compute and time range, the Muon envelope stays below the Adam envelope, showing that Muon reaches better held-out perplexity over a broad set of budgets rather than only at a single endpoint.
-
 \begin{figure}[htbp]
   \centering
   \begin{subfigure}[t]{0.48\linewidth}
@@ -204,7 +200,9 @@ We first aggregate optimizer variants by family to show the high-level efficienc
   \label{fig:family-progressions}
 \end{figure}
 
-Figure~\ref{fig:family-advantages} turns these progression curves into a matched-quality efficiency comparison. For each Adam checkpoint, we use its held-out perplexity as the target and find the lowest-cost Muon checkpoint whose perplexity is at least as good. The plotted value is the resulting FLOP or Wall-Clock reduction relative to that Adam checkpoint, so positive values mean that Muon reaches the same target perplexity with less compute or time. After the earliest targets, most matched targets show roughly 35--45\% lower FLOPs and Wall-Clock time.
+Lower perplexity indicates better probability mass placement on the target DNA sequence. We convert checkpoints to FLOPs using a base forward/backward term proportional to $6PBL$ per step plus a per-optimizer update term; in the largest setting, Muon's Newton--Schulz update adds only about $0.94\%$ overhead relative to the base forward/backward pass (Appendix~\ref{app:FLOPs}).
+
+We first aggregate optimizer variants by family to show the high-level efficiency trend. In Figure~\ref{fig:family-progressions}, each run is trained for 20 epochs and checkpointed once per epoch. At each checkpoint, the family curve reports the best held-out perplexity achieved by any run in that optimizer family, mapped back to its FLOP and Wall-Clock cost. Across the relevant compute and time range, the Muon envelope stays below the Adam envelope, showing that Muon reaches better held-out perplexity over a broad set of budgets rather than only at a single endpoint.
 
 \begin{figure}[htbp]
   \centering
@@ -221,6 +219,8 @@ Figure~\ref{fig:family-advantages} turns these progression curves into a matched
   \caption{Muon advantage at matched Adam perplexity.}
   \label{fig:family-advantages}
 \end{figure}
+
+Figure~\ref{fig:family-advantages} turns these progression curves into a matched-quality efficiency comparison. For each Adam checkpoint, we use its held-out perplexity as the target and find the lowest-cost Muon checkpoint whose perplexity is at least as good. The plotted value is the resulting FLOP or Wall-Clock reduction relative to that Adam checkpoint, so positive values mean that Muon reaches the same target perplexity with less compute or time. After the earliest targets, most matched targets show roughly 35--45\% lower FLOPs and Wall-Clock time.
 
 \begin{figure}[htbp]
   \centering
@@ -252,14 +252,14 @@ Hyperball does not uniformly improve both optimizers, and MuonW is the strongest
 \label{sec:training}
 % ============================================================
 
-The matched-target results show that Muon reaches lower held-out perplexity levels with less compute and time, but they do not explain the source of this advantage. To probe the mechanism, we analyze training-loss sweeps for the within-optimizer norm-control comparisons in Figures~\ref{fig:sweep-losses-adam} and~\ref{fig:sweep-losses-muon}, with aggregate learning curves for the perplexity-selected runs in Figure~\ref{fig:loss-curves}.
-
 \begin{figure}[htbp]
   \centering
   \makebox[\linewidth][c]{\includegraphics[width=1.06\linewidth]{images/adam_comparison.png}}
   \caption{AdamW--AdamH training-loss sweep.}
   \label{fig:sweep-losses-adam}
 \end{figure}
+
+The matched-target results show that Muon reaches lower held-out perplexity levels with less compute and time, but they do not explain the source of this advantage. To probe the mechanism associated with this advantage, we analyze training-loss sweeps for the within-optimizer norm-control comparisons in Figures~\ref{fig:sweep-losses-adam} and~\ref{fig:sweep-losses-muon}, with aggregate learning curves for the perplexity-selected runs in Figure~\ref{fig:loss-curves}.
 
 \begin{figure}[htbp]
   \centering
@@ -330,9 +330,8 @@ This work shows that a relatively simple optimizer change can produce meaningful
 The results presented here should be interpreted with several limitations in mind:
 \begin{itemize}
   \item \textbf{Downstream biological performance:} this study isolates the training-efficiency question and uses perplexity as the matched target metric. We do not claim that perplexity reductions directly imply improved expression prediction, chromatin-accessibility prediction, or variant-effect prediction. Evaluating whether the same optimizer and norm-control choices improve downstream biological tasks is an important next step.
-  \item \textbf{Compute budget:} the study was compute-bound. The full sweep required 225 runs of 20 epochs each, so we did not run multiple seeds and therefore do not report error bars. The experiments therefore also use a fixed batch size, so interactions between batch size and optimizer performance are not fully explored. Additionally, the sweep was split along the weight-decay dimension across different types of GPUs, so the Wall-Clock times only include comparisons with independent decay value $1e-5$.
+  \item \textbf{Compute budget:} the study was compute-bound. The full sweep required 225 runs of 20 epochs each, so we did not run multiple seeds and therefore do not report error bars. The experiments therefore also use a fixed batch size, so interactions between batch size and optimizer performance are not fully explored.
   \item \textbf{Model scale:} the experiments are conducted in a few-hundred-million-parameter regime comparable to AlphaGenome, Enformer, and Borzoi. Optimizer rankings may change at substantially larger scales.
-  \item \textbf{Mechanistic interpretation:} the spectral analyses identify mechanisms consistent with the observed behavior, but they do not establish causality. In particular, the roles of norm growth and spectral concentration remain partially confounded.
 \end{itemize}
 
 
@@ -346,6 +345,8 @@ The results presented here should be interpreted with several limitations in min
 \label{app:data}
 
 We construct the dataset from the AlphaGenome~\citep{alphagenome} ENCODE v4 candidate cis-regulatory element data~\citep{encode-v4}. We preprocess data exactly as described in the paper, except for dividing by the sample non-zero mean during batch creation. Starting from the AlphaGenome cCRE set, we filter for examples whose DNase-seq activity is specific to exactly one of the seven cell lines used in our experiments (A549, HEK293T, HepG2, Jurkat Clone E6-1, K562, SK-N-SH, endothelial cell of umbilical vein, skeletal muscle myoblast). This yields regulatory sequences with a single active DNase track among the selected cell contexts, which supports the auxiliary modality-prediction objective while keeping the training distribution focused on cell-type-specific regulatory activity.
+
+\paragraph{Assets and licenses.} We use ENCODE v4 candidate cis-regulatory element annotations and AlphaGenome preprocessing resources. ENCODE data are released for unrestricted use under the ENCODE data release policy, and the Google DeepMind AlphaGenome code resources are released under the Apache License 2.0. We cite the original sources and follow their stated terms of use. No new dataset, benchmark, or model checkpoint is released as part of this submission.
 
 \section{Full Derivation of the Relative Step Size}
 \label{app:derivation}
@@ -959,8 +960,8 @@ The optimizer-level progression in Figure~\ref{fig:final-perplexity} selects one
 
 \item {\bf Licenses for existing assets}
     \item[] Question: Are the creators or original owners of assets (e.g., code, data, models), used in the paper, properly credited and are the license and terms of use explicitly mentioned and properly respected?
-    \item[] Answer: \answerNo{} % Replace by \answerYes{}, \answerNo{}, or \answerNA{}.
-    \item[] Justification: The paper cites the ENCODE and AlphaGenome resources used for the study, but it does not explicitly discuss their licenses or terms of use.
+    \item[] Answer: \answerYes{} % Replace by \answerYes{}, \answerNo{}, or \answerNA{}.
+    \item[] Justification: The appendix cites the ENCODE and AlphaGenome resources used for the study and states that ENCODE data are released for unrestricted use under the ENCODE data release policy, while the AlphaGenome code resources are released under the Apache License 2.0.
     \item[] Guidelines:
     \begin{itemize}
         \item The answer \answerNA{} means that the paper does not use existing assets.
