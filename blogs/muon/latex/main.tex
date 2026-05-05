@@ -133,7 +133,7 @@ The useful takeaway is that Hyperball makes the learning rate an approximate rel
 \label{sec:experimental-setup}
 % ============================================================
 
-To isolate the effect of the optimizer, we hold the architecture family, dataset, processed-token budget, input pipeline, output heads, and all non-optimizer hyperparameters constant across runs, varying only optimizer family, norm-control scheme, learning rate, and model width. We also swept over the weight decay rate, but this dimension of the sweep was split across different types of GPUs, leading to unfair wall-clock time comparisons. In the interest of fairness and consistency of results, all the following runs were taken from the same type of node with a weight decay rate of $10^{-5}$. With alternative weight decay settings, we saw the same optimizer rankings with minor FLOP differences (Appendix~\ref{app:ema-perplexity}). We train a Transformer model on candidate cis-regulatory elements (cCREs) over 20 epochs of the ENCODE v4 registry~\citep{encode-v4} that are specific to one of eight cell lines (see Appendix~\ref{app:data}). We use three model widths: hs512, hs1024, and hs2048, corresponding to approximately 26M, 105M, and 420M parameters. These runs were executed on 8-GPU nodes using NVIDIA H100s. We tokenize at single-nucleotide resolution and train with a masked language modeling (MLM) objective. The nucleotide head supplies the held-out CE-loss and perplexity metric, while the modality head supplies an auxiliary DNase-seq prediction objective using a factorized Poisson and multinomial loss.
+To isolate the effect of the optimizer, we hold the architecture family, dataset, processed-token budget, input pipeline, output heads, and all non-optimizer hyperparameters constant across runs, varying only optimizer family, norm-control scheme, learning rate, and model width. We fix the weight decay rate to $10^{-5}$ across all experiments. We train a Transformer model on candidate cis-regulatory elements (cCREs) over 20 epochs of the ENCODE v4 registry~\citep{encode-v4} that are specific to one of eight cell lines (see Appendix~\ref{app:data}). We use three model widths: hs512, hs1024, and hs2048, corresponding to approximately 26M, 105M, and 420M parameters. These runs were executed on 8-GPU nodes using NVIDIA H100s. We tokenize at single-nucleotide resolution and train with a masked language modeling (MLM) objective. The nucleotide head supplies the held-out CE-loss and perplexity metric, while the modality head supplies an auxiliary DNase-seq prediction objective using a factorized Poisson and multinomial loss.
 
 \begin{figure}[htbp]
   \centering
@@ -330,7 +330,7 @@ This work shows that a relatively simple optimizer change can produce meaningful
 The results presented here should be interpreted with several limitations in mind:
 \begin{itemize}
   \item \textbf{Downstream biological performance:} this study isolates training efficiency and uses perplexity as the matched target metric. We do not claim that perplexity reductions directly imply improved expression, chromatin-accessibility, or variant-effect prediction; testing whether the same optimizer and norm-control choices improve downstream biological tasks is an important next step.
-  \item \textbf{Compute budget:} the study was compute-bound: the full sweep required 225 runs of 20 epochs each, so we did not run multiple seeds or report error bars. The experiments also use a fixed batch size, leaving batch-size/optimizer interactions unexplored.
+  \item \textbf{Compute budget:} the study was compute-bound: the full sweep required 90 runs of 20 epochs each, so we did not run multiple seeds or report error bars. The experiments also use a fixed batch size, leaving batch-size/optimizer interactions unexplored. To manage compute costs, we fixed the weight decay rate to $10^{-5}$ without sweeping this hyperparameter.
   \item \textbf{Model scale:} the experiments are in a few-hundred-million-parameter regime comparable to AlphaGenome, Enformer, and Borzoi; optimizer rankings may change at substantially larger scales.
 \end{itemize}
 
@@ -581,7 +581,8 @@ which is independent of the dataset size $N$. For our largest configuration ($L 
 \section{EMA Perplexity Values}
 \label{app:ema-perplexity}
 
-The optimizer-level progression in Figure~\ref{fig:final-perplexity} selects one run per optimizer variant using the final exponential moving average (EMA) of checkpoint perplexities. The EMA decay is $0.9$ and is applied over the sequence of checkpoint-level mean perplexities. This dampens batch-level and checkpoint-level noise: an isolated unusually easy or hard evaluation checkpoint changes the EMA by only $10\%$ of its deviation from the previous smoothed value, while persistent improvements continue to accumulate across checkpoints. For Figure~\ref{fig:final-perplexity}, the selected largest-scale runs are the minima in the hs2048 columns below for decay rate $10^{-5}$; these selections match the figure legend.
+The optimizer-level progression in Figure~\ref{fig:final-perplexity} selects one run per optimizer variant using the final exponential moving average (EMA) of checkpoint perplexities. The EMA decay is $0.9$ and is applied over the sequence of checkpoint-level mean perplexities. This dampens batch-level and checkpoint-level noise: an isolated unusually easy or hard evaluation checkpoint changes the EMA by only $10\%$ of its deviation from the previous smoothed value, while persistent improvements continue to accumulate across checkpoints. For Figure~\ref{fig:final-perplexity}, the selected largest-scale runs are the minima in the hs2048 columns below; these selections match the figure legend.
+
 \begin{center}
   \textbf{AdamH}\\[0.4em]
   \begin{tabular}{@{}r@{\hspace{0.35em}}r@{}@{\hspace{0.25em}}|@{\hspace{0.25em}}@{}r@{\hspace{0.35em}}r@{}@{\hspace{0.25em}}|@{\hspace{0.25em}}@{}r@{\hspace{0.35em}}r@{}}
@@ -600,31 +601,16 @@ The optimizer-level progression in Figure~\ref{fig:final-perplexity} selects one
   
   \begin{center}
   \textbf{AdamW}\\[0.4em]
-  \begin{tabular}{@{}r@{\hspace{0.35em}}r@{\hspace{0.35em}}r@{}@{\hspace{0.25em}}|@{\hspace{0.25em}}@{}r@{\hspace{0.35em}}r@{\hspace{0.35em}}r@{}@{\hspace{0.25em}}|@{\hspace{0.25em}}@{}r@{\hspace{0.35em}}r@{\hspace{0.35em}}r@{}}
+  \begin{tabular}{@{}r@{\hspace{0.35em}}r@{}@{\hspace{0.25em}}|@{\hspace{0.25em}}@{}r@{\hspace{0.35em}}r@{}@{\hspace{0.25em}}|@{\hspace{0.25em}}@{}r@{\hspace{0.35em}}r@{}}
   \hline
-  \multicolumn{3}{c}{hs512} & \multicolumn{3}{c}{hs1024} & \multicolumn{3}{c}{hs2048} \\
-  LR & WD & EMA PPL & LR & WD & EMA PPL & LR & WD & EMA PPL \\
+  \multicolumn{2}{c}{hs512} & \multicolumn{2}{c}{hs1024} & \multicolumn{2}{c}{hs2048} \\
+  LR & EMA PPL & LR & EMA PPL & LR & EMA PPL \\
   \hline
-  9.0e-05 & 1.0e-06 & 2.6355 & 9.0e-05 & 1.0e-06 & 2.6120 & 9.0e-05 & 1.0e-06 & 2.5873 \\
-  9.0e-05 & 1.0e-05 & 2.6328 & 9.0e-05 & 1.0e-05 & 2.6116 & 9.0e-05 & 1.0e-05 & 2.5896 \\
-  9.0e-05 & 1.0e-04 & 2.6337 & 9.0e-05 & 1.0e-04 & 2.6090 & 9.0e-05 & 1.0e-04 & 2.5856 \\
-  9.0e-05 & 1.0e-03 & 2.7537 & 9.0e-05 & 1.0e-03 & 2.7143 & 9.0e-05 & 1.0e-03 & 2.6584 \\
-  3.6e-04 & 1.0e-06 & 2.5977 & 3.6e-04 & 1.0e-06 & 2.5881 & 3.6e-04 & 1.0e-06 & 2.5714 \\
-  3.6e-04 & 1.0e-05 & 2.5987 & 3.6e-04 & 1.0e-05 & 2.5865 & 3.6e-04 & 1.0e-05 & 2.5761 \\
-  3.6e-04 & 1.0e-04 & 2.5969 & 3.6e-04 & 1.0e-04 & 2.5797 & 3.6e-04 & 1.0e-04 & \textbf{2.5680} \\
-  3.6e-04 & 1.0e-03 & 2.6388 & 3.6e-04 & 1.0e-03 & 2.6110 & 3.6e-04 & 1.0e-03 & 2.5947 \\
-  1.4e-03 & 1.0e-06 & 2.5837 & 1.4e-03 & 1.0e-06 & 2.5791 & 1.4e-03 & 1.0e-06 & 2.5915 \\
-  1.4e-03 & 1.0e-05 & 2.5870 & 1.4e-03 & 1.0e-05 & 2.5931 & 1.4e-03 & 1.0e-05 & 2.5977 \\
-  1.4e-03 & 1.0e-04 & 2.5830 & 1.4e-03 & 1.0e-04 & 2.5848 & 1.4e-03 & 1.0e-04 & 2.5902 \\
-  1.4e-03 & 1.0e-03 & 2.5881 & 1.4e-03 & 1.0e-03 & 2.5812 & 1.4e-03 & 1.0e-03 & 2.5739 \\
-  5.7e-03 & 1.0e-06 & 2.5894 & 5.7e-03 & 1.0e-06 & 2.5846 & 5.7e-03 & 1.0e-06 & 2.5858 \\
-  5.7e-03 & 1.0e-05 & 2.5927 & 5.7e-03 & 1.0e-05 & 2.5825 & 5.7e-03 & 1.0e-05 & 2.5931 \\
-  5.7e-03 & 1.0e-04 & 2.5931 & 5.7e-03 & 1.0e-04 & 2.5841 & 5.7e-03 & 1.0e-04 & 2.5995 \\
-  5.7e-03 & 1.0e-03 & 2.5887 & 5.7e-03 & 1.0e-03 & 2.5798 & 5.7e-03 & 1.0e-03 & 2.5763 \\
-  2.3e-02 & 1.0e-06 & 2.5903 & 2.3e-02 & 1.0e-06 & 2.5965 & 2.3e-02 & 1.0e-06 & 2.6022 \\
-  2.3e-02 & 1.0e-05 & 2.5884 & 2.3e-02 & 1.0e-05 & 2.5908 & 2.3e-02 & 1.0e-05 & 2.5963 \\
-  2.3e-02 & 1.0e-04 & 2.5858 & 2.3e-02 & 1.0e-04 & 2.5981 & 2.3e-02 & 1.0e-04 & 2.5982 \\
-  2.3e-02 & 1.0e-03 & 2.5953 & 2.3e-02 & 1.0e-03 & 2.5916 & 2.3e-02 & 1.0e-03 & 2.5912 \\
+  9.0e-05 & 2.6328 & 9.0e-05 & 2.6116 & 9.0e-05 & 2.5896 \\
+  3.6e-04 & 2.5987 & 3.6e-04 & 2.5865 & 3.6e-04 & \textbf{2.5761} \\
+  1.4e-03 & 2.5870 & 1.4e-03 & 2.5931 & 1.4e-03 & 2.5977 \\
+  5.7e-03 & 2.5927 & 5.7e-03 & 2.5825 & 5.7e-03 & 2.5931 \\
+  2.3e-02 & 2.5884 & 2.3e-02 & 2.5908 & 2.3e-02 & 2.5963 \\
   \hline
   \end{tabular}
   \end{center}
@@ -647,31 +633,16 @@ The optimizer-level progression in Figure~\ref{fig:final-perplexity} selects one
   
   \begin{center}
   \textbf{MuonW}\\[0.4em]
-  \begin{tabular}{@{}r@{\hspace{0.35em}}r@{\hspace{0.35em}}r@{}@{\hspace{0.25em}}|@{\hspace{0.25em}}@{}r@{\hspace{0.35em}}r@{\hspace{0.35em}}r@{}@{\hspace{0.25em}}|@{\hspace{0.25em}}@{}r@{\hspace{0.35em}}r@{\hspace{0.35em}}r@{}}
+  \begin{tabular}{@{}r@{\hspace{0.35em}}r@{}@{\hspace{0.25em}}|@{\hspace{0.25em}}@{}r@{\hspace{0.35em}}r@{}@{\hspace{0.25em}}|@{\hspace{0.25em}}@{}r@{\hspace{0.35em}}r@{}}
   \hline
-  \multicolumn{3}{c}{hs512} & \multicolumn{3}{c}{hs1024} & \multicolumn{3}{c}{hs2048} \\
-  LR & WD & EMA PPL & LR & WD & EMA PPL & LR & WD & EMA PPL \\
+  \multicolumn{2}{c}{hs512} & \multicolumn{2}{c}{hs1024} & \multicolumn{2}{c}{hs2048} \\
+  LR & EMA PPL & LR & EMA PPL & LR & EMA PPL \\
   \hline
-  9.0e-05 & 1.0e-06 & 2.6919 & 9.0e-05 & 1.0e-06 & 2.6803 & 9.0e-05 & 1.0e-06 & 2.6716 \\
-  9.0e-05 & 1.0e-05 & 2.6902 & 9.0e-05 & 1.0e-05 & 2.6818 & 9.0e-05 & 1.0e-05 & 2.6721 \\
-  9.0e-05 & 1.0e-04 & 2.6933 & 9.0e-05 & 1.0e-04 & 2.6798 & 9.0e-05 & 1.0e-04 & 2.6736 \\
-  9.0e-05 & 1.0e-03 & 2.8029 & 9.0e-05 & 1.0e-03 & 2.7939 & 9.0e-05 & 1.0e-03 & 2.7826 \\
-  3.6e-04 & 1.0e-06 & 2.6326 & 3.6e-04 & 1.0e-06 & 2.6256 & 3.6e-04 & 1.0e-06 & 2.6161 \\
-  3.6e-04 & 1.0e-05 & 2.6335 & 3.6e-04 & 1.0e-05 & 2.6262 & 3.6e-04 & 1.0e-05 & 2.6161 \\
-  3.6e-04 & 1.0e-04 & 2.6330 & 3.6e-04 & 1.0e-04 & 2.6241 & 3.6e-04 & 1.0e-04 & 2.6145 \\
-  3.6e-04 & 1.0e-03 & 2.7089 & 3.6e-04 & 1.0e-03 & 2.6668 & 3.6e-04 & 1.0e-03 & 2.6428 \\
-  1.4e-03 & 1.0e-06 & 2.5987 & 1.4e-03 & 1.0e-06 & 2.5847 & 1.4e-03 & 1.0e-06 & 2.5750 \\
-  1.4e-03 & 1.0e-05 & 2.5987 & 1.4e-03 & 1.0e-05 & 2.5848 & 1.4e-03 & 1.0e-05 & 2.5724 \\
-  1.4e-03 & 1.0e-04 & 2.5958 & 1.4e-03 & 1.0e-04 & 2.5813 & 1.4e-03 & 1.0e-04 & 2.5721 \\
-  1.4e-03 & 1.0e-03 & 2.5973 & 1.4e-03 & 1.0e-03 & 2.5763 & 1.4e-03 & 1.0e-03 & 2.5602 \\
-  5.7e-03 & 1.0e-06 & 2.5676 & 5.7e-03 & 1.0e-06 & 2.5536 & 5.7e-03 & 1.0e-06 & 2.5353 \\
-  5.7e-03 & 1.0e-05 & 2.5708 & 5.7e-03 & 1.0e-05 & 2.5492 & 5.7e-03 & 1.0e-05 & 2.5359 \\
-  5.7e-03 & 1.0e-04 & 2.5696 & 5.7e-03 & 1.0e-04 & 2.5501 & 5.7e-03 & 1.0e-04 & 2.5337 \\
-  5.7e-03 & 1.0e-03 & 2.5584 & 5.7e-03 & 1.0e-03 & 2.5470 & 5.7e-03 & 1.0e-03 & 2.5308 \\
-  2.3e-02 & 1.0e-06 & 2.5499 & 2.3e-02 & 1.0e-06 & 2.5374 & 2.3e-02 & 1.0e-06 & 2.5323 \\
-  2.3e-02 & 1.0e-05 & 2.5550 & 2.3e-02 & 1.0e-05 & 2.5345 & 2.3e-02 & 1.0e-05 & 2.5306 \\
-  2.3e-02 & 1.0e-04 & 2.5524 & 2.3e-02 & 1.0e-04 & 2.5382 & 2.3e-02 & 1.0e-04 & \textbf{2.5274} \\
-  2.3e-02 & 1.0e-03 & 2.5548 & 2.3e-02 & 1.0e-03 & 2.5416 & 2.3e-02 & 1.0e-03 & 2.5337 \\
+  9.0e-05 & 2.6902 & 9.0e-05 & 2.6818 & 9.0e-05 & 2.6721 \\
+  3.6e-04 & 2.6335 & 3.6e-04 & 2.6262 & 3.6e-04 & 2.6161 \\
+  1.4e-03 & 2.5987 & 1.4e-03 & 2.5848 & 1.4e-03 & 2.5724 \\
+  5.7e-03 & 2.5708 & 5.7e-03 & 2.5492 & 5.7e-03 & 2.5359 \\
+  2.3e-02 & 2.5550 & 2.3e-02 & 2.5345 & 2.3e-02 & \textbf{2.5306} \\
   \hline
   \end{tabular}
   \end{center}
@@ -694,36 +665,20 @@ The optimizer-level progression in Figure~\ref{fig:final-perplexity} selects one
   
   \begin{center}
   \textbf{SgdW}\\[0.4em]
-  \begin{tabular}{@{}r@{\hspace{0.35em}}r@{\hspace{0.35em}}r@{}@{\hspace{0.25em}}|@{\hspace{0.25em}}@{}r@{\hspace{0.35em}}r@{\hspace{0.35em}}r@{}@{\hspace{0.25em}}|@{\hspace{0.25em}}@{}r@{\hspace{0.35em}}r@{\hspace{0.35em}}r@{}}
+  \begin{tabular}{@{}r@{\hspace{0.35em}}r@{}@{\hspace{0.25em}}|@{\hspace{0.25em}}@{}r@{\hspace{0.35em}}r@{}@{\hspace{0.25em}}|@{\hspace{0.25em}}@{}r@{\hspace{0.35em}}r@{}}
   \hline
-  \multicolumn{3}{c}{hs512} & \multicolumn{3}{c}{hs1024} & \multicolumn{3}{c}{hs2048} \\
-  LR & WD & EMA PPL & LR & WD & EMA PPL & LR & WD & EMA PPL \\
+  \multicolumn{2}{c}{hs512} & \multicolumn{2}{c}{hs1024} & \multicolumn{2}{c}{hs2048} \\
+  LR & EMA PPL & LR & EMA PPL & LR & EMA PPL \\
   \hline
-  9.0e-05 & 1.0e-06 & 2.8208 & 9.0e-05 & 1.0e-06 & 2.8119 & 9.0e-05 & 1.0e-06 & 2.8053 \\
-  9.0e-05 & 1.0e-05 & 2.8186 & 9.0e-05 & 1.0e-05 & 2.8071 & 9.0e-05 & 1.0e-05 & 2.8024 \\
-  9.0e-05 & 1.0e-04 & 2.8234 & 9.0e-05 & 1.0e-04 & 2.8130 & 9.0e-05 & 1.0e-04 & 2.8077 \\
-  9.0e-05 & 1.0e-03 & 2.8405 & 9.0e-05 & 1.0e-03 & 2.8346 & 9.0e-05 & 1.0e-03 & 2.8304 \\
-  3.6e-04 & 1.0e-06 & 2.8030 & 3.6e-04 & 1.0e-06 & 2.8022 & 3.6e-04 & 1.0e-06 & 2.7974 \\
-  3.6e-04 & 1.0e-05 & 2.8022 & 3.6e-04 & 1.0e-05 & 2.7965 & 3.6e-04 & 1.0e-05 & 2.7914 \\
-  3.6e-04 & 1.0e-04 & 2.8096 & 3.6e-04 & 1.0e-04 & 2.8058 & 3.6e-04 & 1.0e-04 & 2.8021 \\
-  3.6e-04 & 1.0e-03 & 2.8338 & 3.6e-04 & 1.0e-03 & 2.8286 & 3.6e-04 & 1.0e-03 & 2.8259 \\
-  1.4e-03 & 1.0e-06 & 2.7903 & 1.4e-03 & 1.0e-06 & 2.7955 & 1.4e-03 & 1.0e-06 & 2.7929 \\
-  1.4e-03 & 1.0e-05 & 2.7894 & 1.4e-03 & 1.0e-05 & 2.7809 & 1.4e-03 & 1.0e-05 & 2.7839 \\
-  1.4e-03 & 1.0e-04 & 2.7983 & 1.4e-03 & 1.0e-04 & 2.8009 & 1.4e-03 & 1.0e-04 & 2.7990 \\
-  1.4e-03 & 1.0e-03 & 2.8294 & 1.4e-03 & 1.0e-03 & 2.8255 & 1.4e-03 & 1.0e-03 & 2.8242 \\
-  5.7e-03 & 1.0e-06 & 2.7796 & 5.7e-03 & 1.0e-06 & 2.7848 & 5.7e-03 & 1.0e-06 & 2.7819 \\
-  5.7e-03 & 1.0e-05 & 2.7788 & 5.7e-03 & 1.0e-05 & 2.7733 & 5.7e-03 & 1.0e-05 & 2.7743 \\
-  5.7e-03 & 1.0e-04 & 2.7910 & 5.7e-03 & 1.0e-04 & 2.7951 & 5.7e-03 & 1.0e-04 & 2.7968 \\
-  5.7e-03 & 1.0e-03 & 2.8195 & 5.7e-03 & 1.0e-03 & 2.8168 & 5.7e-03 & 1.0e-03 & 2.8149 \\
-  2.3e-02 & 1.0e-06 & 2.7702 & 2.3e-02 & 1.0e-06 & 2.7788 & 2.3e-02 & 1.0e-06 & 2.7956 \\
-  2.3e-02 & 1.0e-05 & \textbf{2.7694} & 2.3e-02 & 1.0e-05 & 2.7921 & 2.3e-02 & 1.0e-05 & 2.7877 \\
-  2.3e-02 & 1.0e-04 & 2.7797 & 2.3e-02 & 1.0e-04 & 2.7925 & 2.3e-02 & 1.0e-04 & 2.8017 \\
-  2.3e-02 & 1.0e-03 & 2.8092 & 2.3e-02 & 1.0e-03 & 2.8108 & 2.3e-02 & 1.0e-03 & 2.8078 \\
+  9.0e-05 & 2.8186 & 9.0e-05 & 2.8071 & 9.0e-05 & 2.8024 \\
+  3.6e-04 & 2.8022 & 3.6e-04 & 2.7965 & 3.6e-04 & 2.7914 \\
+  1.4e-03 & 2.7894 & 1.4e-03 & 2.7809 & 1.4e-03 & 2.7839 \\
+  5.7e-03 & 2.7788 & 5.7e-03 & 2.7733 & 5.7e-03 & 2.7743 \\
+  2.3e-02 & \textbf{2.7694} & 2.3e-02 & 2.7921 & 2.3e-02 & 2.7877 \\
   \hline
   \end{tabular}
   \end{center}
   
-
 % ============================================================
 \section{Additional Figures}
 \label{app:figures}
