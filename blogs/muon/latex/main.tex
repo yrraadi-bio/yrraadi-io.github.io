@@ -327,6 +327,13 @@ This work shows that optimizer and norm-control choices can materially change th
 
 
 % ============================================================
+% References
+% ============================================================
+\clearpage
+\bibliographystyle{unsrtnat}
+\bibliography{references}
+
+% ============================================================
 \clearpage
 \appendix
 \section*{Appendix}
@@ -337,7 +344,7 @@ This work shows that optimizer and norm-control choices can materially change th
 
 We construct the dataset from the AlphaGenome~\citep{alphagenome} ENCODE v4 candidate cis-regulatory element data~\citep{encode-v4}. We preprocess data exactly as described in the paper, except for dividing by the sample non-zero mean during batch creation. Starting from the AlphaGenome cCRE set, we filter for examples whose DNase-seq activity is specific to exactly one of the eight cell lines used in our experiments (A549, HEK293T, HepG2, Jurkat Clone E6-1, K562, SK-N-SH, endothelial cell of umbilical vein, skeletal muscle myoblast). This yields regulatory sequences of length $\le 350$ with a single active DNase track among the selected cell contexts, which supports the auxiliary modality-prediction objective while keeping the training distribution focused on cell-type-specific regulatory activity.
 
-\paragraph{Assets and licenses.} We use ENCODE v4 candidate cis-regulatory element annotations and AlphaGenome preprocessing resources. ENCODE data are released for unrestricted use under the ENCODE data release policy, and the Google DeepMind AlphaGenome code resources are released under the Apache License 2.0. We cite the original sources and follow their stated terms of use. No new dataset, benchmark, or model checkpoint is released as part of this submission.
+\paragraph{Assets and licenses.} We use ENCODE v4 candidate cis-regulatory element annotations and AlphaGenome preprocessing resources. ENCODE data are released for unrestricted use under the ENCODE data release policy, and the Google DeepMind AlphaGenome code resources are released under the Apache License 2.0. We cite the original sources and follow their stated terms of use. No new dataset, benchmark, or model checkpoint is released as part of this submission. The subset is available at \url{https://kaggle.com/datasets/bee59cfcf029b7fa33440aebf35e01a8039aa27982de870e323b27afe626899e}.
 
 \section{Full Derivation of the Relative Step Size}
 \label{app:derivation}
@@ -715,13 +722,7 @@ The optimizer-level progression in Figure~\ref{fig:final-perplexity} selects one
   \label{fig:dynamics-norms}
 \end{figure}
 
-% ============================================================
-% References
-% ============================================================
 \clearpage
-\bibliographystyle{unsrtnat}
-\bibliography{references}
-
 \section*{NeurIPS Paper Checklist}
 
 \begin{enumerate}
