@@ -15,7 +15,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/workbench-lite.css?v=102">
+    <link rel="stylesheet" href="css/workbench-lite.css?v=106">
     <link rel="icon" href="/assets/favicon.png" type="image/png">
 </head>
 <body>
@@ -44,8 +44,13 @@
             </a>
             <h1 class="hero-title">Mapping cancer biology <em>in real tissue.</em></h1>
             <p class="hero-subtitle">We generate spatial, molecular, and functional maps from patient tumor samples so cancer biology can be studied in its native context.</p>
-            <div class="hero-cell-wrap" id="cellWrap">
-                <div class="hero-cell" id="heroCell"></div>
+            <div class="hero-atlas" data-reveal="fade" data-delay="200">
+                <canvas class="atlas-canvas" id="atlasCanvas"></canvas>
+                <div class="atlas-stages" id="atlasStages">
+                    <span class="atlas-stage"><b>Patient tissue</b>Real tumor H&amp;E</span>
+                    <span class="atlas-stage"><b>Multimodal data</b>Spatial &middot; molecular &middot; morphology</span>
+                    <span class="atlas-stage"><b>Models</b>Trained on every sample</span>
+                </div>
             </div>
         </div>
     </section>
@@ -254,8 +259,7 @@
     </footer>
 
     </div>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="js/cell-interact.js?v=25"></script>
+    <script src="js/tissue-atlas.js?v=5"></script>
     <script src="js/hero-canvas.js?v=16"></script>
     <script src="js/scroll-reveal.js?v=5"></script>
     <script src="js/protocol-switch.js?v=3"></script>
