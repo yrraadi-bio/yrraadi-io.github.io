@@ -234,6 +234,57 @@ img { max-width: 100%; display: block; }
     mask-image: radial-gradient(ellipse 82% 86% at 50% 50%, #000 55%, transparent 98%);
 }
 
+/* ─── Hero Tissue→Data→Model Ribbon ─── */
+
+.hero-atlas {
+    margin-top: 24px;
+    width: min(96vw, 1060px);
+    position: relative;
+}
+
+.atlas-canvas {
+    width: 100%;
+    aspect-ratio: 16 / 7;
+    display: block;
+}
+
+.atlas-stages {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 2px;
+    padding: 0 2%;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.9s ease 0.5s, transform 0.9s ease 0.5s;
+}
+.atlas-stages.is-in { opacity: 1; transform: none; }
+
+.atlas-stage {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 12px;
+    color: var(--text-3);
+    text-align: center;
+    line-height: 1.4;
+}
+.atlas-stage:first-child { text-align: left; }
+.atlas-stage:last-child { text-align: right; }
+.atlas-stage b {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: var(--text-2);
+}
+
+@media (max-width: 768px) {
+    .hero-atlas { width: 96vw; margin-top: 12px; }
+    .atlas-stage { font-size: 10px; }
+    .atlas-stage b { font-size: 11px; }
+}
+
 /* -- Shared organelle positioning -- */
 .organelle {
     position: absolute;
