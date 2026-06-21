@@ -1781,6 +1781,30 @@ body.blog-index-page .blog-content {
     line-height: 1.4;
 }
 
+body.hest-blog-page main {
+    zoom: 1.3;
+}
+
+body.hest-blog-page .blog-image img {
+    border-radius: 0;
+    box-shadow: none;
+}
+
+@media (min-width: 1300px) {
+    body.hest-blog-page .blog-article figure.hest-marker-map {
+        width: min(1120px, calc(100vw - 8rem));
+        max-width: min(1120px, calc(100vw - 8rem));
+        margin-left: 50%;
+        margin-right: 0;
+        transform: translateX(-50%);
+    }
+
+    body.hest-blog-page .blog-article figure.hest-wide-xl {
+        width: min(1600px, calc(100vw - 2rem));
+        max-width: min(1600px, calc(100vw - 2rem));
+    }
+}
+
 .motif-carousel {
     position: relative;
     margin: 2rem 0 2.5rem;

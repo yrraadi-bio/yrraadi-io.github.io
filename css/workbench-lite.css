@@ -916,7 +916,8 @@ img { max-width: 100%; display: block; }
     transform: scaleX(1);
 }
 
-.research-card:hover .card-media video {
+.research-card:hover .card-media video,
+.research-card:hover .card-media img {
     transform: scale(1.06);
 }
 
@@ -926,7 +927,8 @@ img { max-width: 100%; display: block; }
     overflow: hidden;
 }
 
-.card-media video {
+.card-media video,
+.card-media img {
     width: 100%;
     height: 100%;
     object-fit: cover;

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-4DGX45FJCJ"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-4DGX45FJCJ');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Introducing Sibyl &mdash; Origin Bio</title>
+    <meta name="description" content="Introducing a single-cell resolution H&amp;E to spatial transcriptomics model trained across diverse tissues." />
+    <meta property="og:type" content="article" />
+    <meta property="og:site_name" content="Origin Bio" />
+    <meta property="og:title" content="Introducing Sibyl &mdash; Origin Bio" />
+    <meta property="og:description" content="A single-cell resolution H&amp;E to spatial transcriptomics model trained across diverse tissues." />
+    <meta property="og:url" content="https://origin.bio/blogs/hest/" />
+    <meta property="og:image" content="https://origin.bio/hest_images/image%20(5).png" />
+    <meta property="og:image:secure_url" content="https://origin.bio/hest_images/image%20(5).png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Introducing Sibyl &mdash; Origin Bio" />
+    <meta name="twitter:description" content="A single-cell resolution H&amp;E to spatial transcriptomics model trained across diverse tissues." />
+    <meta name="twitter:image" content="https://origin.bio/hest_images/image%20(5).png" />
+    <link rel="canonical" href="https://origin.bio/blogs/hest/">
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="icon" href="/assets/favicon.png" type="image/png">
+</head>
+
+<body class="blog-page hest-blog-page">
+    <div class="dna-background">
+        <div class="dna-strand"></div>
+        <div class="dna-strand"></div>
+        <div class="dna-strand"></div>
+    </div>
+
+    <header>
+        <a href="/" class="logo-link">
+            <img src="/assets/Origin%20logo+text%20(blue%20on%20transparent).png" alt="Origin Logo" class="header-logo">
+        </a>
+    </header>
+
+    <main>
+        <section class="blog-hero">
+            <div class="blog-content">
+                <article class="blog-article">
+                    <h2>Introducing Sibyl</h2>
+                    <p class="blog-date">June 2026</p>
+
+                    <section class="blog-takeaways" aria-label="Key takeaways">
+                        <h3>Highlights</h3>
+                        <ul>
+                            <li>Sibyl predicts spatial transcriptomics from H&amp;E at single-cell resolution across diverse tissues.</li>
+                            <li>Built on a unified architecture that predicts cellular layout from H&amp;E patch embeddings, then uses that inferred layout to assign per-cell gene expression.</li>
+                        </ul>
+                    </section>
+
+                    <p>Today, we are introducing Sibyl, a single-cell resolution H&amp;E to spatial transcriptomics model. Sibyl is designed to make molecular state accessible from ordinary histology while preserving the native cell-level spatial organization of the tissue. At inference time, Sibyl only needs H&amp;E patch embeddings: it predicts the cellular layout within the patch, then uses that layout to return molecular predictions assigned to specific cells and spatial positions.</p>
+
+                    <p>Spatial transcriptomics is powerful because it ties gene expression back to tissue architecture. That has obvious clinical relevance: spatial assays are already being used to study tumor microenvironments, immune niches, diagnostic biomarkers, and therapy-response programs in intact tissue <a href="https://www.nature.com/articles/s41587-024-02543-2" target="_blank">[1]</a>, <a href="https://ajp.amjpathol.org/article/S0002-9440(24)00276-1/fulltext" target="_blank">[2]</a>. The challenge is scale. Most spatial assays are still expensive, sparse, and difficult to run across the same sample sizes as H&amp;E. Sibyl is built around the opposite constraint: H&amp;E is abundant, cheap, and already embedded in pathology workflows. If a model can learn a robust mapping from morphology to expression across tissue types, it can make transcriptomic readouts available wherever high-quality histology already exists.</p>
+
+                    <p>Several groups have already shown that histology can predict spatial expression. ST-Net, HisToGene, and Hist2ST learn spot-level mappings <a href="https://www.nature.com/articles/s41551-020-0578-x" target="_blank">[3]</a>, <a href="https://www.biorxiv.org/content/10.1101/2021.11.28.470212v1" target="_blank">[4]</a>, <a href="https://academic.oup.com/bib/article/23/5/bbac297/6650011" target="_blank">[5]</a>, so their predictions inherit the resolution limit of the assay: one spot-level target can average multiple cells and erase the cell-to-cell variation that matters biologically. Newer single-cell methods get closer, but still depend on external cell geometry. GHIST segments H&amp;E nuclei with HoVer-Net, segments Xenium/DAPI/transcripts with BIDCell, then matches the two nuclei sets by overlap; any mismatch between those objects becomes supervision noise <a href="https://www.nature.com/articles/s41592-025-02795-z" target="_blank">[6]</a>. DeepCell is trained around Xenium cell coordinates and crops a centered H&amp;E tile for each supplied cell <a href="https://www.medrxiv.org/content/10.1101/2025.02.09.25321567v2" target="_blank">[7]</a>. In an H&amp;E-only setting, that means adding an upstream DAPI-like cell-localization or segmentation model before expression prediction, which makes the workflow less direct and less flexible. Sibyl predicts the cellular layout from patch embeddings and uses that inferred layout for per-cell expression in one model.</p>
+
+                    <figure class="blog-image wide">
+                        <img src="/hest_images/image%20(5).png" alt="Spearman correlation and Moran's I results for Sibyl gene expression predictions" loading="lazy" />
+                        <figcaption>Figure 1: Sibyl predicts spatial gene expression from H&amp;E across held-out tissue settings, evaluated with gene-wise Spearman correlation and spatial autocorrelation.</figcaption>
+                    </figure>
+
+                    <p>Spearman correlation asks whether Sibyl recovers the ordering of ground-truth cells for each gene: cells with higher measured expression should also receive higher predicted expression. Because each cell has a spatial coordinate, good cell-level ranking translates into recovering where gene expression is high or low across the tissue. But not all genes behave the same way: some are diffuse and close to randomly spread across the slide, while others organize into coherent neighborhoods, compartments, or cell-state regions that morphology can actually explain. Moran&rsquo;s I captures this by measuring spatial autocorrelation, separating the genes whose structure is recoverable from histology from those that are not. Together, these metrics test whether Sibyl learns both which cells should express a gene more strongly and whether that expression forms the right spatial structure.</p>
+
+                    <figure class="blog-image wide">
+                        <img src="/hest_images/01_marker_spatial_maps.png" alt="Predicted and measured marker gene spatial maps from Sibyl" loading="lazy" />
+                        <figcaption>Figure 2: Marker gene spatial maps show that Sibyl recovers localized expression programs from histology alone.</figcaption>
+                    </figure>
+
+                    <p>Aggregate correlations are useful, but spatial biology ultimately has to be visible. To see this directly, we look at three canonical lineage markers across two different tissues, breast and pancreas, on held-out patient slides. Each gene labels a distinct compartment: EPCAM is an epithelial adhesion molecule that marks epithelial and tumor cells, PDGFRA is a receptor expressed by stromal fibroblasts, and PTPRC, also known as CD45, marks immune cells. Because these genes track separate cell populations, their spatial maps should look distinct, and the model should place each in the right neighborhoods rather than smear expression uniformly across the slide. In both tissues, Sibyl recovers this compartment structure from H&amp;E alone: EPCAM lights up the epithelial and tumor regions, PDGFRA traces the surrounding stroma, and PTPRC picks out immune-infiltrated areas, with the predicted maps following the same spatial layout as the measured ground truth.</p>
+
+                    <h2>Architecture and Data</h2>
+
+                    <p>Sibyl uses a frozen H&amp;E image encoder to convert each tissue patch into visual tokens, followed by a shared transformer trunk that integrates morphology across the patch. From this shared representation, the model branches into three heads: a per-cell expression head, a detector head that predicts the probability that each target gene is non-zero in a given cell, and a density head that predicts where cells lie within the patch.</p>
+
+                    <figure class="blog-image wide">
+                        <img src="/hest_images/model_arch2.png" alt="Sibyl model architecture diagram" loading="lazy" />
+                        <figcaption>Figure 3: Sibyl shares a visual transformer trunk across cell-density and gene-expression objectives, then conditions per-cell predictions on each cell's location inside the patch.</figcaption>
+                    </figure>
+
+                    <p>The central design decision is that cells enter the model as queries defined by their own centroids. Each cell's relative position inside the patch is encoded with a Fourier embedding and used as a query that cross-attends to the patch's image tokens, producing a feature for that specific cell. This is what lets Sibyl avoid object mismatch. Single-cell approaches like GHIST detect nuclei on the H&amp;E with a separate model such as HoVer-Net and then match those detections against the transcriptomics segmentation, so any disagreement between the two sets becomes label noise. Sibyl has no matching step: the cell centroids are themselves the queries, so every prediction is anchored to a real cell rather than to the overlap between two independent segmentations.</p>
+
+                    <p>The density head then predicts where cells are likely to be inside the patch. During training the cell queries are placed at the true centroids, but the density head learns the cellular layout so that at inference Sibyl does not need externally provided cell coordinates, such as Xenium centroids or an upstream nucleus detector. It can predict the layout itself and then query expression at those inferred positions, keeping the whole pipeline driven by H&amp;E alone.</p>
+
+                    <p>The detector head exists to handle a quirk of the training objective. Because the expression head is trained with MSE on log1p counts, true zeros are never pushed all the way down; the model assigns them a small non-zero value, which shows up as faint background in the marker maps above where no gating is applied. The detector head independently predicts the probability that each gene is non-zero in a cell, and gating expression by this probability suppresses those spurious low values.</p>
+
+                    <figure class="blog-image wide">
+                        <img src="/hest_images/sf_marker_maps_idx120.png" alt="Marker gene spatial maps with and without detector gating" loading="lazy" />
+                        <figcaption>Figure 4: Effect of gating. The detector head suppresses the low non-zero background left by the log1p MSE objective, sharpening the predicted marker maps toward true zeros.</figcaption>
+                    </figure>
+                </article>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="social-links">
+            <a href="https://x.com/origin_bio" target="_blank" class="social-link" aria-label="Twitter">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                </svg>
+            </a>
+            <a href="https://linkedin.com/company/origin-bio-inc" target="_blank" class="social-link" aria-label="LinkedIn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+                </svg>
+            </a>
+        </div>
+        <div class="copyright">© 2026 Origin Bio</div>
+    </footer>
+
+    <script src="/js/script.js"></script>
+</body>
+
+</html>
