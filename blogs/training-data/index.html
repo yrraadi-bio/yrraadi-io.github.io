@@ -592,7 +592,7 @@
 
         /* ── Fetch helper ────────────────────────────────────────── */
         function loadJSON(url) {
-            return fetch(url).then(function (r) { return r.json(); });
+            return fetch('/data/training-data/' + url).then(function (r) { return r.json(); });
         }
 
         /* ── 1. UMAP (hero) ─────────────────────────────────────── */

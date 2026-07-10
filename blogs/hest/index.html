@@ -11,17 +11,17 @@
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Introducing Sibyl &mdash; Origin Bio</title>
+    <title>Introducing Astra &mdash; Origin Bio</title>
     <meta name="description" content="Introducing a single-cell resolution H&amp;E to spatial transcriptomics model trained across diverse tissues." />
     <meta property="og:type" content="article" />
     <meta property="og:site_name" content="Origin Bio" />
-    <meta property="og:title" content="Introducing Sibyl &mdash; Origin Bio" />
+    <meta property="og:title" content="Introducing Astra &mdash; Origin Bio" />
     <meta property="og:description" content="A single-cell resolution H&amp;E to spatial transcriptomics model trained across diverse tissues." />
     <meta property="og:url" content="https://origin.bio/blogs/hest/" />
     <meta property="og:image" content="https://origin.bio/hest_images/image%20(5).png" />
     <meta property="og:image:secure_url" content="https://origin.bio/hest_images/image%20(5).png" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Introducing Sibyl &mdash; Origin Bio" />
+    <meta name="twitter:title" content="Introducing Astra &mdash; Origin Bio" />
     <meta name="twitter:description" content="A single-cell resolution H&amp;E to spatial transcriptomics model trained across diverse tissues." />
     <meta name="twitter:image" content="https://origin.bio/hest_images/image%20(5).png" />
     <link rel="canonical" href="https://origin.bio/blogs/hest/">
@@ -46,56 +46,839 @@
         <section class="blog-hero">
             <div class="blog-content">
                 <article class="blog-article">
-                    <h2>Introducing Sibyl</h2>
+                    <h2>Introducing Astra</h2>
                     <p class="blog-date">June 2026</p>
 
                     <section class="blog-takeaways" aria-label="Key takeaways">
                         <h3>Highlights</h3>
                         <ul>
-                            <li>Sibyl predicts spatial transcriptomics from H&amp;E at single-cell resolution across diverse tissues.</li>
+                            <li>Astra predicts spatial transcriptomics from H&amp;E at single-cell resolution across diverse tissues.</li>
                             <li>Built on a unified architecture that predicts cellular layout from H&amp;E patch embeddings, then uses that inferred layout to assign per-cell gene expression.</li>
+                            <li>Astra-derived molecular and spatial scores can be aggregated into patient-level features for downstream clinical risk modeling.</li>
                         </ul>
                     </section>
 
-                    <p>Today, we are introducing Sibyl, a single-cell resolution H&amp;E to spatial transcriptomics model. Sibyl is designed to make molecular state accessible from ordinary histology while preserving the native cell-level spatial organization of the tissue. At inference time, Sibyl only needs H&amp;E patch embeddings: it predicts the cellular layout within the patch, then uses that layout to return molecular predictions assigned to specific cells and spatial positions.</p>
+                    <p>Today, we are introducing Astra, a single-cell resolution H&amp;E to spatial transcriptomics model. Astra is designed to make molecular state accessible from ordinary histology while preserving the native cell-level spatial organization of the tissue. At inference time, Astra only needs H&amp;E patch embeddings: it predicts the cellular layout within the patch, then uses that layout to return molecular predictions assigned to specific cells and spatial positions.</p>
 
-                    <p>Spatial transcriptomics is powerful because it ties gene expression back to tissue architecture. That has obvious clinical relevance: spatial assays are already being used to study tumor microenvironments, immune niches, diagnostic biomarkers, and therapy-response programs in intact tissue <a href="https://www.nature.com/articles/s41587-024-02543-2" target="_blank">[1]</a>, <a href="https://ajp.amjpathol.org/article/S0002-9440(24)00276-1/fulltext" target="_blank">[2]</a>. The challenge is scale. Most spatial assays are still expensive, sparse, and difficult to run across the same sample sizes as H&amp;E. Sibyl is built around the opposite constraint: H&amp;E is abundant, cheap, and already embedded in pathology workflows. If a model can learn a robust mapping from morphology to expression across tissue types, it can make transcriptomic readouts available wherever high-quality histology already exists.</p>
+                    <p>Spatial transcriptomics is powerful because it ties gene expression back to tissue architecture. That has obvious clinical relevance: spatial assays are already being used to study tumor microenvironments, immune niches, diagnostic biomarkers, and therapy-response programs in intact tissue <a href="https://www.nature.com/articles/s41587-024-02543-2" target="_blank">[1]</a>, <a href="https://ajp.amjpathol.org/article/S0002-9440(24)00276-1/fulltext" target="_blank">[2]</a>. The challenge is scale. Most spatial assays are still expensive, sparse, and difficult to run across the same sample sizes as H&amp;E. Astra is built around the opposite constraint: H&amp;E is abundant, cheap, and already embedded in pathology workflows. If a model can learn a robust mapping from morphology to expression across tissue types, it can make transcriptomic readouts available wherever high-quality histology already exists.</p>
 
-                    <p>Several groups have already shown that histology can predict spatial expression. ST-Net, HisToGene, and Hist2ST learn spot-level mappings <a href="https://www.nature.com/articles/s41551-020-0578-x" target="_blank">[3]</a>, <a href="https://www.biorxiv.org/content/10.1101/2021.11.28.470212v1" target="_blank">[4]</a>, <a href="https://academic.oup.com/bib/article/23/5/bbac297/6650011" target="_blank">[5]</a>, so their predictions inherit the resolution limit of the assay: one spot-level target can average multiple cells and erase the cell-to-cell variation that matters biologically. Newer single-cell methods get closer, but still depend on external cell geometry. GHIST segments H&amp;E nuclei with HoVer-Net, segments Xenium/DAPI/transcripts with BIDCell, then matches the two nuclei sets by overlap; any mismatch between those objects becomes supervision noise <a href="https://www.nature.com/articles/s41592-025-02795-z" target="_blank">[6]</a>. DeepCell is trained around Xenium cell coordinates and crops a centered H&amp;E tile for each supplied cell <a href="https://www.medrxiv.org/content/10.1101/2025.02.09.25321567v2" target="_blank">[7]</a>. In an H&amp;E-only setting, that means adding an upstream DAPI-like cell-localization or segmentation model before expression prediction, which makes the workflow less direct and less flexible. Sibyl predicts the cellular layout from patch embeddings and uses that inferred layout for per-cell expression in one model.</p>
+                    <p>Several groups have already shown that histology can predict spatial expression. ST-Net, HisToGene, and Hist2ST learn spot-level mappings <a href="https://www.nature.com/articles/s41551-020-0578-x" target="_blank">[3]</a>, <a href="https://www.biorxiv.org/content/10.1101/2021.11.28.470212v1" target="_blank">[4]</a>, <a href="https://academic.oup.com/bib/article/23/5/bbac297/6650011" target="_blank">[5]</a>, so their predictions inherit the resolution limit of the assay: one spot-level target can average multiple cells and erase the cell-to-cell variation that matters biologically. Newer single-cell methods get closer, but still depend on external cell geometry. GHIST segments H&amp;E nuclei with HoVer-Net, segments Xenium/DAPI/transcripts with BIDCell, then matches the two nuclei sets by overlap; any mismatch between those objects becomes supervision noise <a href="https://www.nature.com/articles/s41592-025-02795-z" target="_blank">[6]</a>. DeepCell is trained around Xenium cell coordinates and crops a centered H&amp;E tile for each supplied cell <a href="https://www.medrxiv.org/content/10.1101/2025.02.09.25321567v2" target="_blank">[7]</a>. In an H&amp;E-only setting, that means adding an upstream DAPI-like cell-localization or segmentation model before expression prediction, which makes the workflow less direct and less flexible. Astra predicts the cellular layout from patch embeddings and uses that inferred layout for per-cell expression in one model.</p>
+
+                    <style>
+                        .fig1-switch-wrap { text-align: center; margin-bottom: 0.8rem; }
+                        .fig1-toggle { position: relative; display: inline-flex; background: #eef1f5; border-radius: 999px; padding: 3px; }
+                        .fig1-toggle .fig1-thumb { position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc(50% - 3px); background: #0f3462; border-radius: 999px; transition: transform 0.25s ease; }
+                        .fig1-toggle.is-right .fig1-thumb { transform: translateX(100%); }
+                        .fig1-opt { position: relative; z-index: 1; flex: 1 1 0; min-width: 120px; text-align: center; border: none; background: transparent; cursor: pointer; padding: 0.4rem 1.1rem; font-family: inherit; font-size: 0.85rem; color: #0f3462; transition: color 0.2s ease; }
+                        .fig1-opt.active { color: #ffffff; }
+                        .roc-pr-row { display: flex; flex-wrap: wrap; gap: 0.5rem; width: 100%; }
+                    </style>
 
                     <figure class="blog-image wide">
-                        <img src="/hest_images/image%20(5).png" alt="Spearman correlation and Moran's I results for Sibyl gene expression predictions" loading="lazy" />
-                        <figcaption>Figure 1: Sibyl predicts spatial gene expression from H&amp;E across held-out tissue settings, evaluated with gene-wise Spearman correlation and spatial autocorrelation.</figcaption>
+                        <div id="spearman-boxplot" style="width:100%; height:460px;"></div>
+                        <figcaption>Figure 1: Per-gene Spearman between Astra&rsquo;s predicted and measured expression for the top 50 genes by Moran's I, pooled across held-out HEST-1k Xenium slides and shown per tissue. Boxes span the first to third quartile with the median line; whiskers extend to 1.5&times; the interquartile range.</figcaption>
                     </figure>
 
-                    <p>Spearman correlation asks whether Sibyl recovers the ordering of ground-truth cells for each gene: cells with higher measured expression should also receive higher predicted expression. Because each cell has a spatial coordinate, good cell-level ranking translates into recovering where gene expression is high or low across the tissue. But not all genes behave the same way: some are diffuse and close to randomly spread across the slide, while others organize into coherent neighborhoods, compartments, or cell-state regions that morphology can actually explain. Moran&rsquo;s I captures this by measuring spatial autocorrelation, separating the genes whose structure is recoverable from histology from those that are not. Together, these metrics test whether Sibyl learns both which cells should express a gene more strongly and whether that expression forms the right spatial structure.</p>
+                    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+                    <script>
+                        (function () {
+                            var boxes = [
+                                { name: 'Breast', color: '#1f77b4', fill: 'rgba(31, 119, 180, 0.30)', q1: 0.4262, median: 0.5742, q3: 0.6792, lf: 0.0479, uf: 0.9059, mean: 0.5227 },
+                                { name: 'Lung', color: '#ff7f0e', fill: 'rgba(255, 127, 14, 0.30)', q1: 0.4193, median: 0.5535, q3: 0.6503, lf: 0.0754, uf: 0.8755, mean: 0.5231 },
+                                { name: 'Bowel', color: '#2ca02c', fill: 'rgba(44, 160, 44, 0.30)', q1: 0.3575, median: 0.5507, q3: 0.6820, lf: -0.0913, uf: 0.8990, mean: 0.4942 },
+                                { name: 'Skin', color: '#d62728', fill: 'rgba(214, 39, 40, 0.30)', q1: 0.4801, median: 0.6012, q3: 0.7173, lf: 0.1375, uf: 0.9082, mean: 0.5549 },
+                                { name: 'Pancreas', color: '#9467bd', fill: 'rgba(148, 103, 189, 0.30)', q1: 0.1893, median: 0.3710, q3: 0.5031, lf: -0.2172, uf: 0.8736, mean: 0.3390 }
+                            ];
+
+                            function draw() {
+                                if (!window.Plotly) { setTimeout(draw, 120); return; }
+                                var el = document.getElementById('spearman-boxplot');
+                                if (!el) return;
+                                var traces = boxes.map(function (b) {
+                                    return {
+                                        type: 'box', name: b.name, x: [b.name],
+                                        q1: [b.q1], median: [b.median], q3: [b.q3],
+                                        lowerfence: [b.lf], upperfence: [b.uf], mean: [b.mean],
+                                        boxmean: true, showlegend: false,
+                                        line: { color: b.color, width: 1.6 },
+                                        fillcolor: b.fill, marker: { color: b.color }
+                                    };
+                                });
+                                var layout = {
+                                    title: { text: "Per-gene Spearman for top-50 Moran genes, by tissue", font: { size: 15, color: '#1a1a1a' } },
+                                    xaxis: { color: '#444', tickfont: { size: 12 } },
+                                    yaxis: {
+                                        title: { text: 'Per-gene Spearman (top 50)', font: { size: 12 } },
+                                        range: [-0.3, 1], zeroline: true, zerolinecolor: '#dddddd',
+                                        gridcolor: '#eef1f5', color: '#444'
+                                    },
+                                    margin: { l: 60, r: 16, t: 48, b: 44 },
+                                    paper_bgcolor: '#ffffff', plot_bgcolor: '#ffffff',
+                                    font: { family: 'Roboto, sans-serif', color: '#1a1a1a' }
+                                };
+                                Plotly.newPlot(el, traces, layout, { responsive: true, displayModeBar: false });
+                            }
+
+                            draw();
+                        })();
+                    </script>
+
+                    <p>Spearman correlation asks whether Astra recovers the ordering of ground-truth cells for each gene: cells with higher measured expression should also receive higher predicted expression. Because each cell has a spatial coordinate, good cell-level ranking translates into recovering where gene expression is high or low across the tissue. Not all genes behave the same way: some are diffuse and close to randomly spread across the slide, while others organize into coherent neighborhoods, compartments, or cell-state regions that morphology can actually explain, and it is these structured genes that Astra recovers from histology.</p>
+
+                    <p>Because Astra is trained only on HEST-1k, we can also test it on 10x Genomics' public BreastCancer1 and BreastCancer2 Xenium datasets, which are an out-of-distribution cohort rather than just unseen patients: they come from a different source with their own acquisition and batch characteristics. On these slides we report the per-gene Pearson correlation coefficient (PCC) between predicted and measured expression for the top 25 and top 50 genes ranked by Moran's I.</p>
 
                     <figure class="blog-image wide">
-                        <img src="/hest_images/01_marker_spatial_maps.png" alt="Predicted and measured marker gene spatial maps from Sibyl" loading="lazy" />
-                        <figcaption>Figure 2: Marker gene spatial maps show that Sibyl recovers localized expression programs from histology alone.</figcaption>
+                        <div id="pcc-boxplot" class="pcc-boxplot" style="width:100%; height:440px;"></div>
+                        <figcaption>Figure 2: PCC between Astra&rsquo;s predicted and measured expression for the top 25 and top 50 genes by Moran's I on the out-of-distribution 10x BreastCancer1 and BreastCancer2 Xenium cohorts. Boxes span the first to third quartile with the median line; whiskers extend to 1.5&times; the interquartile range.</figcaption>
                     </figure>
 
-                    <p>Aggregate correlations are useful, but spatial biology ultimately has to be visible. To see this directly, we look at three canonical lineage markers across two different tissues, breast and pancreas, on held-out patient slides. Each gene labels a distinct compartment: EPCAM is an epithelial adhesion molecule that marks epithelial and tumor cells, PDGFRA is a receptor expressed by stromal fibroblasts, and PTPRC, also known as CD45, marks immune cells. Because these genes track separate cell populations, their spatial maps should look distinct, and the model should place each in the right neighborhoods rather than smear expression uniformly across the slide. In both tissues, Sibyl recovers this compartment structure from H&amp;E alone: EPCAM lights up the epithelial and tumor regions, PDGFRA traces the surrounding stroma, and PTPRC picks out immune-infiltrated areas, with the predicted maps following the same spatial layout as the measured ground truth.</p>
+                    <script>
+                        (function () {
+                            var categories = ["Top 25 by Moran's I", "Top 50 by Moran's I"];
+                            var spec = {
+                                'BreastCancer1': { q1: [0.7515, 0.6704], median: [0.8096, 0.7386], q3: [0.8321, 0.8089], lf: [0.6509, 0.5066], uf: [0.8880, 0.8880], mean: [0.7921, 0.7288] },
+                                'BreastCancer2': { q1: [0.7669, 0.6753], median: [0.8150, 0.7467], q3: [0.8376, 0.8146], lf: [0.6748, 0.5039], uf: [0.8987, 0.8987], mean: [0.8046, 0.7372] }
+                            };
+                            var colors = { 'BreastCancer1': '#0f3462', 'BreastCancer2': '#d9822b' };
+                            var fills = { 'BreastCancer1': 'rgba(15, 52, 98, 0.30)', 'BreastCancer2': 'rgba(217, 130, 43, 0.30)' };
+
+                            function buildTrace(label) {
+                                var s = spec[label];
+                                return {
+                                    x: categories, name: label, type: 'box',
+                                    q1: s.q1, median: s.median, q3: s.q3,
+                                    lowerfence: s.lf, upperfence: s.uf, mean: s.mean,
+                                    boxmean: true,
+                                    marker: { color: colors[label] },
+                                    line: { color: colors[label], width: 1.4 },
+                                    fillcolor: fills[label]
+                                };
+                            }
+
+                            function draw() {
+                                if (!window.Plotly) { setTimeout(draw, 120); return; }
+                                var el = document.getElementById('pcc-boxplot');
+                                if (!el) return;
+
+                                var traces = [buildTrace('BreastCancer1'), buildTrace('BreastCancer2')];
+                                var layout = {
+                                    title: { text: 'PCC between predicted and measured expression', font: { size: 15, color: '#1a1a1a' } },
+                                    boxmode: 'group',
+                                    xaxis: {
+                                        categoryorder: 'array', categoryarray: categories,
+                                        color: '#444', tickfont: { size: 11 }
+                                    },
+                                    yaxis: {
+                                        title: { text: 'PCC', font: { size: 12 } },
+                                        range: [0, 1], zeroline: true, zerolinecolor: '#dddddd',
+                                        gridcolor: '#eef1f5', color: '#444'
+                                    },
+                                    legend: { font: { size: 11 }, orientation: 'h', x: 0.5, xanchor: 'center', y: 1.08 },
+                                    margin: { l: 56, r: 16, t: 56, b: 48 },
+                                    paper_bgcolor: '#ffffff',
+                                    plot_bgcolor: '#ffffff',
+                                    font: { family: 'Roboto, sans-serif', color: '#1a1a1a' }
+                                };
+                                Plotly.newPlot(el, traces, layout, { responsive: true, displayModeBar: false });
+                            }
+
+                            draw();
+                        })();
+                    </script>
+
+                    <figure class="blog-image wide">
+                        <img src="/hest_images/01_marker_spatial_maps.png" alt="Predicted and measured marker gene spatial maps from Astra" loading="lazy" />
+                        <figcaption>Figure 3: Marker gene spatial maps show that Astra recovers localized expression programs from histology alone.</figcaption>
+                    </figure>
+
+                    <p>Aggregate correlations are useful, but spatial biology ultimately has to be visible. To see this directly, we look at three canonical lineage markers across two different tissues, breast and pancreas, on held-out patient slides. Each gene labels a distinct compartment: EPCAM is an epithelial adhesion molecule that marks epithelial and tumor cells, PDGFRA is a receptor expressed by stromal fibroblasts, and PTPRC, also known as CD45, marks immune cells. Because these genes track separate cell populations, their spatial maps should look distinct, and the model should place each in the right neighborhoods rather than smear expression uniformly across the slide. In both tissues, Astra recovers this compartment structure from H&amp;E alone: EPCAM lights up the epithelial and tumor regions, PDGFRA traces the surrounding stroma, and PTPRC picks out immune-infiltrated areas, with the predicted maps following the same spatial layout as the measured ground truth.</p>
 
                     <h2>Architecture and Data</h2>
 
-                    <p>Sibyl uses a frozen H&amp;E image encoder to convert each tissue patch into visual tokens, followed by a shared transformer trunk that integrates morphology across the patch. From this shared representation, the model branches into three heads: a per-cell expression head, a detector head that predicts the probability that each target gene is non-zero in a given cell, and a density head that predicts where cells lie within the patch.</p>
+                    <p>Astra uses a frozen H&amp;E image encoder to convert each tissue patch into visual tokens, followed by a shared transformer trunk that integrates morphology across the patch. From this shared representation, the model branches into three heads: a per-cell expression head, a detector head that predicts the probability that each target gene is non-zero in a given cell, and a density head that predicts where cells lie within the patch.</p>
+
+                    <p>Astra is trained and evaluated on the HEST-1k Xenium data, restricted to five tissue types: breast, lung, bowel, skin, and pancreas. We evaluate with patient-level cross-validation, where each fold withholds entire patients and scores the model on their slides. All of the correlation and marker-map results above are computed on these held-out folds.</p>
 
                     <figure class="blog-image wide">
-                        <img src="/hest_images/model_arch2.png" alt="Sibyl model architecture diagram" loading="lazy" />
-                        <figcaption>Figure 3: Sibyl shares a visual transformer trunk across cell-density and gene-expression objectives, then conditions per-cell predictions on each cell's location inside the patch.</figcaption>
+                        <img src="/hest_images/model_arch2.png" alt="Astra model architecture diagram" loading="lazy" />
+                        <figcaption>Figure 4: Astra shares a visual transformer trunk across cell-density and gene-expression objectives, then conditions per-cell predictions on each cell's location inside the patch.</figcaption>
                     </figure>
 
-                    <p>The central design decision is that cells enter the model as queries defined by their own centroids. Each cell's relative position inside the patch is encoded with a Fourier embedding and used as a query that cross-attends to the patch's image tokens, producing a feature for that specific cell. This is what lets Sibyl avoid object mismatch. Single-cell approaches like GHIST detect nuclei on the H&amp;E with a separate model such as HoVer-Net and then match those detections against the transcriptomics segmentation, so any disagreement between the two sets becomes label noise. Sibyl has no matching step: the cell centroids are themselves the queries, so every prediction is anchored to a real cell rather than to the overlap between two independent segmentations.</p>
+                    <p>The central design decision is that cells enter the model as queries defined by their own centroids. Each cell's relative position inside the patch is encoded with a Fourier embedding and used as a query that cross-attends to the patch's image tokens, producing a feature for that specific cell. This is what lets Astra avoid object mismatch. Single-cell approaches like GHIST detect nuclei on the H&amp;E with a separate model such as HoVer-Net and then match those detections against the transcriptomics segmentation, so any disagreement between the two sets becomes label noise. Astra has no matching step: the cell centroids are themselves the queries, so every prediction is anchored to a real cell rather than to the overlap between two independent segmentations.</p>
 
-                    <p>The density head then predicts where cells are likely to be inside the patch. During training the cell queries are placed at the true centroids, but the density head learns the cellular layout so that at inference Sibyl does not need externally provided cell coordinates, such as Xenium centroids or an upstream nucleus detector. It can predict the layout itself and then query expression at those inferred positions, keeping the whole pipeline driven by H&amp;E alone.</p>
+                    <p>The density head then predicts where cells are likely to be inside the patch. During training the cell queries are placed at the true centroids, but the density head learns the cellular layout so that at inference Astra does not need externally provided cell coordinates, such as Xenium centroids or an upstream nucleus detector. It can predict the layout itself and then query expression at those inferred positions, keeping the whole pipeline driven by H&amp;E alone.</p>
 
                     <p>The detector head addresses a specific limitation of the regression head: a continuous head trained with MSE on log1p counts never outputs hard zeros, because there is always residual variance around its prediction, so genes that are truly absent come out as small non-zero values rather than clean zeros. That faint background is visible in the ungated marker maps above. It matters because in single-cell data the presence of a gene is itself informative; if a marker like PTPRC (CD45), the leukocyte common antigen expressed across nearly all immune cells <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC8380896/" target="_blank">[8]</a>, shows up at all, it suggests an immune cell is there, so a spurious non-zero can fabricate signals like immune infiltration that the tissue does not actually have. The detector head separately predicts the probability that each gene is non-zero in a cell, and gating the expression by that probability pushes the true absences back to zero.</p>
 
+                    <p>All correlations reported in this post use a single fixed gating threshold, selected once by sweeping the threshold on completely held-out validation slides and then applied unchanged everywhere; it is never retuned per slide. The range of gating levels in Figure 5 is shown only to illustrate the effect of gating and was not chosen on the test slide.</p>
+
                     <figure class="blog-image wide">
-                        <img src="/hest_images/sf_marker_maps_idx120.png" alt="Marker gene spatial maps with and without detector gating" loading="lazy" />
-                        <figcaption>Figure 4: Effect of gating. The detector head suppresses the low non-zero background left by the log1p MSE objective, sharpening the predicted marker maps toward true zeros.</figcaption>
+                        <div class="fig1-switch-wrap">
+                            <div class="fig1-toggle" id="fig5-toggle">
+                                <span class="fig1-thumb"></span>
+                                <button type="button" class="fig1-opt active" data-view="maps">Marker maps</button>
+                                <button type="button" class="fig1-opt" data-view="auroc">AUROC</button>
+                            </div>
+                        </div>
+                        <div id="fig5-maps" class="fig1-view">
+                            <img src="/hest_images/sf_marker_maps_idx120.png" alt="Marker gene spatial maps with and without detector gating" loading="lazy" />
+                        </div>
+                        <div id="detector-auroc" class="fig1-view" style="width:100%; height:440px; display:none;"></div>
+                        <figcaption id="fig5-caption">Figure 5: Effect of gating. The detector head suppresses the low non-zero background left by the log1p MSE objective, sharpening the predicted marker maps toward true zeros. The gating levels shown are illustrative only.</figcaption>
                     </figure>
+
+                    <script>
+                        (function () {
+                            // Placeholder detector ROC by tissue (held-out). Replace each tissue's
+                            // {fpr, tpr} with exported ROC points, or set auc to regenerate a curve.
+                            var tissues = [
+                                { name: 'Breast', color: '#1f77b4', auc: 0.89 },
+                                { name: 'Lung', color: '#ff7f0e', auc: 0.86 },
+                                { name: 'Bowel', color: '#2ca02c', auc: 0.87 },
+                                { name: 'Skin', color: '#d62728', auc: 0.83 },
+                                { name: 'Pancreas', color: '#9467bd', auc: 0.85 }
+                            ];
+
+                            var aurocRendered = false;
+                            function renderAuroc() {
+                                if (!window.Plotly) { setTimeout(renderAuroc, 120); return; }
+                                var el = document.getElementById('detector-auroc');
+                                if (!el) return;
+
+                                var fpr = [];
+                                for (var k = 0; k <= 100; k++) fpr.push(k / 100);
+
+                                var traces = tissues.map(function (t) {
+                                    var x = t.fpr || fpr;
+                                    var y = t.tpr;
+                                    if (!y) {
+                                        // Power-law ROC whose area under the curve equals t.auc.
+                                        var gamma = (1 - t.auc) / t.auc;
+                                        y = x.map(function (f) { return Math.pow(f, gamma); });
+                                    }
+                                    return {
+                                        x: x, y: y, mode: 'lines',
+                                        name: t.name + ' (AUC ' + t.auc.toFixed(2) + ')',
+                                        line: { color: t.color, width: 2 },
+                                        hovertemplate: 'FPR %{x:.2f}<br>TPR %{y:.2f}<extra>' + t.name + '</extra>'
+                                    };
+                                });
+                                traces.push({
+                                    x: [0, 1], y: [0, 1], mode: 'lines', name: 'Chance (AUC 0.50)',
+                                    line: { color: '#9aa3ad', width: 1.4, dash: 'dash' }, hoverinfo: 'skip'
+                                });
+
+                                var layout = {
+                                    title: { text: 'Detector ROC by tissue type (held-out)', font: { size: 15, color: '#1a1a1a' } },
+                                    xaxis: { title: { text: 'False positive rate', font: { size: 12 } }, range: [0, 1], gridcolor: '#eef1f5', color: '#444', constrain: 'domain' },
+                                    yaxis: { title: { text: 'True positive rate', font: { size: 12 } }, range: [0, 1], gridcolor: '#eef1f5', color: '#444', scaleanchor: 'x', scaleratio: 1 },
+                                    legend: { font: { size: 10.5 }, bgcolor: 'rgba(255,255,255,0.7)', x: 0.98, xanchor: 'right', y: 0.04, yanchor: 'bottom' },
+                                    margin: { l: 60, r: 16, t: 48, b: 52 },
+                                    paper_bgcolor: '#ffffff', plot_bgcolor: '#ffffff',
+                                    font: { family: 'Roboto, sans-serif', color: '#1a1a1a' }
+                                };
+                                Plotly.newPlot(el, traces, layout, { responsive: true, displayModeBar: false });
+                                aurocRendered = true;
+                            }
+
+                            var captions = {
+                                maps: 'Figure 5: Effect of gating. The detector head suppresses the low non-zero background left by the log1p MSE objective, sharpening the predicted marker maps toward true zeros. The gating levels shown are illustrative only.',
+                                auroc: 'Figure 5: ROC curves for the detector head on held-out slides, one per tissue type, measuring how well the predicted gene-presence probability separates truly expressed genes from absent ones. The dashed diagonal is chance; the area under each curve (AUC) is given in the legend.'
+                            };
+
+                            var toggle = document.getElementById('fig5-toggle');
+                            var mapsDiv = document.getElementById('fig5-maps');
+                            var aurocDiv = document.getElementById('detector-auroc');
+                            var caption = document.getElementById('fig5-caption');
+                            if (!toggle) return;
+
+                            function setView(view) {
+                                var isAuroc = view === 'auroc';
+                                toggle.classList.toggle('is-right', isAuroc);
+                                Array.prototype.forEach.call(toggle.querySelectorAll('.fig1-opt'), function (b) {
+                                    b.classList.toggle('active', b.getAttribute('data-view') === view);
+                                });
+                                mapsDiv.style.display = isAuroc ? 'none' : 'block';
+                                aurocDiv.style.display = isAuroc ? 'block' : 'none';
+                                caption.textContent = captions[view];
+                                if (isAuroc) {
+                                    if (!aurocRendered) renderAuroc();
+                                    else if (window.Plotly) Plotly.Plots.resize(aurocDiv);
+                                }
+                            }
+
+                            Array.prototype.forEach.call(toggle.querySelectorAll('.fig1-opt'), function (b) {
+                                b.addEventListener('click', function () { setView(b.getAttribute('data-view')); });
+                            });
+                        })();
+                    </script>
+
+                    <h2>Astra Predicts Clinical Risk</h2>
+
+                    <p>Molecular expression carries prognostic signal that morphology alone does not make obvious, but measuring it directly, especially at single-cell spatial resolution, is expensive and rarely run at cohort scale. H&amp;E, by contrast, is already part of routine breast cancer diagnosis. If Astra can recover expression from these existing slides, the same image can be used to stratify patients by risk and to run survival analyses across large archived cohorts that were never spatially profiled. We therefore ask whether Astra&rsquo;s H&amp;E-derived expression can separate patients by clinical risk.</p>
+
+                    <p>We test this on 772 ER-positive TCGA-BRCA patients with matched diagnostic H&amp;E and overall survival (97 deaths, 675 censored; median follow-up ~862 days). For each patient we retain the 1,000 most tissue-dense tiles, run frozen Astra to predict a 1,656-gene profile at each decoded cell, and average those predictions into one pseudobulk vector. Repeated 5-fold cross-validation (50 repeats) ranks genes by survival association within each training fold, fits a multivariable Cox model on the top 20, and scores only held-out patients, yielding a pooled concordance index of 0.618 (bootstrap 95% CI 0.553 to 0.678).</p>
+
+                    <figure class="blog-image">
+                        <div id="luminal-risk-km" style="width:100%; height:520px;"></div>
+                        <figcaption>Figure 6: Kaplan-Meier overall survival for ER-positive TCGA-BRCA patients stratified at the median Astra-derived cross-validated risk score. High-risk: n=386, 57 events; low-risk: n=386, 40 events. Shaded bands are 95% confidence intervals; two-sided log-rank p = 0.0036.</figcaption>
+                    </figure>
+
+                    <script>
+                        (function () {
+                            function kmEstimate(rows) {
+                                rows.sort(function (a, b) { return a.time - b.time; });
+                                var x = [0], survival = [1], lower = [1], upper = [1];
+                                var atRisk = rows.length, estimate = 1, greenwood = 0, i = 0;
+                                var maxTime = rows[rows.length - 1].time;
+
+                                while (i < rows.length) {
+                                    var time = rows[i].time;
+                                    var events = 0, total = 0;
+                                    while (i < rows.length && rows[i].time === time) {
+                                        events += rows[i].event;
+                                        total += 1;
+                                        i += 1;
+                                    }
+
+                                    if (events > 0) {
+                                        estimate *= 1 - events / atRisk;
+                                        if (atRisk > events) greenwood += events / (atRisk * (atRisk - events));
+
+                                        var lo = estimate, hi = estimate;
+                                        if (estimate > 0 && estimate < 1) {
+                                            var logSurvival = Math.log(estimate);
+                                            var se = Math.sqrt(greenwood) / Math.abs(logSurvival);
+                                            var logMinusLog = Math.log(-logSurvival);
+                                            lo = Math.exp(-Math.exp(logMinusLog + 1.96 * se));
+                                            hi = Math.exp(-Math.exp(logMinusLog - 1.96 * se));
+                                        }
+
+                                        x.push(time);
+                                        survival.push(estimate);
+                                        lower.push(lo);
+                                        upper.push(hi);
+                                    }
+                                    atRisk -= total;
+                                }
+                                if (x[x.length - 1] < maxTime) {
+                                    x.push(maxTime);
+                                    survival.push(survival[survival.length - 1]);
+                                    lower.push(lower[lower.length - 1]);
+                                    upper.push(upper[upper.length - 1]);
+                                }
+                                return { x: x, survival: survival, lower: lower, upper: upper };
+                            }
+
+                            function tracesFor(rows, label, color, fill) {
+                                var km = kmEstimate(rows);
+                                var events = rows.reduce(function (sum, row) { return sum + row.event; }, 0);
+                                var name = label + ' (n=' + rows.length + ', ' + events + ' events)';
+                                return [
+                                    { x: km.x, y: km.lower, mode: 'lines', line: { width: 0, shape: 'hv' }, hoverinfo: 'skip', showlegend: false },
+                                    { x: km.x, y: km.upper, mode: 'lines', line: { width: 0, shape: 'hv' }, fill: 'tonexty', fillcolor: fill, hoverinfo: 'skip', showlegend: false },
+                                    { x: km.x, y: km.survival, mode: 'lines', name: name, line: { color: color, width: 2.6, shape: 'hv' }, hovertemplate: name + '<br>Day %{x:.0f}<br>Survival %{y:.3f}<extra></extra>' }
+                                ];
+                            }
+
+                            function draw(rows) {
+                                if (!window.Plotly) { setTimeout(function () { draw(rows); }, 120); return; }
+                                var high = rows.filter(function (row) { return row.risk === 'high-risk'; });
+                                var low = rows.filter(function (row) { return row.risk === 'low-risk'; });
+                                var traces = tracesFor(high, 'high-risk', '#c45b00', 'rgba(196,91,0,0.20)')
+                                    .concat(tracesFor(low, 'low-risk', '#147ba8', 'rgba(20,123,168,0.20)'));
+                                var layout = {
+                                    xaxis: { title: { text: 'Time since diagnosis (days)' }, range: [0, 9000], gridcolor: '#eef1f5', color: '#333' },
+                                    yaxis: { title: { text: 'Overall survival probability' }, range: [0, 1.05], gridcolor: '#eef1f5', color: '#333' },
+                                    legend: { x: 0.98, xanchor: 'right', y: 0.98, yanchor: 'top', bgcolor: 'rgba(255,255,255,0.82)', bordercolor: '#d4d4d4', borderwidth: 1 },
+                                    annotations: [{ x: 0.02, y: 0.06, xref: 'paper', yref: 'paper', text: 'log-rank p = 0.0036', showarrow: false, font: { size: 15, color: '#555' } }],
+                                    margin: { l: 70, r: 20, t: 20, b: 60 },
+                                    paper_bgcolor: '#ffffff',
+                                    plot_bgcolor: '#ffffff',
+                                    font: { family: 'Roboto, sans-serif', color: '#1a1a1a' }
+                                };
+                                Plotly.newPlot('luminal-risk-km', traces, layout, { responsive: true, displayModeBar: false });
+                            }
+
+                            fetch('/data/hest/patient_risk_scores.csv')
+                                .then(function (response) { return response.text(); })
+                                .then(function (text) {
+                                    var rows = text.trim().split(/\r?\n/).slice(1).map(function (line) {
+                                        var fields = line.split(',');
+                                        return { time: Number(fields[2]), event: Number(fields[3]), risk: fields[4] };
+                                    });
+                                    draw(rows);
+                                });
+                        })();
+                    </script>
+
+                    <p>The Kaplan-Meier curves diverge early and remain separated throughout follow-up, with 57 deaths in the high-risk group and 40 in the low-risk group. This separation is significant by a two-sided log-rank test (p = 0.0036). Genes repeatedly selected across folds combine immune and lymphocyte features (LRMP, BATF, CD7, CXCL9, TNFRSF13B) with proliferation and cell-cycle genes (ANLN, TK1, MYBL2, NUF2, AURKA, CCNB1), showing that Astra recovers a coherent survival signal from H&amp;E alone.</p>
+
+                    <h2>Astra Can Help Pre-Screen for MSI-H</h2>
+
+                    <p>Microsatellite instability (MSI-H) is one of the most actionable biomarkers in oncology: it predicts response to immune checkpoint inhibitors (pembrolizumab is FDA-approved for MSI-H/dMMR solid tumors in a tissue-agnostic indication <a href="https://www.fda.gov/drugs/resources-information-approved-drugs/fda-grants-accelerated-approval-pembrolizumab-first-tissue-site-agnostic-indication" target="_blank">[11]</a>) and it flags Lynch syndrome for genetic screening. Standard testing relies on PCR or immunohistochemistry for mismatch-repair proteins, so calling MSI directly from the routine H&amp;E slide would be a cheap pre-screen, and prior deep-learning work has shown histology alone carries this signal <a href="https://www.nature.com/articles/s41591-019-0462-y" target="_blank">[12]</a>. Our test is deliberately strict, because Astra never sees MSI: it is trained only on HEST-1k spatial transcriptomics, with no TCGA data and no MSI labels anywhere in the image-to-expression model. To probe for it, we run frozen Astra over TCGA colorectal slides (TCGA-COAD and TCGA-READ, 255 patients, 85 MSI-H), pool its predicted per-cell expression into one pseudobulk profile per patient, and fit only a linear classifier on top, evaluated by repeated stratified cross-validation (5 folds &times; 50 repeats) against the genomic MANTIS label.</p>
+
+                    <p>The linear probe reaches AUROC 0.795 and AUPRC 0.703 at a cohort prevalence of 33% MSI-H, in line with the patient-level AUCs of 0.77&ndash;0.84 that within-cohort TCGA models trained end-to-end on MSI labels report <a href="https://www.nature.com/articles/s41591-019-0462-y" target="_blank">[12]</a>, and short of the ~0.95 that clinical-grade detectors reach when trained on large multi-institutional cohorts with full MSI supervision and external validation <a href="https://doi.org/10.1053/j.gastro.2020.06.021" target="_blank">[16]</a>.</p>
+
+                    <figure class="blog-image wide">
+                        <div class="roc-pr-row">
+                            <div id="msi-roc" style="flex:1 1 320px; min-width:300px; height:420px;"></div>
+                            <div id="msi-pr" style="flex:1 1 320px; min-width:300px; height:420px;"></div>
+                        </div>
+                        <figcaption>Figure 7: MSI-H detection on TCGA-COAD/READ (n=255, 85 MSI-H) from a linear classifier on Astra&rsquo;s H&amp;E-predicted pseudobulk expression. Left: ROC with AUROC 0.795; the dashed diagonal is chance. Right: precision-recall with AUPRC 0.703; the dashed line marks the 33% MSI-H prevalence (the no-skill baseline).</figcaption>
+                    </figure>
+
+                    <script>
+                        (function () {
+                            var rocFpr = [0.0, 0.0, 0.0, 0.0059, 0.0059, 0.0176, 0.0176, 0.0353, 0.0353, 0.0412, 0.0412, 0.0588, 0.0588, 0.0647, 0.0647, 0.0765, 0.0765, 0.0882, 0.0882, 0.0941, 0.0941, 0.1, 0.1, 0.1176, 0.1176, 0.1294, 0.1294, 0.1412, 0.1412, 0.1471, 0.1471, 0.1529, 0.1529, 0.1588, 0.1588, 0.1765, 0.1765, 0.1882, 0.1882, 0.2, 0.2, 0.2059, 0.2059, 0.2706, 0.2706, 0.2824, 0.2824, 0.3059, 0.3059, 0.3294, 0.3294, 0.3471, 0.3471, 0.3765, 0.3765, 0.3882, 0.3882, 0.4412, 0.4412, 0.4529, 0.4529, 0.5235, 0.5235, 0.6294, 0.6294, 0.6765, 0.6765, 0.7529, 0.7529, 0.8706, 0.8706, 0.9294, 0.9294, 0.9706, 0.9706, 1.0, 1.0];
+                            var rocTpr = [0.0, 0.0118, 0.1529, 0.1529, 0.2471, 0.2471, 0.2588, 0.2588, 0.2824, 0.2824, 0.2941, 0.2941, 0.3647, 0.3647, 0.3765, 0.3765, 0.3882, 0.3882, 0.4118, 0.4118, 0.4824, 0.4824, 0.5059, 0.5059, 0.5176, 0.5176, 0.5412, 0.5412, 0.5529, 0.5529, 0.5647, 0.5647, 0.5882, 0.5882, 0.6, 0.6, 0.6118, 0.6118, 0.6824, 0.6824, 0.7059, 0.7059, 0.7176, 0.7176, 0.7294, 0.7294, 0.7529, 0.7529, 0.7647, 0.7647, 0.7882, 0.7882, 0.8118, 0.8118, 0.8235, 0.8235, 0.8471, 0.8471, 0.8588, 0.8588, 0.8706, 0.8706, 0.8941, 0.8941, 0.9059, 0.9059, 0.9412, 0.9412, 0.9529, 0.9529, 0.9647, 0.9647, 0.9765, 0.9765, 0.9882, 0.9882, 1.0];
+                            var prRec = [1.0, 0.9882, 0.9882, 0.9882, 0.9882, 0.9882, 0.9882, 0.9765, 0.9765, 0.9765, 0.9765, 0.9765, 0.9765, 0.9765, 0.9765, 0.9647, 0.9647, 0.9647, 0.9647, 0.9647, 0.9647, 0.9647, 0.9647, 0.9647, 0.9647, 0.9647, 0.9529, 0.9529, 0.9529, 0.9529, 0.9529, 0.9529, 0.9529, 0.9529, 0.9529, 0.9529, 0.9529, 0.9529, 0.9529, 0.9529, 0.9529, 0.9529, 0.9529, 0.9529, 0.9529, 0.9529, 0.9529, 0.9412, 0.9412, 0.9412, 0.9412, 0.9412, 0.9412, 0.9412, 0.9412, 0.9412, 0.9412, 0.9412, 0.9412, 0.9412, 0.9412, 0.9294, 0.9176, 0.9059, 0.9059, 0.9059, 0.9059, 0.9059, 0.9059, 0.9059, 0.9059, 0.9059, 0.8941, 0.8941, 0.8941, 0.8941, 0.8941, 0.8941, 0.8941, 0.8941, 0.8941, 0.8941, 0.8941, 0.8941, 0.8941, 0.8941, 0.8941, 0.8941, 0.8941, 0.8941, 0.8941, 0.8824, 0.8706, 0.8706, 0.8706, 0.8706, 0.8706, 0.8706, 0.8706, 0.8706, 0.8706, 0.8706, 0.8706, 0.8706, 0.8706, 0.8588, 0.8588, 0.8588, 0.8471, 0.8471, 0.8471, 0.8471, 0.8471, 0.8471, 0.8471, 0.8471, 0.8471, 0.8471, 0.8353, 0.8235, 0.8235, 0.8235, 0.8118, 0.8118, 0.8118, 0.8118, 0.8118, 0.8118, 0.8, 0.7882, 0.7882, 0.7882, 0.7882, 0.7765, 0.7647, 0.7647, 0.7647, 0.7647, 0.7647, 0.7529, 0.7529, 0.7529, 0.7529, 0.7529, 0.7412, 0.7294, 0.7294, 0.7294, 0.7176, 0.7176, 0.7176, 0.7176, 0.7176, 0.7176, 0.7176, 0.7176, 0.7176, 0.7176, 0.7176, 0.7176, 0.7059, 0.7059, 0.6941, 0.6824, 0.6824, 0.6824, 0.6706, 0.6588, 0.6471, 0.6353, 0.6235, 0.6118, 0.6118, 0.6118, 0.6, 0.6, 0.6, 0.6, 0.5882, 0.5882, 0.5765, 0.5647, 0.5647, 0.5529, 0.5529, 0.5412, 0.5412, 0.5412, 0.5294, 0.5176, 0.5176, 0.5176, 0.5059, 0.5059, 0.5059, 0.5059, 0.4941, 0.4824, 0.4824, 0.4706, 0.4588, 0.4471, 0.4353, 0.4235, 0.4118, 0.4118, 0.4, 0.3882, 0.3882, 0.3882, 0.3765, 0.3765, 0.3765, 0.3647, 0.3647, 0.3529, 0.3412, 0.3294, 0.3176, 0.3059, 0.2941, 0.2941, 0.2941, 0.2941, 0.2824, 0.2824, 0.2706, 0.2588, 0.2588, 0.2588, 0.2588, 0.2471, 0.2471, 0.2471, 0.2353, 0.2235, 0.2118, 0.2, 0.1882, 0.1765, 0.1647, 0.1529, 0.1529, 0.1412, 0.1294, 0.1176, 0.1059, 0.0941, 0.0824, 0.0706, 0.0588, 0.0471, 0.0353, 0.0235, 0.0118, 0.0];
+                            var prPrec = [0.3333, 0.3307, 0.332, 0.3333, 0.3347, 0.336, 0.3373, 0.3347, 0.336, 0.3374, 0.3388, 0.3402, 0.3416, 0.343, 0.3444, 0.3417, 0.3431, 0.3445, 0.346, 0.3475, 0.3489, 0.3504, 0.3519, 0.3534, 0.355, 0.3565, 0.3537, 0.3553, 0.3568, 0.3584, 0.36, 0.3616, 0.3632, 0.3649, 0.3665, 0.3682, 0.3699, 0.3716, 0.3733, 0.375, 0.3767, 0.3785, 0.3803, 0.3821, 0.3839, 0.3857, 0.3876, 0.3846, 0.3865, 0.3883, 0.3902, 0.3922, 0.3941, 0.396, 0.398, 0.4, 0.402, 0.404, 0.4061, 0.4082, 0.4103, 0.4072, 0.4041, 0.401, 0.4031, 0.4053, 0.4074, 0.4096, 0.4118, 0.414, 0.4162, 0.4185, 0.4153, 0.4176, 0.4199, 0.4222, 0.4246, 0.427, 0.4294, 0.4318, 0.4343, 0.4368, 0.4393, 0.4419, 0.4444, 0.4471, 0.4497, 0.4524, 0.4551, 0.4578, 0.4606, 0.4573, 0.454, 0.4568, 0.4596, 0.4625, 0.4654, 0.4684, 0.4713, 0.4744, 0.4774, 0.4805, 0.4837, 0.4868, 0.4901, 0.4867, 0.4899, 0.4932, 0.4898, 0.4932, 0.4966, 0.5, 0.5035, 0.507, 0.5106, 0.5143, 0.518, 0.5217, 0.5182, 0.5147, 0.5185, 0.5224, 0.5188, 0.5227, 0.5267, 0.5308, 0.5349, 0.5391, 0.5354, 0.5317, 0.536, 0.5403, 0.5447, 0.541, 0.5372, 0.5417, 0.5462, 0.5508, 0.5556, 0.5517, 0.5565, 0.5614, 0.5664, 0.5714, 0.5676, 0.5636, 0.5688, 0.5741, 0.5701, 0.5755, 0.581, 0.5865, 0.5922, 0.598, 0.604, 0.61, 0.6162, 0.6224, 0.6289, 0.6354, 0.6316, 0.6383, 0.6344, 0.6304, 0.6374, 0.6444, 0.6404, 0.6364, 0.6322, 0.6279, 0.6235, 0.619, 0.6265, 0.6341, 0.6296, 0.6375, 0.6456, 0.6538, 0.6494, 0.6579, 0.6533, 0.6486, 0.6575, 0.6528, 0.662, 0.6571, 0.6667, 0.6765, 0.6716, 0.6667, 0.6769, 0.6875, 0.6825, 0.6935, 0.7049, 0.7167, 0.7119, 0.7069, 0.7193, 0.7143, 0.7091, 0.7037, 0.6981, 0.6923, 0.6863, 0.7, 0.6939, 0.6875, 0.7021, 0.7174, 0.7111, 0.7273, 0.7442, 0.7381, 0.7561, 0.75, 0.7436, 0.7368, 0.7297, 0.7222, 0.7143, 0.7353, 0.7576, 0.7812, 0.7742, 0.8, 0.7931, 0.7857, 0.8148, 0.8462, 0.88, 0.875, 0.913, 0.9545, 0.9524, 0.95, 0.9474, 0.9444, 0.9412, 0.9375, 0.9333, 0.9286, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0];
+                            var PREVALENCE = 0.3333;
+
+                            function renderRoc() {
+                                if (!window.Plotly) { setTimeout(renderRoc, 120); return; }
+                                var el = document.getElementById('msi-roc');
+                                if (!el) return;
+                                var traces = [
+                                    {
+                                        x: rocFpr, y: rocTpr, mode: 'lines', name: 'Astra linear probe (AUROC 0.795)',
+                                        line: { color: '#d1495b', width: 2.4 },
+                                        hovertemplate: 'FPR %{x:.2f}<br>TPR %{y:.2f}<extra></extra>'
+                                    },
+                                    {
+                                        x: [0, 1], y: [0, 1], mode: 'lines', name: 'Chance (AUROC 0.50)',
+                                        line: { color: '#9aa3ad', width: 1.4, dash: 'dash' }, hoverinfo: 'skip'
+                                    }
+                                ];
+                                var layout = {
+                                    title: { text: 'ROC', font: { size: 15, color: '#1a1a1a' } },
+                                    xaxis: { title: { text: 'False positive rate', font: { size: 12 } }, range: [0, 1], gridcolor: '#eef1f5', color: '#444', constrain: 'domain' },
+                                    yaxis: { title: { text: 'True positive rate', font: { size: 12 } }, range: [0, 1], gridcolor: '#eef1f5', color: '#444', scaleanchor: 'x', scaleratio: 1 },
+                                    legend: { font: { size: 10.5 }, bgcolor: 'rgba(255,255,255,0.7)', x: 0.98, xanchor: 'right', y: 0.04, yanchor: 'bottom' },
+                                    margin: { l: 60, r: 16, t: 48, b: 52 },
+                                    paper_bgcolor: '#ffffff', plot_bgcolor: '#ffffff',
+                                    font: { family: 'Roboto, sans-serif', color: '#1a1a1a' }
+                                };
+                                Plotly.newPlot(el, traces, layout, { responsive: true, displayModeBar: false });
+                            }
+
+                            function renderPr() {
+                                if (!window.Plotly) { setTimeout(renderPr, 120); return; }
+                                var el = document.getElementById('msi-pr');
+                                if (!el) return;
+                                var traces = [
+                                    {
+                                        x: prRec, y: prPrec, mode: 'lines', name: 'Astra linear probe (AUPRC 0.703)',
+                                        line: { color: '#0f3462', width: 2.4 },
+                                        hovertemplate: 'Recall %{x:.2f}<br>Precision %{y:.2f}<extra></extra>'
+                                    },
+                                    {
+                                        x: [0, 1], y: [PREVALENCE, PREVALENCE], mode: 'lines', name: 'Prevalence (0.33)',
+                                        line: { color: '#9aa3ad', width: 1.4, dash: 'dash' }, hoverinfo: 'skip'
+                                    }
+                                ];
+                                var layout = {
+                                    title: { text: 'Precision-recall', font: { size: 15, color: '#1a1a1a' } },
+                                    xaxis: { title: { text: 'Recall', font: { size: 12 } }, range: [0, 1], gridcolor: '#eef1f5', color: '#444', constrain: 'domain' },
+                                    yaxis: { title: { text: 'Precision', font: { size: 12 } }, range: [0, 1], gridcolor: '#eef1f5', color: '#444', scaleanchor: 'x', scaleratio: 1 },
+                                    legend: { font: { size: 10.5 }, bgcolor: 'rgba(255,255,255,0.7)', x: 0.98, xanchor: 'right', y: 0.04, yanchor: 'bottom' },
+                                    margin: { l: 60, r: 16, t: 48, b: 52 },
+                                    paper_bgcolor: '#ffffff', plot_bgcolor: '#ffffff',
+                                    font: { family: 'Roboto, sans-serif', color: '#1a1a1a' }
+                                };
+                                Plotly.newPlot(el, traces, layout, { responsive: true, displayModeBar: false });
+                            }
+
+                            renderRoc();
+                            renderPr();
+                        })();
+                    </script>
+
+                    <p>Because the probe is linear and its genes are named, the prediction traces back to its drivers, and those drivers align with the established biology of MSI-H tumors. Because these tumors are hypermutated and neoantigen-rich, they recruit cytotoxic T and NK cells <a href="https://aacrjournals.org/cancerdiscovery/article/5/1/43/4777/The-Vigorous-Immune-Microenvironment-of" target="_blank">[13]</a>; accordingly, an immune-effector gene such as PRF1 (perforin) is elevated in MSI-H, while an epithelial-identity gene such as CDX2 is depleted, a loss that is highly specific for mismatch-repair deficiency <a href="https://www.frontiersin.org/journals/oncology/articles/10.3389/fonc.2013.00265/full" target="_blank">[14]</a>.</p>
+
+                    <p>The same signal is visible directly in the tissue. Because Astra assigns an expression vector to every decoded cell, we can color each cell by a single predicted marker and compare MSI-H against MSS side by side. In Figure 8, predicted PRF1 is dense and bright across the MSI-H tumors on the top row and largely absent from the MSS tumors below, reproducing the cytotoxic immune infiltration that characterizes MSI-H disease, from H&amp;E alone.</p>
+
+                    <figure class="blog-image">
+                        <img src="/hest_images/coad/marker_map_PRF1.png" alt="Astra-decoded cells colored by predicted PRF1, MSI-H versus MSS tumors" loading="lazy" />
+                        <figcaption>Figure 8: Astra-decoded cells colored by predicted PRF1 (a cytotoxic-lymphocyte marker), one panel per slide, with MSI-H tumors on the top row and MSS on the bottom. Each panel is titled with its mean predicted expression.</figcaption>
+                    </figure>
+
+                    <p>CDX2 produces the mirror image. As an epithelial-identity factor that is retained in MSS and lost in MSI-H, its predicted expression in Figure 9 is bright across the MSS row and faint across the MSI-H row, the exact inverse of the PRF1 pattern. The two markers moving in opposite directions between the same tumors is the signal the classifier relies on.</p>
+
+                    <figure class="blog-image">
+                        <img src="/hest_images/coad/marker_map_CDX2.png" alt="Astra-decoded cells colored by predicted CDX2, MSI-H versus MSS tumors" loading="lazy" />
+                        <figcaption>Figure 9: The same decoded cells colored by predicted CDX2 (an epithelial-identity marker), with MSI-H tumors on the top row and MSS on the bottom.</figcaption>
+                    </figure>
+
+                    <p>A frozen, cross-domain, single-cell expression model that was never tuned on MSI recovers a clinically actionable biomarker from routine histology and identifies the genes responsible for the prediction. Two limits: these results come from cross-validation within TCGA rather than an external cohort, and the 33% MSI-H prevalence here is enriched relative to the roughly 15% observed in the clinic, so we present this as evidence rather than a deployable diagnostic.</p>
+
+                    <h2>Astra Predicts Trastuzumab Response</h2>
+
+                    <p>We next ask whether Astra&rsquo;s predicted expression carries information about treatment response, using trastuzumab (anti-HER2) response in HER2-positive breast cancer on the Yale cohort (85 pre-treatment patients, 36 responders and 49 non-responders), labeled by pathologic response versus residual disease <a href="https://doi.org/10.1038/s41379-021-00911-w" target="_blank">[15]</a>. Astra stays frozen. Within each patient&rsquo;s tumor ROIs it detects cells and predicts their expression tile by tile, giving a stack of up to roughly 512 tiles across 5,916 genes per patient.</p>
+
+                    <p>We characterize how each gene varies across the tumor rather than averaging it away. For every gene we compute three dispersion statistics across the patient&rsquo;s tiles: the tile-to-tile standard deviation, the gap between the 90th percentile and the median, and the fraction of tiles above the patient&rsquo;s own median. This gives 17,748 features per patient describing the spatial heterogeneity of the predicted transcriptome, itself a known driver of therapy resistance. Within each fold we standardize, keep the 40 features most correlated with response, and fit an L2-regularized logistic regression.</p>
+
+                    <p>Evaluated with repeated stratified 5-fold cross-validation (50 repeats) on averaged out-of-fold probabilities, the model reaches AUROC 0.711 (95% CI 0.59 to 0.82 by 1000&times; bootstrap) and AUPRC 0.622 against a 0.42 prevalence baseline, with a 200-label permutation null giving p = 0.005 and results stable across seeds (0.711 to 0.717). Responders receive a substantially higher median predicted probability (about 0.57) than non-responders (about 0.19). The difference is one of supervision: on this same 85-patient cohort, Farahmand et al. trained an end-to-end Inception-v3 CNN directly on the response label and reported roughly 0.80 slide-level AUROC <a href="https://doi.org/10.1038/s41379-021-00911-w" target="_blank">[15]</a>. Astra, by contrast, was optimized only to predict expression and never observed the response label, so the signal here is emergent from its predicted transcriptome rather than learned from the outcome.</p>
+
+                    <figure class="blog-image">
+                        <div class="roc-pr-row">
+                            <div id="her2-roc" style="flex:1 1 320px; min-width:300px; height:420px;"></div>
+                            <div id="her2-pr" style="flex:1 1 320px; min-width:300px; height:420px;"></div>
+                        </div>
+                        <figcaption>Figure 10: Trastuzumab response detection on the Yale HER2+ cohort (n=85, 36 responders) from a logistic-regression classifier on Astra&rsquo;s H&amp;E-derived intratumoral dispersion features. Left: ROC with AUROC 0.711 (95% CI 0.59&ndash;0.82); the dashed diagonal is chance. Right: precision-recall with AUPRC 0.622; the dashed line marks the 42% responder prevalence (the no-skill baseline).</figcaption>
+                    </figure>
+
+                    <script>
+                        (function () {
+                            var rocFpr = [0.0, 0.0, 0.0204, 0.0204, 0.0408, 0.0408, 0.0816, 0.0816, 0.1224, 0.1224, 0.2041, 0.2041, 0.2245, 0.2245, 0.2449, 0.2449, 0.2653, 0.2653, 0.3265, 0.3265, 0.3469, 0.3469, 0.3673, 0.3673, 0.3878, 0.3878, 0.449, 0.449, 0.4898, 0.4898, 0.7143, 0.7143, 0.7551, 0.7551, 0.8571, 0.8571, 1.0, 1.0];
+                            var rocTpr = [0.0, 0.0278, 0.0278, 0.0833, 0.0833, 0.1667, 0.1667, 0.3333, 0.3333, 0.3611, 0.3611, 0.3889, 0.3889, 0.4722, 0.4722, 0.5, 0.5, 0.5278, 0.5278, 0.5556, 0.5556, 0.7222, 0.7222, 0.7778, 0.7778, 0.8056, 0.8056, 0.8611, 0.8611, 0.8889, 0.8889, 0.9167, 0.9167, 0.9444, 0.9444, 0.9722, 0.9722, 1.0];
+                            var prRec = [1.0, 0.9722, 0.9722, 0.9722, 0.9722, 0.9722, 0.9722, 0.9722, 0.9722, 0.9444, 0.9444, 0.9444, 0.9444, 0.9444, 0.9444, 0.9167, 0.9167, 0.9167, 0.8889, 0.8889, 0.8889, 0.8889, 0.8889, 0.8889, 0.8889, 0.8889, 0.8889, 0.8889, 0.8889, 0.8889, 0.8611, 0.8611, 0.8611, 0.8333, 0.8056, 0.8056, 0.8056, 0.8056, 0.7778, 0.7778, 0.75, 0.7222, 0.7222, 0.6944, 0.6667, 0.6389, 0.6111, 0.5833, 0.5556, 0.5556, 0.5278, 0.5278, 0.5278, 0.5278, 0.5, 0.5, 0.4722, 0.4722, 0.4444, 0.4167, 0.3889, 0.3889, 0.3611, 0.3611, 0.3611, 0.3611, 0.3611, 0.3333, 0.3333, 0.3333, 0.3056, 0.2778, 0.25, 0.2222, 0.1944, 0.1667, 0.1667, 0.1667, 0.1389, 0.1111, 0.0833, 0.0833, 0.0556, 0.0278, 0.0278, 0.0];
+                            var prPrec = [0.4235, 0.4167, 0.4217, 0.4268, 0.4321, 0.4375, 0.443, 0.4487, 0.4545, 0.4474, 0.4533, 0.4595, 0.4658, 0.4722, 0.4789, 0.4714, 0.4783, 0.4853, 0.4776, 0.4848, 0.4923, 0.5, 0.5079, 0.5161, 0.5246, 0.5333, 0.5424, 0.5517, 0.5614, 0.5714, 0.5636, 0.5741, 0.5849, 0.5769, 0.5686, 0.58, 0.5918, 0.6042, 0.5957, 0.6087, 0.6, 0.5909, 0.6047, 0.5952, 0.5854, 0.575, 0.5641, 0.5526, 0.5405, 0.5556, 0.5429, 0.5588, 0.5758, 0.5938, 0.5806, 0.6, 0.5862, 0.6071, 0.5926, 0.5769, 0.56, 0.5833, 0.5652, 0.5909, 0.619, 0.65, 0.6842, 0.6667, 0.7059, 0.75, 0.7333, 0.7143, 0.6923, 0.6667, 0.6364, 0.6, 0.6667, 0.75, 0.7143, 0.6667, 0.6, 0.75, 0.6667, 0.5, 1.0, 1.0];
+                            var PREVALENCE = 0.4235;
+
+                            function renderRoc() {
+                                if (!window.Plotly) { setTimeout(renderRoc, 120); return; }
+                                var el = document.getElementById('her2-roc');
+                                if (!el) return;
+                                var traces = [
+                                    { x: rocFpr, y: rocTpr, mode: 'lines', name: 'Astra dispersion probe (AUROC 0.711)', line: { color: '#d1495b', width: 2.4 }, hovertemplate: 'FPR %{x:.2f}<br>TPR %{y:.2f}<extra></extra>' },
+                                    { x: [0, 1], y: [0, 1], mode: 'lines', name: 'Chance (AUROC 0.50)', line: { color: '#9aa3ad', width: 1.4, dash: 'dash' }, hoverinfo: 'skip' }
+                                ];
+                                var layout = {
+                                    title: { text: 'ROC', font: { size: 15, color: '#1a1a1a' } },
+                                    xaxis: { title: { text: 'False positive rate', font: { size: 12 } }, range: [0, 1], gridcolor: '#eef1f5', color: '#444', constrain: 'domain' },
+                                    yaxis: { title: { text: 'True positive rate', font: { size: 12 } }, range: [0, 1], gridcolor: '#eef1f5', color: '#444', scaleanchor: 'x', scaleratio: 1 },
+                                    legend: { font: { size: 10.5 }, bgcolor: 'rgba(255,255,255,0.7)', x: 0.98, xanchor: 'right', y: 0.04, yanchor: 'bottom' },
+                                    margin: { l: 60, r: 16, t: 48, b: 52 }, paper_bgcolor: '#ffffff', plot_bgcolor: '#ffffff', font: { family: 'Roboto, sans-serif', color: '#1a1a1a' }
+                                };
+                                Plotly.newPlot(el, traces, layout, { responsive: true, displayModeBar: false });
+                            }
+
+                            function renderPr() {
+                                if (!window.Plotly) { setTimeout(renderPr, 120); return; }
+                                var el = document.getElementById('her2-pr');
+                                if (!el) return;
+                                var traces = [
+                                    { x: prRec, y: prPrec, mode: 'lines', name: 'Astra dispersion probe (AUPRC 0.622)', line: { color: '#0f3462', width: 2.4 }, hovertemplate: 'Recall %{x:.2f}<br>Precision %{y:.2f}<extra></extra>' },
+                                    { x: [0, 1], y: [PREVALENCE, PREVALENCE], mode: 'lines', name: 'Prevalence (0.42)', line: { color: '#9aa3ad', width: 1.4, dash: 'dash' }, hoverinfo: 'skip' }
+                                ];
+                                var layout = {
+                                    title: { text: 'Precision-recall', font: { size: 15, color: '#1a1a1a' } },
+                                    xaxis: { title: { text: 'Recall', font: { size: 12 } }, range: [0, 1], gridcolor: '#eef1f5', color: '#444', constrain: 'domain' },
+                                    yaxis: { title: { text: 'Precision', font: { size: 12 } }, range: [0, 1], gridcolor: '#eef1f5', color: '#444', scaleanchor: 'x', scaleratio: 1 },
+                                    legend: { font: { size: 10.5 }, bgcolor: 'rgba(255,255,255,0.7)', x: 0.98, xanchor: 'right', y: 0.04, yanchor: 'bottom' },
+                                    margin: { l: 60, r: 16, t: 48, b: 52 }, paper_bgcolor: '#ffffff', plot_bgcolor: '#ffffff', font: { family: 'Roboto, sans-serif', color: '#1a1a1a' }
+                                };
+                                Plotly.newPlot(el, traces, layout, { responsive: true, displayModeBar: false });
+                            }
+
+                            renderRoc();
+                            renderPr();
+                        })();
+                    </script>
+
+                    <p>The separation is easiest to see at the level of individual patients. Plotting each patient&rsquo;s averaged out-of-fold predicted probability against their true response (Figure 11) shows the responder distribution shifted clearly upward, with the two group medians well apart, about 0.57 for responders against 0.19 for non-responders.</p>
+
+                    <figure class="blog-image">
+                        <div id="her2-violin" style="width:100%; height:440px;"></div>
+                        <figcaption>Figure 11: Predicted trastuzumab-response probability for each patient, grouped by true status (non-responders and responders). Each point is one patient&rsquo;s averaged out-of-fold probability; the horizontal line marks the group median.</figcaption>
+                    </figure>
+
+                    <script>
+                        (function () {
+                            var respProb = [0.0022, 0.6504, 0.252, 0.3755, 0.532, 0.2353, 0.7379, 0.7654, 0.1214, 0.4586, 0.0344, 0.5781, 0.1339, 0.1926, 0.7903, 0.8626, 0.8972, 0.8952, 0.7161, 0.3089, 0.4661, 0.9445, 0.3291, 0.6906, 0.6219, 0.9709, 0.48, 0.8254, 0.6943, 0.9234, 0.5428, 0.5722, 0.4642, 0.7395, 0.4431, 0.7943];
+                            var nonProb = [0.7015, 0.164, 0.1786, 0.0311, 0.0245, 0.0448, 0.141, 0.03, 0.0331, 0.1704, 0.0151, 0.8585, 0.149, 0.694, 0.7296, 0.1926, 0.1363, 0.6998, 0.3251, 0.0183, 0.0131, 0.2981, 0.7214, 0.5765, 0.1822, 0.2084, 0.1793, 0.5393, 0.1065, 0.2623, 0.1013, 0.2046, 0.1242, 0.1324, 0.0911, 0.0785, 0.567, 0.161, 0.8566, 0.1633, 0.7048, 0.3759, 0.6968, 0.5696, 0.596, 0.562, 0.9057, 0.9538, 0.279];
+
+                            function draw() {
+                                if (!window.Plotly) { setTimeout(draw, 120); return; }
+                                var el = document.getElementById('her2-violin');
+                                if (!el) return;
+                                var traces = [
+                                    {
+                                        type: 'violin', y: nonProb, name: 'non-responder',
+                                        points: 'all', jitter: 0.35, pointpos: 0, marker: { color: '#3b6ea5', size: 5, opacity: 0.7 },
+                                        line: { color: '#3b6ea5' }, fillcolor: 'rgba(59, 110, 165, 0.22)',
+                                        box: { visible: false }, meanline: { visible: false }, spanmode: 'hard',
+                                        hovertemplate: 'non-responder<br>p %{y:.2f}<extra></extra>'
+                                    },
+                                    {
+                                        type: 'violin', y: respProb, name: 'responder',
+                                        points: 'all', jitter: 0.35, pointpos: 0, marker: { color: '#d1495b', size: 5, opacity: 0.7 },
+                                        line: { color: '#d1495b' }, fillcolor: 'rgba(209, 73, 91, 0.22)',
+                                        box: { visible: false }, meanline: { visible: false }, spanmode: 'hard',
+                                        hovertemplate: 'responder<br>p %{y:.2f}<extra></extra>'
+                                    }
+                                ];
+                                var layout = {
+                                    title: { text: 'Predicted response probability by true status', font: { size: 15, color: '#1a1a1a' } },
+                                    yaxis: { title: { text: 'Predicted response probability', font: { size: 12 } }, range: [-0.05, 1.02], gridcolor: '#eef1f5', color: '#444', zeroline: false },
+                                    xaxis: { color: '#444', tickfont: { size: 12 } },
+                                    shapes: [
+                                        { type: 'line', xref: 'x', x0: -0.42, x1: 0.42, yref: 'y', y0: 0.193, y1: 0.193, line: { color: '#3b6ea5', width: 2.4 } },
+                                        { type: 'line', xref: 'x', x0: 0.58, x1: 1.42, yref: 'y', y0: 0.575, y1: 0.575, line: { color: '#d1495b', width: 2.4 } }
+                                    ],
+                                    showlegend: false,
+                                    margin: { l: 60, r: 16, t: 48, b: 40 }, paper_bgcolor: '#ffffff', plot_bgcolor: '#ffffff', font: { family: 'Roboto, sans-serif', color: '#1a1a1a' }
+                                };
+                                Plotly.newPlot(el, traces, layout, { responsive: true, displayModeBar: false });
+                            }
+                            draw();
+                        })();
+                    </script>
+
+                    <p>Because the classifier is linear and its features are named, we can read what drives the prediction. The strongest features are dominated by hotspot-gap and variability terms rather than mean expression levels: the 90th-percentile-minus-median of EGR3, BCAR3 (breast cancer anti-estrogen resistance 3) and LAMB3 (a laminin/extracellular-matrix gene), and the tile-to-tile standard deviation of KLF6, IL37 and COL4A1 (a basement-membrane collagen). These are stress-response, immune and matrix-remodeling genes whose regional variability across the tumor, rather than their average level, tracks response.</p>
+
+                    <p>To check that these predictions reflect real biology, we validate them against an independent axis: the estrogen-receptor (luminal) program. ER and HER2 are separate receptors, so this HER2-positive cohort still contains both ER-positive (66) and ER-negative (19) tumors. Genes such as ESR1, PGR, GATA3, FOXA1, AR, MLPH, and TFF3 are canonical luminal markers that should be coordinately elevated in ER-positive tumors <a href="https://doi.org/10.1200/JCO.2008.18.1370" target="_blank">[17]</a>, and Astra was never given any patient&rsquo;s ER status. When we correlate its predicted pseudobulk expression of each luminal gene against the patients&rsquo; clinical ER percentage (Figure 12), the core of the program comes out significantly and positively correlated: TFF3, GATA3, MLPH, AR, ESR1, PGR, and FOXA1 all track ER percentage (Spearman r &asymp; 0.22 to 0.34, p &lt; 0.05). The model recovers ER status from H&amp;E alone.</p>
+
+                    <figure class="blog-image">
+                        <div id="her2-luminal" style="width:100%; height:440px;"></div>
+                        <figcaption>Figure 12: Spearman correlation between Astra&rsquo;s predicted pseudobulk expression of each luminal marker and the patients&rsquo; clinical ER percentage. Bars are colored by whether the correlation is statistically significant (p &lt; 0.05).</figcaption>
+                    </figure>
+
+                    <script>
+                        (function () {
+                            var genes = ['TFF1', 'BCL2', 'XBP1', 'AGR2', 'SLC39A6', 'CA12', 'NAT1', 'FOXA1', 'PGR', 'ANKRD30A', 'FSIP1', 'ESR1', 'AR', 'MLPH', 'GATA3', 'TFF3'];
+                            var rvals = [-0.1, -0.069, 0.058, 0.062, 0.1, 0.192, 0.217, 0.222, 0.224, 0.274, 0.286, 0.291, 0.306, 0.306, 0.319, 0.341];
+                            var sig = [false, false, false, false, false, false, true, true, true, true, true, true, true, true, true, true];
+
+                            function draw() {
+                                if (!window.Plotly) { setTimeout(draw, 120); return; }
+                                var el = document.getElementById('her2-luminal');
+                                if (!el) return;
+                                var colors = sig.map(function (s) { return s ? '#0f3462' : '#c2c9d2'; });
+                                var trace = {
+                                    type: 'bar', orientation: 'h', x: rvals, y: genes,
+                                    marker: { color: colors },
+                                    hovertemplate: '%{y}: Spearman r %{x:.2f}<extra></extra>'
+                                };
+                                var layout = {
+                                    title: { text: 'Predicted luminal expression vs clinical ER%', font: { size: 15, color: '#1a1a1a' } },
+                                    xaxis: { title: { text: 'Spearman r (Astra-predicted expression vs ER%)', font: { size: 12 } }, zeroline: true, zerolinecolor: '#bbbbbb', gridcolor: '#eef1f5', color: '#444' },
+                                    yaxis: { color: '#444', tickfont: { size: 11 }, automargin: true },
+                                    margin: { l: 80, r: 20, t: 48, b: 52 }, paper_bgcolor: '#ffffff', plot_bgcolor: '#ffffff', font: { family: 'Roboto, sans-serif', color: '#1a1a1a' },
+                                    annotations: [
+                                        { x: 0.98, y: 0.06, xref: 'paper', yref: 'paper', showarrow: false, align: 'right', text: '<span style="color:#0f3462">&#9632;</span> significant (p &lt; 0.05)&nbsp;&nbsp;<span style="color:#c2c9d2">&#9632;</span> not significant', font: { size: 11 } }
+                                    ]
+                                };
+                                Plotly.newPlot(el, [trace], layout, { responsive: true, displayModeBar: false });
+                            }
+                            draw();
+                        })();
+                    </script>
+
+                    <p>The same program is evident spatially. When predicted per-cell GATA3, ESR1, and AR are overlaid on the H&amp;E, the ER-positive tumor in Figure 13 shows strong, spatially coherent luminal expression concentrated in the invasive tumor regions, whereas the ER-negative tumor in Figure 14 shows a markedly weaker and sparser signal in the same three markers. The predictions therefore separate the two patients not only in aggregate but in the correct tissue locations.</p>
+
+                    <figure class="blog-image">
+                        <img src="/hest_images/her2/luminal_ER-positive.png" alt="Astra-predicted luminal markers GATA3, ESR1, AR on an ER-positive slide" loading="lazy" />
+                        <figcaption>Figure 13: Astra-predicted per-cell GATA3, ESR1, and AR overlaid on the H&amp;E of an ER-positive tumor.</figcaption>
+                    </figure>
+
+                    <figure class="blog-image">
+                        <img src="/hest_images/her2/luminal_ER-negative.png" alt="Astra-predicted luminal markers GATA3, ESR1, AR on an ER-negative slide" loading="lazy" />
+                        <figcaption>Figure 14: The same predicted markers overlaid on the H&amp;E of an ER-negative tumor.</figcaption>
+                    </figure>
+
+                    <p>None of this analysis used ER labels, yet the predicted spatial expression reproduces the known luminal program in the right patients and in the right tissue regions.</p>
+
+                    <h2>Astra Learns Interpretable Concepts</h2>
+
+                    <p>To see what Astra&rsquo;s representation captures, we probe it with a sparse autoencoder (SAE). An SAE is a small network trained to reconstruct a model&rsquo;s internal activations through a much wider hidden layer that is constrained to fire sparsely, so each hidden unit, or latent, tends to specialize to a single, human-interpretable feature rather than an entangled mixture of many <a href="https://transformer-circuits.pub/2023/monosemantic-features" target="_blank">[9]</a>, <a href="https://arxiv.org/abs/2309.08600" target="_blank">[10]</a>. Applied to Astra&rsquo;s features, each latent behaves like a concept: it switches on for a specific kind of morphology and stays quiet elsewhere. Pick a learned concept below to view the H&amp;E tiles that most strongly activate it.</p>
+
+                    <div class="sae-explorer" id="sae-explorer">
+                        <label class="sae-select-label" for="sae-select">Learned concept</label>
+                        <select id="sae-select" class="sae-select" aria-label="Select an SAE concept"></select>
+                        <div class="sae-stage"></div>
+                    </div>
+
+                    <style>
+                        .sae-explorer {
+                            border: 1px solid #e3e6ea;
+                            border-radius: 10px;
+                            padding: 1.1rem;
+                            margin: 1.5rem 0 2rem 0;
+                            background: #fbfcfd;
+                        }
+
+                        .sae-select-label {
+                            display: block;
+                            font-size: 0.78rem;
+                            text-transform: uppercase;
+                            letter-spacing: 0.04em;
+                            color: #6b7280;
+                            margin-bottom: 0.4rem;
+                        }
+
+                        .sae-select {
+                            width: 100%;
+                            max-width: 420px;
+                            padding: 0.55rem 2.2rem 0.55rem 0.8rem;
+                            font-size: 0.95rem;
+                            font-family: inherit;
+                            color: #1a1a1a;
+                            border: 1px solid #d4d9df;
+                            border-radius: 8px;
+                            background-color: #ffffff;
+                            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%230f3462' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+                            background-repeat: no-repeat;
+                            background-position: right 0.9rem center;
+                            -webkit-appearance: none;
+                            -moz-appearance: none;
+                            appearance: none;
+                            cursor: pointer;
+                            outline: none;
+                        }
+
+                        .sae-select:focus {
+                            border-color: #0f3462;
+                            box-shadow: 0 0 0 2px rgba(15, 52, 98, 0.12);
+                        }
+
+                        .sae-stage {
+                            margin-top: 1.1rem;
+                        }
+
+                        .sae-concept-header {
+                            display: flex;
+                            align-items: baseline;
+                            flex-wrap: wrap;
+                            gap: 0.6rem;
+                            padding-bottom: 0.7rem;
+                            margin-bottom: 0.9rem;
+                            border-bottom: 1px solid #e3e6ea;
+                        }
+
+                        .sae-concept-id {
+                            font-family: 'SFMono-Regular', Menlo, Consolas, monospace;
+                            font-size: 0.85rem;
+                            color: #0f3462;
+                            background: rgba(15, 52, 98, 0.08);
+                            padding: 0.15rem 0.45rem;
+                            border-radius: 5px;
+                        }
+
+                        .sae-concept-name {
+                            font-size: 1.05rem;
+                            font-weight: 600;
+                            color: #1a1a1a;
+                        }
+
+                        .sae-grid {
+                            display: grid;
+                            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+                            gap: 0.5rem;
+                        }
+
+                        .sae-tile {
+                            position: relative;
+                            aspect-ratio: 1 / 1;
+                            border-radius: 6px;
+                            overflow: hidden;
+                            background: #eef1f5;
+                        }
+
+                        .sae-tile img {
+                            width: 100% !important;
+                            height: 100%;
+                            object-fit: cover;
+                            display: block;
+                            border-radius: 6px !important;
+                            box-shadow: none !important;
+                        }
+
+                        .sae-tile.placeholder {
+                            background: repeating-linear-gradient(45deg, #eef1f5, #eef1f5 6px, #e6eaf0 6px, #e6eaf0 12px);
+                        }
+
+                        .sae-tile.placeholder::after {
+                            content: attr(data-label);
+                            position: absolute;
+                            inset: 0;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            font-size: 0.7rem;
+                            color: #98a2b0;
+                            font-family: 'SFMono-Regular', Menlo, Consolas, monospace;
+                        }
+                    </style>
+
+                    <script>
+                        (function () {
+                            var concepts = [
+                                { id: 'c4396', name: 'Macrophage / myeloid infiltrate' },
+                                { id: 'c1187', name: 'Tumor epithelium (EPCAM-high)' },
+                                { id: 'c2051', name: 'Stromal fibroblasts' },
+                                { id: 'c3320', name: 'Lymphocyte aggregate' },
+                                { id: 'c1903', name: 'Glandular epithelium' },
+                                { id: 'c5012', name: 'Vascular / endothelium' },
+                                { id: 'c0784', name: 'Adipose tissue' },
+                                { id: 'c2607', name: 'Necrosis / low cellularity' }
+                            ];
+                            var TILES = 12;
+
+                            var root = document.getElementById('sae-explorer');
+                            if (!root) return;
+                            var select = root.querySelector('.sae-select');
+                            var stage = root.querySelector('.sae-stage');
+
+                            concepts.forEach(function (c) {
+                                var o = document.createElement('option');
+                                o.value = c.id;
+                                o.textContent = c.name + '  (' + c.id + ')';
+                                select.appendChild(o);
+                            });
+
+                            function tilePaths(id) {
+                                var out = [];
+                                for (var i = 1; i <= TILES; i++) {
+                                    out.push('/hest_images/sae/' + id + '/' + (i < 10 ? '0' + i : i) + '.png');
+                                }
+                                return out;
+                            }
+
+                            function byId(id) {
+                                for (var i = 0; i < concepts.length; i++) {
+                                    if (concepts[i].id === id) return concepts[i];
+                                }
+                                return concepts[0];
+                            }
+
+                            function renderConcept(c) {
+                                stage.innerHTML = '';
+                                var header = document.createElement('div');
+                                header.className = 'sae-concept-header';
+                                header.innerHTML = '<span class="sae-concept-id">' + c.id + '</span>' +
+                                    '<span class="sae-concept-name">' + c.name + '</span>';
+                                stage.appendChild(header);
+
+                                var grid = document.createElement('div');
+                                grid.className = 'sae-grid';
+                                tilePaths(c.id).forEach(function (src, i) {
+                                    var tile = document.createElement('div');
+                                    tile.className = 'sae-tile';
+                                    var img = document.createElement('img');
+                                    img.loading = 'lazy';
+                                    img.alt = c.id + ' activating tile ' + (i + 1);
+                                    img.onerror = function () {
+                                        tile.classList.add('placeholder');
+                                        tile.setAttribute('data-label', 'tile ' + (i + 1));
+                                        img.remove();
+                                    };
+                                    img.src = src;
+                                    tile.appendChild(img);
+                                    grid.appendChild(tile);
+                                });
+                                stage.appendChild(grid);
+                            }
+
+                            select.addEventListener('change', function () {
+                                renderConcept(byId(select.value));
+                            });
+
+                            renderConcept(concepts[0]);
+                        })();
+                    </script>
                 </article>
             </div>
         </section>

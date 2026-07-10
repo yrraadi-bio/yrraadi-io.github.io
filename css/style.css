@@ -1790,18 +1790,31 @@ body.hest-blog-page .blog-image img {
     box-shadow: none;
 }
 
-@media (min-width: 1300px) {
-    body.hest-blog-page .blog-article figure.hest-marker-map {
-        width: min(1120px, calc(100vw - 8rem));
-        max-width: min(1120px, calc(100vw - 8rem));
-        margin-left: 50%;
-        margin-right: 0;
-        transform: translateX(-50%);
-    }
+body.hest-blog-page .blog-content {
+    max-width: 900px;
+}
 
-    body.hest-blog-page .blog-article figure.hest-wide-xl {
-        width: min(1600px, calc(100vw - 2rem));
-        max-width: min(1600px, calc(100vw - 2rem));
+@media (min-width: 1300px) {
+    /* Unify text and image widths so paragraphs and figures share one column */
+    body.hest-blog-page .blog-article p,
+    body.hest-blog-page .blog-article li,
+    body.hest-blog-page .blog-article h2,
+    body.hest-blog-page .blog-article h3,
+    body.hest-blog-page .blog-article h4,
+    body.hest-blog-page .blog-article h4.blog-subheading,
+    body.hest-blog-page .blog-article .blog-takeaways,
+    body.hest-blog-page .blog-article ul,
+    body.hest-blog-page .blog-article ol,
+    body.hest-blog-page .blog-article blockquote,
+    body.hest-blog-page .blog-article figure,
+    body.hest-blog-page .blog-article figure.wide,
+    body.hest-blog-page .blog-article figure.hest-marker-map,
+    body.hest-blog-page .blog-article details.collapsible-section {
+        width: auto;
+        max-width: 860px;
+        margin-left: auto;
+        margin-right: auto;
+        transform: none;
     }
 }
 
