@@ -822,11 +822,10 @@
                             <summary>
                                 <h4>Why does Hyperball worsen Muon?</h4>
                             </summary>
-                        <p>We hypothesize that this is
-                        because Hyperball&rsquo;s re-projection scales all
-                        singular values of the weight matrix by the <em>same</em> multiplicative factor. When
-                        Hyperball maps \(W_{t+1} = R\,(W_t + U_t)/\|W_t + U_t\|_F\), it shrinks every singular
-                        direction of \(W\) equally<span class="sidenote-group"><sup class="sidenote-ref">10</sup><span
+                        <p>We hypothesize that this comes from how the repeated norm constraint reshapes the
+                        optimization <em>trajectory</em>, not from the rescaling step itself. Each step,
+                        Hyperball maps \(W_{t+1} = R\,(W_t + U_t)/\|W_t + U_t\|_F\), multiplying every
+                        singular value of \(W_t + U_t\) by the <em>same</em> scalar \(c = R/\|W_t + U_t\|_F\)<span class="sidenote-group"><sup class="sidenote-ref">10</sup><span
                             class="sidenote-card side-left">It is actually possible to be on both the Frobenius and
                             Spectral sphere at
                             once as they DO intersect, but our algorithm does not guarantee that we enter
@@ -834,23 +833,24 @@
                             \|W\|_F\le \sqrt{\min(m, n)}\|W\|_2\), so one might believe that
                             \(\|W\|_F\in[1,\sqrt{\min(m, n)}]\) guarantees that \(W\) lies in the intersection, but
                             this is a necessary condition, not a sufficient one (think of a rank 1 matrix
-                            within this range)!</span></span>. The dominant singular values of \(W\), being
-                        large, survive this downscaling, and they remain the dominant share of the fixed energy
-                        budget \(\|W\|_F^2 = \sum_i \sigma_i^2 = R^2\). The smaller singular values of \(W\),
-                        however, cannot: Muon&rsquo;s whitening of the update matrix tries to grow them step
-                        after step by distributing the learning signal equally across all singular directions,
-                        but the uniform rescaling of the weight matrix pulls them back down proportionally each
-                        time. Because they never accumulate enough energy to matter, the small directions
-                        effectively die while the large ones persist, concentrating the spectrum into fewer and
-                        fewer dominant modes.
-                        The <a href="#spectral-analysis">spectral metrics</a> below support this: MuonH&rsquo;s
-                        spectral entropy and participation ratio collapse over training, consistent with the
-                        small singular directions being progressively eroded by the uniform rescaling.</p>
+                            within this range)!</span></span>. Crucially, because this factor is uniform it
+                        leaves the <em>shape</em> of the spectrum untouched: rescaling all \(\sigma_i\)
+                        proportionally preserves their ratios, so scale-invariant metrics like spectral entropy
+                        and participation ratio are unchanged by the retraction on its own. The effect must
+                        therefore be dynamical. Muon&rsquo;s whitening tries to feed energy into the weaker
+                        singular directions of \(W\), but forcing \(\|W_{t+1}\|_F = R\) at every step constrains
+                        where the next update can move; over many steps this repeated retraction limits how much
+                        the weaker directions can actually accumulate in \(W\), relative to the unconstrained
+                        MuonW.
+                        The <a href="#spectral-analysis">spectral metrics</a> below are consistent with this:
+                        MuonH&rsquo;s weight spectrum ends up more concentrated than MuonW&rsquo;s, but because
+                        those metrics are scale-invariant, this reflects a genuinely different training
+                        trajectory rather than a trivial consequence of rescaling the matrix norm.</p>
 
                     <p>Adam under the same Hyperball constraint does not suffer this fate, because without
                         whitening the spectrum is already concentrated in the task-relevant directions; the
-                        uniform rescaling therefore does comparatively little damage. Weight decay, on the other
-                        hand, does <em>not</em> alter the Muon update at all, it only decays the matrix
+                        norm constraint therefore perturbs its trajectory comparatively little. Weight decay, on
+                        the other hand, does <em>not</em> alter the Muon update at all, it only decays the matrix
                         the update is added to, so the whitening and the regularizer rarely conflict.</p>
                         </details>
 
@@ -1048,10 +1048,10 @@
                         green dominating the mid learning rates. By width 1024, the advantage fades to
                         mostly yellow, and at width 2048 the picture inverts: the heatmap is mostly warm,
                          with weight decay winning by up to ~4.5% at the higher learning rates late in
-                        training. This suggests that the spectral squeeze (described in the 
+                        training. This suggests that the spectral concentration under Hyperball (described in the 
                         <a href="#spectral-analysis">Spectral Analysis</a>) worsens with scale; larger
-                        weight matrices have more trailing singular directions for the uniform rescaling to
-                        erode.</p>
+                        weight matrices have more trailing singular directions whose growth the repeated
+                        norm constraint can suppress.</p>
 
                     <h4 class="blog-subheading">Cross-optimizer comparison</h4>
 
@@ -1093,13 +1093,14 @@
                         matrices:</p>
                     <ul>
                         <li><strong>Spectral Entropy:</strong> A measure of how uniformly variance is distributed
-                            across singular values. Values near \(1.0\) indicate a "full rank", diverse
-                            representation, while values near \(0\) indicate rank collapse (variance
-                            concentrated in a few dimensions).</li>
+                            across singular values. Values near \(1.0\) indicate a broadly distributed spectrum,
+                            while lower values indicate stronger spectral concentration. This metric is
+                            scale-invariant, as it is computed after normalizing the spectrum.</li>
                         <li><strong>Participation Ratio (PR):</strong> The effective rank of the matrix. Higher
                             PR means more active dimensions are used to represent data. We normalize the PR to get the
-                            ratio of the effective rank to full rank, which allows us to compare matrices of different
-                            shapes (we want to see the training dynamics, exact scale is not important).</li>
+                            ratio of the effective rank to full rank. This metric is scale-invariant as well: it is
+                            the ratio of the square of the sum of the eigenvalues to the sum of their squares (of the
+                            gram matrix), so multiplying \(W\) by any scalar leaves it unchanged.</li>
                     </ul>
 
                     <figure class="blog-image">
@@ -1159,13 +1160,21 @@
                         </p>
                     </details>
 
-                    <h4 class="blog-subheading">Uniform Rescaling and the Spectral Squeeze</h4>
+                    <h4 class="blog-subheading">Norm Constraints and Spectral Concentration</h4>
                     <p>MuonH (Red) constrains \(\|W\|_F = R\) at every step by multiplying every
-                        singular value by the same factor \(c = R/\|W_t + U_t\|_F\). The large singular
-                        values survive this downscaling; the small ones (which Muon&rsquo;s whitening
-                        tried to grow) cannot, because the uniform rescaling pulls them back down before
-                        they accumulate meaningful energy. Over many steps this concentrates the spectrum into
-                        fewer dominant modes, erasing the weak regulatory signals in the tail.</p>
+                        singular value of \(W_t + U_t\) by the same factor \(c = R/\|W_t + U_t\|_F\). It is
+                        tempting to say this retraction is what erodes the small singular values, but a scalar
+                        rescale cannot do that: multiplying <em>every</em> \(\sigma_i\) by the same \(c\)
+                        preserves the ratios between them, so it leaves the <em>shape</em> of the spectrum
+                        untouched. Our spectral metrics are scale-invariant by construction, so this step alone
+                        changes neither the spectral entropy nor the participation ratio. The concentration we
+                        observe is therefore a property of the <em>trajectory</em>, not of the rescaling
+                        arithmetic: forcing \(\|W_{t+1}\|_F = R\) at every step constrains where the next
+                        whitened update can move the weights, and over many steps this repeated retraction limits
+                        how much energy Muon can accumulate in the weaker singular directions of \(W\), relative
+                        to the unconstrained MuonW. Because the metrics ignore overall scale, the gap we see
+                        between MuonH and MuonW reflects this genuinely different optimization path rather than a
+                        trivial consequence of fixing the matrix norm.</p>
 
                     <p>This effect is compounded on the <em>update</em> side. Recall that Muon&rsquo;s
                         NS\(_5\) whitening is imperfect: it pushes singular values toward \(1\) but
@@ -1181,9 +1190,9 @@
                         the end of training, consistent with this hypothesized mechanism.</p>
 
                     <p>In contrast, MuonW (Blue) imposes no hard constraint on the weight norm, so there is
-                        no uniform rescaling step and no feedback loop. Muon&rsquo;s whitened updates can
-                        grow the small singular directions over many steps without them being pulled back,
-                        and the dominant singular directions can grow without suppressing the smaller ones.
+                        no per-step retraction and no feedback loop. Muon&rsquo;s whitened updates are free to
+                        accumulate energy in the weaker singular directions over many steps, and the dominant
+                        directions can grow without the norm budget forcing a trade-off against the smaller ones.
                         MuonW shows sustained higher spectral entropy and participation ratio, suggesting
                         a more distributed use of singular directions; we hypothesize this helps increase capacity and
                          retain combinatorial regulatory structure.
