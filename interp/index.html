@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>KEGG Pathway Explorer | Origin Bio</title>
+<meta name="description" content="Explore held-out-supported KEGG pathway associations across Prov-GigaPath block-sparse features." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link rel="icon" href="../assets/favicon.png" type="image/png">
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <a href="/" class="origin-logo" aria-label="Origin Bio homepage">
+      <img src="../assets/Origin logo+text (blue on transparent).png" alt="Origin Bio">
+    </a>
+    <span class="brand-rule" aria-hidden="true"></span>
+    <div class="product-brand">
+      <span class="product-kicker">Research explorer</span>
+      <h1>KEGG Pathway Explorer</h1>
+      <p id="bundleLabel" class="subtitle">loading…</p>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <p class="provenance">gated block norm per patch<br><span id="sourceNote"></span></p>
+    <button id="reload" class="btn-reload" title="Re-fetch the site scripts, styles and pathway data, bypassing the browser cache">
+      <span class="btn-icon" aria-hidden="true"></span><span id="reloadLabel">Reload assets</span>
+    </button>
+  </div>
+</header>
+
+<main class="layout">
+
+  <aside class="sidebar">
+    <div class="search-wrap">
+      <input id="search" type="search" placeholder="Search pathway or hsa id…" autocomplete="off" />
+    </div>
+    <div id="pathwayList" class="pathway-list"></div>
+  </aside>
+
+  <section class="content">
+
+    <div id="empty" class="empty">Select a KEGG pathway to begin.</div>
+
+    <div id="detail" class="detail hidden">
+
+      <div class="pathway-head">
+        <div>
+          <h2 id="pathwayName"></h2>
+          <p class="meta">
+            <a id="keggLink" target="_blank" rel="noopener"><span id="pathwayId"></span></a>
+            <span class="dot">·</span>
+            <span id="supportedCount"></span>
+          </p>
+        </div>
+      </div>
+
+      <h3 class="section-title">Top expressed genes <span class="hint" id="geneHint"></span></h3>
+      <div id="geneList" class="gene-list"></div>
+      <p id="geneNote" class="gene-note hidden"></p>
+
+      <h3 class="section-title">Top activating blocks <span class="hint">held-out supported, ranked by |held-out effect| — click to select</span></h3>
+      <div id="blockList" class="block-list"></div>
+
+      <div class="gallery-head">
+        <h3 class="section-title">Top tiles</h3>
+        <div class="controls">
+          <div class="tabs" id="modeTabs">
+            <button data-mode="block" class="active">By block activation</button>
+            <button data-mode="score">By pathway score</button>
+          </div>
+          <label class="ctl">highlight
+            <select id="fraction">
+              <option value="0.05">top 5% patches</option>
+              <option value="0.1" selected>top 10% patches</option>
+              <option value="0.25">top 25% patches</option>
+              <option value="0.5">top 50% patches</option>
+              <option value="1">all firing patches</option>
+            </select>
+          </label>
+          <label class="ctl">scale
+            <select id="normalize">
+              <option value="tile" selected>per tile</option>
+              <option value="gallery">per gallery</option>
+            </select>
+          </label>
+          <label class="ctl">opacity <input id="opacity" type="range" min="0.1" max="1" step="0.05" value="0.8" /></label>
+          <label class="ctl checkbox"><input id="showGrid" type="checkbox" /> patch grid</label>
+        </div>
+      </div>
+      <p id="galleryNote" class="gallery-note"></p>
+
+      <div class="scalebar">
+        <span class="scale-title">patch activation</span>
+        <span id="scaleMin" class="tick"></span>
+        <span class="ramp"></span>
+        <span id="scaleMax" class="tick"></span>
+        <span id="scaleCaption" class="scale-caption"></span>
+      </div>
+
+      <div id="geneScale" class="scalebar hidden">
+        <span class="scale-title"><span id="geneScaleName"></span> expression</span>
+        <span id="geneScaleMin" class="tick"></span>
+        <span class="ramp gene"></span>
+        <span id="geneScaleMax" class="tick"></span>
+        <span id="geneScaleCaption" class="scale-caption"></span>
+      </div>
+      <div id="gallery" class="gallery"></div>
+
+    </div>
+  </section>
+</main>
+
+<div id="modal" class="modal hidden">
+  <div class="modal-inner">
+    <button id="modalClose" class="close">&times;</button>
+    <h3 id="modalTitle"></h3>
+    <p id="modalMeta" class="modal-meta"></p>
+    <div class="modal-grid" id="modalGrid">
+      <figure><canvas id="modalRaw" width="448" height="448"></canvas><figcaption>tile (H&amp;E)</figcaption></figure>
+      <figure><canvas id="modalOverlay" width="448" height="448"></canvas><figcaption>overlay, strongest patches only</figcaption></figure>
+      <figure><canvas id="modalHeat" width="448" height="448"></canvas><figcaption>14×14 patch map, every patch from 0 to peak</figcaption></figure>
+      <figure id="modalGeneFigure" class="hidden"><canvas id="modalGene" width="448" height="448"></canvas><figcaption id="modalGeneCaption"></figcaption></figure>
+    </div>
+    <p id="modalStats" class="modal-stats"></p>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
