@@ -71,15 +71,25 @@
         <h3 class="section-title">Block manifold <span class="hint" id="manifoldHint"></span></h3>
         <div class="controls">
           <div class="tabs" id="manifoldTabs">
-            <button data-view="pathway" class="active">Pathway coordinate</button>
-            <button data-view="gene" id="manifoldGeneTab" class="hidden">Gene coordinate</button>
-            <button data-view="dominant">Dominant pathway</button>
-            <button data-view="dictionary">Dictionary depth</button>
+            <button data-view="pathway" class="active">Pathway score</button>
+            <button data-view="gene" id="manifoldGeneTab" class="hidden">Gene expression</button>
+            <button data-view="activation">Block activation</button>
+            <button data-view="slide">Slide</button>
+            <button data-view="cross">Cross-block map</button>
           </div>
-          <label class="ctl">points
+          <label class="ctl" id="scopeControl">tiles
             <select id="manifoldScope">
-              <option value="all" selected>all estimable blocks</option>
-              <option value="supported">held-out supported only</option>
+              <option value="all" selected>all tiles</option>
+              <option value="train">training only</option>
+              <option value="heldout">held-out only</option>
+            </select>
+          </label>
+          <label class="ctl hidden" id="crossControl">colour
+            <select id="crossColour">
+              <option value="dominant" selected>dominant pathway</option>
+              <option value="coordinate">pathway effect</option>
+              <option value="gene">selected gene effect</option>
+              <option value="layer">encoder layer</option>
             </select>
           </label>
         </div>

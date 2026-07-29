@@ -58,7 +58,7 @@ MODELS = {
         "collection": "kegg",
     },
     "gigapath_msigdb": {
-        "label": "Prov-GigaPath ViT-G · top-96 dictionaries · MSigDB Hallmark",
+        "label": "Prov-GigaPath ViT-G · top-96 dictionaries",
         "encoder": "96 of 512 blocks are active at every patch",
         "root": "/home/viraj/origin-2.0/runs_bsf/prov_gigapath/xenium_16k_topk96/msigdb_hallmark_feature_extraction",
         "run_root": "/home/viraj/origin-2.0/runs_bsf/prov_gigapath/xenium_16k_topk96",
@@ -78,7 +78,7 @@ MODELS = {
         "collection": "kegg",
     },
     "gigapath_gs16_msigdb": {
-        "label": "Prov-GigaPath ViT-G · top-96 width-16 dictionaries · MSigDB Hallmark",
+        "label": "Prov-GigaPath ViT-G · top-96 width-16 dictionaries",
         "encoder": "96 of 512 blocks are active at every patch",
         "root": "/home/viraj/origin-2.0/runs_bsf/prov_gigapath/xenium_16k_gs16_topk96/msigdb_hallmark_feature_extraction",
         "run_root": "/home/viraj/origin-2.0/runs_bsf/prov_gigapath/xenium_16k_gs16_topk96",
@@ -102,6 +102,40 @@ def write_atomic(path, payload):
     scratch = path.with_name(path.name + ".partial")
     scratch.write_bytes(payload.encode() if isinstance(payload, str) else payload)
     os.replace(scratch, path)
+
+
+def compact(payload):
+
+    """Collapse integral floats to ints, which halves payloads dominated by zeroed patch arrays.
+
+    Args:
+        payload (object): Any JSON-serializable value.
+
+    Returns:
+        object: the same value with every integral float replaced by an int
+    """
+
+    if isinstance(payload, float): return int(payload) if payload == int(payload) else payload
+    if isinstance(payload, dict): return {key: compact(value) for key, value in payload.items()}
+    if isinstance(payload, list): return [compact(value) for value in payload]
+
+    return payload
+
+
+def compact_json(payload):
+
+    """Encode one document as small as JSON allows without losing a value.
+
+    allow_nan is off because bare NaN is invalid JSON and would fail silently in the browser.
+
+    Args:
+        payload (object): JSON-serializable document.
+
+    Returns:
+        str: encoded document
+    """
+
+    return json.dumps(compact(payload), separators=(",", ":"), allow_nan=False)
 
 
 def task_index_of(profile, layer, group_size):
@@ -172,12 +206,11 @@ def write_collection_manifest(data_root):
             "collection_label": payload["collection_label"],
             "label": payload["label"],
             "n_pathways": len(payload["pathways"]),
-            "built": payload["built"],
         })
 
     # KEGG first when present, so the default view matches the published figures
     entries.sort(key=lambda entry: (entry["collection"] != "kegg", entry["collection_label"]))
-    write_atomic(data_root / "collections.json", json.dumps({"collections": entries}, allow_nan=False))
+    write_atomic(data_root / "collections.json", compact_json({"collections": entries}))
     print(f"collection manifest: {', '.join(entry['collection_label'] for entry in entries)}", flush=True)
 
     return entries
@@ -199,15 +232,13 @@ def collection_profile(root, profile):
     """
 
     name = profile["collection"]
-    label = COLLECTIONS[name]["label"]
 
     record = root / "pathway_collection.json"
     if record.is_file():
-        payload = json.loads(record.read_text())
-        name = str(payload["collection"])
-        label = str(payload["label"])
+        name = str(json.loads(record.read_text())["collection"])
 
-    return {"name": name, "label": label, "url_template": COLLECTIONS[name]["url"],
+    # the display label is ours, so a root's release-stamped label cannot leak into the tabs
+    return {"name": name, "label": COLLECTIONS[name]["label"], "url_template": COLLECTIONS[name]["url"],
             "name_suffix": COLLECTIONS[name]["name_suffix"]}
 
 
@@ -1033,18 +1064,17 @@ def main():
 
     written = {f"{item['pathway_id']}.json" for item in pathways_out}
     for item in pathways_out:
-        # allow_nan=False: bare NaN is invalid JSON and would fail silently in the browser
-        write_atomic(pathway_dir / f"{item['pathway_id']}.json", json.dumps(item, allow_nan=False))
+        write_atomic(pathway_dir / f"{item['pathway_id']}.json", compact_json(item))
 
     for stale in pathway_dir.glob("*.json"):
         if stale.name not in written:
             stale.unlink()
 
-    write_atomic(data_dir / "index.json", json.dumps(index, allow_nan=False))
+    write_atomic(data_dir / "index.json", compact_json(index))
 
     # record this bundle's tiles so pruning can spare images another bundle still needs
     referenced = sorted({Path(path).name for path in seen.values()})
-    write_atomic(data_dir / "tiles.json", json.dumps({"tiles": referenced}, allow_nan=False))
+    write_atomic(data_dir / "tiles.json", compact_json({"tiles": referenced}))
 
     keep = set()
     for manifest in (out_dir / "data").glob("*/tiles.json"):

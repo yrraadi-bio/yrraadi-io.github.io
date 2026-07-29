@@ -154,11 +154,14 @@ a { color: inherit; }
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* border-box origin: with the default padding-box the gradient repeats under the translucent
+   border and paints its dark end as a spot on the left edge */
 .ramp {
   width: 120px;
   height: 9px;
   border-radius: 5px;
   background: linear-gradient(90deg, #fff 0%, #fff 8%, #c6dbef 30%, #6baed6 55%, #2171b5 78%, #08306b 100%);
+  background-origin: border-box;
   border: 1px solid var(--rule);
   flex: none;
 }
