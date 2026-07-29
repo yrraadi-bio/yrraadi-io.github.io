@@ -7,7 +7,27 @@ const state = {
   blockIndex: 0,
   mode: "block",
   gene: null,
+  collections: [],
+  slug: null,
+  manifold: null,
+  manifoldView: "pathway",
+  manifoldCamera: null,
 };
+
+// one in-flight promise per URL, so a repeated selection never refetches
+const jsonCache = new Map();
+
+function loadJson(url) {
+  if (jsonCache.has(url)) return jsonCache.get(url);
+  const promise = fetch(url).then((response) => {
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return response.json();
+  });
+  jsonCache.set(url, promise);
+  promise.catch(() => jsonCache.delete(url));
+
+  return promise;
+}
 
 // read display settings straight from the inputs so restored form state never desyncs
 function controls() {
@@ -257,20 +277,8 @@ function renderSidebar(filter) {
   }
 }
 
-const payloadCache = new Map();
-
 function loadPathway(pathwayId) {
-  if (payloadCache.has(pathwayId)) return payloadCache.get(pathwayId);
-  const promise = fetch(`data/pathways/${pathwayId}.json`).then((response) => {
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return response.json();
-  });
-  payloadCache.set(pathwayId, promise);
-
-  // drop failures so a later click retries instead of replaying a rejected promise
-  promise.catch(() => payloadCache.delete(pathwayId));
-
-  return promise;
+  return loadJson(`data/${state.slug}/pathways/${pathwayId}.json`);
 }
 
 async function selectPathway(index) {
@@ -282,7 +290,8 @@ async function selectPathway(index) {
   document.getElementById("detail").classList.remove("hidden");
   document.getElementById("pathwayName").textContent = entry.name;
   document.getElementById("pathwayId").textContent = entry.pathway_id;
-  document.getElementById("keggLink").href = `https://www.kegg.jp/pathway/${entry.pathway_id}`;
+  const template = state.bundle.pathway_url_template || "https://www.kegg.jp/pathway/{pathway_id}";
+  document.getElementById("keggLink").href = template.replace("{pathway_id}", entry.pathway_id);
   document.getElementById("supportedCount").textContent = `${entry.n_supported_blocks} held-out supported blocks`;
   document.getElementById("geneList").innerHTML = "";
   document.getElementById("blockList").innerHTML = "";
@@ -308,6 +317,9 @@ async function selectPathway(index) {
   renderGenes();
   renderBlocks();
   renderGallery();
+
+  await loadPathwayCoords(entry.pathway_id);
+  if (state.pathway === index) renderManifold();
 }
 
 function renderGenes() {
@@ -331,14 +343,19 @@ function renderGenes() {
     const chip = document.createElement("div");
     // dashed border marks genes absent from some slide panels
     chip.className = `gene-chip${gene.train_slides < 46 ? " partial" : ""}${state.gene === gene.symbol ? " active" : ""}`;
-    chip.title = `${gene.symbol} · mean ${gene.mean} log1p CPM · sd ${gene.std} · measured on ${gene.train_slides}/46 training and ${gene.heldout_slides}/12 held-out slides · click to overlay its per-cell expression on the tiles`;
+    chip.title = `${gene.symbol} · mean ${gene.mean} log1p CPM · sd ${gene.std} · measured on ${gene.train_slides}/46 training and ${gene.heldout_slides}/12 held-out slides · click to overlay its per-cell expression on the tiles and recolour the manifold by this gene`;
     chip.innerHTML = `
       <div class="grow"><span class="sym">${gene.symbol}</span><span class="lvl">${gene.mean.toFixed(2)}</span></div>
       <div class="meter"><span style="width:${strongest > 0 ? (gene.mean / strongest) * 100 : 0}%"></span></div>`;
     chip.addEventListener("click", () => {
       state.gene = state.gene === gene.symbol ? null : gene.symbol;
+
+      // selecting a gene recolours the manifold by that gene, deselecting returns to the pathway
+      state.manifoldView = state.gene ? "gene" : "pathway";
+
       renderGenes();
       renderGallery();
+      renderManifold();
     });
     holder.appendChild(chip);
   });
@@ -357,13 +374,7 @@ function renderGeneNote() {
   note.classList.remove("hidden");
   note.innerHTML = `Green squares mark <b>${state.gene}</b> transcripts in the cells measured inside each tile.
     Xenium reads expression once per cell, so the green layer is the per-cell expression binned onto the same
-    14&times;14 grid as the block activation &mdash; patches with no measured cell stay unmarked.
-    <button id="clearGene">clear ${state.gene}</button>`;
-  document.getElementById("clearGene").addEventListener("click", () => {
-    state.gene = null;
-    renderGenes();
-    renderGallery();
-  });
+    14&times;14 grid as the block activation &mdash; patches with no measured cell stay unmarked.`;
 }
 
 function renderBlocks() {
@@ -392,6 +403,7 @@ function renderBlocks() {
       state.blockIndex = index;
       renderBlocks();
       renderGallery();
+      renderManifold();
     });
     holder.appendChild(card);
   });
@@ -462,6 +474,347 @@ function renderGeneScale(tiles, geneMax) {
   document.getElementById("geneScaleCaption").textContent = perTile
     ? `each tile spans 0 to its own ${state.gene} peak (gallery peak ${geneMax.toFixed(1)} log1p CPM per cell, ${cells} cells measured here)`
     : `one shared scale, 0 to the gallery peak of ${geneMax.toFixed(1)} log1p CPM per cell across ${cells} measured cells`;
+}
+
+/* ---------- 3D block manifold ---------- */
+
+const MANIFOLD_PALETTE = ["#4E728A", "#C4650D", "#2E6E4E", "#B23A48", "#7A4E7E", "#8A6D1B", "#D08BB0", "#556065", "#9FB233", "#2FA5A5"];
+const AXIS_PAD = 0.04;
+
+// Plotly's default cube pads well past the cloud, so axes are clamped to the data
+function axisRange(values) {
+  const finite = values.filter((value) => value !== null && Number.isFinite(value));
+  const low = Math.min(...finite);
+  const high = Math.max(...finite);
+  const margin = (high - low) * AXIS_PAD || 1;
+
+  return [low - margin, high + margin];
+}
+
+function manifoldAxis(title, values) {
+  return {
+    title: { text: title, font: { size: 12, color: "#1D272A" } },
+    range: axisRange(values),
+    showbackground: true,
+    backgroundcolor: "#FCFCFB",
+    gridcolor: "#DEDCD4",
+    zeroline: false,
+    showticklabels: true,
+    ticks: "outside",
+    tickfont: { size: 9, color: "#6F7472" },
+    showspikes: false,
+  };
+}
+
+function manifoldLayout(title, subtitle, showLegend) {
+  const blocks = state.manifold.blocks;
+
+  return {
+    title: {
+      text: subtitle ? `${title}<br><sub>${subtitle}</sub>` : title,
+      x: 0.5,
+      xanchor: "center",
+      font: { size: 15, color: "#1D272A" },
+    },
+    scene: {
+      xaxis: manifoldAxis("UMAP 1", blocks.x),
+      yaxis: manifoldAxis("UMAP 2", blocks.y),
+      zaxis: manifoldAxis("UMAP 3", blocks.z),
+      aspectmode: "cube",
+      camera: state.manifoldCamera || { eye: { x: 1.45, y: 1.45, z: 1.05 } },
+    },
+    showlegend: Boolean(showLegend),
+    legend: {
+      itemsizing: "constant",
+      font: { size: 10.5 },
+      bgcolor: "rgba(255,255,255,0.85)",
+      bordercolor: "#DEDCD4",
+      borderwidth: 1,
+      x: 0.01,
+      y: 0.99,
+    },
+    margin: { l: 4, r: 4, t: 62, b: 4 },
+    paper_bgcolor: "#FFFFFF",
+    font: { family: "Inter, system-ui, sans-serif" },
+  };
+}
+
+const PLOT_CONFIG = { displaylogo: false, responsive: true, modeBarButtonsToRemove: ["resetCameraLastSave3d"] };
+
+function blockHover(indices) {
+  const blocks = state.manifold.blocks;
+  const legend = state.manifold.labels.legend;
+
+  return indices.map((i) => {
+    const code = state.manifold.labels.code[i];
+    const dominant = code >= 0 ? legend[code].name : code === -2 ? "other supported pathway" : "no supported pathway";
+    return `${blocks.dictionaries[blocks.dictionary_code[i]]} · block ${blocks.block[i]}`
+      + `<br>firing fraction ${blocks.firing_fraction[i]}`
+      + `<br>dominant: ${dominant}`;
+  });
+}
+
+// which block rows the manifold should draw, given the scope control and what is being coloured
+function manifoldRows(coords) {
+  const blocks = state.manifold.blocks;
+  const all = blocks.block_global_index.map((value, index) => index);
+  if (document.getElementById("manifoldScope").value !== "supported") return all;
+
+  if (!coords) return all;
+  const keep = new Set(coords.supported_blocks);
+
+  const subset = all.filter((index) => keep.has(blocks.block_global_index[index]));
+  return subset.length ? subset : all;
+}
+
+function selectedGlobalIndex() {
+  if (!state.detail || !state.detail.blocks.length) return null;
+  const block = state.detail.blocks[state.blockIndex];
+
+  return block ? block.block_global_index : null;
+}
+
+// a ringed marker so the block selected in the cards above is findable in the cloud
+function highlightTrace(rows) {
+  const blocks = state.manifold.blocks;
+  const target = selectedGlobalIndex();
+  if (target === null) return [];
+
+  const at = rows.find((index) => blocks.block_global_index[index] === target);
+  if (at === undefined) return [];
+
+  return [{
+    type: "scatter3d",
+    mode: "markers",
+    name: "selected block",
+    x: [blocks.x[at]], y: [blocks.y[at]], z: [blocks.z[at]],
+    marker: { size: 11, color: "rgba(0,0,0,0)", line: { color: "#1D272A", width: 3 }, symbol: "circle" },
+    hovertemplate: `selected: ${blocks.dictionaries[blocks.dictionary_code[at]]} · block ${blocks.block[at]}<extra></extra>`,
+    showlegend: true,
+  }];
+}
+
+function subset(values, rows) {
+  return rows.map((index) => values[index]);
+}
+
+// symmetric colour bound from the 2nd-98th percentile, so a few extremes cannot flatten the map
+function effectBound(values) {
+  const finite = values.filter((value) => value !== null && Number.isFinite(value)).map(Math.abs).sort((a, b) => a - b);
+  if (!finite.length) return 1;
+
+  return finite[Math.floor(finite.length * 0.98)] || finite[finite.length - 1] || 1;
+}
+
+function continuousTrace(rows, values, title, scale) {
+  const blocks = state.manifold.blocks;
+  const picked = subset(values, rows);
+  const bound = effectBound(picked);
+
+  return [{
+    type: "scatter3d",
+    mode: "markers",
+    name: title,
+    x: subset(blocks.x, rows), y: subset(blocks.y, rows), z: subset(blocks.z, rows),
+    text: blockHover(rows),
+    hoverinfo: "text",
+    marker: {
+      size: 2.9,
+      color: picked.map((value) => (value === null ? 0 : value)),
+      colorscale: scale || "RdBu",
+      reversescale: Boolean(!scale),
+      cmin: -bound,
+      cmax: bound,
+      opacity: 0.88,
+      colorbar: { title: { text: title, side: "right", font: { size: 11 } }, thickness: 13, len: 0.62 },
+    },
+    showlegend: false,
+  }];
+}
+
+function dominantTraces(rows) {
+  const blocks = state.manifold.blocks;
+  const labels = state.manifold.labels;
+  const traces = [];
+
+  const background = rows.filter((index) => labels.code[index] < 0);
+  if (background.length) {
+    traces.push({
+      type: "scatter3d",
+      mode: "markers",
+      name: `no dominant pathway (${background.length})`,
+      x: subset(blocks.x, background), y: subset(blocks.y, background), z: subset(blocks.z, background),
+      text: blockHover(background),
+      hoverinfo: "text",
+      marker: { size: 2.0, color: "#D7D5CE", opacity: 0.5 },
+    });
+  }
+
+  labels.legend.forEach((entry, code) => {
+    const rowsFor = rows.filter((index) => labels.code[index] === code);
+    if (!rowsFor.length) return;
+    traces.push({
+      type: "scatter3d",
+      mode: "markers",
+      name: `${entry.name.slice(0, 38)} (${rowsFor.length})`,
+      x: subset(blocks.x, rowsFor), y: subset(blocks.y, rowsFor), z: subset(blocks.z, rowsFor),
+      text: blockHover(rowsFor),
+      hoverinfo: "text",
+      marker: { size: 3.4, color: MANIFOLD_PALETTE[code % MANIFOLD_PALETTE.length], opacity: 0.92 },
+    });
+  });
+
+  return traces;
+}
+
+function dictionaryTrace(rows) {
+  const blocks = state.manifold.blocks;
+  const layers = subset(blocks.layer, rows);
+
+  return [{
+    type: "scatter3d",
+    mode: "markers",
+    name: "layer",
+    x: subset(blocks.x, rows), y: subset(blocks.y, rows), z: subset(blocks.z, rows),
+    text: blockHover(rows),
+    hoverinfo: "text",
+    marker: {
+      size: 2.9,
+      color: layers,
+      colorscale: "Viridis",
+      cmin: Math.min(...layers),
+      cmax: Math.max(...layers),
+      opacity: 0.88,
+      colorbar: { title: { text: "encoder layer", side: "right", font: { size: 11 } }, thickness: 13, len: 0.62 },
+    },
+    showlegend: false,
+  }];
+}
+
+// remember the viewpoint so switching colourings never throws the camera back to default
+function bindCameraMemory(id) {
+  document.getElementById(id).on("plotly_relayout", (event) => {
+    if (event["scene.camera"]) state.manifoldCamera = event["scene.camera"];
+  });
+}
+
+function activateManifoldTab(view) {
+  document.querySelectorAll("#manifoldTabs button").forEach((button) => {
+    button.classList.toggle("active", button.dataset.view === view);
+  });
+}
+
+// the gene tab only exists while a gene with an exported coordinate is selected
+function syncGeneTab() {
+  const tab = document.getElementById("manifoldGeneTab");
+  const available = Boolean(state.gene && state.manifold && state.manifold.genes.has(state.gene));
+  tab.classList.toggle("hidden", !available);
+  tab.textContent = available ? `${state.gene} coordinate` : "Gene coordinate";
+
+  if (!available && state.manifoldView === "gene") state.manifoldView = "pathway";
+
+  return available;
+}
+
+async function renderManifold() {
+  const holder = document.getElementById("manifoldMain");
+  const note = document.getElementById("manifoldNote");
+  const hint = document.getElementById("manifoldHint");
+
+  if (!state.manifold || !state.detail) return;
+
+  const entry = state.bundle.pathways[state.pathway];
+  const label = state.bundle.collection_label || "pathway";
+  hint.textContent = `${state.manifold.blocks.n_blocks.toLocaleString()} estimable blocks, embedded by their 1,656-gene training effect signature`;
+
+  const geneAvailable = syncGeneTab();
+  activateManifoldTab(state.manifoldView);
+
+  let rows = manifoldRows(state.manifold.pathway);
+  let traces = [];
+  let title = "";
+  let subtitle = "";
+  let legend = false;
+
+  if (state.manifoldView === "gene") {
+    const coords = await loadJson(`data/manifold/genes/${state.gene}.json`);
+
+    // a slower gene fetch must not paint over a newer selection
+    if (state.gene !== coords.symbol || state.manifoldView !== "gene") return;
+
+    const stats = state.manifold.genes.get(state.gene);
+    rows = manifoldRows(coords);
+    traces = continuousTrace(rows, coords.values, `${state.gene} effect`);
+    title = `${state.gene} coordinate on the block manifold`;
+    subtitle = `gene-level training partial effect per block · ${stats.n_supported_blocks} blocks held-out supported`;
+    note.innerHTML = `The colour bar is now <b>${state.gene}</b> alone, not the ${entry.name} set: red blocks rise with this
+      gene, blue fall with it. Median |held-out effect| <b>${stats.median_abs_heldout_effect}</b> over
+      <b>${stats.n_supported_blocks}</b> supported blocks. The block positions do not move, so switching back to
+      <b>Pathway coordinate</b> recolours the same cloud by the whole set.`;
+  } else if (state.manifoldView === "dominant") {
+    traces = dominantTraces(rows);
+    title = `Dominant held-out-supported ${label} pathway per block`;
+    subtitle = `${state.manifold.labels.legend.length} most frequent pathways coloured, ${state.manifold.labels.n_other} blocks dominated by another`;
+    legend = true;
+    note.textContent = "Each block is coloured by the single supported association with the largest absolute held-out effect.";
+  } else if (state.manifoldView === "dictionary") {
+    traces = dictionaryTrace(rows);
+    title = "Block manifold by encoder depth";
+    subtitle = "colour is the encoder layer the dictionary was fit on";
+    note.textContent = "Depth is the dominant structure in the embedding: blocks from neighbouring layers land near each other.";
+  } else {
+    const coords = state.manifold.pathway;
+    if (!coords) {
+      Plotly.purge(holder);
+      holder.innerHTML = `<p class="gallery-note" style="padding:16px">No manifold coordinate exported for ${entry.pathway_id}.</p>`;
+      note.textContent = "";
+      return;
+    }
+    traces = continuousTrace(rows, coords.values, "training effect");
+    title = `${coords.name} coordinate on the block manifold`;
+    subtitle = `training partial effect per block · ${coords.supported_blocks.length.toLocaleString()} blocks held-out supported`;
+    note.innerHTML = "Red blocks rise with the pathway score, blue fall with it; grey-white blocks are unrelated to it."
+      + (geneAvailable ? ` Click <b>${state.gene} coordinate</b> to swap the colour bar to that gene alone.` : "")
+      + (state.gene && !geneAvailable
+        ? ` <b>${state.gene}</b> has no exported block coordinate: only the ${state.manifold.genes.size} genes with the most
+           held-out-supported blocks carry one, so it can only be shown on the tiles below.`
+        : "");
+  }
+
+  traces = traces.concat(highlightTrace(rows));
+  await Plotly.react(holder, traces, manifoldLayout(title, subtitle, legend || traces.length > 1), PLOT_CONFIG);
+
+  if (!holder.dataset.bound) {
+    bindCameraMemory("manifoldMain");
+    holder.dataset.bound = "1";
+  }
+}
+
+async function loadManifold() {
+  const [blocks, labels, genes] = await Promise.all([
+    loadJson("data/manifold/blocks.json"),
+    loadJson(`data/${state.slug}/manifold/labels.json`),
+    loadJson("data/manifold/genes_index.json"),
+  ]);
+
+  state.manifold = {
+    blocks: blocks,
+    labels: labels,
+    genes: new Map(genes.genes.map((gene) => [gene.symbol, gene])),
+    pathways: null,
+    pathway: null,
+  };
+
+  state.manifold.pathways = new Set((await loadJson(`data/${state.slug}/manifold/pathways_index.json`)).pathways.map((p) => p.pathway_id));
+}
+
+async function loadPathwayCoords(pathwayId) {
+  if (!state.manifold) return;
+  if (!state.manifold.pathways.has(pathwayId)) {
+    state.manifold.pathway = null;
+    return;
+  }
+  state.manifold.pathway = await loadJson(`data/${state.slug}/manifold/pathways/${pathwayId}.json`);
 }
 
 function renderGallery() {
@@ -562,19 +915,78 @@ async function reloadAssets() {
   button.disabled = true;
   label.textContent = "refetching…";
 
-  const assets = ["index.html", "app.js", "styles.css", "data/index.json"];
-  if (state.pathway !== null) assets.push(`data/pathways/${state.bundle.pathways[state.pathway].pathway_id}.json`);
+  const assets = ["index.html", "app.js", "styles.css", "data/collections.json", `data/${state.slug}/index.json`,
+    "data/manifold/blocks.json", "data/manifold/genes_index.json", `data/${state.slug}/manifold/labels.json`];
+  if (state.pathway !== null) assets.push(`data/${state.slug}/pathways/${state.bundle.pathways[state.pathway].pathway_id}.json`);
 
   await Promise.all(assets.map((asset) => fetch(asset, { cache: "reload" }).catch(() => null)));
-  payloadCache.clear();
+  jsonCache.clear();
   imageCache.clear();
 
   location.reload();
 }
 
+function renderCollectionTabs() {
+  const holder = document.getElementById("collectionTabs");
+  holder.innerHTML = "";
+
+  // a single collection needs no switch, so the tabs stay out of the way
+  if (state.collections.length < 2) return;
+
+  state.collections.forEach((entry) => {
+    const button = document.createElement("button");
+    button.textContent = entry.collection_label;
+    button.title = `${entry.n_pathways} gene sets · built ${entry.built}`;
+    button.className = entry.slug === state.slug ? "active" : "";
+    button.addEventListener("click", () => selectCollection(entry.slug));
+    holder.appendChild(button);
+  });
+}
+
+async function selectCollection(slug) {
+  if (slug === state.slug) return;
+
+  const keptPathway = state.pathway === null ? null : state.bundle.pathways[state.pathway].pathway_id;
+  const keptGene = state.gene;
+
+  state.slug = slug;
+  state.pathway = null;
+  state.detail = null;
+  state.blockIndex = 0;
+
+  state.bundle = await loadJson(`data/${slug}/index.json`);
+  await loadManifold();
+  renderCollectionTabs();
+  renderBundleLabel();
+  renderSidebar(document.getElementById("search").value);
+
+  // gene sets do not carry across collections, so fall back to the strongest one
+  state.gene = keptGene;
+  const same = state.bundle.pathways.findIndex((entry) => entry.pathway_id === keptPathway);
+  if (state.bundle.pathways.length) selectPathway(same >= 0 ? same : 0);
+}
+
+function renderBundleLabel() {
+  const built = state.bundle.built ? ` · data built ${state.bundle.built}` : "";
+  const collection = state.bundle.collection_label || "KEGG";
+  document.getElementById("bundleLabel").textContent =
+    `${state.bundle.label} · ${state.bundle.pathways.length} ${collection} gene sets · ${state.bundle.patch_grid}×${state.bundle.patch_grid} patch grid${built}`;
+  document.getElementById("sourceNote").textContent = state.bundle.encoder_note;
+}
+
 function bindControls() {
   document.getElementById("search").addEventListener("input", (event) => renderSidebar(event.target.value));
   document.getElementById("reload").addEventListener("click", reloadAssets);
+
+  document.querySelectorAll("#manifoldTabs button").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.manifoldView = button.dataset.view;
+      activateManifoldTab(state.manifoldView);
+      renderManifold();
+    });
+  });
+
+  document.getElementById("manifoldScope").addEventListener("change", renderManifold);
 
   document.querySelectorAll("#modeTabs button").forEach((button) => {
     button.addEventListener("click", () => {
@@ -606,12 +1018,15 @@ function bindControls() {
 }
 
 async function init() {
-  const response = await fetch("data/index.json");
-  state.bundle = await response.json();
-  const built = state.bundle.built ? ` · data built ${state.bundle.built}` : "";
-  document.getElementById("bundleLabel").textContent =
-    `${state.bundle.label} · ${state.bundle.pathways.length} KEGG pathways · ${state.bundle.patch_grid}×${state.bundle.patch_grid} patch grid${built}`;
-  document.getElementById("sourceNote").textContent = state.bundle.encoder_note;
+  const manifest = await loadJson("data/collections.json");
+  state.collections = manifest.collections;
+  state.slug = state.collections[0].slug;
+
+  state.bundle = await loadJson(`data/${state.slug}/index.json`);
+  await loadManifold();
+
+  renderCollectionTabs();
+  renderBundleLabel();
   renderSidebar("");
   bindControls();
   if (state.bundle.pathways.length) selectPathway(0);

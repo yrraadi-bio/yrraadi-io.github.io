@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>KEGG Pathway Explorer | Origin Bio</title>
-<meta name="description" content="Explore held-out-supported KEGG pathway associations across Prov-GigaPath block-sparse features." />
+<title>Pathway Explorer | Origin Bio</title>
+<meta name="description" content="Explore held-out-supported KEGG and MSigDB Hallmark pathway associations across Prov-GigaPath block-sparse features." />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
@@ -21,11 +21,12 @@
     <span class="brand-rule" aria-hidden="true"></span>
     <div class="product-brand">
       <span class="product-kicker">Research explorer</span>
-      <h1>KEGG Pathway Explorer</h1>
+      <h1>Pathway Explorer</h1>
       <p id="bundleLabel" class="subtitle">loading…</p>
     </div>
   </div>
   <div class="topbar-right">
+    <div class="tabs collection-tabs" id="collectionTabs"></div>
     <p class="provenance">gated block norm per patch<br><span id="sourceNote"></span></p>
     <button id="reload" class="btn-reload" title="Re-fetch the site scripts, styles and pathway data, bypassing the browser cache">
       <span class="btn-icon" aria-hidden="true"></span><span id="reloadLabel">Reload assets</span>
@@ -37,14 +38,14 @@
 
   <aside class="sidebar">
     <div class="search-wrap">
-      <input id="search" type="search" placeholder="Search pathway or hsa id…" autocomplete="off" />
+      <input id="search" type="search" placeholder="Search pathway name or id…" autocomplete="off" />
     </div>
     <div id="pathwayList" class="pathway-list"></div>
   </aside>
 
   <section class="content">
 
-    <div id="empty" class="empty">Select a KEGG pathway to begin.</div>
+    <div id="empty" class="empty">Select a pathway to begin.</div>
 
     <div id="detail" class="detail hidden">
 
@@ -65,6 +66,28 @@
 
       <h3 class="section-title">Top activating blocks <span class="hint">held-out supported, ranked by |held-out effect| — click to select</span></h3>
       <div id="blockList" class="block-list"></div>
+
+      <div class="manifold-head">
+        <h3 class="section-title">Block manifold <span class="hint" id="manifoldHint"></span></h3>
+        <div class="controls">
+          <div class="tabs" id="manifoldTabs">
+            <button data-view="pathway" class="active">Pathway coordinate</button>
+            <button data-view="gene" id="manifoldGeneTab" class="hidden">Gene coordinate</button>
+            <button data-view="dominant">Dominant pathway</button>
+            <button data-view="dictionary">Dictionary depth</button>
+          </div>
+          <label class="ctl">points
+            <select id="manifoldScope">
+              <option value="all" selected>all estimable blocks</option>
+              <option value="supported">held-out supported only</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <p id="manifoldNote" class="gallery-note"></p>
+      <div class="manifold-frame">
+        <div id="manifoldMain" class="manifold-plot"></div>
+      </div>
 
       <div class="gallery-head">
         <h3 class="section-title">Top tiles</h3>
@@ -130,6 +153,7 @@
   </div>
 </div>
 
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
 <script src="app.js"></script>
 </body>
 </html>

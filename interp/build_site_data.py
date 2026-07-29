@@ -18,7 +18,24 @@ PATCH_GRID = 14
 DEFAULT_XENIUM = "/home/viraj/silico-folder/data/spatial_shards_hest_v1/xenium"
 DEFAULT_OUT = "/home/viraj/yrraadi-io.github.io/interp"
 
-# the two BSF families differ in dictionary layout, activation sharding and checkpoint format
+GIGAPATH_LAYERS = (0, 1, 13, 18, 23, 29, 38, 39)
+
+# per-collection display label, external reference link, and redundant name suffix
+COLLECTIONS = {
+    "kegg": {
+        "label": "KEGG",
+        "url": "https://www.kegg.jp/pathway/{pathway_id}",
+        "name_suffix": " - Homo sapiens (human)",
+    },
+    "msigdb": {
+        "label": "MSigDB Hallmark",
+        "url": "https://www.gsea-msigdb.org/gsea/msigdb/human/geneset/{pathway_id}.html",
+        "name_suffix": "",
+    },
+}
+
+# the two BSF families differ in dictionary layout, activation sharding and checkpoint format;
+# a profile also names which gene-set collection its analysis root was annotated against
 MODELS = {
     "origin": {
         "label": "Origin checkpoint-6 (big47) · top-16 dictionaries",
@@ -28,15 +45,47 @@ MODELS = {
         "dictionaries": [(layer, size) for layer in (1, 2, 3, 4) for size in (3, 16)],
         "world_size": 8,
         "layout": "origin",
+        "collection": "kegg",
     },
     "gigapath": {
         "label": "Prov-GigaPath ViT-G · top-96 dictionaries",
         "encoder": "96 of 512 blocks are active at every patch",
         "root": "/home/viraj/origin-2.0/runs_bsf/prov_gigapath/xenium_16k_topk96/gene_pathway_feature_extraction",
         "run_root": "/home/viraj/origin-2.0/runs_bsf/prov_gigapath/xenium_16k_topk96",
-        "dictionaries": [(layer, 3) for layer in (0, 1, 13, 18, 23, 29, 38, 39)],
+        "dictionaries": [(layer, 3) for layer in GIGAPATH_LAYERS],
         "world_size": 4,
         "layout": "gigapath",
+        "collection": "kegg",
+    },
+    "gigapath_msigdb": {
+        "label": "Prov-GigaPath ViT-G · top-96 dictionaries · MSigDB Hallmark",
+        "encoder": "96 of 512 blocks are active at every patch",
+        "root": "/home/viraj/origin-2.0/runs_bsf/prov_gigapath/xenium_16k_topk96/msigdb_hallmark_feature_extraction",
+        "run_root": "/home/viraj/origin-2.0/runs_bsf/prov_gigapath/xenium_16k_topk96",
+        "dictionaries": [(layer, 3) for layer in GIGAPATH_LAYERS],
+        "world_size": 4,
+        "layout": "gigapath",
+        "collection": "msigdb",
+    },
+    "gigapath_gs16": {
+        "label": "Prov-GigaPath ViT-G · top-96 width-16 dictionaries",
+        "encoder": "96 of 512 blocks are active at every patch",
+        "root": "/home/viraj/origin-2.0/runs_bsf/prov_gigapath/xenium_16k_gs16_topk96/gene_pathway_feature_extraction",
+        "run_root": "/home/viraj/origin-2.0/runs_bsf/prov_gigapath/xenium_16k_gs16_topk96",
+        "dictionaries": [(layer, 16) for layer in GIGAPATH_LAYERS],
+        "world_size": 4,
+        "layout": "gigapath",
+        "collection": "kegg",
+    },
+    "gigapath_gs16_msigdb": {
+        "label": "Prov-GigaPath ViT-G · top-96 width-16 dictionaries · MSigDB Hallmark",
+        "encoder": "96 of 512 blocks are active at every patch",
+        "root": "/home/viraj/origin-2.0/runs_bsf/prov_gigapath/xenium_16k_gs16_topk96/msigdb_hallmark_feature_extraction",
+        "run_root": "/home/viraj/origin-2.0/runs_bsf/prov_gigapath/xenium_16k_gs16_topk96",
+        "dictionaries": [(layer, 16) for layer in GIGAPATH_LAYERS],
+        "world_size": 4,
+        "layout": "gigapath",
+        "collection": "msigdb",
     },
 }
 
@@ -100,20 +149,83 @@ def load_blocks_index(root, profile):
     return pd.concat(frames, ignore_index=True)
 
 
-def load_pathway_names(root):
+def write_collection_manifest(data_root):
 
-    """Map frozen KEGG identifiers to short display names.
+    """Refresh the manifest of built bundles that drives the site's collection tabs.
+
+    Every bundle directory is discovered from disk rather than listed in code, so the tabs can
+    never advertise a collection whose data is missing.
+
+    Args:
+        data_root (Path): Site ``data`` directory holding one subdirectory per bundle.
+
+    Returns:
+        list: manifest entries in display order
+    """
+
+    entries = []
+    for index_path in sorted(data_root.glob("*/index.json")):
+        payload = json.loads(index_path.read_text())
+        entries.append({
+            "slug": payload["slug"] if "slug" in payload else index_path.parent.name,
+            "collection": payload["collection"],
+            "collection_label": payload["collection_label"],
+            "label": payload["label"],
+            "n_pathways": len(payload["pathways"]),
+            "built": payload["built"],
+        })
+
+    # KEGG first when present, so the default view matches the published figures
+    entries.sort(key=lambda entry: (entry["collection"] != "kegg", entry["collection_label"]))
+    write_atomic(data_root / "collections.json", json.dumps({"collections": entries}, allow_nan=False))
+    print(f"collection manifest: {', '.join(entry['collection_label'] for entry in entries)}", flush=True)
+
+    return entries
+
+
+def collection_profile(root, profile):
+
+    """Resolve which gene-set collection the analysis root actually holds.
+
+    The root's own ``pathway_collection.json`` wins over the model profile, so a root can
+    never be described as a collection it was not annotated against.
 
     Args:
         root (Path): Gene/pathway analysis output root.
+        profile (dict): Model profile from ``MODELS``.
 
     Returns:
-        dict: ``hsa`` identifier to short pathway name.
+        dict: name, label, url_template, and the display-name suffix to strip.
+    """
+
+    name = profile["collection"]
+    label = COLLECTIONS[name]["label"]
+
+    record = root / "pathway_collection.json"
+    if record.is_file():
+        payload = json.loads(record.read_text())
+        name = str(payload["collection"])
+        label = str(payload["label"])
+
+    return {"name": name, "label": label, "url_template": COLLECTIONS[name]["url"],
+            "name_suffix": COLLECTIONS[name]["name_suffix"]}
+
+
+def load_pathway_names(root, suffix=""):
+
+    """Map frozen gene-set identifiers to short display names.
+
+    Args:
+        root (Path): Gene/pathway analysis output root.
+        suffix (str): Collection-specific name suffix to strip, empty when there is none.
+
+    Returns:
+        dict: set identifier to short pathway name.
     """
 
     sets = json.loads((root / "expanded_kegg_gene_sets.json").read_text())
 
-    return {key: value["name"].replace(" - Homo sapiens (human)", "") for key, value in sets.items()}
+    return {key: (value["name"].replace(suffix, "") if suffix else value["name"]) for key, value in sets.items()}
 
 
 def select_pathways(root, n_pathways, n_blocks):
@@ -789,6 +901,7 @@ def main():
     parser.add_argument("--genes", type=int, default=12)
     parser.add_argument("--verify-tiles", type=int, default=3)
     parser.add_argument("--label")
+    parser.add_argument("--slug", help="bundle directory under data/, defaults to the collection name")
     args = parser.parse_args()
 
     profile = MODELS[args.model]
@@ -796,7 +909,10 @@ def main():
     run_root = Path(args.run_root if args.run_root else profile["run_root"])
     label = args.label if args.label else profile["label"]
     out_dir = Path(args.out)
-    data_dir = out_dir / "data"
+
+    # each collection owns a bundle directory; tile images stay in one shared pool
+    slug = args.slug if args.slug else collection_profile(root, profile)["name"]
+    data_dir = out_dir / "data" / slug
     tile_dir = out_dir / "tiles"
     data_dir.mkdir(parents=True, exist_ok=True)
     tile_dir.mkdir(parents=True, exist_ok=True)
@@ -807,7 +923,9 @@ def main():
     verify_activity(root, run_root, profile, activity_cache, args.verify_tiles)
 
     blocks_index = load_blocks_index(root, profile)
-    names = load_pathway_names(root)
+    sets = collection_profile(root, profile)
+    print(f"gene-set collection: {sets['label']} ({sets['name']})", flush=True)
+    names = load_pathway_names(root, sets["name_suffix"])
 
     ordered, per_pathway, counts = select_pathways(root, args.pathways, args.blocks)
     print(f"selected {len(ordered)} pathways with held-out support", flush=True)
@@ -900,6 +1018,10 @@ def main():
     index = {
         "label": label,
         "model": args.model,
+        "slug": slug,
+        "collection": sets["name"],
+        "collection_label": sets["label"],
+        "pathway_url_template": sets["url_template"],
         "encoder_note": profile["encoder"],
         "built": datetime.now().astimezone().strftime("%Y-%m-%d %H:%M %Z"),
         "patch_grid": PATCH_GRID,
@@ -920,16 +1042,25 @@ def main():
 
     write_atomic(data_dir / "index.json", json.dumps(index, allow_nan=False))
 
-    # drop tile images left behind by earlier builds
-    referenced = {Path(path).name for path in seen.values()}
+    # record this bundle's tiles so pruning can spare images another bundle still needs
+    referenced = sorted({Path(path).name for path in seen.values()})
+    write_atomic(data_dir / "tiles.json", json.dumps({"tiles": referenced}, allow_nan=False))
+
+    keep = set()
+    for manifest in (out_dir / "data").glob("*/tiles.json"):
+        keep.update(json.loads(manifest.read_text())["tiles"])
+
     removed = 0
     for existing in tile_dir.glob("*.jpg"):
-        if existing.name not in referenced:
+        if existing.name not in keep:
             existing.unlink()
             removed += 1
 
+    write_collection_manifest(out_dir / "data")
+
     payload_mb = sum(path.stat().st_size for path in pathway_dir.glob("*.json")) / (1024 ** 2)
-    print(f"wrote {data_dir / 'index.json'} and {len(pathways_out)} pathway payloads ({payload_mb:.1f} MB), {len(seen)} tile images, pruned {removed} stale", flush=True)
+    print(f"wrote {data_dir / 'index.json'} and {len(pathways_out)} pathway payloads ({payload_mb:.1f} MB), "
+          f"{len(seen)} tile images, pruned {removed} stale", flush=True)
 
 
 if __name__ == "__main__":

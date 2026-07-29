@@ -320,20 +320,6 @@ a { color: inherit; }
 
 .gene-note b { color: #0b6b47; }
 
-.gene-note button {
-  font: inherit;
-  font-size: 11px;
-  margin-left: 8px;
-  padding: 2px 8px;
-  color: #0b6b47;
-  background: var(--panel);
-  border: 1px solid var(--gene-line);
-  border-radius: 20px;
-  cursor: pointer;
-}
-
-.gene-note button:hover { border-color: var(--gene); }
-
 /* blocks */
 
 .block-list { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 26px; }
@@ -373,6 +359,27 @@ a { color: inherit; }
 .bar { height: 4px; border-radius: 3px; background: var(--rule); margin-top: 8px; overflow: hidden; }
 
 .bar span { display: block; height: 100%; background: var(--accent); }
+
+/* collection tabs sit in the topbar, so they carry their own weight */
+
+.collection-tabs button { padding: 7px 13px; font-size: 12.5px; font-weight: 500; white-space: nowrap; }
+
+/* 3D block manifold */
+
+.manifold-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; flex-wrap: wrap; margin-top: 26px; }
+
+.manifold-frame {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  background: var(--panel);
+  padding: 10px;
+  margin-bottom: 6px;
+}
+
+.manifold-plot { width: 100%; height: 600px; }
 
 /* gallery */
 
