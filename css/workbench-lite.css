@@ -606,61 +606,361 @@ img { max-width: 100%; display: block; }
     line-height: 1.3;
 }
 
-/* ─── Horizontal Pipeline Track ─── */
+/* ─── Interactive Pipeline Explorer ─── */
 
-.pl-track {
-    display: flex;
-    align-items: stretch;
-    gap: 0;
-    margin-top: 48px;
+.pl-explorer {
+    display: grid;
+    grid-template-columns: minmax(280px, 0.9fr) 1.5fr;
+    gap: 28px;
+    margin-top: 44px;
+    max-width: 1180px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
-.pl-card {
-    flex: 1;
-    padding: 36px 32px;
-    border: 1px solid var(--border);
-    border-right: none;
+/* -- Left rail: clickable steps -- */
+.pl-rail {
     display: flex;
     flex-direction: column;
-    transition: background 0.3s ease;
+    gap: 8px;
+    position: relative;
 }
 
-.pl-card:last-of-type {
-    border-right: 1px solid var(--border);
+.pl-step {
+    display: grid;
+    grid-template-columns: 44px 1fr;
+    align-items: center;
+    gap: 16px;
+    padding: 18px 20px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: #fff;
+    cursor: pointer;
+    text-align: left;
+    font-family: var(--font-body);
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s, background 0.3s, transform 0.3s;
 }
 
-.pl-card:hover {
-    background: rgba(27, 54, 93, 0.03);
+.pl-step:hover {
+    border-color: var(--border-hover);
+    transform: translateX(3px);
 }
 
-.pl-num {
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 0.12em;
-    color: var(--teal);
-    margin-bottom: 16px;
-    font-variant-numeric: tabular-nums;
+.pl-step.is-active {
+    border-color: rgba(27, 54, 93, 0.28);
+    background: linear-gradient(90deg, var(--accent-dim), rgba(27, 54, 93, 0.02));
 }
 
-.pl-title {
-    font-family: var(--font-display);
-    font-size: 24px;
-    font-weight: 400;
-    line-height: 1.2;
-    margin: 0 0 14px;
-    color: var(--text-1);
-}
-
-.pl-desc {
+.pl-step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid rgba(27, 54, 93, 0.16);
+    background: #fff;
+    color: var(--text-3);
     font-size: 15px;
-    color: var(--text-2);
-    line-height: 1.75;
-    margin: 0;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    transition: background 0.35s, color 0.35s, border-color 0.35s, transform 0.35s;
 }
 
-.pl-arrow {
-    display: none;
+.pl-step.is-active .pl-step-num {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    transform: scale(1.06);
 }
+
+.pl-step-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.pl-step-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-1);
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+}
+
+.pl-step-tag {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--text-3);
+}
+
+.pl-step.is-active .pl-step-tag { color: var(--accent); }
+
+.pl-step-bar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: transparent;
+}
+
+.pl-step-bar i {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 0;
+    background: var(--accent);
+}
+
+.pl-step.is-active .pl-step-bar i {
+    height: 100%;
+}
+
+.pl-rail.is-playing .pl-step.is-active .pl-step-bar i {
+    height: 0;
+    animation: plStepFill var(--pl-dwell, 5s) linear forwards;
+}
+
+@keyframes plStepFill {
+    from { height: 0; }
+    to { height: 100%; }
+}
+
+/* -- Right stage: cross-fading panels -- */
+.pl-stage {
+    position: relative;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background:
+        radial-gradient(120% 120% at 100% 0%, rgba(27, 54, 93, 0.05), transparent 55%),
+        #fff;
+    overflow: hidden;
+    min-height: 380px;
+}
+
+.pl-panel {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    grid-template-rows: 1fr auto;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(14px);
+    transition: opacity 0.5s ease, transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: none;
+}
+
+.pl-panel.is-active {
+    position: relative;
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+    pointer-events: auto;
+}
+
+.pl-panel-body {
+    padding: 0 40px 40px;
+}
+
+.pl-panel-index {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--accent);
+    margin-bottom: 14px;
+}
+
+.pl-panel-index em {
+    font-style: normal;
+    color: var(--text-3);
+}
+
+.pl-panel-title {
+    font-family: var(--font-display);
+    font-size: clamp(28px, 3vw, 40px);
+    font-weight: 400;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    color: var(--text-1);
+    margin: 0 0 14px;
+}
+
+.pl-panel-desc {
+    font-size: 16px;
+    color: var(--text-2);
+    line-height: 1.7;
+    margin: 0;
+    max-width: 560px;
+}
+
+/* -- Stage visuals -- */
+.pl-viz {
+    position: relative;
+    margin: 34px 40px 8px;
+    height: 190px;
+    border-radius: 14px;
+    background: linear-gradient(160deg, rgba(27, 54, 93, 0.04), rgba(27, 54, 93, 0.01));
+    overflow: hidden;
+}
+
+.pl-panel.is-active .pl-viz > span {
+    animation-play-state: running;
+}
+
+/* blocks: stacked FFPE blocks */
+.pl-viz--blocks { display: flex; align-items: flex-end; justify-content: center; gap: 12px; padding: 26px; }
+.pl-viz--blocks span {
+    width: 34px;
+    border-radius: 4px;
+    background: linear-gradient(180deg, rgba(27, 54, 93, 0.32), rgba(27, 54, 93, 0.14));
+    box-shadow: inset 0 0 0 1px rgba(27, 54, 93, 0.18);
+    animation: plRise 2.6s ease-in-out infinite alternate;
+}
+.pl-viz--blocks span:nth-child(1) { height: 60%; animation-delay: 0s; }
+.pl-viz--blocks span:nth-child(2) { height: 82%; animation-delay: .2s; }
+.pl-viz--blocks span:nth-child(3) { height: 45%; animation-delay: .4s; }
+.pl-viz--blocks span:nth-child(4) { height: 70%; animation-delay: .6s; }
+.pl-viz--blocks span:nth-child(5) { height: 55%; animation-delay: .8s; }
+.pl-viz--blocks span:nth-child(6) { height: 78%; animation-delay: 1s; }
+@keyframes plRise { from { transform: translateY(8px); opacity: .7; } to { transform: none; opacity: 1; } }
+
+/* slices: thin sections peeling off */
+.pl-viz--slices { display: flex; align-items: center; justify-content: center; gap: 9px; }
+.pl-viz--slices span {
+    width: 8px; height: 120px;
+    border-radius: 4px;
+    background: linear-gradient(180deg, rgba(27, 54, 93, 0.30), rgba(27, 54, 93, 0.10));
+    animation: plSlice 2.4s ease-in-out infinite;
+}
+.pl-viz--slices span:nth-child(odd) { animation-delay: .15s; }
+.pl-viz--slices span:nth-child(1){animation-delay:0s}
+.pl-viz--slices span:nth-child(2){animation-delay:.12s}
+.pl-viz--slices span:nth-child(3){animation-delay:.24s}
+.pl-viz--slices span:nth-child(4){animation-delay:.36s}
+.pl-viz--slices span:nth-child(5){animation-delay:.48s}
+.pl-viz--slices span:nth-child(6){animation-delay:.6s}
+.pl-viz--slices span:nth-child(7){animation-delay:.72s}
+@keyframes plSlice { 0%,100% { transform: scaleY(.7); opacity:.6 } 50% { transform: scaleY(1); opacity:1 } }
+
+/* grid: spatial capture spots */
+.pl-viz--grid {
+    background-image: radial-gradient(circle, rgba(27, 54, 93, 0.55) 1.6px, transparent 2px);
+    background-size: 22px 22px;
+    background-position: center;
+    animation: plGridPulse 3s ease-in-out infinite;
+}
+.pl-viz--grid::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(120deg, transparent 30%, rgba(27, 54, 93, 0.12) 50%, transparent 70%);
+    background-size: 220% 100%;
+    animation: plScan 3.2s linear infinite;
+}
+@keyframes plGridPulse { 0%,100% { opacity:.55 } 50% { opacity:1 } }
+@keyframes plScan { from { background-position: 120% 0 } to { background-position: -120% 0 } }
+
+/* niches: clustered tissue regions */
+.pl-viz--niches { }
+.pl-viz--niches span {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(2px);
+    animation: plBlob 5s ease-in-out infinite alternate;
+}
+.pl-viz--niches span:nth-child(1){ width:120px;height:120px;left:12%;top:20%;background:radial-gradient(circle,rgba(27,54,93,.28),transparent 70%);}
+.pl-viz--niches span:nth-child(2){ width:100px;height:100px;left:44%;top:34%;background:radial-gradient(circle,rgba(120,70,210,.24),transparent 70%);animation-delay:.6s}
+.pl-viz--niches span:nth-child(3){ width:90px;height:90px;left:62%;top:12%;background:radial-gradient(circle,rgba(30,160,120,.24),transparent 70%);animation-delay:1.2s}
+.pl-viz--niches span:nth-child(4){ width:76px;height:76px;left:74%;top:46%;background:radial-gradient(circle,rgba(27,54,93,.22),transparent 70%);animation-delay:1.8s}
+@keyframes plBlob { from { transform: translate(0,0) scale(1) } to { transform: translate(6px,-6px) scale(1.08) } }
+
+/* cells: dissociated cells drifting */
+.pl-viz--cells span {
+    position: absolute;
+    border-radius: 50%;
+    background: radial-gradient(circle at 38% 34%, rgba(30,160,120,.4), rgba(30,160,120,.12) 70%);
+    box-shadow: inset 0 0 0 1px rgba(30,160,120,.3);
+    animation: plDrift 6s ease-in-out infinite alternate;
+}
+.pl-viz--cells span:nth-child(1){width:34px;height:34px;left:16%;top:26%}
+.pl-viz--cells span:nth-child(2){width:26px;height:26px;left:34%;top:56%;animation-delay:.5s}
+.pl-viz--cells span:nth-child(3){width:40px;height:40px;left:50%;top:22%;animation-delay:1s}
+.pl-viz--cells span:nth-child(4){width:22px;height:22px;left:62%;top:60%;animation-delay:1.5s}
+.pl-viz--cells span:nth-child(5){width:30px;height:30px;left:74%;top:32%;animation-delay:2s}
+.pl-viz--cells span:nth-child(6){width:18px;height:18px;left:26%;top:70%;animation-delay:2.5s}
+.pl-viz--cells span:nth-child(7){width:28px;height:28px;left:84%;top:58%;animation-delay:3s}
+@keyframes plDrift { from { transform: translate(0,0) } to { transform: translate(5px,-7px) } }
+
+/* split: two treatment arms */
+.pl-viz--split { display: flex; }
+.pl-viz--split span {
+    flex: 1;
+    position: relative;
+    animation: plFadeArm 3s ease-in-out infinite alternate;
+}
+.pl-viz--split span:first-child {
+    background: repeating-linear-gradient(90deg, rgba(27,54,93,.14) 0 6px, transparent 6px 16px);
+}
+.pl-viz--split span:last-child {
+    background: repeating-linear-gradient(90deg, rgba(190,60,60,.16) 0 6px, transparent 6px 16px);
+    animation-delay: .8s;
+}
+.pl-viz--split span:last-child::before {
+    content: '';
+    position: absolute; left: 0; top: 0; bottom: 0; width: 1px;
+    background: var(--border);
+}
+@keyframes plFadeArm { from { opacity:.5 } to { opacity:1 } }
+
+/* signal: response readout bars */
+.pl-viz--signal { display: flex; align-items: flex-end; justify-content: center; gap: 10px; padding: 24px; }
+.pl-viz--signal span {
+    width: 20px;
+    border-radius: 4px 4px 0 0;
+    background: linear-gradient(180deg, rgba(27,54,93,.4), rgba(27,54,93,.12));
+    animation: plBar 1.8s ease-in-out infinite;
+}
+.pl-viz--signal span:nth-child(1){height:40%;animation-delay:0s}
+.pl-viz--signal span:nth-child(2){height:70%;animation-delay:.1s}
+.pl-viz--signal span:nth-child(3){height:55%;animation-delay:.2s}
+.pl-viz--signal span:nth-child(4){height:88%;animation-delay:.3s}
+.pl-viz--signal span:nth-child(5){height:48%;animation-delay:.4s}
+.pl-viz--signal span:nth-child(6){height:75%;animation-delay:.5s}
+.pl-viz--signal span:nth-child(7){height:60%;animation-delay:.6s}
+.pl-viz--signal span:nth-child(8){height:35%;animation-delay:.7s}
+@keyframes plBar { 0%,100% { transform: scaleY(.75); transform-origin: bottom } 50% { transform: scaleY(1); transform-origin: bottom } }
+
+/* curves: sensitive vs resistant response */
+.pl-viz--curves span {
+    position: absolute;
+    left: 8%; right: 8%;
+    height: 2px;
+    border-radius: 2px;
+}
+.pl-viz--curves span:first-child {
+    top: 40%;
+    background: linear-gradient(90deg, rgba(30,160,120,.2), rgba(30,160,120,.85));
+    box-shadow: 0 0 12px rgba(30,160,120,.35);
+    transform-origin: left;
+    animation: plCurveA 3s ease-in-out infinite alternate;
+}
+.pl-viz--curves span:last-child {
+    top: 60%;
+    background: linear-gradient(90deg, rgba(190,60,60,.2), rgba(190,60,60,.8));
+    box-shadow: 0 0 12px rgba(190,60,60,.3);
+    transform-origin: left;
+    animation: plCurveB 3s ease-in-out infinite alternate;
+}
+@keyframes plCurveA { from { transform: rotate(-4deg) } to { transform: rotate(-14deg) } }
+@keyframes plCurveB { from { transform: rotate(3deg) } to { transform: rotate(10deg) } }
 
 /* ─── Platform Track Toggle ─── */
 
@@ -723,12 +1023,6 @@ img { max-width: 100%; display: block; }
 
 .pipeline-section .pl-track.is-active {
     display: flex;
-    animation: trackFade 0.4s ease;
-}
-
-@keyframes trackFade {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
 }
 
 .modalities-section {
@@ -763,16 +1057,51 @@ img { max-width: 100%; display: block; }
     background: #fff;
     display: flex;
     flex-direction: column;
+    position: relative;
+    overflow: hidden;
     transition: border-color 0.35s, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s;
+}
+
+.modality-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), rgba(120, 70, 210, 0.7));
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modality-card::after {
+    content: '';
+    position: absolute;
+    top: -40%;
+    right: -40%;
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(27, 54, 93, 0.08) 0%, transparent 70%);
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    pointer-events: none;
 }
 
 .modality-card:hover {
     border-color: rgba(27, 54, 93, 0.2);
-    transform: translateY(-5px);
+    transform: translateY(-6px);
     box-shadow: 0 20px 50px rgba(27, 54, 93, 0.10), 0 4px 12px rgba(0, 0, 0, 0.03);
 }
 
+.modality-card:hover::before { transform: scaleX(1); }
+.modality-card:hover::after { opacity: 1; }
+
 .modality-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     font-size: 12px;
     font-weight: 600;
     color: var(--teal);
@@ -781,7 +1110,23 @@ img { max-width: 100%; display: block; }
     margin-bottom: 18px;
 }
 
+.modality-kicker::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--teal);
+    box-shadow: 0 0 0 3px var(--accent-dim);
+    transition: transform 0.35s ease;
+}
+
+.modality-card:hover .modality-kicker::before {
+    transform: scale(1.25);
+}
+
 .modality-title {
+    position: relative;
+    z-index: 1;
     font-family: var(--font-display);
     font-size: 26px;
     font-weight: 400;
@@ -791,6 +1136,8 @@ img { max-width: 100%; display: block; }
 }
 
 .modality-desc {
+    position: relative;
+    z-index: 1;
     font-size: 15px;
     color: var(--text-2);
     line-height: 1.7;
@@ -798,19 +1145,12 @@ img { max-width: 100%; display: block; }
 }
 
 @media (max-width: 1080px) {
-    .pl-track {
-        flex-direction: column;
-        gap: 0;
+    .pl-explorer {
+        grid-template-columns: 1fr;
+        gap: 20px;
     }
 
-    .pl-card {
-        border-right: 1px solid var(--border);
-        border-bottom: none;
-    }
-
-    .pl-card:last-of-type {
-        border-bottom: 1px solid var(--border);
-    }
+    .pl-stage { min-height: 340px; }
 
     .section-subtitle {
         font-size: 22px;
@@ -1354,6 +1694,13 @@ img { max-width: 100%; display: block; }
     .pill-sep { transform: rotate(90deg); }
 
     .pipeline-section { padding: 8px 16px 24px; }
+    .pl-explorer { margin-top: 28px; }
+    .pl-step { padding: 14px 16px; gap: 12px; grid-template-columns: 38px 1fr; }
+    .pl-step-num { width: 38px; height: 38px; font-size: 14px; }
+    .pl-step-name { font-size: 15px; }
+    .pl-panel-body { padding: 0 24px 28px; }
+    .pl-viz { margin: 24px 24px 6px; height: 150px; }
+    .pl-stage { min-height: 300px; }
     .pipeline-list { gap: 16px; }
     .pipe-row {
         grid-template-columns: 1fr;

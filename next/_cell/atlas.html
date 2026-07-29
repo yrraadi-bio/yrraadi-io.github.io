@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>cell atlas</title>
+<style>
+    html, body { margin: 0; padding: 0; overflow: hidden; background: transparent; }
+    canvas { display: block; }
+    #gl { position: fixed; left: -10000px; top: 0; }
+    #err {
+        position: fixed; inset: 0; padding: 24px; margin: 0; background: #fff;
+        font: 13px/1.5 ui-monospace, Menlo, monospace; color: #b3261e;
+        white-space: pre-wrap; display: none;
+    }
+</style>
+<script type="importmap">
+{
+    "imports": {
+        "three": "./vendor/build/three.module.js",
+        "three/addons/": "./vendor/examples/jsm/"
+    }
+}
+</script>
+</head>
+<body>
+<canvas id="atlas"></canvas>
+<pre id="err"></pre>
+<script id="out" type="text/plain"></script>
+<script type="module">
+    import('./atlas.js').catch(e => {
+        const el = document.getElementById('err');
+        el.style.display = 'block';
+        el.textContent = 'LOAD ERROR\n' + (e && e.stack ? e.stack : e);
+    });
+</script>
+</body>
+</html>

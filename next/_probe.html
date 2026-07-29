@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+    html, body { margin: 0; background: #07101d; overflow: hidden; }
+    iframe { border: 0; width: var(--w, 100vw); height: 100vh; display: block; }
+    /* ?dbg=1 prints what the page actually computed over the top of it, which is
+       the only way to tell a wrong colour apart from a low opacity in a shot */
+    #dbg {
+        position: fixed;
+        left: 0;
+        bottom: 0;
+        z-index: 99;
+        margin: 0;
+        padding: 10px 14px;
+        font: 13px/1.5 ui-monospace, monospace;
+        white-space: pre;
+        color: #0f0;
+        background: rgba(0, 0, 0, 0.82);
+    }
+</style>
+</head>
+<body>
+<iframe id="f" src="index.html"></iframe>
+<script>
+    const args = new URLSearchParams(location.search);
+    const frac = parseFloat(args.get('f') || '0');
+    const which = args.get('s') || 'stage';
+    // anything between two stages is outside either one's scroll range, so it can
+    // only be reached as an offset from one of their ends
+    const off = parseFloat(args.get('o') || '0');
+    const f = document.getElementById('f');
+    // headless lays the page out at its own default width and then crops to
+    // --window-size, so a narrow viewport has to be made with a narrow frame
+    if (args.get('w')) document.documentElement.style.setProperty('--w', args.get('w') + 'px');
+
+    function hold() {
+        const w = f.contentWindow;
+        const stage = w.document && w.document.getElementById(which);
+        if (stage) {
+            // absolute document position, so a positioned ancestor between the
+            // target and the body cannot shift the offset out from under it
+            const at = stage.getBoundingClientRect().top + w.scrollY;
+            const travel = stage.offsetHeight - w.innerHeight;
+            const top = frac < 0 ? 0 : Math.max(0, at + travel * frac + off);
+            if (Math.abs(w.scrollY - top) > 0.5) {
+                w.scrollTo({ top: Math.round(top), behavior: 'instant' });
+            }
+        }
+        requestAnimationFrame(hold);
+    }
+
+    requestAnimationFrame(hold);
+
+    // the frame is same-origin, so its failures can be collected here and drawn
+    // into the shot rather than left in a console no screenshot can reach
+    if (args.get('err')) {
+        const errs = [];
+        const watch = function () {
+            const w = f.contentWindow;
+            if (!w) return;
+            w.addEventListener('error', function (e) {
+                errs.push((e.message || e.type) + ' @ ' + (e.filename || '?') + ':' + (e.lineno || 0));
+            });
+            w.addEventListener('unhandledrejection', function (e) {
+                errs.push('unhandled rejection: ' + e.reason);
+            });
+        };
+        watch();
+        f.addEventListener('load', watch);
+        setTimeout(function () {
+            const pre = document.createElement('pre');
+            pre.id = 'dbg';
+            pre.textContent = errs.length ? errs.join('\n') : 'no runtime errors';
+            document.body.appendChild(pre);
+        }, 6000);
+    }
+
+    // the island is the one block whose shape is set in percentages of itself, so
+    // choosing where to sample it means knowing its measured height first
+    if (args.get('geom')) {
+        setTimeout(function () {
+            const w = f.contentWindow;
+            const d = w.document;
+            const rows = ['viewport      ' + w.innerWidth + 'x' + w.innerHeight];
+            ['.island', '#pivot', '#engine', '#engineStage', '#cases', '#closing'].forEach(function (sel) {
+                const el = d.querySelector(sel);
+                if (!el) return;
+                const top = Math.round(el.getBoundingClientRect().top + w.scrollY);
+                rows.push(sel.padEnd(14) + 'top ' + top + '  h ' + Math.round(el.offsetHeight));
+            });
+            const pre = document.createElement('pre');
+            pre.id = 'dbg';
+            pre.textContent = rows.join('\n');
+            document.body.appendChild(pre);
+        }, 2000);
+    }
+
+    if (args.get('dbg')) {
+        setTimeout(function () {
+            const d = f.contentWindow.document;
+            const rows = [];
+            const active = Array.from(d.querySelectorAll('#' + which + ' .caption, .caption'))
+                .map(el => [el, parseFloat(el.style.getPropertyValue('--o') || 0)])
+                .sort((a, b) => b[1] - a[1])[0];
+            if (active) {
+                const el = active[0];
+                const h2 = el.querySelector('h2');
+                const cs = getComputedStyle(h2);
+                rows.push('caption --o   ' + active[1]);
+                rows.push('h2 color      ' + cs.color);
+                rows.push('h2 text       ' + h2.textContent.slice(0, 40));
+                rows.push('stage --ink   ' +
+                    getComputedStyle(d.getElementById('stage')).getPropertyValue('--ink'));
+                rows.push('stage class   ' + d.getElementById('stage').className);
+            }
+            const pre = document.createElement('pre');
+            pre.id = 'dbg';
+            pre.textContent = rows.join('\n');
+            document.body.appendChild(pre);
+        }, 2500);
+    }
+</script>
+</body>
+</html>

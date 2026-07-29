@@ -15,7 +15,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/workbench-lite.css?v=106">
+    <link rel="stylesheet" href="css/workbench-lite.css?v=108">
     <link rel="icon" href="/assets/favicon.png" type="image/png">
 </head>
 <body>
@@ -68,48 +68,148 @@
         </div>
 
         <div class="pl-track is-active" data-track="0">
-            <div class="pl-card">
-                <span class="pl-num">01</span>
-                <h3 class="pl-title">Block Sourcing</h3>
-                <p class="pl-desc">FFPE tumor blocks sourced from hospital and biobank partners, with anonymized clinical annotations covering tumor type, grade, stage, and treatment history.</p>
-            </div>
-            <div class="pl-card">
-                <span class="pl-num">02</span>
-                <h3 class="pl-title">Sectioning</h3>
-                <p class="pl-desc">Blocks are sectioned onto spatial capture substrates and quality-controlled, preserving native tissue architecture and spatial coordinates.</p>
-            </div>
-            <div class="pl-card">
-                <span class="pl-num">03</span>
-                <h3 class="pl-title">Spatial Profiling</h3>
-                <p class="pl-desc">Spatial transcriptomics paired with imaging-based morphology (H&amp;E and immunofluorescence), with every measurement anchored to its location in the tissue.</p>
-            </div>
-            <div class="pl-card">
-                <span class="pl-num">04</span>
-                <h3 class="pl-title">Tissue Maps</h3>
-                <p class="pl-desc">Spatially resolved maps of cell states, programs, and niches that show how each tumor is organized across patient cohorts.</p>
+            <div class="pl-explorer">
+                <div class="pl-rail" role="tablist" aria-label="Spatial pipeline steps">
+                    <button class="pl-step is-active" type="button" role="tab" aria-selected="true" data-step="0">
+                        <span class="pl-step-num">01</span>
+                        <span class="pl-step-text">
+                            <span class="pl-step-name">Block Sourcing</span>
+                            <span class="pl-step-tag">Sourcing</span>
+                        </span>
+                        <span class="pl-step-bar"><i></i></span>
+                    </button>
+                    <button class="pl-step" type="button" role="tab" aria-selected="false" data-step="1">
+                        <span class="pl-step-num">02</span>
+                        <span class="pl-step-text">
+                            <span class="pl-step-name">Sectioning</span>
+                            <span class="pl-step-tag">Prep</span>
+                        </span>
+                        <span class="pl-step-bar"><i></i></span>
+                    </button>
+                    <button class="pl-step" type="button" role="tab" aria-selected="false" data-step="2">
+                        <span class="pl-step-num">03</span>
+                        <span class="pl-step-text">
+                            <span class="pl-step-name">Spatial Profiling</span>
+                            <span class="pl-step-tag">Assay</span>
+                        </span>
+                        <span class="pl-step-bar"><i></i></span>
+                    </button>
+                    <button class="pl-step" type="button" role="tab" aria-selected="false" data-step="3">
+                        <span class="pl-step-num">04</span>
+                        <span class="pl-step-text">
+                            <span class="pl-step-name">Tissue Maps</span>
+                            <span class="pl-step-tag">Output</span>
+                        </span>
+                        <span class="pl-step-bar"><i></i></span>
+                    </button>
+                </div>
+                <div class="pl-stage">
+                    <div class="pl-panel is-active" data-step="0">
+                        <div class="pl-viz pl-viz--blocks" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+                        <div class="pl-panel-body">
+                            <span class="pl-panel-index">Step 01 <em>/ 04</em></span>
+                            <h3 class="pl-panel-title">Block Sourcing</h3>
+                            <p class="pl-panel-desc">FFPE tumor blocks sourced from hospital and biobank partners, with anonymized clinical annotations covering tumor type, grade, stage, and treatment history.</p>
+                        </div>
+                    </div>
+                    <div class="pl-panel" data-step="1">
+                        <div class="pl-viz pl-viz--slices" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+                        <div class="pl-panel-body">
+                            <span class="pl-panel-index">Step 02 <em>/ 04</em></span>
+                            <h3 class="pl-panel-title">Sectioning</h3>
+                            <p class="pl-panel-desc">Blocks are sectioned onto spatial capture substrates and quality-controlled, preserving native tissue architecture and spatial coordinates.</p>
+                        </div>
+                    </div>
+                    <div class="pl-panel" data-step="2">
+                        <div class="pl-viz pl-viz--grid" aria-hidden="true"></div>
+                        <div class="pl-panel-body">
+                            <span class="pl-panel-index">Step 03 <em>/ 04</em></span>
+                            <h3 class="pl-panel-title">Spatial Profiling</h3>
+                            <p class="pl-panel-desc">Spatial transcriptomics paired with imaging-based morphology (H&amp;E and immunofluorescence), with every measurement anchored to its location in the tissue.</p>
+                        </div>
+                    </div>
+                    <div class="pl-panel" data-step="3">
+                        <div class="pl-viz pl-viz--niches" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+                        <div class="pl-panel-body">
+                            <span class="pl-panel-index">Step 04 <em>/ 04</em></span>
+                            <h3 class="pl-panel-title">Tissue Maps</h3>
+                            <p class="pl-panel-desc">Spatially resolved maps of cell states, programs, and niches that show how each tumor is organized across patient cohorts.</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
         <div class="pl-track" data-track="1">
-            <div class="pl-card">
-                <span class="pl-num">01</span>
-                <h3 class="pl-title">Live Tissue Sourcing</h3>
-                <p class="pl-desc">Fresh tumor resections and live tissue, with the option to harvest dissociated single cells, sourced from clinical partners under matched clinical annotations.</p>
-            </div>
-            <div class="pl-card">
-                <span class="pl-num">02</span>
-                <h3 class="pl-title">Slicing &amp; Perturbation</h3>
-                <p class="pl-desc">Fresh tumors are processed into precision-cut tumor slices, or dissociated cells, and allocated into matched untreated and perturbed arms.</p>
-            </div>
-            <div class="pl-card">
-                <span class="pl-num">03</span>
-                <h3 class="pl-title">Response Readouts</h3>
-                <p class="pl-desc">Perturbation-response readouts across arms, including transcriptomic, proteomic, and functional or viability assays measured after treatment in living tissue.</p>
-            </div>
-            <div class="pl-card">
-                <span class="pl-num">04</span>
-                <h3 class="pl-title">Response Profiles</h3>
-                <p class="pl-desc">Response profiles capturing how living tumors react to drugs and perturbations, including sensitive and resistant cell populations.</p>
+            <div class="pl-explorer">
+                <div class="pl-rail" role="tablist" aria-label="Functional pipeline steps">
+                    <button class="pl-step is-active" type="button" role="tab" aria-selected="true" data-step="0">
+                        <span class="pl-step-num">01</span>
+                        <span class="pl-step-text">
+                            <span class="pl-step-name">Live Tissue Sourcing</span>
+                            <span class="pl-step-tag">Sourcing</span>
+                        </span>
+                        <span class="pl-step-bar"><i></i></span>
+                    </button>
+                    <button class="pl-step" type="button" role="tab" aria-selected="false" data-step="1">
+                        <span class="pl-step-num">02</span>
+                        <span class="pl-step-text">
+                            <span class="pl-step-name">Slicing &amp; Perturbation</span>
+                            <span class="pl-step-tag">Perturb</span>
+                        </span>
+                        <span class="pl-step-bar"><i></i></span>
+                    </button>
+                    <button class="pl-step" type="button" role="tab" aria-selected="false" data-step="2">
+                        <span class="pl-step-num">03</span>
+                        <span class="pl-step-text">
+                            <span class="pl-step-name">Response Readouts</span>
+                            <span class="pl-step-tag">Measure</span>
+                        </span>
+                        <span class="pl-step-bar"><i></i></span>
+                    </button>
+                    <button class="pl-step" type="button" role="tab" aria-selected="false" data-step="3">
+                        <span class="pl-step-num">04</span>
+                        <span class="pl-step-text">
+                            <span class="pl-step-name">Response Profiles</span>
+                            <span class="pl-step-tag">Output</span>
+                        </span>
+                        <span class="pl-step-bar"><i></i></span>
+                    </button>
+                </div>
+                <div class="pl-stage">
+                    <div class="pl-panel is-active" data-step="0">
+                        <div class="pl-viz pl-viz--cells" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+                        <div class="pl-panel-body">
+                            <span class="pl-panel-index">Step 01 <em>/ 04</em></span>
+                            <h3 class="pl-panel-title">Live Tissue Sourcing</h3>
+                            <p class="pl-panel-desc">Fresh tumor resections and live tissue, with the option to harvest dissociated single cells, sourced from clinical partners under matched clinical annotations.</p>
+                        </div>
+                    </div>
+                    <div class="pl-panel" data-step="1">
+                        <div class="pl-viz pl-viz--split" aria-hidden="true"><span></span><span></span></div>
+                        <div class="pl-panel-body">
+                            <span class="pl-panel-index">Step 02 <em>/ 04</em></span>
+                            <h3 class="pl-panel-title">Slicing &amp; Perturbation</h3>
+                            <p class="pl-panel-desc">Fresh tumors are processed into precision-cut tumor slices, or dissociated cells, and allocated into matched untreated and perturbed arms.</p>
+                        </div>
+                    </div>
+                    <div class="pl-panel" data-step="2">
+                        <div class="pl-viz pl-viz--signal" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+                        <div class="pl-panel-body">
+                            <span class="pl-panel-index">Step 03 <em>/ 04</em></span>
+                            <h3 class="pl-panel-title">Response Readouts</h3>
+                            <p class="pl-panel-desc">Perturbation-response readouts across arms, including transcriptomic, proteomic, and functional or viability assays measured after treatment in living tissue.</p>
+                        </div>
+                    </div>
+                    <div class="pl-panel" data-step="3">
+                        <div class="pl-viz pl-viz--curves" aria-hidden="true"><span></span><span></span></div>
+                        <div class="pl-panel-body">
+                            <span class="pl-panel-index">Step 04 <em>/ 04</em></span>
+                            <h3 class="pl-panel-title">Response Profiles</h3>
+                            <p class="pl-panel-desc">Response profiles capturing how living tumors react to drugs and perturbations, including sensitive and resistant cell populations.</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
@@ -119,23 +219,23 @@
             <span class="section-label">What We Generate</span>
             <p class="section-subtitle">A tissue-first data and model engine for cancer biology.</p>
         </div>
-        <div class="modalities-grid" data-reveal="fade-up" data-delay="80">
-            <div class="modality-card">
+        <div class="modalities-grid">
+            <div class="modality-card" data-reveal="fade-up" data-delay="0">
                 <span class="modality-kicker">Spatial Genomics</span>
                 <h3 class="modality-title">Spatial transcriptomics</h3>
                 <p class="modality-desc">Readouts from tumor blocks that map gene expression back onto tissue architecture, revealing neighborhoods, programs, and spatially organized disease states.</p>
             </div>
-            <div class="modality-card">
+            <div class="modality-card" data-reveal="fade-up" data-delay="90">
                 <span class="modality-kicker">Tissue Phenotype</span>
                 <h3 class="modality-title">Morphology &amp; proteomics</h3>
                 <p class="modality-desc">Histology, morphology, and protein-level measurements that anchor molecular findings in the physical structure of each patient sample.</p>
             </div>
-            <div class="modality-card">
+            <div class="modality-card" data-reveal="fade-up" data-delay="180">
                 <span class="modality-kicker">Functional Response</span>
                 <h3 class="modality-title">Ex vivo perturbation</h3>
                 <p class="modality-desc">Precision-cut tumor slices exposed to drugs, cytokines, immune modulators, and genetic or molecular perturbations to observe response in native tissue.</p>
             </div>
-            <div class="modality-card">
+            <div class="modality-card" data-reveal="fade-up" data-delay="270">
                 <span class="modality-kicker">Models</span>
                 <h3 class="modality-title">Multimodal AI models</h3>
                 <p class="modality-desc">Multimodal models trained on our proprietary sequencing and spatial transcriptomics data, supporting target discovery, perturbation-response prediction, cross-modal tasks such as inferring spatial expression from H&amp;E imaging, and patient stratification.</p>
@@ -262,6 +362,6 @@
     <script src="js/tissue-atlas.js?v=5"></script>
     <script src="js/hero-canvas.js?v=16"></script>
     <script src="js/scroll-reveal.js?v=5"></script>
-    <script src="js/protocol-switch.js?v=3"></script>
+    <script src="js/protocol-switch.js?v=4"></script>
 </body>
 </html>

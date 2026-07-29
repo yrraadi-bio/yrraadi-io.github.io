@@ -1,0 +1,1227 @@
+:root {
+    --navy-900: #07101d;
+    --navy-800: #0b1c34;
+    --navy-700: #102b4d;
+    --navy-600: #193b67;
+    /* the blue every dark movement resolves to at its edges, and the one colour
+       a turn is allowed to start or end on */
+    --ground: #0b1c34;
+    /* A turn carries the whole change itself, start to finish, so the blocks on
+       either side stay flat and the length of a blend is this one number.
+
+       It can sit well under a viewport without reading as a stripe laid between
+       two slabs, which is what the earlier, longer version was guarding against.
+       A stripe needs edges, and an eased turn has none: it leaves and arrives at
+       a standstill, so there is no point at which the page announces that a new
+       block has started. */
+    --turn: 64vh;
+    --ink: #f2f6fb;
+    --ink-dim: rgba(224, 235, 248, 0.62);
+    --ink-faint: rgba(200, 218, 240, 0.34);
+    --accent: #7fb4ff;
+    --rail: rgba(180, 205, 240, 0.14);
+    --rail-glow: 0 0 10px rgba(127, 180, 255, 0.5);
+    --paper: #f7f8fb;
+    --malignant: #ff7aa8;
+    --serif: 'Instrument Serif', Georgia, serif;
+    --sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-weight: 300;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+}
+
+.grain {
+    position: fixed;
+    inset: -50%;
+    z-index: 60;
+    pointer-events: none;
+    opacity: 0.85;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='260' height='260' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+    mix-blend-mode: overlay;
+    animation: grain-drift 6s steps(5) infinite;
+}
+
+/* overlay grain alone disappears in the darkest navy, so a second pass
+   screens the same noise back in to keep the shadows textured */
+.grain--lift {
+    opacity: 0.16;
+    mix-blend-mode: screen;
+    animation-direction: reverse;
+}
+
+/* Overlay and screen both do almost nothing to white, so on their own the paper
+   half of the page would come out perfectly smooth while the blue half is
+   textured, and the grain would appear to switch off halfway down. A multiply
+   pass is the one that survives on paper, and because it also reads on blue it
+   can run the whole length of the page without changing at the turn. */
+/* Few octaves and a high base frequency on purpose: multiply is strong enough
+   that the low-frequency part of a fractal field stops reading as tooth and
+   starts reading as dirty cloud across the paper. */
+.grain--tooth {
+    opacity: 0.3;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='t'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='260' height='260' filter='url(%23t)' opacity='0.35'/%3E%3C/svg%3E");
+}
+
+@keyframes grain-drift {
+    0%   { transform: translate3d(0, 0, 0); }
+    20%  { transform: translate3d(-3%, 2%, 0); }
+    40%  { transform: translate3d(2%, -3%, 0); }
+    60%  { transform: translate3d(-2%, -2%, 0); }
+    80%  { transform: translate3d(3%, 1%, 0); }
+    100% { transform: translate3d(0, 0, 0); }
+}
+
+/* ---------- The two grounds, and the turns between them ----------
+
+   The page opens blue, turns to paper for the cell story, and stays on paper to
+   the end; the one dark stretch after that is the island, which is a shape laid
+   over paper rather than a third ground. It gets there natively: every block
+   declares the ground it sits on, and a turn is an ordinary block whose
+   background is the gradient from one to the other. A turn begins and ends on
+   exactly the colour of the block above and below it, so there is no join
+   anywhere that needs blending, masking or hiding.
+
+   Nothing here is fixed to the viewport, deliberately. A fixed backdrop can only
+   be one colour for the whole document, which forces every other colour to be
+   patched over the top of it. */
+
+.ground--dark {
+    background: var(--ground);
+    position: relative;
+}
+
+.ground--paper {
+    background: var(--paper);
+    position: relative;
+    --ink: #0a1729;
+    --ink-dim: rgba(11, 26, 47, 0.72);
+    --ink-faint: rgba(11, 26, 47, 0.5);
+    --accent: #16509e;
+    --rail: rgba(11, 26, 47, 0.15);
+    --rail-glow: none;
+    color: var(--ink);
+}
+
+/* On its own this is only empty height. It carries a gradient where a straight
+   edge is wanted, and inside the island it is left bare, holding open the room
+   the lens needs to draw in to a point. */
+.turn {
+    height: var(--turn);
+    position: relative;
+}
+
+/* Two separate things decide whether a turn reads as the page changing colour.
+
+   The route it travels: interpolating blue straight to white passes through
+   grey, which is the smudge that made every earlier attempt look dirty. Going
+   up through saturated blue keeps chroma the whole way, so the page brightens
+   rather than fading.
+
+   How it is paced along the block: a turn that begins changing at full rate
+   draws a visible line across the page even when its first colour is an exact
+   match for the block above it, because what shows at the join is the jump in
+   rate, not a jump in colour. Flat ground meeting a gradient at speed is a
+   corner in the brightness profile, and a corner reads as an edge.
+
+   So the stops are laid on a smootherstep, which is flat in both slope and
+   curvature at each end: the block holds its incoming ground, reaches its
+   fastest in the middle, and comes back to a standstill before handing over.
+   That puts the rate where it meets flat ground under one level per 100px,
+   which is far below anything the eye can pick out.
+
+   They are also spaced so that brightness advances evenly down the block rather
+   than in even steps along the route, since the route accelerates hard into
+   white on its own and even spacing would put the fastest part four fifths of
+   the way down. Both of those are why the positions here are worked out rather
+   than picked by eye, and why nudging one on its own will reopen the join. */
+.turn--light {
+    background: linear-gradient(180deg,
+        var(--ground) 0%,
+        var(--ground) 5%,
+        #0c1f38 11%,
+        #0d2644 18%,
+        #123962 27%,
+        #245b96 38%,
+        #5a8bbe 50%,
+        #9abbdc 62%,
+        #ccddef 73%,
+        #e8eff7 82%,
+        #f3f6fa 89%,
+        var(--paper) 95%,
+        var(--paper) 100%);
+}
+
+/* ---------- The blue island ----------
+
+   The middle of the page is blue with white above and below it, and rather than
+   a band with two straight edges it is a lens: widest across the middle, drawn
+   in at both ends, with the white curving round its shoulders.
+
+   That shape cannot be assembled out of the blocks it covers. A per-block
+   background can only ever produce horizontal edges, so the whole stretch is
+   wrapped and painted once, and the blocks inside give up their own fill.
+
+   The same stops as a turn, and for the same reasons, but travelling out along
+   a radius instead of down the page: flat for the solid middle of the lens,
+   eased through the rim, flat again by the time it reaches paper. The rim is
+   where a turn used to be, so the change still takes about a turn's worth of
+   scrolling at the centre line.
+
+   Two numbers set the shape, and they are more constrained than they look.
+   Vertically the ellipse has to be half the island so that its last stop lands
+   exactly on the top and bottom edges; any larger and blue reaches the edge and
+   collides with the paper stage beyond it. Horizontally it has to stay wide
+   enough that the solid middle still runs past the left and right of the
+   viewport where the text sits, which is what keeps the question and the intro
+   on flat ground while the corners fall away. */
+.island {
+    position: relative;
+    /* the shape is held in three numbers so a narrow screen can restate them
+       without restating the ramp, which must not drift between the two */
+    --lens: 92%;
+    --pool-hi: 42% 16%;
+    --pool-lo: 40% 15%;
+    background:
+        radial-gradient(var(--pool-hi) at 38% 34%, var(--navy-600) 0%, rgba(25, 59, 103, 0) 68%),
+        radial-gradient(var(--pool-lo) at 66% 62%, var(--navy-700) 0%, rgba(16, 43, 77, 0) 68%),
+        radial-gradient(ellipse var(--lens) 50% at 50% 50%,
+            var(--ground) 0%,
+            var(--ground) 57.3%,
+            #0c1f38 60%,
+            #0d2644 63.1%,
+            #123962 67.2%,
+            #245b96 72.1%,
+            #5a8bbe 77.5%,
+            #9abbdc 82.9%,
+            #ccddef 87.9%,
+            #e8eff7 91.9%,
+            #f3f6fa 95.1%,
+            var(--paper) 97.8%),
+        var(--paper);
+}
+
+/* the island paints one continuous shape, so nothing inside it may lay down a
+   fill of its own and cut a straight edge across the curve */
+.island .ground--dark {
+    background: none;
+}
+
+/* ---------- Floating menu bar ---------- */
+
+.dock {
+    position: fixed;
+    top: 22px;
+    left: 50%;
+    z-index: 70;
+    display: flex;
+    align-items: center;
+    gap: clamp(20px, 3.4vw, 52px);
+    /* the call to action inside carries its own ring, so the right end is cut
+       back to that ring while the left keeps the full inset */
+    padding: 5px 5px 5px 28px;
+    border-radius: 100px;
+    background: rgba(13, 29, 53, 0.52);
+    border: 1px solid rgba(150, 190, 245, 0.16);
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    box-shadow: 0 20px 46px rgba(2, 8, 18, 0.5),
+                inset 0 1px 0 rgba(220, 236, 255, 0.1);
+    transform: translateX(-50%);
+    transition: opacity 0.45s ease, transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* the halo the bar floats in */
+.dock::before {
+    content: '';
+    position: absolute;
+    inset: -160% -8%;
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(50% 50% at 50% 50%, rgba(127, 180, 255, 0.18) 0%, rgba(127, 180, 255, 0) 72%);
+}
+
+/* the bar sits over the top of the stage, so it lifts away as soon as the page
+   starts moving and returns only at the very top */
+.dock.is-gone {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-18px);
+    pointer-events: none;
+}
+
+.dock__links {
+    display: flex;
+    align-items: center;
+    gap: clamp(16px, 2.2vw, 34px);
+}
+
+.dock__links a {
+    font-size: 0.7rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.dock__links a:hover { color: var(--ink); }
+
+/* the bar's own call to action: a ring rather than a fill, so the bar reads as
+   one piece of glass with a button drawn on it instead of two stacked pills */
+.access {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 32px;
+    padding: 0 16px;
+    border-radius: 100px;
+    border: 1px solid rgba(190, 216, 250, 0.34);
+    color: var(--ink);
+    font-size: 0.68rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: border-color 0.3s ease, background 0.3s ease;
+}
+
+.access:hover {
+    border-color: rgba(210, 230, 255, 0.6);
+    background: rgba(190, 216, 250, 0.1);
+}
+
+/* the pair only becomes a box of its own where they have to fall back into the
+   flow, which is why it is nothing at all up here */
+.corners { display: contents; }
+
+/* ---------- The two opening corners ----------
+
+   The bar between them holds the links and the call to action, so the wordmark
+   sits at one end of the opening and the backing at the other. Neither carries a
+   pill, so the bar is the only glass along the top and both corners read
+   straight off the navy. They are laid out against the block rather than the
+   viewport, so they scroll away with it. */
+.brand,
+.yc {
+    position: absolute;
+    /* the bar is fixed 22px down and stands 44px tall, so matching both numbers
+       here is what puts all three on one centre line */
+    top: 22px;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    text-decoration: none;
+}
+
+.brand {
+    left: calc((100% - var(--app-w)) / 2);
+}
+
+.brand img {
+    display: block;
+    width: clamp(92px, 8vw, 118px);
+    height: auto;
+    opacity: 0.92;
+}
+
+.yc {
+    right: calc((100% - var(--app-w)) / 2);
+    gap: 10px;
+    white-space: nowrap;
+}
+
+.yc:hover .yc__label { color: var(--ink); }
+
+.yc__label {
+    font-size: 0.7rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--ink-dim);
+    transition: color 0.3s ease;
+}
+
+.yc__mark {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 19px;
+    height: 19px;
+    border-radius: 5px;
+    background: #f26522;
+    color: #fff;
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+/* ---------- Opening question ---------- */
+
+/* The landing is the one dark block short enough for an atmosphere to read at
+   all: on a stage hundreds of viewports tall a percentage-sized pool of blue
+   flattens into a plain tint.
+
+   Both pools have to be spent before the bottom edge, or the block hands the
+   turn below it a colour that is not var(--ground) and the two no longer meet.
+   A pool is spent at centre + 0.68 of its radius, where its last stop is
+   transparent, so each one needs that to land inside 100%: the first at
+   12 + 0.64 x 52 = 45%, the second at 72 + 0.68 x 38 = 98%. */
+.opening {
+    /* the window's width, kept here because the corner pills line their outer
+       edges up with its own and have to be told the same number */
+    --app-w: min(1340px, 96vw);
+    background:
+        radial-gradient(90% 52% at 22% 12%, var(--navy-600) 0%, rgba(25, 59, 103, 0) 64%),
+        radial-gradient(76% 38% at 84% 72%, var(--navy-700) 0%, rgba(16, 43, 77, 0) 68%),
+        var(--ground);
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    /* the run of flat navy under the window is bought here rather than by
+       lengthening the turn below, so the ramp keeps the length and pacing it
+       was worked out at and only starts further down the page */
+    padding: 10vh 5vw 8vh;
+    text-align: center;
+}
+
+/* Two lines are held open so the window never moves while a question types,
+   and the text is centred inside them rather than sitting at the top, so a
+   one-line question keeps the same air above and below it as a two-line one
+   and stays midway between the bar and the window. */
+.question {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* a floor rather than a fixed height, so a question that needs a line more
+       than the reserve grows the block instead of running into the window */
+    min-height: 2.32em;
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: clamp(1.55rem, 3vw, 2.75rem);
+    line-height: 1.16;
+    letter-spacing: -0.012em;
+    /* the block it sits in is already inset, so a viewport-wide cap would hang
+       the longest line off both edges of it */
+    max-width: min(1240px, 100%);
+    color: #fff;
+    text-align: center;
+}
+
+.q__lead,
+.q__rest {
+    transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+                filter 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* both halves are typed, so they only ever animate on the way out */
+.q__lead { opacity: 1; filter: blur(0); }
+
+.q__rest {
+    opacity: 0;
+    filter: blur(9px);
+}
+
+.question.is-live .q__rest {
+    opacity: 1;
+    filter: blur(0);
+    transition: none;
+}
+
+.question.is-out .q__lead {
+    opacity: 0;
+    filter: blur(9px);
+}
+
+.question.is-typing-lead .q__lead::after,
+.question.is-typing-rest .q__rest::after {
+    content: '';
+    display: inline-block;
+    width: 0.055em;
+    height: 0.78em;
+    margin-left: 0.07em;
+    vertical-align: -0.05em;
+    background: var(--accent);
+    animation: caret-blink 1s steps(1) infinite;
+}
+
+@keyframes caret-blink {
+    0%, 49%   { opacity: 1; }
+    50%, 100% { opacity: 0; }
+}
+
+/* ---------- Empty demo window ---------- */
+
+.app {
+    position: relative;
+    width: var(--app-w);
+    /* taller than the room left under the question, so its bottom edge sits
+       below the fold and is reached by scrolling into the navy under it */
+    height: clamp(380px, 82vh, 980px);
+    margin-top: clamp(6px, 1.3vh, 16px);
+    border-radius: 18px;
+    overflow: hidden;
+    text-align: left;
+    background: linear-gradient(180deg, rgba(18, 38, 66, 0.66) 0%, rgba(9, 20, 38, 0.72) 100%);
+    border: 1px solid rgba(150, 190, 245, 0.15);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 46px 100px rgba(2, 7, 16, 0.62),
+                inset 0 1px 0 rgba(220, 236, 255, 0.09);
+    opacity: 0;
+    animation: panel-in 1.4s cubic-bezier(0.22, 1, 0.36, 1) 0.45s forwards;
+}
+
+@keyframes panel-in {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.app__bar {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    height: 26px;
+    padding: 0 11px;
+    border-bottom: 1px solid rgba(150, 190, 245, 0.1);
+    background: rgba(160, 200, 250, 0.03);
+}
+
+.app__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(180, 205, 240, 0.2);
+}
+
+.app__tabs {
+    display: flex;
+    gap: 5px;
+    margin-left: 10px;
+}
+
+.app__tab {
+    width: 56px;
+    height: 13px;
+    border-radius: 4px;
+    background: rgba(180, 205, 240, 0.05);
+}
+
+.app__tab.is-active {
+    background: rgba(127, 180, 255, 0.11);
+    box-shadow: inset 0 0 0 1px rgba(127, 180, 255, 0.14);
+}
+
+.app__body {
+    position: relative;
+    height: calc(100% - 26px);
+}
+
+/* The live workspace, over the top of the grid that stands in for it while it
+   loads. The app paints its own background on a wrapper sized to its content
+   rather than on the document, so until its data arrives that wrapper is
+   shorter than the frame and whatever is behind it shows along the bottom.
+   The frame carries the app's own page colour for that reason. */
+.app__frame {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: #fff;
+}
+
+/* faint plotting grid so the empty frame still reads as a workspace */
+.app__body::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(150, 190, 245, 0.055) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(150, 190, 245, 0.055) 1px, transparent 1px);
+    background-size: 48px 48px;
+    -webkit-mask-image: radial-gradient(72% 72% at 50% 42%, #000 0%, rgba(0, 0, 0, 0) 100%);
+    mask-image: radial-gradient(72% 72% at 50% 42%, #000 0%, rgba(0, 0, 0, 0) 100%);
+}
+
+/* ---------- Scroll stage ---------- */
+
+.stage {
+    position: relative;
+    /* Long enough that the stretch of regulated division has room to feel slow
+       without the beats after the mutation having to rush, and no longer than
+       that. A caption holds for as long as the page is not being scrolled, so
+       distance buys a reader nothing they cannot get by stopping, and it costs
+       everyone who wanted to get to the end. */
+    height: 760vh;
+}
+
+.stage__sticky {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.stage__sticky canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+/* The second stage runs the same grid of patients through what we do to them,
+   so it reuses the sticky canvas and caption track wholesale. It carries two
+   acts: five states of the data engine, and then the closing sort, which is
+   folded in here rather than given a section of its own so that the predicted
+   slide can travel from one into the other without leaving the canvas. */
+.stage--engine {
+    height: 920vh;
+}
+
+/* Its captions carry more explanation than the story ones, so they are set
+   smaller. Kept narrow so the grid beside them is never crowded. */
+.stage--engine .captions { width: min(32ch, 30vw); }
+.stage--engine .caption h2 { font-size: clamp(1.7rem, 2.85vw, 2.6rem); }
+.stage--engine .caption p { max-width: 32ch; }
+
+.captions {
+    position: absolute;
+    left: 7vw;
+    top: 50%;
+    transform: translateY(-50%);
+    width: min(30ch, 40vw);
+    pointer-events: none;
+}
+
+.caption {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 100%;
+    opacity: var(--o, 0);
+    transform: translateY(calc(-50% + (1 - var(--o, 0)) * 22px));
+    will-change: opacity, transform;
+}
+
+/* the step number is the one caption part that was pinned to a blue, and it now
+   runs on paper, so it takes the ground's accent rather than a fixed one */
+.caption__num {
+    display: block;
+    margin-bottom: 0.9rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.28em;
+    color: var(--accent);
+    opacity: 0.72;
+}
+
+.caption h2 {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: clamp(2.35rem, 4.35vw, 4.3rem);
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    margin-bottom: 0.7rem;
+    color: var(--ink);
+}
+
+.caption p {
+    font-size: clamp(1rem, 1.18vw, 1.18rem);
+    line-height: 1.65;
+    color: var(--ink-dim);
+    max-width: 30ch;
+}
+
+.rail {
+    position: absolute;
+    right: 2.4vw;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 1px;
+    height: 26vh;
+    background: var(--rail);
+}
+
+/* the glow reads as light leaking off the rail on blue and as a grey blur on
+   paper, so the paper ground drops it rather than recolouring it */
+.rail__fill {
+    width: 100%;
+    height: 0%;
+    background: linear-gradient(180deg, var(--accent), var(--malignant));
+    box-shadow: var(--rail-glow);
+}
+
+/* ---------- The question the engine answers ---------- */
+
+.pivot {
+    min-height: 78vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10vh 8vw;
+    text-align: center;
+}
+
+.pivot__line {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: clamp(2.2rem, 5.4vw, 4.6rem);
+    line-height: 1.14;
+    letter-spacing: -0.015em;
+    max-width: 22ch;
+    /* two lines held open so nothing shifts as the question types */
+    min-height: 2.28em;
+    color: var(--ink);
+}
+
+.pivot__line.is-typing::after {
+    content: '';
+    display: inline-block;
+    width: 0.05em;
+    height: 0.78em;
+    margin-left: 0.07em;
+    vertical-align: -0.05em;
+    background: var(--accent);
+    animation: caret-blink 1s steps(1) infinite;
+}
+
+/* ---------- Data engine ---------- */
+
+.engine {
+    position: relative;
+    padding: 18vh 8vw 15vh;
+    max-width: 1180px;
+    margin: 0 auto;
+}
+
+/* An engine section is a centred measure rather than a full-width band, so it
+   is narrower than the viewport and its own fill would leave a column of paper
+   with the body's blue still showing down either side. The ground goes on a
+   layer widened back out to the viewport instead, which means the section's own
+   fill has to come off so it stops covering it.
+
+   Only the paper ones need this. A blue engine section is the same colour as
+   the body behind it, so the margins match whether they are painted or not. */
+.engine.ground--paper {
+    background: none;
+}
+
+.engine.ground--paper::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    z-index: -1;
+    width: 100vw;
+    transform: translateX(-50%);
+    background: var(--paper);
+}
+
+/* The closing block is a way out of the page rather than the end of the
+   argument: the line it used to carry is now the heading of the section above
+   it, and what is left is a pair of buttons and a footer. It no longer needs
+   the room it was given to hold two paragraphs of prose. */
+.engine--tail {
+    padding-top: 9vh;
+}
+
+.engine__eyebrow {
+    font-size: 0.72rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--accent);
+    opacity: 0.8;
+    margin-bottom: 2.4rem;
+}
+
+.engine__lead {
+    font-family: var(--serif);
+    font-size: clamp(1.9rem, 3.7vw, 3.3rem);
+    line-height: 1.24;
+    letter-spacing: -0.012em;
+    max-width: 30ch;
+    color: var(--ink);
+}
+
+.engine__lead em {
+    font-style: italic;
+}
+
+.engine__lead--dim {
+    margin-top: 1.7rem;
+    font-size: clamp(1.1rem, 1.6vw, 1.42rem);
+    font-family: var(--sans);
+    line-height: 1.62;
+    letter-spacing: 0;
+    max-width: 50ch;
+    color: var(--ink-dim);
+}
+
+.engine__lead--accent {
+    color: var(--accent);
+}
+
+.engine__cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-top: 3.2rem;
+}
+
+.btn {
+    display: inline-block;
+    padding: 13px 26px;
+    border-radius: 100px;
+    background: var(--ink);
+    color: var(--navy-900);
+    font-size: 0.86rem;
+    letter-spacing: 0.02em;
+    text-decoration: none;
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), background 0.35s ease, color 0.35s ease;
+}
+
+.btn:hover { transform: translateY(-2px); }
+
+.btn--ghost {
+    background: transparent;
+    color: var(--ink-dim);
+    border: 1px solid rgba(180, 205, 240, 0.22);
+}
+
+.btn--ghost:hover {
+    color: var(--ink);
+    background: rgba(127, 180, 255, 0.08);
+}
+
+/* on paper the fill inverts: the ink the button already uses is the navy,
+   so only the label and the ghost outline need repointing */
+.ground--paper .btn { color: var(--paper); }
+.ground--paper .btn--ghost { border-color: rgba(11, 26, 47, 0.2); color: var(--ink-dim); }
+.ground--paper .btn--ghost:hover { background: rgba(26, 92, 192, 0.07); color: var(--ink); }
+
+/* ---------- Who it is for ----------
+
+   The closing act, which lives inside the engine stage's sticky box rather than
+   in a section of its own. It used to be its own block, and the cost of that was
+   that the predicted slide scrolled off the top of one canvas and was rebuilt on
+   another one below it, so the same tumor arrived twice. Sharing the sticky box
+   means the slide never leaves the screen: it simply travels down into this act.
+
+   It takes the place of the caption column when it comes up, so it sits where
+   the captions sit and is faded in on scroll progress the same way they are. */
+.verdict__copy {
+    position: absolute;
+    left: 7vw;
+    top: 50%;
+    transform: translateY(calc(-50% + (1 - var(--o, 0)) * 22px));
+    width: min(34ch, 30vw);
+    opacity: var(--o, 0);
+    pointer-events: none;
+    will-change: opacity, transform;
+}
+
+.verdict__lead {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: clamp(1.9rem, 3.1vw, 2.9rem);
+    line-height: 1.16;
+    letter-spacing: -0.012em;
+    color: var(--ink);
+}
+
+.verdict__body {
+    margin-top: 1.5rem;
+    font-size: clamp(0.98rem, 1.12vw, 1.12rem);
+    line-height: 1.62;
+    color: var(--ink-dim);
+}
+
+/* ---------- Precedent ----------
+
+   The one block on the page that is only evidence. Everything above it is an
+   argument made in pictures, and an argument like that is worth nothing if the
+   thing it concludes has never worked, so this is seven cases where it did, set
+   as a table because a table is what a reader checks rather than watches.
+
+   Everything in it is sourced. The point being made is that the group a drug is
+   for is a fraction of the group that shares its diagnosis, and a claim like that
+   is only worth making with the figures attached and a reference on each one. */
+.cases {
+    position: relative;
+    padding: 16vh 7vw 10vh;
+    background: var(--paper);
+}
+
+.cases__intro { max-width: 62ch; }
+
+.cases__lead {
+    margin-top: 1.4rem;
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: clamp(2.1rem, 3.9vw, 3.5rem);
+    line-height: 1.1;
+    letter-spacing: -0.012em;
+    color: var(--ink);
+}
+
+.cases__body {
+    margin-top: 1.6rem;
+    font-size: clamp(0.98rem, 1.12vw, 1.12rem);
+    line-height: 1.68;
+    color: var(--ink-dim);
+}
+
+.cases__list {
+    margin-top: 8vh;
+    list-style: none;
+    border-top: 1px solid rgba(11, 26, 47, 0.13);
+}
+
+/* Name, then who it is for, then what that is worth. The money column is set to its
+   content and pinned right so seven different magnitudes line up on their last digit
+   rather than on their first. */
+.case {
+    display: grid;
+    grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.5fr) auto;
+    gap: 2.5rem 3.2vw;
+    align-items: start;
+    padding: 3.4rem 0;
+    border-bottom: 1px solid rgba(11, 26, 47, 0.13);
+}
+
+.case__name {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: clamp(1.5rem, 2.1vw, 2rem);
+    line-height: 1.15;
+    color: var(--ink);
+}
+
+/* The render sits on the paper rather than in a frame. Its file is keyed to real
+   alpha and trimmed to its own bounds when it is baked, so there is no white
+   rectangle to hide behind a border and no source margin to crop away: the row
+   only has to say how tall the thing is.
+
+   Height rather than width, because the subjects are different shapes: five tall
+   ribbon diagrams and two wide skeletal drawings, and it is the optical size they
+   need to agree on. Fixing the height also keeps every drug's name the same
+   distance below the rule above it. */
+.case__art {
+    height: clamp(124px, 12.5vw, 188px);
+    margin-bottom: 1.6rem;
+}
+
+.case__art img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    /* contain and a left origin, so a shape this box did not anticipate is
+       scaled to fit and hung off the column edge rather than cropped */
+    object-fit: contain;
+    object-position: left center;
+}
+
+.case__gen {
+    margin-top: 0.5rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    line-height: 1.5;
+    color: var(--ink-faint);
+}
+
+.case__chem {
+    margin-top: 0.9rem;
+    font-size: 0.72rem;
+    line-height: 1.7;
+    color: var(--ink-dim);
+}
+
+.case__chem b {
+    font-weight: 500;
+    color: var(--ink);
+}
+
+.case__who {
+    margin-top: 1.35rem;
+    font-size: clamp(0.92rem, 1.02vw, 1.02rem);
+    line-height: 1.66;
+    color: var(--ink-dim);
+}
+
+.case__who strong {
+    font-weight: 500;
+    color: var(--ink);
+}
+
+/* The response rate is the largest thing in the row, and the line under it is set
+   in sentence case rather than as a label so the two read as one sentence: this
+   percentage of eligible patients with that disease. The fraction is meaningless
+   without the group it is a fraction of, and a reader who meets a bare percentage
+   here will assume it means everyone with the diagnosis. */
+.case__rate {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: clamp(2rem, 3.1vw, 3rem);
+    line-height: 1;
+    letter-spacing: -0.015em;
+    white-space: nowrap;
+    color: var(--ink);
+}
+
+.case__rate span {
+    margin-left: 0.03em;
+    font-size: 0.52em;
+    color: var(--ink-faint);
+}
+
+.case__among {
+    margin-top: 0.6rem;
+    font-size: clamp(0.9rem, 1vw, 1rem);
+    line-height: 1.5;
+    color: var(--ink-dim);
+}
+
+/* What the figure above it actually measures, and in which trial. Apparatus rather
+   than argument, so it is set at the smallest size on the page and used again for
+   the two labels in the economics column. */
+.case__basis {
+    margin-top: 0.62rem;
+    font-size: 0.66rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    line-height: 1.55;
+    color: var(--ink-faint);
+}
+
+/* Superscript, and never underlined: a reference marker is apparatus rather than
+   an invitation, so it should be findable without competing with the number it
+   is attached to. */
+.case__cite {
+    margin-left: 0.28em;
+    font-size: 0.68em;
+    font-weight: 400;
+    vertical-align: super;
+    letter-spacing: 0.02em;
+    text-decoration: none;
+    color: var(--ink-faint);
+    transition: color 0.2s ease;
+}
+
+.case__cite:hover,
+.case__cite:focus-visible { color: var(--accent); }
+
+/* What the drug earned, set to match the response rate at the other end of the row,
+   because those two are the whole argument: this fraction of the people it was given
+   to, and that much revenue either way.
+
+   What it cost to develop is not here. No company this size reports research spending
+   by product, so the only honest figure is a median for the whole therapeutic class,
+   and a figure that cannot vary between rows has no business in a column. It is
+   stated once, in the prose above. */
+.case__econ {
+    justify-self: end;
+    text-align: right;
+}
+
+.case__num {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: clamp(1.9rem, 3vw, 2.9rem);
+    line-height: 1;
+    letter-spacing: -0.015em;
+    white-space: nowrap;
+    color: var(--ink);
+}
+
+.case__num span {
+    margin-left: 0.06em;
+    font-size: 0.52em;
+    letter-spacing: 0.02em;
+    color: var(--ink-faint);
+}
+
+/* Numbered to match the markers in the rows, and targetable, so a marker is a
+   link to something rather than a decoration that implies one. */
+.cases__refs {
+    max-width: 82ch;
+    margin-top: 9vh;
+    padding-left: 1.6rem;
+    font-size: 0.74rem;
+    line-height: 1.7;
+    color: var(--ink-faint);
+}
+
+.cases__refs li {
+    margin-top: 0.42rem;
+    padding-left: 0.35rem;
+}
+
+.cases__refs li:target { color: var(--ink-dim); }
+
+.cases__note {
+    max-width: 78ch;
+    margin-top: 4vh;
+    font-size: 0.74rem;
+    line-height: 1.75;
+    color: var(--ink-faint);
+}
+
+.engine__foot {
+    margin-top: 7rem;
+    font-size: 0.68rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+}
+
+.engine__foot--src {
+    margin-top: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: none;
+    opacity: 0.7;
+}
+
+@media (max-width: 860px) {
+    /* the links are gone at this width and the call to action is all that is
+       left inside, so the bar drops its own shell and the pill stands alone */
+    .dock {
+        top: 14px;
+        padding: 0;
+        background: none;
+        border-color: transparent;
+        box-shadow: none;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+    .dock__links { display: none; }
+    /* nothing is held out to the sides here, so the pair goes back into the flow
+       above the question, side by side and cut down enough to fit a phone
+       across */
+    .corners {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        margin-bottom: 22px;
+    }
+    .brand,
+    .yc {
+        position: static;
+        min-height: 0;
+    }
+    .brand img { width: 96px; }
+    .yc { gap: 7px; }
+    .access {
+        min-height: 30px;
+        padding: 0 14px;
+        font-size: 0.62rem;
+        letter-spacing: 0.1em;
+    }
+    .yc__label { font-size: 0.62rem; letter-spacing: 0.1em; }
+    .yc__mark { width: 16px; height: 16px; font-size: 10px; }
+    .opening { padding: 11vh 5vw 8vh; }
+    /* the longest question runs to three lines at this measure, and the window
+       must not move when it is the one being typed */
+    .question { min-height: 3.48em; }
+    .app { height: clamp(280px, 52vh, 470px); }
+    .app__tab { width: 38px; }
+    .stage { height: 680vh; }
+    .stage--engine { height: 860vh; }
+    .stage--engine .captions { width: auto; }
+    .stage--engine .caption p { max-width: none; }
+    .captions {
+        left: 8vw;
+        right: 8vw;
+        width: auto;
+        top: auto;
+        bottom: 12vh;
+        transform: none;
+    }
+    .caption {
+        top: auto;
+        bottom: 0;
+        transform: translateY(calc((1 - var(--o, 0)) * 22px));
+    }
+    .caption p { max-width: none; }
+    .rail { right: 6vw; height: 18vh; }
+    .pivot { min-height: 62vh; padding: 8vh 7vw; }
+    .engine { padding: 14vh 7vw 12vh; }
+    /* the copy goes over the top of the frame rather than beside it, and the
+       grid is given the room below it by the canvas's own layout */
+    .verdict__copy {
+        left: 7vw;
+        right: 7vw;
+        top: 6vh;
+        width: auto;
+        transform: translateY(calc((1 - var(--o, 0)) * 22px));
+    }
+    .verdict__body { margin-top: 1rem; }
+    /* three columns will not fit a phone, and the money is the payoff of the
+       row rather than an aside, so it goes last and full width */
+    .cases { padding: 12vh 7vw 8vh; }
+    .cases__list { margin-top: 6vh; }
+    .case {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+        padding: 2.6rem 0;
+    }
+    .case__econ {
+        justify-self: start;
+        text-align: left;
+    }
+    .case__who { margin-top: 1.1rem; }
+    /* The lens is measured against the island, and the island is a completely
+       different shape here: a nearly square block on desktop becomes a column
+       five times taller than it is wide. The same 92% that puts the rim far out
+       in the desktop margins leaves it only 198px from the centre line, which is
+       inside the measure, so it climbs the page beside the copy and passes under
+       it instead of staying in the margins.
+
+       Widening the ellipse well past the viewport takes the horizontal term
+       almost out of the distance, so the rim runs across the page rather than
+       down it and the sides stay flat navy for the whole of the text. Only the
+       far corners are still near enough to the rim to fall away, which is the
+       part of the curve worth keeping: the shoulders read as a lens, and nothing
+       else in the block does anything but taper.
+
+       The pools go with it. Sized against a narrow box they stand up on end and
+       read as two vertical smears rather than as atmosphere, so they are given
+       back their width and the same wide, flat character they have on desktop. */
+    .island {
+        --lens: 400%;
+        --pool-hi: 120% 14%;
+        --pool-lo: 115% 13%;
+    }
+    /* a turn is sized against the viewport it plays out in, so it stays in vh;
+       it only needs to be a little shorter where scrolling is slower */
+    :root { --turn: 58vh; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .grain { animation: none; }
+    .q__lead, .q__rest { transition-duration: 0.01s; }
+    .question.is-typing-lead .q__lead::after,
+    .question.is-typing-rest .q__rest::after { animation: none; }
+    .app { animation: none; opacity: 1; }
+    .beat { opacity: 1; transform: none; transition: none; }
+    .pivot__line.is-typing::after { animation: none; }
+}

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>cell render</title>
+<style>
+    html, body { margin: 0; padding: 0; overflow: hidden; background: #f6f1ea; }
+    canvas { display: block; }
+    #err {
+        position: fixed; inset: 0; padding: 24px; margin: 0;
+        font: 13px/1.5 ui-monospace, Menlo, monospace; color: #b3261e;
+        white-space: pre-wrap; display: none;
+    }
+    #hud {
+        position: fixed; left: 10px; bottom: 8px;
+        font: 11px/1.4 ui-monospace, Menlo, monospace; color: #8b8175; display: none;
+    }
+</style>
+<script type="importmap">
+{
+    "imports": {
+        "three": "./vendor/build/three.module.js",
+        "three/addons/": "./vendor/examples/jsm/"
+    }
+}
+</script>
+</head>
+<body>
+<pre id="err"></pre>
+<div id="hud"></div>
+<script type="module">
+    import('./scene.js').catch(e => {
+        const el = document.getElementById('err');
+        el.style.display = 'block';
+        el.textContent = 'LOAD ERROR\n' + (e && e.stack ? e.stack : e);
+    });
+</script>
+</body>
+</html>
