@@ -411,6 +411,70 @@ def load_pathway_tile_scores(root, pathways):
     return out
 
 
+def basic_correlation(identity, activation, scores):
+
+    """Compute an unadjusted pathway-score versus block-activation Pearson correlation.
+
+    Args:
+        identity (pandas.DataFrame): Tile identity and split rows [n_tiles].
+        activation (numpy.ndarray): Scalar block activation magnitude [n_tiles].
+        scores (dict): Training tile id to pathway score.
+
+    Returns:
+        tuple: (Pearson r float or None, number of training tiles used)
+    """
+
+    tile_ids = identity["tile_id"].astype(str).to_numpy()
+    train = identity["split"].astype(str).to_numpy() == "train"
+    present = np.asarray([tile_id in scores for tile_id in tile_ids], dtype=bool)
+    rows = train & present
+    x = np.asarray(activation, dtype=np.float64)[rows]
+    y = np.asarray([scores[tile_id] for tile_id in tile_ids[rows]], dtype=np.float64)
+    finite = np.isfinite(x) & np.isfinite(y)
+    x = x[finite]
+    y = y[finite]
+
+    if len(x) < 3 or np.var(x) <= np.finfo(np.float64).eps or np.var(y) <= np.finfo(np.float64).eps:
+        return None, int(len(x))
+
+    return float(np.corrcoef(x, y)[0, 1]), int(len(x))
+
+
+def backfill_basic_correlations(root, data_dir, profile):
+
+    """Add raw selected-block correlations to an already-built site bundle.
+
+    Args:
+        root (Path): Gene/pathway analysis output root.
+        data_dir (Path): Existing collection bundle directory.
+        profile (dict): Model profile from ``MODELS``.
+
+    Returns:
+        int: pathway documents updated
+    """
+
+    paths = sorted((data_dir / "pathways").glob("*.json"))
+    if not paths:
+        raise FileNotFoundError(f"no pathway bundles found under {data_dir / 'pathways'}")
+
+    documents = [json.loads(path.read_text()) for path in paths]
+    scores = load_pathway_tile_scores(root, [document["pathway_id"] for document in documents])
+    activity_cache = {}
+
+    for path, document in zip(paths, documents):
+        pathway_scores = scores[document["pathway_id"]]
+        for block in document["blocks"]:
+            task_index = task_index_of(profile, block["layer"], block["group_size"])
+            identity, activity = load_activity(root, task_index, activity_cache)
+            value, rows = basic_correlation(identity, activity[:, int(block["block"])], pathway_scores)
+            block["basic_r"] = round(value, 4) if value is not None else None
+            block["basic_r_n"] = rows
+
+        write_atomic(path, compact_json(document))
+
+    return len(documents)
+
+
 def provenance_map(run_root, split, profile):
 
     """Map each tile id to its activation shard position.
@@ -683,6 +747,7 @@ def collect_tile_requests(root, per_pathway, tile_scores, n_candidates, n_score_
             # shortlist tiles by this block's mean gated activity across every cohort tile
             column = activity[:, local_block]
             top = np.argsort(-column)[:n_candidates]
+            basic_r, basic_r_n = basic_correlation(identity, column, tile_scores[pathway])
 
             tiles = []
             for position in top:
@@ -712,6 +777,8 @@ def collect_tile_requests(root, per_pathway, tile_scores, n_candidates, n_score_
                 "ci_high": round(float(row["ci_high"]), 4),
                 "firing_fraction": round(float(meta["firing_fraction"]), 4),
                 "stable_rank": round(float(meta["contribution_stable_rank"]), 3),
+                "basic_r": round(basic_r, 4) if basic_r is not None else None,
+                "basic_r_n": basic_r_n,
                 "tiles": tiles,
             })
 
@@ -933,6 +1000,7 @@ def main():
     parser.add_argument("--verify-tiles", type=int, default=3)
     parser.add_argument("--label")
     parser.add_argument("--slug", help="bundle directory under data/, defaults to the collection name")
+    parser.add_argument("--basic-correlations-only", action="store_true", help="backfill raw pathway-block correlations")
     args = parser.parse_args()
 
     profile = MODELS[args.model]
@@ -947,6 +1015,11 @@ def main():
     tile_dir = out_dir / "tiles"
     data_dir.mkdir(parents=True, exist_ok=True)
     tile_dir.mkdir(parents=True, exist_ok=True)
+
+    if args.basic_correlations_only:
+        updated = backfill_basic_correlations(root, data_dir, profile)
+        print(f"updated raw pathway-block correlations in {updated} {slug} bundles", flush=True)
+        return
 
     activity_cache = {}
 

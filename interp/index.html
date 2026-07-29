@@ -51,7 +51,13 @@
 
       <div class="pathway-head">
         <div>
-          <h2 id="pathwayName"></h2>
+          <div class="pathway-title-row">
+            <h2 id="pathwayName"></h2>
+            <span id="basicCorrelation" class="basic-correlation hidden" aria-live="polite">
+              <span class="correlation-label">raw pathway × selected block</span>
+              <strong id="basicCorrelationValue"></strong>
+            </span>
+          </div>
           <p class="meta">
             <a id="keggLink" target="_blank" rel="noopener"><span id="pathwayId"></span></a>
             <span class="dot">·</span>

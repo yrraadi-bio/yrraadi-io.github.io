@@ -297,6 +297,7 @@ async function selectPathway(index) {
   const template = state.bundle.pathway_url_template || "https://www.kegg.jp/pathway/{pathway_id}";
   document.getElementById("keggLink").href = template.replace("{pathway_id}", entry.pathway_id);
   document.getElementById("supportedCount").textContent = `${entry.n_supported_blocks} held-out supported blocks`;
+  document.getElementById("basicCorrelation").classList.add("hidden");
   document.getElementById("geneList").innerHTML = "";
   document.getElementById("blockList").innerHTML = "";
   document.getElementById("gallery").innerHTML = "";
@@ -381,11 +382,35 @@ function renderGeneNote() {
     14&times;14 grid as the block activation &mdash; patches with no measured cell stay unmarked.`;
 }
 
+function renderBasicCorrelation() {
+  const badge = document.getElementById("basicCorrelation");
+  const output = document.getElementById("basicCorrelationValue");
+  if (!state.detail || !state.detail.blocks.length) {
+    badge.classList.add("hidden");
+    return;
+  }
+
+  const block = state.detail.blocks[state.blockIndex];
+  const value = block.basic_r;
+  badge.classList.remove("hidden", "positive", "negative");
+
+  if (!Number.isFinite(value)) {
+    output.textContent = "r unavailable";
+    badge.title = "Raw Pearson correlation is undefined because one input has no variance.";
+    return;
+  }
+
+  output.textContent = `r ${value >= 0 ? "+" : "−"}${Math.abs(value).toFixed(3)}`;
+  badge.classList.add(value >= 0 ? "positive" : "negative");
+  badge.title = `Unadjusted Pearson correlation between ${state.detail.name} score and ${block.dictionary} #${block.block} activation magnitude across ${block.basic_r_n.toLocaleString()} training tiles. No covariate residualization; the block card reports the adjusted held-out effect.`;
+}
+
 function renderBlocks() {
   const pathway = state.detail;
   const holder = document.getElementById("blockList");
   const strongest = Math.max(...pathway.blocks.map((b) => Math.abs(b.heldout_effect)));
   holder.innerHTML = "";
+  renderBasicCorrelation();
 
   pathway.blocks.forEach((block, index) => {
     const card = document.createElement("div");

@@ -154,19 +154,19 @@ a { color: inherit; }
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* border-box origin: with the default padding-box the gradient repeats under the translucent
-   border and paints its dark end as a spot on the left edge */
 .ramp {
   width: 120px;
   height: 9px;
   border-radius: 5px;
   background: linear-gradient(90deg, #fff 0%, #fff 8%, #c6dbef 30%, #6baed6 55%, #2171b5 78%, #08306b 100%);
   background-origin: border-box;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
   border: 1px solid var(--rule);
   flex: none;
 }
 
-.ramp.gene { background: linear-gradient(90deg, #edf8e9, #bae4b3, #74c476, #238b45, #00441b); }
+.ramp.gene { background-image: linear-gradient(90deg, #edf8e9, #bae4b3, #74c476, #238b45, #00441b); }
 
 .scalebar { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin: 0 0 14px; }
 
@@ -246,6 +246,8 @@ a { color: inherit; }
 
 .pathway-head { margin-bottom: 24px; }
 
+.pathway-title-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
 .pathway-head h2 {
   font-family: var(--font-display);
   font-size: 32px;
@@ -253,6 +255,39 @@ a { color: inherit; }
   letter-spacing: -0.02em;
   line-height: 1.1;
 }
+
+.basic-correlation {
+  --correlation-color: var(--slate);
+  --correlation-bg: #eef3f7;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--correlation-color);
+  background: var(--correlation-bg);
+  border: 1px solid color-mix(in srgb, var(--correlation-color) 22%, transparent);
+  border-radius: 999px;
+  padding: 4px 9px 4px 7px;
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.basic-correlation::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--correlation-color);
+}
+
+.basic-correlation.positive { --correlation-color: #0b6b47; --correlation-bg: var(--gene-soft); }
+
+.basic-correlation.negative { --correlation-color: var(--warn); --correlation-bg: #f8e9ee; }
+
+.basic-correlation strong { font-size: 11.5px; font-variant-numeric: tabular-nums; }
+
+.correlation-label { color: var(--muted); }
 
 .meta { margin: 4px 0 0; font-size: 12px; color: var(--muted); }
 
