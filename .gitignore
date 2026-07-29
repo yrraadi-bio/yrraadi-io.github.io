@@ -4,3 +4,13 @@ blogs/.DS_Store
 blogs/muon/latex/.DS_Store
 blogs/muon/.DS_Store
 blogs/.DS_Store
+paper/__pycache__/
+paper/*.aux
+paper/*.bbl
+paper/*.blg
+paper/*.log
+paper/*.out
+paper/gate05/
+paper/student_gate05/
+paper/influence/
+paper/p2s.pdf

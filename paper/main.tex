@@ -1,0 +1,1251 @@
+\documentclass[11pt]{article}
+
+\usepackage[left=1in,right=1in,top=0.70in,bottom=0.70in]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{algorithm}
+\usepackage[noend]{algpseudocode}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage[most]{tcolorbox}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage{xcolor}
+\usepackage[colorlinks=true,allcolors=blue!55!black]{hyperref}
+\definecolor{originblue}{HTML}{123E6D}
+
+\graphicspath{{figures/}}
+\captionsetup{font=small,labelfont=bf,skip=7pt}
+\linespread{1.06}
+\setlength{\parindent}{1.4em}
+\setlength{\parskip}{0.70em plus 0.1em minus 0.1em}
+\setlength{\textfloatsep}{15pt plus 3pt minus 2pt}
+\setlength{\intextsep}{13pt plus 2pt minus 2pt}
+
+\begin{document}
+
+\begin{tcolorbox}[
+  enhanced,
+  colback=white,
+  colframe=originblue,
+  boxrule=0.7pt,
+  arc=9pt,
+  outer arc=9pt,
+  left=16pt,
+  right=16pt,
+  top=14pt,
+  bottom=12pt,
+  before skip=0pt,
+  after skip=15pt
+]
+\begingroup
+\setlength{\parindent}{0pt}
+{\raggedright\color{originblue}\fontsize{18}{21}\selectfont\bfseries
+Astra: Histology-Derived Single-Cell Spatial Transcriptomics for Clinical
+Prediction\par}
+\vspace{7pt}
+{\small
+Akshat Singh\textsuperscript{1}, Malhar Bhide\textsuperscript{1},
+Viraj Doshi\textsuperscript{1}, Aum Wadhwani\textsuperscript{1}, and
+Yash Rathod\textsuperscript{1}\par}
+\vspace{2pt}
+{\footnotesize\textsuperscript{1}Origin Bio\par}
+\vspace{12pt}
+{\small
+Spatial transcriptomics ties gene expression to tissue architecture, but the
+assays remain expensive and sparse relative to hematoxylin-and-eosin (H\&E)
+histology, which is abundant and already embedded in pathology workflows. We
+introduce \textbf{Astra}, a model that predicts spatial transcriptomics from
+H\&E at single-cell resolution across diverse tissues. At inference Astra
+requires only H\&E patch embeddings: it predicts the cellular layout within a
+patch and uses that inferred layout to assign per-cell gene expression, with no
+external cell segmentation or transcriptomic coordinates. Trained only on the
+HEST-1k Xenium corpus across breast, lung, bowel, and skin, Astra recovers
+structured, spatially coherent expression on held-out patients and on an
+out-of-distribution 10x breast-cancer cohort. We then show that Astra's
+H\&E-derived expression carries clinical signal without task-specific
+fine-tuning of the image-to-expression model: it predicts trastuzumab response
+in HER2-positive breast cancer from intratumoral expression dispersion (AUROC
+0.713), stratifies overall survival in ER-positive TCGA-BRCA (log-rank
+$p=0.007$ between predicted risk quartiles), and pre-screens for microsatellite
+instability in colorectal cancer (AUROC 0.705). Together, these results show
+that histology-derived single-cell expression can support a variety of clinical
+applications, such as treatment-response prediction, prognosis, and molecular
+biomarker screening.\par}
+\vspace{12pt}
+\begin{minipage}[b]{0.70\linewidth}
+  \footnotesize
+  \textbf{Date:} June 2026
+\end{minipage}
+\hfill
+\begin{minipage}[b]{0.25\linewidth}
+  \raggedleft
+  \includegraphics[width=0.82in]{../assets/Origin logo+text (blue on transparent).png}
+\end{minipage}
+\endgroup
+\end{tcolorbox}
+
+\section{Introduction}
+
+Spatial transcriptomics reads out gene expression while preserving where each
+cell sits, so it captures niches, tumor--immune boundaries, and local cell
+states that bulk or dissociated assays average away~\cite{spatial_review_natbiotech}.
+That spatial context is exactly what makes it valuable for understanding
+disease~\cite{spatial_pathology_ajp},
+yet the assays are costly, low-throughput, and sparse. Hematoxylin-and-eosin
+(H\&E) histology is the opposite: it is cheap, ubiquitous, and already sits in
+every pathology archive. Learning to predict expression directly from H\&E would
+turn that existing morphology into a molecular and spatial readout at cohort
+scale. That spatial readout matters clinically because many therapies act
+through cellular geometry rather than average composition: antibody--drug
+conjugates such as trastuzumab deruxtecan kill antigen-negative neighbors within
+a short diffusion radius (the bystander
+effect~\cite{ogitani_bystander,staudacher_bystander}), so response in
+antigen-heterogeneous and HER2-low tumors depends on how positive and negative
+cells are interspersed~\cite{destiny_b04}; likewise, checkpoint-blockade response
+tracks tumor--T-cell arrangement and organized tertiary lymphoid
+structures~\cite{chen_mellman,cabrita_tls,helmink_tls}. Each is a property of
+tissue geometry that survives only when a cell's position is recorded alongside
+its expression.
+
+Existing models establish that morphology carries transcriptomic signal, but
+their resolution or inference requirements limit how directly they can be used.
+Spot-level models such as ST-Net, HisToGene, and
+Hist2ST~\cite{stnet,histogene,hist2st} learn from Visium-style targets, so each
+prediction averages over many cells and blurs the cell-to-cell variation that
+defines a niche. Single-cell methods such as GHIST and DeepCell improve
+resolution but still take the cellular layout as an input rather than inferring
+it: GHIST matches separate H\&E and Xenium segmentations, while DeepCell crops
+H\&E around supplied Xenium centroids~\cite{ghist,deepcell}. Either route ties
+training and inference to an external segmentation, and any spatial mismatch
+between the two assays injects label noise or discards usable training signal
+(Section~\ref{sec:arch}).
+
+Astra removes that dependency. At training, cells enter the model as queries
+defined by their centroids, while, in parallel, a density head learns where
+those centroids fall inside each patch. At inference, the density head proposes the layout from
+H\&E alone and expression is queried at the inferred positions, without external
+segmentation or cross-assay matching. We first test whether this H\&E-only pipeline recovers spatially
+coherent expression across tissues. We then hold Astra frozen and test three
+clinical applications in cohorts without measured spatial transcriptomics:
+trastuzumab response prediction in HER2-positive breast cancer, survival
+stratification in ER-positive breast cancer, and MSI-H pre-screening in
+colorectal cancer. These tasks test whether the predicted transcriptome provides
+useful clinical signal rather than only reproducing benchmark expression.
+
+\section{Astra recovers spatial expression from histology}
+\label{sec:recovery}
+
+We evaluate Astra with patient-level cross-validation on HEST-1k Xenium data
+restricted to breast, lung, bowel, and skin, withholding entire patients each
+fold. The primary metric is the per-gene Spearman correlation between predicted
+and measured expression (Methods~\ref{met:recovery}): cells with higher measured expression should rank
+higher in the prediction, which, because every cell has a coordinate, is
+equivalent to recovering where a gene is high or low on the slide. Genes vary
+widely in how much spatial structure they carry. Diffuse genes are nearly
+random across the tissue and hard to pin to morphology; genes that organize into
+compartments or neighborhoods are the ones Astra recovers
+(Figure~\ref{fig:spearman}). Across the top-50 Moran's I genes the median
+per-gene Spearman is 0.46 in breast, 0.51 in lung, 0.41 in bowel, and 0.53 in
+skin (0.47 pooled), a consistent level of recovery across four unrelated tissue
+types. Ranking each slide's genes by true Moran's I and sweeping how many are
+kept, this recovery is highest for the most organized genes and falls as more
+diffuse genes are added (Figure~\ref{fig:ngenes}), so the top few dozen genes
+per slide carry the strongest predictions.
+
+\noindent\begin{minipage}{\linewidth}
+  \captionsetup{type=figure}
+  \centering
+  \begin{subfigure}{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{spearman_boxplot.pdf}
+    \caption{Top-50 Moran's I genes, per tissue.}
+    \label{fig:spearman}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{spearman_vs_ngenes.pdf}
+    \caption{Cumulative-mean Spearman vs.\ number of genes kept.}
+    \label{fig:ngenes}
+  \end{subfigure}
+  \caption{Held-out HEST-1k recovery with inferred layouts: top-50 gene
+  Spearman by tissue and cumulative recovery across Moran-ranked genes.}
+  \label{fig:heldout}
+\end{minipage}
+
+Because Astra is trained only on HEST-1k, a useful stress test is an
+out-of-distribution cohort with different acquisition and batch characteristics.
+On 10x Genomics' public BreastCancer1 and BreastCancer2 Xenium slides, the
+per-gene Pearson correlation for the top 25 genes by Moran's I has a median
+above 0.80 in both cohorts, with the top 50 genes near 0.74
+(Figure~\ref{fig:pcc}). These medians meet or exceed the values GHIST reports on
+the same two slides (top-20 spatially variable genes ${\approx}0.70$, top-50
+${\approx}0.60$)~\cite{ghist}, and Astra reaches them fully out of distribution,
+having never seen these slides, whereas GHIST is trained on each slide through
+five-fold spatial cross-validation over horizontal bands of the same tissue. The
+comparison is not head-to-head, since the gene rankings differ (Moran's I vs.\
+SPARK-X spatially variable genes) and our correlation is computed over all cells
+on a slide rather than a single held-out band, but it indicates Astra's
+out-of-distribution recovery is competitive with a model fit directly on the
+target slides.
+
+\noindent\begin{minipage}{\linewidth}
+  \captionsetup{skip=3pt}
+  \centering
+  \includegraphics[width=0.50\linewidth]{pcc_boxplot.pdf}
+  \captionof{figure}{Out-of-distribution 10x breast PCC for the top 25 and 50
+  genes ranked by Moran's I.}
+  \label{fig:pcc}
+\end{minipage}
+
+Aggregate correlations do not show what the predictions look like in tissue. We
+therefore examine one biologically informative gene from each tissue, always
+showing measured expression beside Astra's prediction.
+
+\smallskip
+\noindent\begin{minipage}{\linewidth}
+  \centering
+  \includegraphics[width=0.96\linewidth]{marker_panel.png}
+  \captionof{figure}{Measured (left within each panel) and Astra-predicted
+  (right) expression for GATA3 in breast, COL17A1 in skin, FOXJ1 in lung, and
+  GREM1 in bowel.}
+  \label{fig:marker_panel}
+\end{minipage}
+
+These maps test whether Astra places high-expression domains and compartment
+boundaries correctly rather than only matching a slide-level distribution,
+spanning four distinct morphology--expression relationships. GATA3 marks luminal
+mammary epithelium and estrogen-receptor signaling, a defining regulator of
+luminal breast-cancer identity~\cite{gata3_breast}; COL17A1 anchors basal
+keratinocytes through hemidesmosomes and marks a distinct basal skin
+compartment~\cite{col17_skin}; FOXJ1 drives motile-cilia differentiation,
+localizing ciliated airway epithelium against surrounding lung~\cite{foxj1_lung};
+and GREM1, a BMP antagonist, marks a cancer-promoting stromal program in
+colorectal tissue~\cite{grem1_crc}. Astra recovers these domains with Spearman
+correlations of 0.53, 0.73, 0.71, and 0.62, respectively. These are qualitative
+spatial sanity checks chosen to cover distinct compartments (a nuclear luminal
+regulator, a basal adhesion protein, a ciliogenesis factor, and a secreted
+stromal antagonist), not the highest-correlation genes or evidence that they are
+privileged biomarkers; the held-out aggregate analyses
+(Figure~\ref{fig:heldout}) provide the quantitative assessment.
+
+\section{Architecture and data}
+\label{sec:arch}
+
+Astra uses a frozen H\&E image encoder to convert each tissue patch into visual
+tokens, followed by a shared transformer trunk that integrates morphology across
+the patch (Methods~\ref{met:arch}). From this representation the model branches into three heads
+(Figure~\ref{fig:arch}): a per-cell expression head, a detector head that
+predicts whether each target gene is non-zero in a given cell, and a density
+head that predicts where cells lie within the patch.
+
+\noindent\begin{minipage}{\linewidth}
+  \centering
+  \includegraphics[width=0.88\linewidth]{model_arch.png}
+  \captionof{figure}{Astra's shared visual trunk and position-conditioned
+  density, presence, and per-cell expression heads.}
+  \label{fig:arch}
+\end{minipage}
+
+The HEST-1k Xenium slides do not share a single gene panel: the breast, lung,
+bowel, and skin assays each target a different set of transcripts. We reconcile
+these per-tissue Xenium panels into one harmonized vocabulary and train Astra to
+predict this fixed 1{,}656-gene output for every cell, regardless of which tissue
+the patch comes from. This single output space is what the downstream clinical
+analyses use: in Sections~\ref{sec:trastuzumab}--\ref{sec:msi} each patient is run
+through the full 1{,}656-gene head, since those tasks operate per patient and never
+require a common gene set across Xenium slides. The per-slide recovery in
+Section~\ref{sec:recovery} reports on far fewer genes: each slide is scored on
+its own top genes ranked by that slide's Moran's I, so the actual genes differ
+from slide to slide. To average a top-$K$ statistic over all held-out slides on
+equal footing, every slide must be able to supply $K$ genes, which caps $K$ at
+the gene count of the smallest-panel slide, a few hundred genes. The number thus differs by application because of how
+the metric is aggregated, not because the model emits a different panel.
+
+The central design decision is that cells enter as queries defined by their own
+centroids. Each cell's relative position inside the patch is encoded with a
+Fourier embedding and used as a query that cross-attends to the patch's image
+tokens, producing a feature for that specific cell. This avoids the object
+mismatch of methods that detect nuclei on H\&E and then match them to a
+transcriptomics segmentation: Astra has no matching step, because the centroids
+themselves are the queries.
+
+\noindent\begin{minipage}{\linewidth}
+  \centering
+  \includegraphics[width=0.46\linewidth]{detection_recall.pdf}
+  \captionof{figure}{Xenium nuclei matched to H\&E detections by tissue; grey,
+  unmatched.}
+  \label{fig:detection}
+\end{minipage}
+
+This is a design decision about how training supervision is used, not a
+benchmark against matching-based methods. H\&E detections and Xenium nuclei are
+non-identical object sets: nearest-neighbor matching recovers 68\% of Xenium
+cells in breast, 69\% in lung, 67\% in bowel, and 80\% in skin, leaving
+20--33\% unmatched (Figure~\ref{fig:detection}). Matched-pair supervision must
+therefore discard or misassign part of the measured transcriptome, whereas Astra
+anchors training queries to measured Xenium centroids and uses every measured
+cell, estimating their positions only at inference.
+
+\noindent\begin{minipage}{\linewidth}
+  \captionsetup{skip=3pt}
+  \centering
+  \includegraphics[width=0.62\linewidth]{density_surface.png}
+  \captionof{figure}{Measured and Astra-decoded density on held-out breast
+  ($104\,\mu$m bins; 324{,}538 vs.\ 316{,}511 cells).}
+  \label{fig:density}
+\end{minipage}
+
+The density head is what makes inference H\&E-only. During training, cell queries
+are placed at the true centroids while the density head learns the cellular
+layout from a unit-mass Gaussian target (Methods~\ref{met:loss}); at inference Astra proposes that layout and queries expression at the
+inferred positions. At inference the head emits a continuous density heatmap that
+must be turned into discrete cell positions. We decode it adaptively
+(Methods~\ref{met:decoding}): because the density target is built from unit-mass
+Gaussians, integrating the map gives a cell count $C$, and comparing $C$ against
+the number of resolvable local maxima says which decoder to trust. Where peaks
+account for at least $80\%$ of $C$ we take those non-maximum-suppression peaks
+directly; where the density saturates and peaks merge, so that fewer than $80\%$
+of the predicted cells appear as distinct maxima, we instead place all $C$ cells
+as density-weighted centroids by a Lloyd/centroidal-Voronoi relaxation, which
+recovers the correct cell count in crowded regions where peak picking would
+undercount. The decoded layout closely tracks the measured one both in total count
+and in spatial distribution (Figure~\ref{fig:density}).
+
+Because the decoded and measured cells are two independent point sets, we pair
+them for scoring by greedy nearest-neighbor matching (Methods~\ref{met:recovery}): processed in increasing
+distance, each measured cell claims its closest unclaimed predicted cell within a
+distance gate set by the slide's typical cell spacing, giving one-to-one pairs
+(unmatched cells count as misses or false positives), and per-gene Spearman
+correlations are computed over these matched pairs. To isolate the cost of
+inferring rather than measuring the layout, we re-score the held-out slides with
+either measured centroids (\emph{teacher-forced}) or Astra's decoded layout
+(\emph{student}); the gap between the two is small (Figure~\ref{fig:studteach}).
+
+\noindent\begin{minipage}{\linewidth}
+  \captionsetup{skip=3pt}
+  \centering
+  \includegraphics[width=0.62\linewidth]{student_vs_teacher.pdf}
+  \captionof{figure}{Top-50 gene Spearman with inferred (student) versus
+  measured (teacher-forced) centroids.}
+  \label{fig:studteach}
+\end{minipage}
+
+The student model recovers almost all teacher-forced performance without
+measured centroids or an external cell localizer. Median Spearman is 0.46
+versus 0.47 in breast and 0.53 versus 0.51 in skin, while lung is similarly
+close. Bowel shows the only visible gap. The overlap across tissues indicates
+that layout inference preserves the expression signal in the full H\&E-only
+pipeline.
+
+\noindent\begin{minipage}[t]{0.49\linewidth}
+  \vspace{0pt}
+  The detector head addresses a different failure mode. A continuous head
+  trained with mean-squared error on $\log(1+x)$ never outputs hard zeros, so
+  absent genes emerge as small non-zero values and can fabricate infiltration
+  for markers such as PTPRC~\cite{cd45}. A separate head predicts whether each gene is
+  non-zero, and gating by that probability restores true absences. One fixed
+  threshold, selected on held-out validation slides, is used throughout. The
+  detector reaches AUROC 0.96 in breast and lung, 0.94 in skin, and 0.87 in
+  bowel (pooled 0.94; Figure~\ref{fig:detroc}).
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.47\linewidth}
+  \vspace{0pt}
+  \captionsetup{skip=3pt}
+  \centering
+  \includegraphics[width=0.98\linewidth]{detector_roc.pdf}
+  \captionof{figure}{Held-out gene-presence detector ROC by tissue.}
+  \label{fig:detroc}
+\end{minipage}
+
+To sanity-check the training mixture and decide which tissues to keep, we trace
+each held-out query patch back to the training patches that most helped or hurt
+its prediction with influence functions. For a query patch $q$ and a training
+candidate $c$ the FastInf score is
+$I(c,q)=-(\nabla_\theta L_c)^{\top}\hat{G}_\lambda^{-1}(\nabla_\theta \ell_q)$,
+where $\ell_q$ is the all-genes MSE loss on the held-out patch and $L_c$ the same
+loss on the candidate. The curvature term $\hat{G}_\lambda$ is a block-diagonal
+generalized Fisher matrix accumulated over a Fisher subsample of $N_F=1{,}024$
+training patches ($64$ batches of $16$) as
+$\hat G\approx\frac{1}{N_F}\sum_i g_ig_i^{\top}$ per trainable matrix block (a
+diagonal Fisher for vector blocks), then \emph{damped} by adding a multiple of
+the identity before inversion,
+\[
+\hat G_\lambda=\hat G+\lambda I ,
+\]
+and inverted with a Schulz hyperpower iteration (HyperINF). The damping term
+$\lambda$ is what makes the inverse well-conditioned: the empirical Fisher is
+low-rank and near-singular at this subsample size, so $\lambda$ floors its
+spectrum and bounds $\lVert\hat G_\lambda^{-1}\rVert$, trading curvature fidelity
+for numerical stability. We use $\lambda=0.01$, the smallest value in a
+$\lambda\in\{0.01,0.05,0.1\}$ sweep that still inverts stably, since larger
+damping drives $\hat G_\lambda^{-1}\!\to\!\lambda^{-1}I$ and degrades the score
+toward a plain gradient dot product. The score is signed: a negative value marks
+a beneficial (proponent) patch that lowers the query's loss, a positive value a
+harmful (opponent) one. Scoring each query against the whole training set is
+intractable, so we narrow candidates in two stages. First a FastIF-style
+retrieval step picks \emph{which} patches are eligible: for each query we take
+its $k=10{,}000$ nearest training patches by L2 distance between frozen Gigapath
+class-token features, a purely visual-similarity filter. We then compute the
+influence score above for that shortlist and rank patches by the score itself, so
+``most influential'' is decided by influence, not by feature distance. We report
+raw (non-cosine) scores at $\lambda=0.01$ and $k=10{,}000$ over $1{,}024$
+held-out queries.
+
+The recovered relationships pass an obvious sanity check and surface a useful
+data decision. Beneficial influence is overwhelmingly same-tissue and
+morphologically matched: a query's strongest proponents are training patches of
+the same tissue that share its morphology (same-tissue fraction 0.96 lung, 0.92
+breast, 0.86 pancreas, 0.84 skin; Figure~\ref{fig:influence_heatmap}). The
+systematic exception is bowel, whose beneficial influencers are only 0.58 bowel
+and draw heavily on pale fibrous/stromal patches from pancreas (0.26) and breast
+(0.08), so influence tracks shared morphology, not the tissue label. That is what
+tells us to include the pancreas slides even though Astra is not intended for
+pancreas inference: pancreas is the single largest cross-tissue source of
+beneficial signal for bowel, a tissue we do report on. The qualitative panel
+shows the same pattern patch by patch, with each query retrieving same-tissue
+twins as its top proponents while bowel pulls in breast and pancreas stroma
+(Figure~\ref{fig:influence_qual}).
+
+\begin{figure}[tbp]
+  \centering
+  \includegraphics[width=0.8\linewidth]{influence_tissue_heatmap.png}
+  \caption{Where beneficial (bottom-10) influence comes from, row-normalized by
+  held-out query tissue. Proponents are dominated by the same tissue, with bowel
+  the exception (strong pancreas contribution).}
+  \label{fig:influence_heatmap}
+\end{figure}
+
+\begin{figure}[tbp]
+  \centering
+  \includegraphics[width=0.66\linewidth]{influence_qualitative.png}
+  \caption{Held-out query patch (red, leftmost) and its top beneficial proponent
+  training patches per row; same-tissue morphological twins dominate, while bowel
+  retrieves breast and pancreas stroma.}
+  \label{fig:influence_qual}
+\end{figure}
+
+The magnitude of these scores is worth reading carefully, because ranks here are
+defined by influence rather than by feature distance
+(Figure~\ref{fig:influence_score}). Lists are sorted by score descending, so
+rank $1$ is a query's \emph{least} beneficial scored candidate. The median of
+those rank-$1$ scores is $-3.8$ (left), already on the beneficial side of zero,
+which means that for a typical held-out query essentially the entire scored
+shortlist is signed beneficial and outright harmful candidates are the exception.
+The right panel shows the median and $10$--$90$ percentile band of the score at
+each rank position once a query's $10{,}000$ candidates are sorted. It is
+therefore a sorted quantile profile of one distribution: its monotone descent is
+guaranteed by the sorting and carries no information about feature-space
+proximity or about how deep a kNN pool needs to reach. What it does report is the
+shape of that distribution. The bulk of candidates sit in a shallow band around
+the median, while the final decade of ranks steepens sharply, the median reaching
+about $-22$ and the $10$th percentile falling below $-60$. Strongly beneficial
+influence is thus concentrated in a small minority of patches rather than spread
+evenly over the shortlist, which is why the tissue attributions above are read
+from the bottom-$10$ proponents per query.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.9\linewidth]{influence_score_geometry.png}
+  \caption{Influence score geometry over 1{,}024 held-out queries
+  ($\lambda=0.01$, $k=10{,}000$, raw scores). Left: distribution of each query's
+  rank-$1$ (least beneficial) influence score, median $-3.8$, already on the
+  beneficial side of zero. Right: median and $10$--$90$ percentile band of the
+  score at each rank position after sorting each query's candidates by influence.
+  Ranks are defined by the score itself, so this is a sorted quantile profile of
+  the score distribution and its monotone descent is a property of the sorting,
+  not evidence about feature-space proximity; the sharp steepening in the last
+  decade shows that strongly beneficial influence is confined to a small minority
+  of candidates.}
+  \label{fig:influence_score}
+\end{figure}
+
+\section{Astra predicts trastuzumab response}
+\label{sec:trastuzumab}
+
+Having shown that Astra recovers spatial expression from histology, we now hold
+it frozen and ask whether that H\&E-derived expression carries clinical signal in
+cohorts where spatial transcriptomics was never measured, beginning with
+treatment response. We use trastuzumab (anti-HER2) response in HER2-positive
+breast cancer on the Yale cohort (85 pre-treatment patients, 36 responders and
+49 non-responders), labeled by pathologic response versus residual
+disease~\cite{farahmand_trastuzumab}. Astra stays frozen. Within each patient's
+tumor ROIs (Methods~\ref{met:preproc}) it detects cells and predicts their expression tile by tile, giving a
+stack of up to roughly 512 tiles across the 1{,}656-gene output panel per
+patient.
+
+Rather than averaging expression away, we characterize how each gene varies
+across the tumor. For every gene we compute two dispersion statistics across the
+patient's tiles (Methods~\ref{met:downstream}): the tile-to-tile standard deviation and the gap between the
+90th percentile and the median (a hotspot term). This yields 3{,}312 features
+per patient describing the spatial heterogeneity of the predicted transcriptome,
+without directly including mean expression. In each outer 5-fold split, the 17
+test patients remain untouched. The feature count is chosen by an inner
+stratified 5-fold cross-validation over the 68-patient development set: for each
+candidate count from 1 through 20 we standardize and rank features by response
+correlation on each inner training split, fit an L2-regularized logistic
+regression on the top-ranked features, and score the held-out inner folds; the
+count with the highest pooled inner-fold AUROC is selected. We then refit the
+selected model on all 68 development patients before predicting the 17 test
+patients.
+
+\noindent\begin{minipage}{\linewidth}
+  \captionsetup{type=figure}
+  \centering
+  \begin{subfigure}{0.62\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{her2_roc_pr.pdf}
+    \caption{ROC and precision--recall.}
+    \label{fig:her2}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}{0.35\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{her2_violin.pdf}
+    \caption{Predicted probability by status.}
+    \label{fig:violin}
+  \end{subfigure}
+  \caption{Trastuzumab response from Astra-derived dispersion features
+  ($n=85$): ROC/PR (AUROC 0.713; AUPRC 0.669) and out-of-fold probabilities.}
+  \label{fig:her2_panel}
+\end{minipage}
+
+Evaluated with repeated stratified 5-fold cross-validation (50 repeats) on
+averaged out-of-fold probabilities, this nested feature-count selection
+reaches AUROC 0.713 (95\% CI 0.60--0.82 by $2000\times$ bootstrap) and AUPRC
+0.669 against a 0.42 prevalence baseline (Figure~\ref{fig:her2}). The inner
+cross-validation selected a median of 8 features. Responders receive a higher median predicted
+probability (${\sim}0.52$) than non-responders (${\sim}0.30$). The difference from prior work
+is one of supervision: on this same cohort, Farahmand et al.\ trained an
+end-to-end Inception-v3 CNN directly on the response label and reported roughly
+0.80 slide-level AUROC~\cite{farahmand_trastuzumab}, whereas Astra's
+image-to-expression model was optimized only to predict expression, without
+task-specific fine-tuning on the response label; only the lightweight linear
+probe is trained on it.
+
+\noindent\begin{minipage}{\linewidth}
+  \captionsetup{skip=3pt}
+  \centering
+  \includegraphics[width=0.90\linewidth]{her2_top3_features.pdf}
+  \captionof{figure}{Cohort distributions of the three most selected response
+  features; counts denote selection across 250 outer models.}
+  \label{fig:her2_features}
+\end{minipage}
+
+\noindent\begin{minipage}{\linewidth}
+  \captionsetup{skip=3pt}
+  \centering
+  \includegraphics[width=0.72\linewidth]{her2_gene_union.pdf}
+  \captionof{figure}{Top-10 genes by union selection frequency: fraction of the
+  250 outer models selecting either the tile-to-tile standard deviation or the
+  P90$-$P50 hotspot gap of each gene (the two variants are counted once per model).}
+  \label{fig:her2_gene_union}
+\end{minipage}
+
+Because the classifier is linear and its selection occurs entirely inside the
+training data, we can inspect which features remain stable without using test
+labels. The 90th-percentile-minus-median hotspot gap and tile-to-tile standard
+deviation of SOD2 are selected in 235 (94\%) and 231 (92\%) of the 250 outer
+models, respectively; counting either dispersion variant, SOD2 enters 248 of
+250 models (99\%). The third most frequently selected feature is the
+tile-to-tile standard deviation of PDIA3 (142 models, 57\%;
+Figures~\ref{fig:her2_features}--\ref{fig:her2_gene_union}). SOD2 is the mitochondrial superoxide dismutase
+that buffers oxidative stress. Elevated SOD2 has been associated with tumor
+stage, nodal metastasis, and worse survival in breast cancer, and redox
+regulation has been implicated more broadly in HER2-positive disease and
+treatment response~\cite{sod2_breast_prognosis,her2_redox}. PDIA3
+(ERp57), the third-ranked feature's gene, is an endoplasmic-reticulum disulfide
+oxidoreductase involved in protein folding and redox quality control. Prior
+breast-cancer studies report increased PDIA3 in invasive ductal carcinoma,
+including association with high-grade and node-positive disease, while
+perturbing PDIA3 alters extracellular-matrix, adhesion, and migration programs
+linked to breast-cancer outcomes~\cite{pdia3_breast_aggressiveness,pdia3_breast_outcomes}.
+This makes heterogeneous PDIA3 expression biologically plausible as a regional
+stress or aggressive-tissue marker, but does not establish it as a
+trastuzumab-resistance mechanism.
+
+Beyond these two, the remaining recurrently selected genes
+(Figure~\ref{fig:her2_gene_union}) fall into three tiers of literature support
+(Table~\ref{tab:her2_genes}): three with direct trastuzumab-resistance evidence,
+three with general breast-cancer associations but no trastuzumab-specific role,
+and two lung-lineage markers with no established breast role that most plausibly
+reflect predicted-expression variation the probe latches onto rather than a
+mechanism. This audit supports biological plausibility for the leading genes but
+is not independent validation, so the quantitative cohort test that follows is
+limited to the top two features, SOD2 and PDIA3.
+
+\begin{table}[h]
+  \centering
+  \small
+  \captionsetup{skip=4pt}
+  \caption{Recurrently selected trastuzumab-response genes beyond SOD2 and
+  PDIA3, grouped by strength of literature support.}
+  \label{tab:her2_genes}
+  \begin{tabular}{@{}lll@{}}
+    \toprule
+    Gene & Role & Literature Context \\
+    \midrule
+    \multicolumn{3}{@{}l}{\emph{Direct trastuzumab-resistance evidence}}\\
+    HSPA5 (GRP78) & UPR chaperone & Zhang \& Zhang (2013)~\cite{her2_hspa5}\\
+    CD44 & stem-cell marker & Boulding et al.\ (2015)~\cite{her2_cd44}\\
+    LDHA & glycolytic enzyme & Zhao et al.\ (2011)~\cite{her2_ldha}\\
+    \addlinespace
+    \multicolumn{3}{@{}l}{\emph{General breast-cancer association}}\\
+    PGC & pepsinogen C & Balbin et al.\ (1995)~\cite{her2_pgc}\\
+    FSTL1 & secreted glycoprotein & Chan et al.\ (2018)~\cite{her2_fstl1}\\
+    GREM1 & stromal BMP antagonist & Kobayashi et al.\ (2021)~\cite{grem1_crc}\\
+    \addlinespace
+    \multicolumn{3}{@{}l}{\emph{No established breast role (likely expression proxy)}}\\
+    NAPSA & lung-adenocarcinoma marker & Turner et al.\ (2012)~\cite{her2_napsa}\\
+    SFTPC & surfactant protein C & Turner et al.\ (2012)~\cite{her2_napsa}\\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\noindent\begin{minipage}[t]{0.43\linewidth}
+  \vspace{0pt}
+  For both features, the direction is consistent across the cohort: both SOD2
+  dispersion terms are
+  higher in non-responders (standard deviation 0.171 vs.\ 0.129,
+  $p=1.2\times10^{-4}$; hotspot gap 0.312 vs.\ 0.222,
+  $p=2.0\times10^{-4}$), as is PDIA3 standard deviation (0.138 vs.\ 0.122,
+  $p=0.0012$; Figure~\ref{fig:her2_features}). Non-responding tumors therefore
+  carry patchier oxidative- and ER-stress predictions. These statistics retain
+  variation that pseudobulk erases, although their correlation with mean
+  abundance prevents a claim of an independent heterogeneity mechanism.
+  Figure~\ref{fig:her2_spatial} localizes that variation: the SOD2 hotspot gap
+  reflects high-expression tiles against a lower background, whereas PDIA3
+  standard deviation captures broader tile-to-tile variability. These
+  within-group maxima illustrate the phenotype; the cohort evidence is
+  Figure~\ref{fig:her2_features}.
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.53\linewidth}
+  \vspace{0pt}
+  \captionsetup{skip=3pt}
+  \centering
+  \includegraphics[width=0.98\linewidth]{her2_sod2_pdia3_spatial.pdf}
+  \captionof{figure}{Spatial maxima for SOD2 hotspot gap (top) and PDIA3
+  standard deviation (bottom); squares are $128\,\mu$m H\&E tiles.}
+  \label{fig:her2_spatial}
+\end{minipage}
+
+Response here was predicted without any trastuzumab-specific training of the
+expression model: the same frozen Astra supplies the features and only a small
+linear probe is fit on the labels. This is the point of routing clinical
+prediction through predicted expression rather than training a bespoke
+supervised model per task. That expression is a shared substrate, so as the base
+model improves from aggregated spatial transcriptomics across more patients, its
+predictions become more accurate and every downstream readout built on them
+(response here, survival and MSI in the sections that follow) improves at once,
+with no new task-specific labels. The clinical results that follow lean on
+exactly this transfer.
+
+\section{Astra predicts survival risk in luminal breast cancer}
+
+Trastuzumab response used Astra's expression to predict a treatment endpoint; we
+next ask whether the same frozen model carries prognostic signal for a different
+clinical outcome and cohort. Overall survival in luminal breast cancer is a
+natural test: molecular expression stratifies risk in ways morphology alone does
+not make obvious~\cite{luminal_markers}, yet measuring it at single-cell spatial
+resolution is rarely feasible at cohort scale. On 771 ER-positive TCGA-BRCA
+patients with matched diagnostic H\&E and overall survival (97 deaths, 674
+censored; median follow-up ${\sim}865$ days), we retain the 1{,}000 most
+tissue-dense tiles per patient (Methods~\ref{met:preproc}), run frozen Astra to predict a 1{,}656-gene
+profile at each decoded cell, and average those predictions into one
+pseudobulk vector (Methods~\ref{met:downstream}). Repeated 5-fold cross-validation (50 repeats) ranks genes by
+survival association within each training fold and fits a multivariable Cox
+model; the number of genes is itself chosen per fold by an inner 3-fold
+cross-validation over the development patients (median 40 genes), and only
+held-out patients are scored, yielding a pooled concordance index of 0.570.
+
+\noindent\begin{minipage}{\linewidth}
+  \centering
+  \includegraphics[width=0.68\linewidth]{km_survival_quartiles.pdf}
+  \captionof{figure}{ER-positive TCGA-BRCA survival for the top and bottom
+  cross-validated Astra risk quartiles ($n=193$ each; two-sided log-rank
+  $p=0.007$).}
+  \label{fig:km_quartiles}
+\end{minipage}
+
+The separation is sharpest at the extremes of predicted risk: comparing the top
+and bottom risk quartiles (193 patients each), the high-risk group has twice as
+many deaths as the low-risk group (28 vs.\ 14) and the survival curves diverge
+early and stay apart (Figure~\ref{fig:km_quartiles}; two-sided log-rank
+$p=0.007$). Splitting the full cohort at the median risk preserves the
+separation across all 771 patients (386 high vs.\ 385 low; 57 vs.\ 40 deaths;
+Figure~\ref{fig:km}; $p=0.031$).
+
+\noindent\begin{minipage}{\linewidth}
+  \centering
+  \includegraphics[width=0.68\linewidth]{km_survival.pdf}
+  \captionof{figure}{ER-positive TCGA-BRCA survival by cross-validated Astra
+  risk at the median split ($n=386$ high, $385$ low; two-sided log-rank
+  $p=0.031$).}
+  \label{fig:km}
+\end{minipage}
+
+Because gene selection happens entirely inside the training folds, we can read
+off which genes recur across the 250 outer models without touching held-out
+labels (Figure~\ref{fig:survival_genes}). The most frequently selected genes are
+secretory and stromal (SLPI 86\%, CTSE 78\%, SERPINB2 73\%, PCOLCE2 52\%) mixed
+with a strong adaptive-immune and lymphocyte signature (IGKC 71\%, IGHG1 63\%,
+ICOS 60\%, PDCD1 59\%, TRBC2 57\%, CTLA4 51\%, MARCO 50\%), indicating that
+Astra recovers a coherent immune- and stroma-linked survival signal from H\&E
+alone.
+
+\noindent\begin{minipage}{\linewidth}
+  \captionsetup{skip=3pt}
+  \centering
+  \includegraphics[width=0.72\linewidth]{survival_gene_selection.pdf}
+  \captionof{figure}{Top-10 genes by cross-validated selection frequency in the
+  luminal survival model (fraction of the 250 outer Cox models retaining each
+  gene).}
+  \label{fig:survival_genes}
+\end{minipage}
+
+These recurrent genes have documented breast-cancer associations that match the
+direction Astra finds. The humoral- and lymphocyte-immunity markers are the
+best established: immunoglobulin kappa C (IGKC) is a validated single-gene
+prognostic and predictive marker whose high tumor expression, reflecting
+infiltrating plasma cells, tracks with better survival in breast
+cancer~\cite{surv_igkc}, and dense tumor-infiltrating lymphocytes marked by
+IGHG1, ICOS, PDCD1, TRBC2, and CTLA4 are a recognized favorable-prognosis axis
+in ER-negative and high-grade disease~\cite{surv_tils}. Among the secretory and
+stromal genes, SLPI is a driver of triple-negative breast-cancer metastasis
+whose high expression predicts shorter overall and metastasis-free
+survival~\cite{surv_slpi}; cathepsin E (CTSE) is a Mendelian-randomization-linked
+breast-cancer-risk gene with subtype-dependent prognostic
+value~\cite{surv_ctse}; and SERPINB2 (PAI-2) marks the plasminogen-activator
+axis, where high tumor-cell expression is associated with lymph-node metastasis
+and reduced survival~\cite{surv_serpinb2}. That an unsupervised probe on
+H\&E-predicted expression rediscovers this immune--stroma prognostic program,
+rather than arbitrary genes, supports the biological plausibility of the signal
+while the concordance and log-rank statistics remain the quantitative evidence.
+
+\section{Astra can help pre-screen for MSI-H}
+\label{sec:msi}
+
+Microsatellite instability (MSI-H) is among the most actionable biomarkers in
+oncology: it predicts response to immune-checkpoint inhibitors. Pembrolizumab is
+FDA-approved for MSI-H/dMMR solid tumors in a tissue-agnostic
+indication~\cite{fda_pembro}, and MSI-H also flags Lynch syndrome for genetic
+screening.
+Standard testing relies on PCR or immunohistochemistry for mismatch-repair
+proteins, so calling MSI from routine H\&E would be a cheap pre-screen, and prior
+deep-learning work has shown histology carries this signal~\cite{kather_msi}.
+Our test is deliberately strict: the image-to-expression model receives no
+task-specific fine-tuning on MSI. It is trained only on HEST-1k spatial
+transcriptomics, with no TCGA data and no MSI labels anywhere in that model; only
+the linear probe on top sees the label. We run frozen Astra over TCGA colorectal slides
+(TCGA-COAD and TCGA-READ; 255 patients, 85 MSI-H), pool predicted per-cell
+expression into one pseudobulk profile per patient, and fit only a linear
+classifier on top under nested cross-validation (Methods~\ref{met:downstream}; repeated stratified 5-fold
+outer CV, 50 repeats), with the number of AUC-ranked genes chosen by an inner
+5-fold loop inside each training split (median 160 genes), scored against the
+genomic MANTIS label~\cite{mantis}.
+
+\noindent\begin{minipage}{\linewidth}
+  \centering
+  \includegraphics[width=0.92\linewidth]{msi_roc_pr.pdf}
+  \captionof{figure}{MSI-H detection from Astra-predicted pseudobulk expression
+  in TCGA-COAD/READ (AUROC 0.705; AUPRC 0.611).}
+  \label{fig:msi}
+\end{minipage}
+
+The linear probe reaches AUROC 0.705 and AUPRC 0.611 at a cohort prevalence of
+33\% MSI-H (Figure~\ref{fig:msi}), a 1.8$\times$ precision lift over prevalence.
+This is competitive with the within-cohort TCGA models trained end-to-end on MSI
+labels (patient-level AUC 0.77--0.84~\cite{kather_msi}; our bootstrap 95\% CI
+reaches 0.78), and below the ${\sim}0.95$ of clinical-grade detectors trained on
+large multi-institutional cohorts with full MSI supervision and external
+validation~\cite{echle_msi}. Astra reaches this without any of that
+task-specific machinery: it sees no MSI label or TCGA slide in training and fits
+only a named-gene linear probe, keeping an interpretability those end-to-end
+detectors lack. As argued for trastuzumab (Section~\ref{sec:trastuzumab}),
+predicted expression is the shared substrate, so gains to the base model from
+aggregated spatial transcriptomics carry over to this task with no new MSI
+supervision.
+
+Because the probe is linear and its genes are named, the prediction traces back
+to features that align with MSI-H biology. Hypermutated, neoantigen-rich MSI-H
+tumors recruit an inflamed immune infiltrate~\cite{msi_immune}, and the most
+recurrently selected genes are exactly that program: myeloid and
+antigen-handling markers (CCL3, SPI1, C5AR1, CPVL, FGR), the
+tryptophan-catabolizing checkpoint gene IDO1, the cross-presenting
+dendritic-cell receptor XCR1, and MHC class II (HLA-DQB2) are each chosen in over
+90\% of outer folds (Figure~\ref{fig:msi_genes}). As a spatial sanity check on the same
+immune-versus-epithelial axis, Figure~\ref{fig:msi_spatial} contrasts the
+cytotoxic-effector gene PRF1 (perforin), dense across MSI-H tumors and largely
+absent from MSS, with the epithelial-identity gene CDX2, whose loss is highly
+specific for mismatch-repair deficiency~\cite{cdx2_msi} and which produces the
+mirror image.
+
+\noindent\begin{minipage}{\linewidth}
+  \captionsetup{skip=3pt}
+  \centering
+  \includegraphics[width=0.72\linewidth]{msi_gene_selection.pdf}
+  \captionof{figure}{Top-10 genes by cross-validated selection frequency in the
+  MSI-H probe (fraction of the 250 outer models retaining each gene).}
+  \label{fig:msi_genes}
+\end{minipage}
+
+\noindent\begin{minipage}[t]{0.56\linewidth}
+  \vspace{0pt}
+  \captionsetup{skip=3pt}
+  \centering
+  \includegraphics[width=\linewidth]{coad_prf1.png}\\[6pt]
+  \includegraphics[width=\linewidth]{coad_cdx2.png}
+  \captionof{figure}{Astra-predicted PRF1 (top) and CDX2 (bottom) across MSI-H
+  (top rows within each panel) and MSS (bottom rows) tumors.}
+  \label{fig:msi_spatial}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.4\linewidth}
+  \vspace{0pt}
+  A frozen, cross-domain expression model, without task-specific fine-tuning on
+  MSI, therefore recovers an established clinical biomarker through an
+  interpretable, named-gene route rather than an opaque classifier, and
+  identifies the genes responsible. Two limits apply: these results are
+  cross-validated within TCGA rather than externally validated, and the 33\%
+  MSI-H prevalence here is enriched relative to the roughly 15\% observed
+  clinically, so we present this as evidence rather than a deployable diagnostic.
+\end{minipage}
+
+\section{Discussion}
+
+Astra establishes a general architecture for learning single-cell molecular
+representations from routine histology. By jointly inferring cellular position
+and expression, it removes the requirement for a spatial assay or separately
+matched segmentation at inference. The same frozen representation transfers
+from expression recovery to treatment-response prediction, survival
+stratification, and MSI-H pre-screening. Together, these findings suggest that
+spatial-expression supervision can produce histologic representations with
+clinical utility across treatment response, prognosis, and biomarker screening.
+Prospective, multi-institutional validation is required before deployment.
+
+This separation between a general image-to-expression model and a lightweight
+task-specific model is important. A single frozen model could be run
+retrospectively over existing pathology archives, after which small labeled
+cohorts could be used to test response, prognosis, or biomarker hypotheses
+without retraining Astra for every endpoint. Single-cell output also
+preserves regional heterogeneity that slide-level embeddings and pseudobulk
+measurements can erase. In practice, this could support molecular-test triage,
+identify tissue regions for confirmatory profiling, and help prioritize patients
+for biomarker-directed studies while retaining a spatial record of the predicted
+signal.
+
+One particularly relevant use is clinical-trial enrichment, which we raise as a
+hypothesis to be tested prospectively rather than a demonstrated capability. FDA
+guidance defines predictive enrichment as selecting patients ``more likely to
+respond to the drug treatment than other patients with the condition'' and notes
+that this can increase effect size and permit a smaller study
+population~\cite{fda_enrichment}. This matters because aggregate trial results
+can obscure spatially defined differences in treatment response.
+In NeoTRIP, adding atezolizumab did not significantly improve pathologic complete
+response overall (48.6\% vs.\ 44.4\%, $p=0.48$), but retrospective imaging mass
+cytometry of archived trial tissue found that cellular composition and spatial
+organization distinguished immunotherapy-sensitive from resistant
+tumors~\cite{neotrip_spatial}. In NSABP B-41, the H\&E-derived DeSTIL spatial
+immune signature identified a subgroup with markedly better event-free survival
+on trastuzumab than the combination arm (HR 0.09; interaction $p=0.024$), while
+signature-negative patients showed no treatment difference~\cite{destil_b41}.
+Exploratory analysis of KATHERINE likewise found no T-DM1 benefit in the subgroup
+with focal HER2 expression below 30\% (HR 1.21; focal-versus-nonfocal interaction
+$p<0.05$), although the subgroup was small and the confidence interval wide
+(0.58--2.51)~\cite{katherine_biomarkers}. These retrospective results show how an
+aggregate trial effect can conceal treatment-relevant spatial organization. An
+inexpensive H\&E-based pre-screen for a response-associated spatial program could
+prioritize patients for confirmatory testing or enrollment, potentially
+recovering efficacy signals that an unselected trial would dilute. Its near-term
+value is as a scalable screening layer that reduces the samples needing costly
+molecular assays, not as a determinant of eligibility on its own. More broadly,
+Astra shows how inferred single-cell expression can turn routine histology into
+a scalable substrate for biomarker discovery, trial enrichment, and clinically
+directed molecular profiling.
+
+\section{Methods}
+\label{sec:methods}
+
+\subsection{Model architecture}
+\label{met:arch}
+
+Astra maps an H\&E patch and a set of cell positions to per-cell gene
+expression. Each patch is a $256\times256$-pixel tile resampled to
+$0.5\,\mu$m/pixel (a $128\,\mu$m field of view), then bilinearly resized to
+$224\times224$ and ImageNet-normalized before the encoder. The image encoder is
+a frozen Prov-GigaPath ViT-G/16~\cite{gigapath} with embedding dimension
+$1536$; we keep its full token grid, $197$ tokens per patch (one class token and
+a $14\times14$ grid of patch tokens), rather than pooling to the class token.
+
+The shared trunk is a four-layer pre-norm transformer over these $197$ tokens
+with eight attention heads (head dimension $192$). Each layer normalizes with
+root-mean-square norm (RMSNorm~\cite{rmsnorm}),
+$\mathrm{RMSNorm}(x)=x/\sqrt{\tfrac{1}{d}\sum_i x_i^2+\epsilon}\;\odot\gamma$,
+and uses a gated SwiGLU feed-forward block~\cite{swiglu_shazeer},
+$\mathrm{SwiGLU}(x)=W_{\mathrm{down}}\big(\mathrm{SiLU}(W_{\mathrm{gate}}x)\odot
+W_{\mathrm{up}}x\big)$ with inner width $4{,}096$, in place of a GELU MLP. Token
+position is injected by two-dimensional rotary position embeddings
+(RoPE~\cite{rope_su}) applied
+to the queries and keys: each head's channels are split in half, one half rotated
+by the token's grid column and the other by its row (base frequency $\theta=100$;
+the class token is given the identity rotation). Before rotation, queries and
+keys are per-head RMSNorm-normalized (QK-norm) for training stability. Concretely,
+for query/key vector $u$ at grid position with rotary tables $(\cos,\sin)$,
+$\mathrm{RoPE}(u)=u\odot\cos+\mathrm{rot}_{\text{half}}(u)\odot\sin$, and
+attention is the usual softmax over $q^{\top}k/\sqrt{192}$. A final RMSNorm is
+applied before the heads read from the trunk.
+
+Cells enter as queries. A cell at pixel $(x,y)$ inside the patch is expressed as
+a patch-relative coordinate $(dx,dy)\in[-1,1]^2$ and embedded with a
+NeRF-style Fourier feature map~\cite{tancik_fourier} using eight frequency bands
+$\omega_k=\pi\,2^{k}$ for $k=0,\dots,7$:
+\[
+\phi(dx,dy)=\big[\sin(\omega_k dx),\cos(\omega_k dx),
+\sin(\omega_k dy),\cos(\omega_k dy)\big]_{k=0}^{7}\in\mathbb{R}^{32},
+\]
+which a linear layer projects to $1536$ and an RMSNorm normalizes. This query
+cross-attends (eight heads) to that patch's $197$ image tokens, producing one
+$1536$-dimensional feature per cell; the feature is RMSNorm'd and refined by a
+residual SwiGLU feed-forward block,
+$\mathrm{SwiGLU}(x)=W_{\mathrm{down}}\big(\mathrm{SiLU}(W_{\mathrm{gate}}x)\odot
+W_{\mathrm{up}}x\big)$ with inner width $4{,}096$. Because each cell is queried
+at its own centroid, there is no nucleus-to-transcript matching step.
+
+Three linear heads read the per-cell feature. The expression head is a linear
+map to the $1{,}656$-gene panel with no output activation. The gene-presence
+(detector) head is a parallel linear map to $1{,}656$ logits predicting whether
+each gene is non-zero in that cell. The density head is separate: it reshapes
+the $14\times14$ patch tokens to a spatial grid, applies a $1\times1$ projection
+to $192$ channels, upsamples three times ($2\times$ bilinear, $3\times3$
+convolution, GELU) to $112\times112$, and applies a softplus to emit a
+non-negative density map.
+
+\subsection{Targets, loss, and optimization}
+\label{met:loss}
+
+Expression targets are library-size normalized to a fixed total count of $200$
+per cell and then $\log(1+x)$-transformed; all recovery metrics and downstream
+features are computed in this log-normalized space. Supervision is restricted to
+the genes each Xenium slide actually measures through a per-cell presence mask,
+so a slide never penalizes genes outside its panel. The training objective sums
+three terms,
+\[
+\mathcal{L}=\lambda_{\mathrm{expr}}\,\mathrm{MSE}(\hat y,y)
++\lambda_{\mathrm{pres}}\,\mathrm{BCE}_{w}(\hat p,\mathbf{1}[y>0])
++\lambda_{\mathrm{dens}}\,\mathrm{MSE}_{\Sigma}(\hat D,D)
++\lambda_{\mathrm{cnt}}\,\lvert\textstyle\sum\hat D-N\rvert,
+\]
+with $\lambda_{\mathrm{expr}}=100$, $\lambda_{\mathrm{pres}}=1$ (positive class
+weight $4$), $\lambda_{\mathrm{dens}}=1000$, and $\lambda_{\mathrm{cnt}}=0.1$.
+The expression term is mean-squared error in log-normalized space (the optional
+Pearson term carried by the \texttt{mse\_pcc} loss is disabled). The density
+target $D$ places a unit-mass Gaussian ($\sigma=2$ density pixels) at each true
+centroid, scored by summed MSE, and a companion $L_1$ term matches the integrated
+density to the true cell count $N$. The model trains for $12$ epochs with AdamW~\cite{adamw}
+(learning rate $7\times10^{-4}$, $\beta=(0.9,0.95)$, weight decay $10^{-4}$,
+gradient clip $1.0$, batch size $48$) under a $5\%$ linear warmup followed by
+cosine decay to $10^{-6}$. Patches are augmented with random flips, $90^{\circ}$
+rotations, light HED and color jitter; the encoder stays frozen throughout.
+
+\subsection{Gene panel and training data}
+\label{met:data}
+
+Astra is trained on HEST-1k Xenium slides~\cite{hest} across the target tissues.
+The per-tissue Xenium panels do not agree, so all measured genes are indexed
+into one universal axis and the $1{,}656$-gene output is the union of genes
+measured anywhere in the corpus; each cell is supervised only on the genes its
+own slide measured. Patient-level cross-validation withholds entire slides per
+fold, and the $12$ held-out slides used for the recovery analyses are disjoint
+from the $47$ training slides.
+
+\subsection{Whole-slide preprocessing}
+\label{met:preproc}
+
+For every downstream cohort, slides are tiled on a non-overlapping grid of
+$256$-pixel tiles at $0.5\,\mu$m/pixel, matching the training geometry. Each tile
+is stain-normalized by luminosity standardization: the tile is converted RGB to
+LAB, the $95$th percentile $p$ of the L (luminance) channel is taken, L is
+rescaled as $L'=\mathrm{clip}(255\,L/p,\,0,\,255)$ with the A and B channels
+unchanged, and the tile is converted back to RGB. This equalizes brightness per
+tile without a reference slide and leaves hue and saturation untouched.
+
+Tiles are selected per task. For the TCGA-BRCA survival and MSI cohorts we rank
+tiles by tissue content and keep the top $1{,}000$ per slide, where tissue is a
+mask of saturated, non-bright pixels (HSV saturation $>25$ and value $<245$)
+cleaned by $5\times5$ morphological opening and closing, and a tile's score is
+the fraction of its pixels inside that mask. For the HER2 cohort we instead
+rasterize the pathologist tumor-ROI polygons and keep tiles whose ROI overlap is
+at least $0.5$ and whose tissue fraction is at least $0.1$, ranked by ROI
+coverage and capped at $512$ tiles per slide.
+
+\subsection{Inference: cell decoding and expression}
+\label{met:decoding}
+
+At inference Astra receives only H\&E. For each tile the density head emits a
+non-negative map $\hat D\in\mathbb{R}_{\ge0}^{H_d\times W_d}$ with
+$H_d=W_d=112$ spanning the tile's $128\,\mu$m field of view, so one density
+pixel is $2.29$ source pixels ($1.14\,\mu$m). Because the training target places
+a unit-mass Gaussian at every centroid, the integral of the map estimates the
+cell count,
+\[
+\hat N=\sum_{u}\hat D_u,\qquad C=\operatorname{round}(\hat N),
+\]
+and a pixel index $u=(r,c)$ maps to a patch-relative query coordinate by
+\[
+\pi(u)=\Big(\tfrac{2(c+\frac12)}{W_d}-1,\;\tfrac{2(r+\frac12)}{H_d}-1\Big)\in[-1,1]^2 .
+\]
+Converting $\hat D$ into discrete centroids uses two decoders with
+complementary failure modes, selected per tile.
+
+\paragraph{Peak decoding (non-maximum suppression).} Let $\mathcal{N}_w(u)$ be
+the $w\times w$ box centered at $u$ (zero-padded outside the map) and $\tau$ a
+peak-height floor. A pixel is a peak when it attains the maximum of its own
+neighborhood and clears the floor,
+\[
+\mathcal{P}=\Big\{u:\;\hat D_u=\max_{v\in\mathcal{N}_w(u)}\hat D_v
+\;\;\text{and}\;\;\hat D_u>\tau\Big\},
+\]
+and the decoded set is $\{\pi(u):u\in\mathcal{P}\}$, optionally truncated to the
+$C$ tallest peaks. We use $\tau=0.005$ and $w=3$. Two peaks at Chebyshev
+distance $1$ would each have to dominate the other, so distinct peaks are at
+least $2$ density pixels ($\approx2.3\,\mu$m) apart, which sets the method's
+resolution limit. Its cardinality $|\mathcal{P}|$ is emergent rather than
+prescribed: where neighboring Gaussians merge into a single plateau the peak
+count falls below $C$, so peak decoding undercounts in the most crowded regions.
+
+\paragraph{Count-matched centroid decoding (Lloyd / centroidal Voronoi).} The
+second decoder fixes the cardinality at $C$ and solves only for position. Let
+$S=\{u:\hat D_u>\tau\}$ be the support, $p_u=\pi(u)$, and normalize the
+densities into a distribution on $S$,
+\[
+w_u=\hat D_u\Big/\!\!\sum_{v\in S}\hat D_v,\qquad \sum_{u\in S}w_u=1 .
+\]
+We seek $C$ sites $Z=\{z_1,\dots,z_C\}$ minimizing the density-weighted
+quantization energy
+\[
+F(Z)=\sum_{u\in S} w_u\,\min_{1\le k\le C}\lVert p_u-z_k\rVert_2^2 ,
+\]
+which Lloyd's algorithm attacks by alternating a Voronoi assignment with a
+weighted-centroid update. Writing $a(u)=\arg\min_k\lVert p_u-z_k\rVert_2$ and
+$R_k=\{u\in S:a(u)=k\}$, the update is
+\[
+z_k\;\leftarrow\;\frac{\sum_{u\in R_k} w_u\,p_u}{\sum_{u\in R_k} w_u}
+\qquad (R_k\neq\varnothing;\ \text{empty regions hold }z_k\text{ fixed}).
+\]
+Each half-step is non-increasing in $F$: the assignment minimizes $F$ over $a$
+at fixed $Z$, and the weighted mean is the minimizer of weighted squared
+distance at fixed $a$. So $F$ descends monotonically to a local minimum whose
+stationary point is the centroidal-Voronoi condition, every site sitting at the
+density-weighted centroid of the region it owns. Sites are initialized at
+support pixels drawn from $\operatorname{Categorical}(w)$ (without replacement
+when $|S|\ge C$), which starts them inside the mass and keeps the iteration
+short. We stop at a tolerance of $10^{-5}$ on
+$\max_k\lVert\Delta z_k\rVert_\infty$ or a cap of $8$ iterations, and return
+exactly $C$ centroids. Unlike peak decoding this cannot undercount, but its
+points are centroids of mass rather than nuclei, so it is less accurate wherever
+peaks are genuinely resolvable.
+
+\paragraph{Adaptive selection.} The decoders are combined per tile by testing how
+much of the predicted count the peaks can account for. With $P=|\mathcal{P}|$ the
+uncapped peak count and a saturation fraction $s=0.8$, peaks are trusted when
+$P\ge sC$ and the centroid decoder is used otherwise; $P\ll C$ is the signature
+of merged blobs. The ratio $P/C$ is thus an estimate of the fraction of cells
+the map resolves as distinct maxima.
+
+\begin{algorithm}[H]
+\caption{Adaptive density decoding for one tile}
+\begin{algorithmic}[1]
+\Require map $\hat D$, floor $\tau=0.005$, window $w=3$, saturation $s=0.8$, iteration cap $8$
+\State $C\gets\operatorname{round}\big(\sum_u \hat D_u\big)$ \Comment{count from the integrated density}
+\State $\mathcal{P}\gets\{u:\hat D_u=\max_{v\in\mathcal{N}_w(u)}\hat D_v\ \text{and}\ \hat D_u>\tau\}$
+\If{$C>0$ \textbf{and} $|\mathcal{P}|\ge s\,C$}
+  \State \Return $\pi(u)$ for the $\min(C,|\mathcal{P}|)$ tallest $u\in\mathcal{P}$ \Comment{peaks resolve the count}
+\EndIf
+\State $S\gets\{u:\hat D_u>\tau\}$;\quad $w_u\gets \hat D_u/\sum_{v\in S}\hat D_v$
+\State $z_k\gets\pi(u_k)$ with $u_k\sim\operatorname{Categorical}(w)$, $k=1,\dots,C$ \Comment{peaks saturated}
+\For{$t=1,\dots,8$}
+  \State $a(u)\gets\arg\min_k\lVert\pi(u)-z_k\rVert_2$ for all $u\in S$
+  \State $z'_k\gets\big(\sum_{u:a(u)=k}w_u\pi(u)\big)\big/\big(\sum_{u:a(u)=k}w_u\big)$ for non-empty regions
+  \State \textbf{if} $\max_k\lVert z'_k-z_k\rVert_\infty<10^{-5}$ \textbf{then} $z\gets z'$; \textbf{break}
+  \State $z\gets z'$
+\EndFor
+\State \Return $z_1,\dots,z_C$
+\end{algorithmic}
+\end{algorithm}
+
+The decoded centroids are used directly as the cell queries of
+Section~\ref{met:arch}: each is Fourier-embedded and cross-attends to its own
+tile's $197$ image tokens, giving an
+$[\,n_{\mathrm{cells}}\times1656\,]$ matrix of predicted log-normalized
+expression per tile, and each is offset from its tile anchor into absolute slide
+coordinates so cells pool across tiles. The gene-presence probability, when
+used, is thresholded at a single value chosen on held-out validation slides to
+zero out predicted absences.
+
+\subsection{Spatial-recovery evaluation}
+\label{met:recovery}
+
+\paragraph{Cell matching.} The decoded cells and the measured Xenium cells are
+independent point sets of sizes $M$ and $N$, so scoring first pairs them by
+greedy nearest-neighbor matching. Let $d_{ij}=\lVert c^{\mathrm{true}}_i-
+c^{\mathrm{pred}}_j\rVert_2$ be pairwise distances and $\tau$ the gate, set to the
+median nearest-neighbor spacing among measured cells. Candidate pairs with
+$d_{ij}\le\tau$ are sorted ascending and consumed greedily, each cell used once:
+\begin{algorithm}[H]
+\caption{Greedy one-to-one cell matching}
+\begin{algorithmic}[1]
+\State $\mathcal{C}\gets\{(i,j): d_{ij}\le\tau\}$ sorted by increasing $d_{ij}$
+\State $\mathcal{M}\gets\varnothing$;\; used$_{\mathrm{true}}\gets\varnothing$;\; used$_{\mathrm{pred}}\gets\varnothing$
+\For{$(i,j)\in\mathcal{C}$}
+  \If{$i\notin$ used$_{\mathrm{true}}$ \textbf{and} $j\notin$ used$_{\mathrm{pred}}$}
+    \State $\mathcal{M}\gets\mathcal{M}\cup\{(i,j)\}$;\; mark $i,j$ used
+  \EndIf
+\EndFor
+\State \Return matched pairs $\mathcal{M}$ \Comment{unmatched cells are misses / false positives}
+\end{algorithmic}
+\end{algorithm}
+All per-gene correlations below are computed on the matched expression matrices
+$Y^{\mathrm{true}},\hat Y\in\mathbb{R}^{|\mathcal{M}|\times G}$ obtained by
+reindexing to $\mathcal{M}$.
+
+\paragraph{Per-gene Spearman.} Spearman's $\rho$ is Pearson's $r$ applied to
+ranks. For gene $g$, let $r(\cdot)$ assign average ranks (ties averaged) down the
+column of matched cells and $\bar r$ its mean:
+\[
+a=r\!\left(\hat Y_{:,g}\right),\quad b=r\!\left(Y^{\mathrm{true}}_{:,g}\right),
+\qquad
+\rho_g=\frac{\sum_c (a_c-\bar a)(b_c-\bar b)}
+{\sqrt{\sum_c (a_c-\bar a)^2}\,\sqrt{\sum_c (b_c-\bar b)^2}} .
+\]
+A gene with zero variance in either column is undefined and dropped from the
+aggregate; the headline number is the mean (or median) of $\rho_g$ over kept
+genes. The out-of-distribution 10x slides instead report per-gene Pearson $r$ on
+the matched values directly (no ranking).
+
+\paragraph{Moran's I.} Spatial structure per gene uses a $k$-nearest-neighbor
+graph over cell coordinates ($k=6$), row-normalized to weights $W$ with
+$\sum_j W_{ij}=1$ (so $W_{ij}=1/k$ for the $k$ neighbors of $i$, else $0$). For
+gene $g$ with expression $x$, center it as $z=x-\bar x$. Since row-normalization
+makes $S_0=\sum_{ij}W_{ij}=N$, the leading $N/S_0$ factor is $1$ and Moran's I is
+the normalized quadratic form
+\[
+I_g=\frac{z^{\top}Wz}{z^{\top}z}
+=\frac{\sum_i z_i\,(Wz)_i}{\sum_i z_i^2},
+\qquad (Wz)_i=\tfrac{1}{k}\!\!\sum_{j\in\mathrm{knn}(i)}\!\! z_j .
+\]
+$(Wz)_i$ is cell $i$'s neighbor-averaged deviation, so the numerator rewards
+cells whose own deviation agrees in sign with their neighborhood: $I_g\!\to\!1$
+is smooth spatial clustering, $I_g\!\approx\!0$ is spatially random.
+
+\paragraph{Aggregation by spatial strength.} Genes are ranked by $I_g$ computed
+on \emph{measured} expression, so selection never sees the prediction. Writing
+$\pi$ for that descending order, the top-$50$ boxplot per slide is
+$\{\rho_{\pi(1)},\dots,\rho_{\pi(50)}\}$ (box = quartiles $Q_1,Q_3$, line =
+median, Tukey whiskers to the farthest point within $[\,Q_1-1.5\,\mathrm{IQR},\,
+Q_3+1.5\,\mathrm{IQR}\,]$), and the recovery-versus-gene-count curve is the
+running cumulative mean
+\[
+S(n)=\frac{1}{n}\sum_{t=1}^{n}\rho_{\pi(t)} ,
+\]
+averaged across slides within each tissue.
+
+\subsection{Downstream clinical models}
+\label{met:downstream}
+
+The frozen Astra model is never fine-tuned on any clinical label; only a
+lightweight probe is trained per task. All fitting happens strictly inside each
+cross-validation training split.
+
+\paragraph{Patient representations.} For survival and MSI we pseudobulk: with
+per-tile decoded expression $\hat Y^{(t)}\in\mathbb{R}^{n_t\times G}$ over
+retained tiles $t=1,\dots,T$, the patient vector averages over \emph{all} cells,
+\[
+u=\frac{\sum_{t}\sum_{c=1}^{n_t}\hat Y^{(t)}_{c,:}}{\sum_t n_t}\in\mathbb{R}^{G},
+\qquad G=1{,}656 .
+\]
+For HER2 we keep heterogeneity instead. Each tile is collapsed to its mean
+profile $m^{(t)}=\tfrac{1}{n_t}\sum_c \hat Y^{(t)}_{c,:}$, transformed as
+$\tilde m^{(t)}=\log\!\big(1+\max(m^{(t)},0)\big)$, and each gene $g$ is
+summarized across the $T$ tiles by two dispersion features,
+\[
+\mathrm{STD}_g=\sqrt{\tfrac{1}{T}\textstyle\sum_t(\tilde m^{(t)}_g-\bar{\tilde m}_g)^2},
+\qquad
+\mathrm{GAP}_g=Q_{90}\big(\tilde m^{(\cdot)}_g\big)-Q_{50}\big(\tilde m^{(\cdot)}_g\big),
+\]
+giving a $2G=3{,}312$-dimensional feature vector per patient that excludes mean
+abundance.
+
+\paragraph{Survival (TCGA-BRCA, luminal).} With right-censored overall survival
+$(t_i,\delta_i)$ we fit a Cox proportional-hazards model
+$h_i(t)=h_0(t)\exp(\beta^{\top}x_i)$ by maximizing the partial likelihood over
+the risk sets $R(t_i)=\{j:t_j\ge t_i\}$,
+\[
+\ell(\beta)=\sum_{i:\delta_i=1}\Big[\beta^{\top}x_i
+-\log\!\!\sum_{j\in R(t_i)} e^{\beta^{\top}x_j}\Big].
+\]
+Within each training fold we standardize genes, rank them by univariate
+association (each gene's single-covariate Cox score), and keep the top $K$, with
+$K$ chosen per fold by an inner $3$-fold cross-validation over the development
+patients (median $40$); the multivariable model is then fit on those genes. The
+risk score for a held-out patient is
+$\hat\beta^{\top}x$; concordance is Harrell's $C$, the fraction of comparable
+patient pairs whose predicted risk orders agree with survival:
+\[
+C=\frac{\sum_{i:\delta_i=1}\sum_{j:t_j>t_i}\mathbf{1}\!\left[\hat\beta^{\top}x_i>\hat\beta^{\top}x_j\right]}
+{\sum_{i:\delta_i=1}\sum_{j:t_j>t_i}1}.
+\]
+This is repeated over $5$-fold cross-validation ($50$ repeats); out-of-fold
+scores are pooled, and patients are compared by a two-sided log-rank test both
+at the median split and between the top and bottom risk quartiles.
+
+\paragraph{Response and MSI (logistic probe).} Both binary tasks fit an
+L2-regularized logistic regression on standardized features,
+\[
+\min_{w,b}\;\;\tfrac{1}{2}\lVert w\rVert_2^2
++C\sum_{i}\log\!\Big(1+e^{-y_i\,(w^{\top}x_i+b)}\Big),
+\qquad
+\hat p_i=\sigma(w^{\top}x_i+b),
+\]
+with $y_i\in\{-1,+1\}$. MSI (TCGA-COAD/READ) fits this on the pseudobulk vector
+against the genomic MANTIS label under nested cross-validation: a repeated
+stratified $5$-fold outer loop ($50$ repeats), with the number of AUC-ranked
+genes chosen by an inner $5$-fold loop inside each training split (median $160$
+genes) before refitting on the full development set and scoring the held-out
+fold.
+
+HER2 response adds nested feature-count selection so the dispersion features and
+their number are chosen without touching test patients:
+\begin{algorithm}[H]
+\caption{HER2 response: nested inner-CV feature-count selection (one outer fold)}
+\begin{algorithmic}[1]
+\State split cohort $\to$ $17$ test, $68$ development (stratified by response)
+\For{$K=1,\dots,20$}
+  \For{each inner stratified $5$-fold split of the $68$ development patients}
+    \State standardize on the inner-train fold; rank genes by $|\mathrm{corr}(\text{feature},\,y)|$
+    \State fit logistic regression on the top-$K$ features; predict the inner-validation fold
+  \EndFor
+  \State record the pooled inner-fold AUROC for $K$
+\EndFor
+\State $K^\star\gets\arg\max_K$ pooled inner-fold AUROC
+\State refit top-$K^\star$ model on all $68$ development patients
+\State predict $\hat p$ for the $17$ test patients
+\end{algorithmic}
+\end{algorithm}
+The full procedure runs over $50$ repeats of stratified $5$-fold splits; the
+$250$ outer models yield out-of-fold probabilities that are averaged per patient
+before scoring, and $95\%$ confidence intervals come from $2{,}000$ bootstrap
+resamples of the patients. Feature-selection frequencies (e.g.\ how often each
+dispersion feature enters the top-$K^\star$) are tallied across the $250$ models.
+
+\bibliographystyle{unsrtnat}
+\bibliography{references}
+
+\end{document}
