@@ -28,6 +28,7 @@
 
     const stage = document.getElementById('stage');
     const railFill = document.getElementById('railFill');
+    const storyBeat = document.getElementById('storyBeat');
     // scoped, because the engine stage below reuses the same caption markup
     const captions = Array.from(document.querySelectorAll('#captions .caption'));
 
@@ -201,7 +202,27 @@
         return Math.min(MAX_GEN, base + (mp - onset) * MUT_RATE);
     }
 
-    function resize() {
+    /* Where each stage sits in the document, and how far it travels.
+
+       Held here rather than read per frame. Both stages used to be measured
+       with getBoundingClientRect() on every frame, which forces the browser to
+       flush layout twice before either canvas can draw; the same numbers can be
+       taken once and turned into a viewport-relative position with the one
+       scroll offset the frame already reads. They only move when the document
+       is laid out again, which is a resize or a late webfont. */
+    let sTop = 0, sTravel = 1, eTop = 0, eTravel = 1;
+
+    function measureStages() {
+        sTop = stage.getBoundingClientRect().top + window.scrollY;
+        sTravel = Math.max(stage.offsetHeight - window.innerHeight, 1);
+        if (!estage) return;
+        eTop = estage.getBoundingClientRect().top + window.scrollY;
+        eTravel = Math.max(estage.offsetHeight - window.innerHeight, 1);
+    }
+
+    /* The cheap half of a resize: the canvas backing stores and the frame
+       geometry, with every cached layout left alone. */
+    function measure() {
         dpr = Math.min(window.devicePixelRatio || 1, 2);
         W = canvas.clientWidth;
         H = canvas.clientHeight;
@@ -215,15 +236,49 @@
             ecanvas.height = canvas.height;
             ectx.setTransform(dpr, 0, 0, dpr, 0, 0);
         }
-        verdict = null;
         minDim = Math.min(W, H);
         wide = W > 860;
-        cx = W * (wide ? 0.58 : 0.5);
+        // the frame is offset to clear the caption column beside it, and with
+        // motion turned down that column is underneath rather than alongside
+        cx = W * (wide && !reduceMotion ? 0.58 : 0.5);
         cy = H * (wide ? 0.5 : 0.42);
+        measureStages();
+    }
+
+    /* The expensive half: everything seeded off the canvas size, which has to
+       be built again from scratch. */
+    function resize() {
+        measure();
+        verdict = null;
         cohort = null;
         spread = null;
         grown = null;
         query = null;
+    }
+
+    /* A phone collapsing its address bar fires a resize with the width
+       unchanged, and the full teardown above on that event means the first
+       scroll of a page visit throws away and rebuilds the entire scene. A
+       height-only change small enough to be browser chrome takes the cheap path
+       instead: the canvases are resized, the layouts are kept, and the drift in
+       minDim over sixty or eighty pixels is not visible.
+
+       Debounced either way, because a drag of a desktop window edge delivers
+       these by the dozen and each one is a rebuild. */
+    let resizeTimer = 0;
+    let lastW = 0, lastH = 0;
+    const CHROME_H = 140;
+
+    function onResize() {
+        const w = canvas.clientWidth, h = canvas.clientHeight;
+        const cheap = w === lastW && Math.abs(h - lastH) <= CHROME_H;
+        lastW = w; lastH = h;
+        window.clearTimeout(resizeTimer);
+        resizeTimer = window.setTimeout(function () {
+            if (cheap) measure();
+            else resize();
+            kick();
+        }, 140);
     }
 
     function radiusAt(level) {
@@ -296,12 +351,12 @@
     let lastY = window.scrollY;
     let lastT = performance.now();
 
-    function readVelocity(now) {
+    function readVelocity(now, y) {
         const dt = Math.max(now - lastT, 1);
         // per-frame samples are noisy enough that the raw figure swings by a
         // factor of two between frames on a steady trackpad drag
-        const inst = Math.abs(window.scrollY - lastY) / dt * 1000 / Math.max(H, 1);
-        lastY = window.scrollY;
+        const inst = Math.abs(y - lastY) / dt * 1000 / Math.max(H, 1);
+        lastY = y;
         lastT = now;
         vel += (inst - vel) * 0.2;
         return vel;
@@ -333,11 +388,8 @@
        of holding a single cell for most of a screen of scrolling. The exponent
        is set against the stage height: it buys the opening beats back the
        scroll that the longer middle of the sequence needs. */
-    function readProgress() {
-        const travel = stage.offsetHeight - window.innerHeight;
-        const top = stage.getBoundingClientRect().top;
-        const raw = clamp01(-top / Math.max(travel, 1));
-        return Math.pow(raw, 0.82);
+    function readProgress(y) {
+        return Math.pow(clamp01((y - sTop) / sTravel), 0.82);
     }
 
     /* ---------- phase 1: one cell becomes a tumor ---------- */
@@ -584,6 +636,9 @@
             sprites.clear();
             shades.clear();
             prebake();
+            // the loop may have stood down while this was downloading, and the
+            // frame on screen was drawn with the shader it has just replaced
+            kick();
         };
         const grab = (src, key) => {
             const img = new Image();
@@ -1207,26 +1262,52 @@
        Two atlases, on the same argument as the cell sprites: the twenty in the
        grid are small and share a sheet of tiles, the one held up at the end is
        three times the width and gets its own. */
+    /* Four files, but a section only needs two of them.
+
+       The washed copies are a separate 410KB, and they used to be counted into
+       the same readiness flag as the colour tissue, which meant the twenty
+       sections in the grid could not be baked — and so the cohort could not
+       appear at all — until the grey atlases had also finished downloading.
+       Nothing wants them until the beat after the stain lands, so they are
+       tracked apart and the wash is baked when they arrive.
+
+       They are not derived from the colour ones. The grey files are desaturated
+       and then brought back up to a mean of 128, where the colour tissue sits at
+       86, so a grayscale filter over the colour atlas lands about six percent
+       off across the frame and the washed slide comes out muddy. */
     const HE = {
         grid: null, tile: 320, cols: 4, count: 8,
         lg: null, gridGray: null, lgGray: null,
-        settled: false
+        settled: false,
+        grayReady: false
     };
 
     function loadStains() {
         if (HE.pending != null) return;
-        HE.pending = 4;
-        const done = () => { if (!--HE.pending) HE.settled = true; };
-        const grab = (src, key) => {
+        HE.pending = 2;
+        HE.grayPending = 2;
+
+        const colour = () => {
+            if (--HE.pending) return;
+            HE.settled = true;
+            kick();
+        };
+        const washed = () => {
+            if (--HE.grayPending) return;
+            HE.grayReady = true;
+            kick();
+        };
+        const grab = (src, key, done) => {
             const img = new Image();
             img.onload = () => { HE[key] = img; done(); };
             img.onerror = done;
             img.src = src;
         };
-        grab('he.webp', 'grid');
-        grab('he-lg.webp', 'lg');
-        grab('he-gray.webp', 'gridGray');
-        grab('he-lg-gray.webp', 'lgGray');
+
+        grab('he.webp', 'grid', colour);
+        grab('he-lg.webp', 'lg', colour);
+        grab('he-gray.webp', 'gridGray', washed);
+        grab('he-lg-gray.webp', 'lgGray', washed);
     }
 
     // only reached if the tissue never downloaded, and only so that a section
@@ -1441,6 +1522,9 @@
             queue: rest.slice(),
             // filled by the second stage, which needs the same tumors stained
             sections: rest.slice(),
+            // sections whose washed copy is still owed, because the grey tissue
+            // had not arrived when the colour one was baked
+            drains: [],
             // the second stage pulls the whole grid back about its own middle,
             // so it has to know where that is
             mid: { x: (x0 + x1) / 2, y: (y0 + y1) / 2 },
@@ -1597,9 +1681,11 @@
     const ecanvas = document.getElementById('engineCanvas');
     const ectx = ecanvas ? ecanvas.getContext('2d') : null;
     const erail = document.getElementById('engineRail');
+    const engineBeat = document.getElementById('engineBeat');
     const ecaptions = Array.from(document.querySelectorAll('#engineCaptions .caption'));
 
     let ep = 0;
+    let epTarget = 0;
     // engine-local progress. The stage carries two acts now, and this is the
     // first one's own 0..1 so that its beats did not have to be renumbered when
     // the closing act was folded in behind them
@@ -1711,15 +1797,30 @@
             g.translate(R, R);
             drawSection(g, t.layout.cells, t.slotR, 1.1, t.layout.id);
             t.section = cv;
-            const gray = document.createElement('canvas');
-            gray.width = gray.height = size;
-            const gg = gray.getContext('2d');
-            gg.setTransform(dpr, 0, 0, dpr, 0, 0);
-            gg.translate(R, R);
-            drawSection(gg, t.layout.cells, t.slotR, 1.1, t.layout.id, 1, true);
-            t.drained = gray;
             t.sectionR = R;
             t.spots = buildSpots(t.layout, t.slotR);
+            cohort.drains.push(t);
+        }
+    }
+
+    /* The washed copy of a section, baked once the grey tissue is in. Kept out of
+       the pass above so that a section can be stained and shown while these are
+       still downloading: the wash does not happen until a beat later, and a
+       section baked against the grey atlas before it lands would be cached with
+       the fallback stain in it for the rest of the page. */
+    function growDrains(budget) {
+        if (!HE.grayReady) return;
+        for (let n = 0; n < budget && cohort.drains.length; n++) {
+            const t = cohort.drains.shift();
+            const R = t.sectionR;
+            const size = Math.max(8, Math.ceil(R * 2 * dpr));
+            const cv = document.createElement('canvas');
+            cv.width = cv.height = size;
+            const g = cv.getContext('2d');
+            g.setTransform(dpr, 0, 0, dpr, 0, 0);
+            g.translate(R, R);
+            drawSection(g, t.layout.cells, t.slotR, 1.1, t.layout.id, 1, true);
+            t.drained = cv;
         }
     }
 
@@ -1746,7 +1847,8 @@
        lattice, because the whole claim is that it did not need one. */
     function ensureQuery() {
         if (query) return query;
-        if (!HE.settled) return null;
+        // bakes its washed copy in the same pass, so it needs the grey tissue too
+        if (!HE.grayReady) return null;
         const R = minDim * (wide ? 0.215 : 0.27);
         const span = R * 1.7;
         const layout = buildLayout(9173);
@@ -1851,6 +1953,7 @@
         // all done in one go rather than dribbled in over the first second
         growSprites(reduceMotion ? 64 : 4);
         growSections(reduceMotion ? 64 : 4);
+        growDrains(reduceMotion ? 64 : 4);
 
         const g = ectx;
         /* Whose patient a tumor is carries the first beat and is clutter by the
@@ -1922,12 +2025,13 @@
         if (arrive > 0.002 && vq <= 0) drawQuery(g, arrive, infer, mute);
     }
 
-    function renderEngineStage() {
-        if (!estage || !ectx) return;
-        const rect = estage.getBoundingClientRect();
-        if (rect.top >= window.innerHeight || rect.bottom <= 0) return;
-        const travel = estage.offsetHeight - window.innerHeight;
-        ep = ease(ep, clamp01(-rect.top / Math.max(travel, 1)));
+    function renderEngineStage(y, vh) {
+        if (!estage || !ectx) return false;
+        // read whether or not the stage is on screen, so the eased value is
+        // converging on the right target while the loop is winding down
+        epTarget = clamp01((y - eTop) / eTravel);
+        if (eTop >= y + vh || eTop + eTravel + vh <= y) return false;
+        ep = ease(ep, epTarget);
         eq = clamp01(ep / E_SHARE);
         // the two acts butt up against each other with no gap, so the slide is
         // handed from one to the other on a single frame and in one place
@@ -1949,14 +2053,21 @@
         erail.style.height = (ep * 100).toFixed(1) + '%';
         // unclamped, so the last engine caption fades out on its own as the
         // closing act comes up rather than sticking at full opacity
-        syncCaptions(ecaptions, ep / E_SHARE);
+        syncCaptions(ecaptions, ep / E_SHARE, engineBeat);
         if (vcopy) {
             // held back until the engine act's last caption has gone: the two
             // occupy the same column, and any overlap there is two paragraphs
             // printed on top of each other
             const o = smooth(clamp01((vq - 0.13) / 0.09));
             vcopy.style.setProperty('--o', o.toFixed(3));
+            /* The closing act shares this stage, so it is the stage's last beat
+               and the readout has to count it. Without this the count sits at
+               its last engine caption while the rail beside it is only halfway
+               down, which reads as the page being stuck. */
+            if (engineBeat && o > 0.5) engineBeat.textContent = String(ecaptions.length + 1);
         }
+
+        return true;
     }
 
     /* ---------- second act, same stage: who the drug is for ---------- */
@@ -2191,7 +2302,8 @@
        stamping tissue. The followed patient is first in the queue because it is
        the only one on screen for the first third of the loop. */
     function growVerdict(budget) {
-        if (!HE.settled) return;
+        // bakes both copies of a section in one pass, so both atlases are needed
+        if (!HE.grayReady) return;
         for (let n = 0; n < budget && verdict.queue.length; n++) {
             const t = verdict.queue.shift();
             if (!t.layout) t.layout = buildLayout(t.seed);
@@ -2400,7 +2512,12 @@
 
     /* ---------- chrome ---------- */
 
-    function syncCaptions(list, prog) {
+    /* readout, when given, is the element showing which beat of the stage this
+       is. It takes the caption currently carrying the most opacity rather than
+       the nearest data-at, so the number changes on the same frame the words
+       under it do. */
+    function syncCaptions(list, prog, readout) {
+        let lead = 0, best = -1;
         list.forEach((el, i) => {
             const at = parseFloat(el.dataset.at);
             const prev = i > 0 ? parseFloat(list[i - 1].dataset.at) : at - 0.16;
@@ -2414,15 +2531,24 @@
                     (1 - clamp01((prog - (end - fade)) / fade));
             if (i === 0) o *= smooth(clamp01(prog / 0.04));
             el.style.setProperty('--o', o.toFixed(3));
+            if (o > best) { best = o; lead = i; }
         });
+
+        if (!readout) return;
+        const n = String(lead + 1);
+        if (readout.textContent !== n) readout.textContent = n;
     }
 
     function renderMitosis(mp) {
         const built = mp >= 1 ? fullyGrown() : buildCells(mp);
         const cells = built.cells;
         const bound = boundsRadius(cells);
-        const fit = Math.min(1, (minDim * 0.38) / Math.max(bound, 1));
-        camScale += (fit - camScale) * 0.12;
+        // a still has the whole frame to itself rather than sharing it with the
+        // captions, so it is given more of it
+        const fit = Math.min(1, (minDim * (reduceMotion ? 0.46 : 0.38)) / Math.max(bound, 1));
+        // with motion turned down one still is drawn and nothing runs again, so
+        // the camera arrives at its fitted scale rather than converging on it
+        camScale = reduceMotion ? fit : camScale + (fit - camScale) * 0.12;
 
         const aura = auraTint(cells);
         // The first cell arrives from the depth of the page, then settles into
@@ -2452,30 +2578,111 @@
         return { k, cellR: n ? sum / n : radiusAt(7) * minDim };
     }
 
+    function drawStory(prog) {
+        ground = GROUNDS.paper;
+        ctx.clearRect(0, 0, W, H);
+        if (prog <= GROW_END) {
+            renderMitosis(clamp01(prog / GROW_END));
+        } else if (prog <= META_END) {
+            renderSpread(clamp01((prog - GROW_END) / (META_END - GROW_END)));
+        } else {
+            renderCohort(clamp01((prog - META_END) / (1 - META_END)));
+        }
+    }
+
     function frame() {
         baked = 0;
-        readVelocity(performance.now());
-        targetP = readProgress();
+        const y = window.scrollY;
+        const vh = window.innerHeight;
+        readVelocity(performance.now(), y);
+        targetP = readProgress(y);
         p = ease(p, targetP);
 
-        const rect = stage.getBoundingClientRect();
-        if (rect.top < window.innerHeight && rect.bottom > 0) {
-            ground = GROUNDS.paper;
-            ctx.clearRect(0, 0, W, H);
-            if (p <= GROW_END) {
-                renderMitosis(clamp01(p / GROW_END));
-            } else if (p <= META_END) {
-                renderSpread(clamp01((p - GROW_END) / (META_END - GROW_END)));
-            } else {
-                renderCohort(clamp01((p - META_END) / (1 - META_END)));
-            }
+        const storyOn = sTop - y < vh && sTop + sTravel + vh - y > 0;
+        if (storyOn) {
+            drawStory(p);
             railFill.style.height = (p * 100).toFixed(1) + '%';
-            syncCaptions(captions, p);
+            syncCaptions(captions, p, storyBeat);
         }
 
-        renderEngineStage();
+        const engineOn = renderEngineStage(y, vh);
 
-        requestAnimationFrame(frame);
+        /* Whether there is anything left to do. Both stages off screen and both
+           eased values sitting on their targets means the next frame would draw
+           the same thing again, so the loop stands down and a scroll starts it
+           back up. It used to run at full rate for the whole visit, including
+           the several screens of table at the end and any time the tab was in
+           the background. */
+        if (!document.hidden && (storyOn || engineOn || settling())) {
+            raf = requestAnimationFrame(frame);
+            return;
+        }
+        running = false;
+    }
+
+    function settling() {
+        return Math.abs(p - targetP) > 0.0004 || Math.abs(ep - epTarget) > 0.0004;
+    }
+
+    let running = false;
+    let raf = 0;
+
+    function kick() {
+        if (running || document.hidden || reduceMotion) return;
+        running = true;
+        // restarting after an idle stretch, so the velocity sample is seeded at
+        // the current position instead of measuring the whole jump as one frame
+        lastY = window.scrollY;
+        lastT = performance.now();
+        raf = requestAnimationFrame(frame);
+    }
+
+    function stop() {
+        running = false;
+        window.cancelAnimationFrame(raf);
+    }
+
+    /* ---------- the page with motion turned down ----------
+
+       The stages collapse to their content, the captions become an ordinary
+       column of prose, and each canvas is drawn exactly once. Nothing here is
+       tied to scroll position, which is the whole point: a visitor who asked
+       for less motion was previously given the same twenty-seven screens of
+       scroll-driven animation with only the easing removed.
+
+       One still per stage rather than one per beat, so what is drawn is the
+       state most of that stage's captions are about: the tumor at the end of
+       its growth, and the cohort with every map read off it. */
+    const STILL_ENGINE = 0.70;
+
+    function drawStills() {
+        drawStory(GROW_END);
+        captions.forEach(el => el.style.setProperty('--o', '1'));
+
+        if (!estage || !ectx) return;
+
+        ground = GROUNDS.paper;
+        ectx.clearRect(0, 0, W, H);
+        eq = STILL_ENGINE;
+        renderEngine(STILL_ENGINE, 0);
+        ecaptions.forEach(el => el.style.setProperty('--o', '1'));
+        if (vcopy) vcopy.style.setProperty('--o', '1');
+    }
+
+    /* Waits for the tissue and the cell atlas, then draws once. Bounded, because
+       an atlas that never downloads must not mean a canvas that never draws:
+       past the deadline the still is taken with whatever is loaded, which is the
+       fallback shader the scroll version would have used anyway. */
+    let stillTries = 0;
+
+    function stills() {
+        loadStains();
+        // the engine still is taken past the wash, so it wants the grey tissue too
+        if ((atlas.ready && HE.grayReady) || ++stillTries > 40) {
+            drawStills();
+            return;
+        }
+        window.setTimeout(stills, 120);
     }
 
     /* The single cell is the largest thing the page ever draws, so its sprites
@@ -2500,9 +2707,28 @@
         })();
     }
 
-    window.addEventListener('resize', resize);
+    window.addEventListener('resize', onResize, { passive: true });
+    window.addEventListener('scroll', kick, { passive: true });
+
+    // a background tab has nothing to draw for, and rAF is throttled rather
+    // than stopped there, so the loop is taken down and put back explicitly
+    document.addEventListener('visibilitychange', function () {
+        if (document.hidden) stop();
+        else kick();
+    });
+
+    /* The stage offsets are measured off a laid-out document, and the captions
+       are set in a webfont that changes their height when it lands, so they are
+       taken again once at each point the layout can still move under them. */
+    window.addEventListener('load', measureStages);
+    if (document.fonts) document.fonts.ready.then(measureStages);
+
     resize();
+    lastW = canvas.clientWidth;
+    lastH = canvas.clientHeight;
     loadAtlas();
     prebake();
-    requestAnimationFrame(frame);
+
+    if (reduceMotion) stills();
+    else kick();
 })();

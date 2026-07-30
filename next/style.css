@@ -17,7 +17,11 @@
     --turn: 64vh;
     --ink: #f2f6fb;
     --ink-dim: rgba(224, 235, 248, 0.62);
-    --ink-faint: rgba(200, 218, 240, 0.34);
+    /* 0.34 came out at 2.5:1 against the navy, which is below AA for any size.
+       The apparatus this tone is used for — trial names, markers, references —
+       is exactly the part of the page a sceptical reader stops to check, so it
+       is the wrong place to be economising on legibility. */
+    --ink-faint: rgba(200, 218, 240, 0.58);
     --accent: #7fb4ff;
     --rail: rgba(180, 205, 240, 0.14);
     --rail-glow: 0 0 10px rgba(127, 180, 255, 0.5);
@@ -29,7 +33,12 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
-html { scroll-behavior: smooth; }
+/* Deliberately not smooth. The two stages are eight and nine screens tall, so
+   every in-page target is thousands of pixels away and a smooth jump animates
+   the whole distance while the canvas chases the position it is being handed,
+   which reads as the page refusing to go where it was asked. The stages do
+   their own smoothing; the jumps between them should be instant. */
+html { scroll-behavior: auto; }
 
 body {
     background: var(--ground);
@@ -40,46 +49,82 @@ body {
     overflow-x: hidden;
 }
 
+/* ---------- Focus ----------
+
+   One ring for the whole page, taking the accent of whichever ground it lands
+   on. There was nothing before this: a visitor on the keyboard could tab the
+   dock, the corners, the workspace and every citation in the table with no
+   indication of where they were. */
+:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 3px;
+}
+
+/* ---------- Skip link ----------
+
+   The page is long on purpose, and the argument it is making is settled by the
+   table of drugs near the end. Anyone who already agrees, or who is here to
+   check the figures, should not have to scroll two stages to reach it. Off
+   screen until it takes focus, which is the one moment it is useful. */
+/* Clears the bar rather than landing on it: at the bar's own 22px it covered the
+   middle link, so a keyboard visitor's first stop hid the second one. */
+.skip {
+    position: fixed;
+    top: 78px;
+    left: 50%;
+    z-index: 80;
+    padding: 10px 20px;
+    border-radius: 100px;
+    background: var(--ink);
+    color: var(--navy-900);
+    font-size: 0.78rem;
+    letter-spacing: 0.02em;
+    text-decoration: none;
+    /* its own height plus the offset above, so it is fully off the top edge
+       rather than peeking under it */
+    transform: translate(-50%, calc(-78px - 100%));
+    transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.skip:focus-visible {
+    transform: translate(-50%, 0);
+}
+
+/* ---------- Grain ----------
+
+   One layer, normally composited, held still.
+
+   It used to be three — overlay, screen and multiply — because no single blend
+   mode reads on both grounds: overlay and screen vanish into white paper,
+   multiply was the only one that survived there, and the darkest navy needed
+   the screen pass to keep any tooth at all. Each of those is a full-viewport
+   blend, and a blend mode is expensive in a way a normal layer is not: the
+   compositor has to read the backdrop back out before it can mix into it. Three
+   of them, sized to twice the viewport in each axis for a drift animation, came
+   to roughly four viewports of readback per layer per frame, on top of a canvas
+   that is already redrawing every frame. Measured against a scroll through the
+   first stage it was the difference between 20fps and 60fps, and about half of
+   that cost was the drift alone.
+
+   A mid-grey noise composited normally needs no readback and gets the same
+   result on both grounds, for the reason the three modes were reaching for
+   separately: grey is darker than paper and lighter than navy, so one layer
+   darkens the white half and lifts the blue half without being told which it is
+   sitting on. The alpha carries the noise, so what varies per pixel is how much
+   grey shows through rather than how bright it is.
+
+   Held still because the drift bought very little: steps(5) over 6s is five
+   recomposites of the whole viewport for a texture shift at the threshold of
+   visibility. */
 .grain {
     position: fixed;
-    inset: -50%;
+    inset: 0;
     z-index: 60;
     pointer-events: none;
-    opacity: 0.85;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='260' height='260' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
-    mix-blend-mode: overlay;
-    animation: grain-drift 6s steps(5) infinite;
-}
-
-/* overlay grain alone disappears in the darkest navy, so a second pass
-   screens the same noise back in to keep the shadows textured */
-.grain--lift {
-    opacity: 0.16;
-    mix-blend-mode: screen;
-    animation-direction: reverse;
-}
-
-/* Overlay and screen both do almost nothing to white, so on their own the paper
-   half of the page would come out perfectly smooth while the blue half is
-   textured, and the grain would appear to switch off halfway down. A multiply
-   pass is the one that survives on paper, and because it also reads on blue it
-   can run the whole length of the page without changing at the turn. */
-/* Few octaves and a high base frequency on purpose: multiply is strong enough
-   that the low-frequency part of a fractal field stops reading as tooth and
-   starts reading as dirty cloud across the paper. */
-.grain--tooth {
-    opacity: 0.3;
-    mix-blend-mode: multiply;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='t'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='260' height='260' filter='url(%23t)' opacity='0.35'/%3E%3C/svg%3E");
-}
-
-@keyframes grain-drift {
-    0%   { transform: translate3d(0, 0, 0); }
-    20%  { transform: translate3d(-3%, 2%, 0); }
-    40%  { transform: translate3d(2%, -3%, 0); }
-    60%  { transform: translate3d(-2%, -2%, 0); }
-    80%  { transform: translate3d(3%, 1%, 0); }
-    100% { transform: translate3d(0, 0, 0); }
+    opacity: 0.42;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.92' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope='0.5' intercept='0.28'/%3E%3CfeFuncG type='linear' slope='0.5' intercept='0.28'/%3E%3CfeFuncB type='linear' slope='0.5' intercept='0.28'/%3E%3CfeFuncA type='linear' slope='0.42'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='260' height='260' filter='url(%23g)'/%3E%3C/svg%3E");
+    background-size: 260px 260px;
 }
 
 /* ---------- The two grounds, and the turns between them ----------
@@ -106,7 +151,8 @@ body {
     position: relative;
     --ink: #0a1729;
     --ink-dim: rgba(11, 26, 47, 0.72);
-    --ink-faint: rgba(11, 26, 47, 0.5);
+    /* 0.5 measured 3.3:1 on paper; 0.62 clears AA at 4.8:1 */
+    --ink-faint: rgba(11, 26, 47, 0.62);
     --accent: #16509e;
     --rail: rgba(11, 26, 47, 0.15);
     --rail-glow: none;
@@ -849,14 +895,70 @@ body {
     max-width: 30ch;
 }
 
-.rail {
+/* ---------- Where you are, and how to leave ----------
+
+   A stage is eight or nine screens of scrolling with no scrollbar worth reading
+   and no section breaks inside it, and the rail on its own could not say how
+   much of that was left: one pixel wide, a quarter of the viewport tall, and
+   the same shape at the start as at the end. A count beside it turns an
+   unbounded scroll into a known number of beats, which is the difference
+   between committing to a page and being trapped in one.
+
+   The way out sits under it, because the two answers a visitor wants at that
+   moment are how much is left and how to stop. */
+.progress {
     position: absolute;
     right: 2.4vw;
     top: 50%;
     transform: translateY(-50%);
-    width: 1px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 13px;
+}
+
+.progress__count {
+    display: flex;
+    align-items: baseline;
+    gap: 0.28em;
+    font-size: 0.68rem;
+    letter-spacing: 0.14em;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-dim);
+}
+
+.progress__of { color: var(--ink-faint); }
+
+.rail {
+    position: relative;
+    width: 2px;
     height: 26vh;
+    border-radius: 2px;
     background: var(--rail);
+}
+
+/* Quiet, and never in front of the artwork: it takes the far column the rail
+   already owns rather than the middle of the stage. */
+.onward {
+    position: absolute;
+    right: 2.4vw;
+    bottom: 6vh;
+    z-index: 5;
+    padding: 7px 15px;
+    border: 1px solid var(--rail);
+    border-radius: 100px;
+    color: var(--ink-dim);
+    font-size: 0.64rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: color 0.3s ease, border-color 0.3s ease;
+}
+
+.onward:hover {
+    color: var(--ink);
+    border-color: var(--accent);
 }
 
 /* the glow reads as light leaking off the rail on blue and as a grey blur on
@@ -1141,7 +1243,8 @@ body {
 
 .case__gen {
     margin-top: 0.5rem;
-    font-size: 0.72rem;
+    font-size: 0.74rem;
+    font-weight: 400;
     letter-spacing: 0.14em;
     text-transform: uppercase;
     line-height: 1.5;
@@ -1205,7 +1308,8 @@ body {
    the two labels in the economics column. */
 .case__basis {
     margin-top: 0.62rem;
-    font-size: 0.66rem;
+    font-size: 0.72rem;
+    font-weight: 400;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     line-height: 1.55;
@@ -1261,11 +1365,15 @@ body {
 
 /* Numbered to match the markers in the rows, and targetable, so a marker is a
    link to something rather than a decoration that implies one. */
+/* Set at 400 rather than the page's 300. At this size the light weight was
+   costing more legibility than the extra half-millimetre of height was
+   buying, and a reference is meant to be read once carefully. */
 .cases__refs {
     max-width: 82ch;
     margin-top: 9vh;
     padding-left: 1.6rem;
-    font-size: 0.74rem;
+    font-size: 0.82rem;
+    font-weight: 400;
     line-height: 1.7;
     color: var(--ink-faint);
 }
@@ -1280,24 +1388,28 @@ body {
 .cases__note {
     max-width: 78ch;
     margin-top: 4vh;
-    font-size: 0.74rem;
+    font-size: 0.82rem;
+    font-weight: 400;
     line-height: 1.75;
     color: var(--ink-faint);
 }
 
 .engine__foot {
     margin-top: 7rem;
-    font-size: 0.68rem;
+    font-size: 0.74rem;
+    font-weight: 400;
     letter-spacing: 0.2em;
     text-transform: uppercase;
     color: var(--ink-faint);
 }
 
+/* The 0.7 opacity that used to be here compounded with the alpha already in
+   --ink-faint, which put the credit line near the floor of what is visible at
+   all. The tone is faint enough on its own. */
 .engine__foot--src {
     margin-top: 0.7rem;
     letter-spacing: 0.12em;
     text-transform: none;
-    opacity: 0.7;
 }
 
 @media (max-width: 860px) {
@@ -1373,7 +1485,18 @@ body {
         transform: translateY(calc((1 - var(--o, 0)) * 22px));
     }
     .caption p { max-width: none; }
-    .rail { right: 6vw; height: 18vh; }
+    .progress { right: 5vw; gap: 10px; }
+    .rail { height: 18vh; }
+    .progress__count { font-size: 0.62rem; }
+    /* the caption column runs to the bottom of the box at this width, so the way
+       out goes up beside the rail instead of under it */
+    .onward {
+        right: 5vw;
+        bottom: auto;
+        top: 8vh;
+        padding: 6px 12px;
+        font-size: 0.6rem;
+    }
     .pivot { min-height: 62vh; padding: 8vh 7vw; }
     .engine { padding: 14vh 7vw 12vh; }
     /* the copy goes over the top of the frame rather than beside it, and the
@@ -1427,15 +1550,90 @@ body {
     :root { --turn: 58vh; }
 }
 
+/* ---------- The page with motion turned down ----------
+
+   What used to be here removed the easing, the caret and the grain drift, and
+   left everything else in place: the two stages kept their full height, so a
+   visitor who had asked for less motion still had twenty-seven screens of
+   scroll-driven animation to crank through, and got a slightly worse version of
+   it because the easing that smoothed the canvas was the part that had been
+   taken away.
+
+   So the stages stop being stages. Each collapses to its content, the sticky box
+   becomes an ordinary block, and the canvas is drawn once and never again. The
+   captions were already the whole argument in prose; laid out in a column under
+   the still they read as an illustrated article, which is what this page is when
+   it is not moving. */
 @media (prefers-reduced-motion: reduce) {
-    html { scroll-behavior: auto; }
-    .grain { animation: none; }
     .q__lead, .q__rest { transition-duration: 0.01s; }
     .question.is-typing-lead .q__lead::after,
     .question.is-typing-rest .q__rest::after { animation: none; }
     .app { animation: none; opacity: 1; }
     .app__load { animation: none; }
     .app.is-loading .app__load { animation: none; transform: translateX(0); }
-    .beat { opacity: 1; transform: none; transition: none; }
     .pivot__line.is-typing::after { animation: none; }
+    .btn:hover { transform: none; }
+
+    .stage,
+    .stage--engine { height: auto; }
+
+    .stage__sticky {
+        position: static;
+        height: auto;
+        overflow: visible;
+        padding: 10vh 7vw 4vh;
+    }
+
+    /* Capped rather than sized to the viewport, so the still is composed the same
+       way on any screen and the caption under it is above the fold: a still that
+       fills the window on its own reads as another full-height act, which is the
+       thing this whole branch exists to get away from. */
+    .stage__sticky canvas {
+        position: static;
+        width: 100%;
+        height: min(62vh, 560px);
+    }
+
+    /* both of these are answers to "how far through this am I", and there is no
+       longer a through to be part of */
+    .progress,
+    .onward { display: none; }
+
+    .captions,
+    .stage--engine .captions {
+        position: static;
+        width: auto;
+        max-width: 68ch;
+        margin: 6vh auto 0;
+        transform: none;
+    }
+
+    .caption,
+    .stage--engine .caption {
+        position: static;
+        width: auto;
+        opacity: 1;
+        transform: none;
+        will-change: auto;
+    }
+
+    .caption + .caption { margin-top: 3.4rem; }
+
+    /* at rest these are read one after another rather than one at a time, so
+       they are set as headings in a column instead of as display type */
+    .caption h2,
+    .stage--engine .caption h2 { font-size: clamp(1.5rem, 2.4vw, 2rem); }
+
+    .caption p,
+    .stage--engine .caption p { max-width: 68ch; }
+
+    .verdict__copy {
+        position: static;
+        width: auto;
+        max-width: 68ch;
+        margin: 6vh auto 0;
+        opacity: 1;
+        transform: none;
+        will-change: auto;
+    }
 }
