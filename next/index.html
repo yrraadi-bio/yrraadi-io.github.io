@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?rev=corners-8">
+    <link rel="stylesheet" href="style.css?rev=embed-8">
     <link rel="icon" href="../assets/favicon.png" type="image/png">
 </head>
 <body>
@@ -41,7 +41,7 @@
 
         <h1 class="question" id="question"><span class="q__text"><span class="q__lead">What if</span><span class="q__rest"> we made as many cancer drugs next year as we have in the last <em>100</em>?</span></span></h1>
 
-        <div class="app">
+        <div class="app" data-demo="/platform?embed=1&amp;view=review&amp;job=491dc1b6f0c5&amp;theme=dark">
             <div class="app__bar">
                 <span class="app__dot"></span>
                 <span class="app__dot"></span>
@@ -51,15 +51,32 @@
                     <span class="app__tab"></span>
                     <span class="app__tab"></span>
                 </div>
+                <p class="app__meta">
+                    <span class="app__meta-dot" aria-hidden="true"></span>
+                    <span class="app__meta-text">Breast Cancer 2 (Rep 2) &middot; 133,853 predicted cells</span>
+                </p>
             </div>
             <div class="app__body">
-                <iframe
-                    class="app__frame"
-                    src="https://origin-demo.tail47ef4b.ts.net/"
-                    title="Origin Spatial demo"
-                    loading="eager"
-                    referrerpolicy="no-referrer"
-                ></iframe>
+                <span class="app__load" aria-hidden="true"></span>
+
+                <div class="app__ack" role="status">
+                    <p class="app__ack-text">
+                        Gene expression predicted through our proprietary model.
+                        <span class="app__ack-cue">Click any cell to see more information.</span>
+                    </p>
+                    <button class="app__ack-go" type="button">Okay</button>
+                </div>
+
+                <p class="app__hint" aria-hidden="true">
+                    <span class="app__hint--interact">Click to interact</span>
+                    <span class="app__hint--release">Esc to scroll on</span>
+                    <span class="app__hint--handheld">Tap to open the workspace</span>
+                </p>
+
+                <p class="app__fallback" role="status">
+                    The live workspace is not reachable from here.
+                    <a class="app__fallback-link" href="/platform?embed=1&amp;view=review&amp;job=491dc1b6f0c5&amp;theme=dark" target="_blank" rel="noopener noreferrer">Open it in a new tab</a>
+                </p>
             </div>
         </div>
     </section>
@@ -450,6 +467,7 @@
     </section>
 
     <script src="questions.js?rev=italics-2"></script>
+    <script src="platform.js?rev=embed-8"></script>
     <script src="palettes.js"></script>
     <script src="mitosis.js?rev=gray-assets-3"></script>
 </body>
