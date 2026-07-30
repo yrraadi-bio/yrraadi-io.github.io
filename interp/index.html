@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Pathway Explorer | Origin Bio</title>
-<meta name="description" content="Explore held-out-supported KEGG and MSigDB Hallmark pathway associations across Prov-GigaPath block-sparse features." />
+<meta name="description" content="Explore KEGG and MSigDB Hallmark associations that reproduce on held-out tissue tiles across Prov-GigaPath block-sparse features." />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
@@ -36,8 +36,11 @@
 
 <main class="layout">
 
-  <aside class="sidebar">
+  <aside id="pathwaySidebar" class="sidebar">
     <div class="search-wrap">
+      <button id="sidebarToggle" class="btn-sidebar" aria-controls="pathwaySidebar" aria-expanded="true" title="Hide pathway list">
+        <span id="sidebarToggleGlyph" class="sidebar-toggle-glyph" aria-hidden="true">‹</span>
+      </button>
       <input id="search" type="search" placeholder="Search pathway name or id…" autocomplete="off" />
     </div>
     <div id="pathwayList" class="pathway-list"></div>
@@ -63,6 +66,10 @@
             <span class="dot">·</span>
             <span id="supportedCount"></span>
           </p>
+          <div class="pathway-explainer">
+            <p><strong>Pathway score:</strong> the mean training-standardized log1p-CPM expression of this pathway's genes measured on a tile. Positive means collectively above the training average; negative means below.</p>
+            <p><strong>Raw r:</strong> Pearson correlation between that score and the selected block's activation magnitude across training tiles. “Held-out” means the 12 unseen slides and their tiles, not unseen blocks.</p>
+          </div>
         </div>
       </div>
 
@@ -70,7 +77,7 @@
       <div id="geneList" class="gene-list"></div>
       <p id="geneNote" class="gene-note hidden"></p>
 
-      <h3 class="section-title">Top activating blocks <span class="hint">held-out supported, ranked by |held-out effect| — click to select</span></h3>
+      <h3 class="section-title">Top activating blocks <span class="hint">associations reproduced on held-out tiles, ranked by |effect on held-out tiles|, click to select</span></h3>
       <div id="blockList" class="block-list"></div>
 
       <div class="manifold-head">
@@ -80,7 +87,7 @@
             <button data-view="pathway" class="active">Pathway score</button>
             <button data-view="gene" id="manifoldGeneTab" class="hidden">Gene expression</button>
             <button data-view="activation">Block activation</button>
-            <button data-view="slide">Slide</button>
+            <button data-view="tissue">Tissue</button>
             <button data-view="cross">Cross-block map</button>
           </div>
           <label class="ctl" id="scopeControl">tiles
@@ -103,6 +110,23 @@
       <p id="manifoldNote" class="gallery-note"></p>
       <div class="manifold-frame">
         <div id="manifoldMain" class="manifold-plot"></div>
+      </div>
+
+      <div class="manifold-recipe">
+        <div id="recipeTile">
+          <p><strong>What this is.</strong> One point per tile this block fires on, placed by the
+            <span id="recipeGroupSize">16</span> numbers this block gives that tile, squeezed down to 3 by UMAP. Each block is
+            embedded on its own, so this layout is that block's alone.</p>
+          <p><strong>The axes.</strong> UMAP 1, 2 and 3 are not genes and not expression. They have no units, so only closeness
+            counts: tiles near each other look alike to this block. Tabs change the colour, never the positions.</p>
+        </div>
+        <div id="recipeCross" class="hidden">
+          <p><strong>What this is.</strong> One point per block, not per tile. A block is placed by how strongly it tracks each
+            of the 1,656 measured genes across training tiles, so 1,656 numbers per block, squeezed down to 3 by UMAP.</p>
+          <p><strong>The axes.</strong> UMAP 1, 2 and 3 are not genes and not predicted expression. The genes are the inputs
+            that got compressed away, which is why a gene or pathway shows as colour rather than as a direction. Only closeness
+            counts: blocks near each other track genes alike.</p>
+        </div>
       </div>
 
       <div class="gallery-head">
@@ -170,6 +194,7 @@
 </div>
 
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+<script src="copy.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

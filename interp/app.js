@@ -112,6 +112,51 @@ function cutoff(tile, fraction) {
   return firing[Math.min(keep, firing.length) - 1];
 }
 
+function rgb(colour) { return `rgb(${colour[0]},${colour[1]},${colour[2]})`; }
+
+function rgba(colour, alpha) { return `rgba(${colour[0]},${colour[1]},${colour[2]},${alpha})`; }
+
+// every canvas draws the same patch grid, so the geometry is derived in one place
+function geometry(canvas) {
+  const grid = state.bundle.patch_grid;
+
+  return { ctx: canvas.getContext("2d"), grid: grid, size: canvas.width, cell: canvas.width / grid };
+}
+
+// a zero reference would divide the whole ramp by zero, so it falls back to unit scale
+function heatScale(reference) { return reference > 0 ? reference : 1; }
+
+function strokeGrid(ctx, grid, cell, size, colour) {
+  ctx.strokeStyle = colour;
+  ctx.lineWidth = 0.5;
+
+  for (let i = 1; i < grid; i += 1) {
+    ctx.beginPath();
+    ctx.moveTo(i * cell, 0);
+    ctx.lineTo(i * cell, size);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(0, i * cell);
+    ctx.lineTo(size, i * cell);
+    ctx.stroke();
+  }
+}
+
+// one gridded heatmap, with the caller supplying the patch values and how a value becomes a colour
+function drawPatchHeat(canvas, entries, background, colourOf) {
+  const { ctx, grid, size, cell } = geometry(canvas);
+
+  ctx.fillStyle = background;
+  ctx.fillRect(0, 0, size, size);
+
+  entries.forEach(([patch, value]) => {
+    ctx.fillStyle = colourOf(value);
+    ctx.fillRect((patch % grid) * cell, Math.floor(patch / grid) * cell, cell, cell);
+  });
+
+  strokeGrid(ctx, grid, cell, size, "rgba(255,255,255,0.6)");
+}
+
 function drawTile(canvas, tile, maxValue, options) {
   const grid = state.bundle.patch_grid;
   const size = canvas.width;
@@ -125,8 +170,7 @@ function drawTile(canvas, tile, maxValue, options) {
     if (!settings.overlay) return;
 
     const cell = size / grid;
-    const reference = current.normalize === "tile" ? tile.max_patch : maxValue;
-    const scale = reference > 0 ? reference : 1;
+    const scale = heatScale(current.normalize === "tile" ? tile.max_patch : maxValue);
     const cut = cutoff(tile, settings.fraction);
     const floor = cut / scale;
 
@@ -140,8 +184,7 @@ function drawTile(canvas, tile, maxValue, options) {
         // rescale the surviving band across the full ramp so the peak patches stand out
         const value = Math.min(1, raw / scale);
         const shaped = floor < 1 ? (value - floor) / (1 - floor) : 1;
-        const [red, green, blue] = ramp(shaped);
-        ctx.fillStyle = `rgba(${red},${green},${blue},${(0.3 + 0.7 * shaped) * settings.opacity})`;
+        ctx.fillStyle = rgba(ramp(shaped), (0.3 + 0.7 * shaped) * settings.opacity);
         ctx.fillRect(c * cell, r * cell, cell + 0.5, cell + 0.5);
         lit.set(r * grid + c, shaped);
       }
@@ -151,13 +194,12 @@ function drawTile(canvas, tile, maxValue, options) {
     const genes = geneMap(tile);
     if (genes) {
       const stats = geneStats(tile);
-      const geneScale = (current.normalize === "tile" ? stats.peak : settings.geneMax) || 1;
+      const geneScale = heatScale(current.normalize === "tile" ? stats.peak : settings.geneMax);
 
       genes.map.forEach((value, patch) => {
         if (value <= 0) return;
         const shaped = Math.min(1, value / geneScale);
-        const [red, green, blue] = geneRamp(0.25 + 0.75 * shaped);
-        ctx.fillStyle = `rgba(${red},${green},${blue},${(0.45 + 0.5 * shaped) * settings.opacity})`;
+        ctx.fillStyle = rgba(geneRamp(0.25 + 0.75 * shaped), (0.45 + 0.5 * shaped) * settings.opacity);
         ctx.fillRect((patch % grid) * cell, Math.floor(patch / grid) * cell, cell + 0.5, cell + 0.5);
       });
 
@@ -165,94 +207,28 @@ function drawTile(canvas, tile, maxValue, options) {
       ctx.lineWidth = Math.max(1.5, cell * 0.12);
       lit.forEach((shaped, patch) => {
         if (!(genes.map.get(patch) > 0)) return;
-        const [red, green, blue] = ramp(Math.max(0.45, shaped));
-        ctx.strokeStyle = `rgba(${red},${green},${blue},${(0.75 + 0.25 * shaped) * settings.opacity})`;
+        ctx.strokeStyle = rgba(ramp(Math.max(0.45, shaped)), (0.75 + 0.25 * shaped) * settings.opacity);
         ctx.strokeRect((patch % grid) * cell + ctx.lineWidth / 2, Math.floor(patch / grid) * cell + ctx.lineWidth / 2, cell - ctx.lineWidth, cell - ctx.lineWidth);
       });
     }
 
-    if (settings.grid) {
-      ctx.strokeStyle = "rgba(255,255,255,0.35)";
-      ctx.lineWidth = 0.5;
-      for (let i = 1; i < grid; i += 1) {
-        ctx.beginPath();
-        ctx.moveTo(i * cell, 0);
-        ctx.lineTo(i * cell, size);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(0, i * cell);
-        ctx.lineTo(size, i * cell);
-        ctx.stroke();
-      }
-    }
+    if (settings.grid) strokeGrid(ctx, grid, cell, size, "rgba(255,255,255,0.35)");
   });
 }
 
 function drawHeat(canvas, tile, maxValue) {
-  const grid = state.bundle.patch_grid;
-  const size = canvas.width;
-  const ctx = canvas.getContext("2d");
-  const cell = size / grid;
-  const reference = controls().normalize === "tile" ? tile.max_patch : maxValue;
-  const scale = reference > 0 ? reference : 1;
+  const scale = heatScale(controls().normalize === "tile" ? tile.max_patch : maxValue);
+  const entries = tile.patches.map((value, patch) => [patch, value / scale]);
 
-  ctx.fillStyle = "#fbfbfa";
-  ctx.fillRect(0, 0, size, size);
-
-  for (let r = 0; r < grid; r += 1) {
-    for (let c = 0; c < grid; c += 1) {
-      const value = tile.patches[r * grid + c] / scale;
-      const [red, green, blue] = ramp(value);
-      ctx.fillStyle = value <= 0 ? "#f2f2f0" : `rgb(${red},${green},${blue})`;
-      ctx.fillRect(c * cell, r * cell, cell, cell);
-    }
-  }
-
-  ctx.strokeStyle = "rgba(255,255,255,0.6)";
-  ctx.lineWidth = 0.5;
-  for (let i = 1; i < grid; i += 1) {
-    ctx.beginPath();
-    ctx.moveTo(i * cell, 0);
-    ctx.lineTo(i * cell, size);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(0, i * cell);
-    ctx.lineTo(size, i * cell);
-    ctx.stroke();
-  }
+  drawPatchHeat(canvas, entries, "#fbfbfa", (value) => (value <= 0 ? "#f2f2f0" : rgb(ramp(value))));
 }
 
 // standalone gene panel: grey where no cell was measured, pale where a cell carries no transcript
 function drawGeneHeat(canvas, tile, geneMax) {
-  const grid = state.bundle.patch_grid;
-  const size = canvas.width;
-  const ctx = canvas.getContext("2d");
-  const cell = size / grid;
-  const genes = geneMap(tile);
-  const stats = geneStats(tile);
-  const scale = (controls().normalize === "tile" ? stats.peak : geneMax) || 1;
+  const scale = heatScale(controls().normalize === "tile" ? geneStats(tile).peak : geneMax);
 
-  ctx.fillStyle = "#eceff2";
-  ctx.fillRect(0, 0, size, size);
-
-  genes.map.forEach((value, patch) => {
-    const [red, green, blue] = geneRamp(value > 0 ? 0.25 + 0.75 * Math.min(1, value / scale) : 0);
-    ctx.fillStyle = value > 0 ? `rgb(${red},${green},${blue})` : "#f8fbf9";
-    ctx.fillRect((patch % grid) * cell, Math.floor(patch / grid) * cell, cell, cell);
-  });
-
-  ctx.strokeStyle = "rgba(255,255,255,0.6)";
-  ctx.lineWidth = 0.5;
-  for (let i = 1; i < grid; i += 1) {
-    ctx.beginPath();
-    ctx.moveTo(i * cell, 0);
-    ctx.lineTo(i * cell, size);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(0, i * cell);
-    ctx.lineTo(size, i * cell);
-    ctx.stroke();
-  }
+  drawPatchHeat(canvas, [...geneMap(tile).map], "#eceff2",
+    (value) => (value > 0 ? rgb(geneRamp(0.25 + 0.75 * Math.min(1, value / scale))) : "#f8fbf9"));
 }
 
 function renderSidebar(filter) {
@@ -277,7 +253,7 @@ function renderSidebar(filter) {
   });
 
   if (!list.children.length) {
-    list.innerHTML = '<p class="gallery-note" style="padding:10px">No pathway matches that search.</p>';
+    list.innerHTML = `<p class="gallery-note" style="padding:10px">${COPY.sidebarEmpty}</p>`;
   }
 }
 
@@ -296,12 +272,12 @@ async function selectPathway(index) {
   document.getElementById("pathwayId").textContent = entry.pathway_id;
   const template = state.bundle.pathway_url_template || "https://www.kegg.jp/pathway/{pathway_id}";
   document.getElementById("keggLink").href = template.replace("{pathway_id}", entry.pathway_id);
-  document.getElementById("supportedCount").textContent = `${entry.n_supported_blocks} held-out supported blocks`;
+  document.getElementById("supportedCount").textContent = COPY.supportedBlocks(entry.n_supported_blocks);
   document.getElementById("basicCorrelation").classList.add("hidden");
   document.getElementById("geneList").innerHTML = "";
   document.getElementById("blockList").innerHTML = "";
   document.getElementById("gallery").innerHTML = "";
-  document.getElementById("galleryNote").textContent = "loading…";
+  document.getElementById("galleryNote").textContent = COPY.loading;
 
   renderSidebar(document.getElementById("search").value);
 
@@ -312,7 +288,7 @@ async function selectPathway(index) {
 
   if (state.detail instanceof Error) {
     document.getElementById("geneHint").textContent = "";
-    document.getElementById("galleryNote").textContent = `could not load ${entry.pathway_id}.json (${state.detail.message})`;
+    document.getElementById("galleryNote").textContent = COPY.loadFailed(entry.pathway_id, state.detail.message);
     return;
   }
 
@@ -334,21 +310,21 @@ function renderGenes() {
   holder.innerHTML = "";
 
   // genes with zero counts everywhere are non-estimable, so they are counted rather than ranked
-  const undetected = pathway.n_undetected_genes ? `, ${pathway.n_undetected_genes} never detected` : "";
+  const undetected = pathway.n_undetected_genes ? COPY.genes.undetectedClause(pathway.n_undetected_genes) : "";
 
   if (!pathway.genes.length) {
-    hint.textContent = `none of ${pathway.n_pathway_genes} measured genes were detected in training tiles`;
+    hint.textContent = COPY.genes.noneDetected(pathway.n_pathway_genes);
     return;
   }
 
-  hint.textContent = `${pathway.genes.length} of ${pathway.n_pathway_genes} measured genes${undetected}, by mean expression across training tiles (log1p CPM) — click one to map it onto the tiles`;
+  hint.textContent = COPY.genes.hint(pathway.genes.length, pathway.n_pathway_genes, undetected);
   const strongest = Math.max(...pathway.genes.map((gene) => gene.mean));
 
   pathway.genes.forEach((gene) => {
     const chip = document.createElement("div");
     // dashed border marks genes absent from some slide panels
     chip.className = `gene-chip${gene.train_slides < 46 ? " partial" : ""}${state.gene === gene.symbol ? " active" : ""}`;
-    chip.title = `${gene.symbol} · mean ${gene.mean} log1p CPM · sd ${gene.std} · measured on ${gene.train_slides}/46 training and ${gene.heldout_slides}/12 held-out slides · click to overlay its per-cell expression on the tiles and recolour the manifold by this gene`;
+    chip.title = COPY.genes.chipTitle(gene);
     chip.innerHTML = `
       <div class="grow"><span class="sym">${gene.symbol}</span><span class="lvl">${gene.mean.toFixed(2)}</span></div>
       <div class="meter"><span style="width:${strongest > 0 ? (gene.mean / strongest) * 100 : 0}%"></span></div>`;
@@ -377,9 +353,7 @@ function renderGeneNote() {
   }
 
   note.classList.remove("hidden");
-  note.innerHTML = `Green squares mark <b>${state.gene}</b> transcripts in the cells measured inside each tile.
-    Xenium reads expression once per cell, so the green layer is the per-cell expression binned onto the same
-    14&times;14 grid as the block activation &mdash; patches with no measured cell stay unmarked.`;
+  note.innerHTML = COPY.genes.overlay(state.gene);
 }
 
 function renderBasicCorrelation() {
@@ -395,14 +369,14 @@ function renderBasicCorrelation() {
   badge.classList.remove("hidden", "positive", "negative");
 
   if (!Number.isFinite(value)) {
-    output.textContent = "r unavailable";
-    badge.title = "Raw Pearson correlation is undefined because one input has no variance.";
+    output.textContent = COPY.correlation.unavailable;
+    badge.title = COPY.correlation.unavailableTitle;
     return;
   }
 
   output.textContent = `r ${value >= 0 ? "+" : "−"}${Math.abs(value).toFixed(3)}`;
   badge.classList.add(value >= 0 ? "positive" : "negative");
-  badge.title = `Unadjusted Pearson correlation between ${state.detail.name} score and ${block.dictionary} #${block.block} activation magnitude across ${block.basic_r_n.toLocaleString()} training tiles. No covariate residualization; the block card reports the adjusted held-out effect.`;
+  badge.title = COPY.correlation.title(state.detail.name, block);
 }
 
 function renderBlocks() {
@@ -422,8 +396,8 @@ function renderBlocks() {
         <span class="bid">#${block.block}</span>
       </div>
       <table>
-        <tr><td>held-out effect</td><td class="val">${block.heldout_effect.toFixed(3)}</td></tr>
-        <tr><td>train effect</td><td class="val">${block.train_effect.toFixed(3)}</td></tr>
+        <tr><td>effect on held-out tiles</td><td class="val">${block.heldout_effect.toFixed(3)}</td></tr>
+        <tr><td>effect on training tiles</td><td class="val">${block.train_effect.toFixed(3)}</td></tr>
         <tr><td>&Delta;R&sup2;</td><td class="val">${block.delta_r2.toFixed(4)}</td></tr>
         <tr><td>firing frac.</td><td class="val">${block.firing_fraction.toFixed(3)}</td></tr>
       </table>
@@ -455,6 +429,18 @@ function activeTiles() {
   return { tiles: block.tiles, block: block };
 }
 
+// a tile from a held-out slide carries no pathway score, so it reads as n/a rather than as zero
+function tileScore(tile) {
+  return tile.pathway_score === null || tile.pathway_score === undefined ? "n/a" : tile.pathway_score.toFixed(3);
+}
+
+// both ramps label their two ends and caption themselves, from the same three elements
+function setScaleTicks(prefix, low, high, caption) {
+  document.getElementById(`${prefix}Min`).textContent = low;
+  document.getElementById(`${prefix}Max`).textContent = high;
+  document.getElementById(`${prefix}Caption`).textContent = caption;
+}
+
 // label the ramp with the values its two ends actually correspond to
 function renderScaleBar(tiles) {
   const current = controls();
@@ -462,29 +448,16 @@ function renderScaleBar(tiles) {
   const peaks = tiles.map((tile) => tile.max_patch).filter((value) => value > 0);
   const cuts = tiles.map((tile) => cutoff(tile, current.fraction)).filter((value) => Number.isFinite(value));
 
-  const minTick = document.getElementById("scaleMin");
-  const maxTick = document.getElementById("scaleMax");
-  const caption = document.getElementById("scaleCaption");
-
-  if (!peaks.length) {
-    minTick.textContent = "";
-    maxTick.textContent = "";
-    caption.textContent = "no firing patches to scale";
-    return;
-  }
+  if (!peaks.length) return setScaleTicks("scale", "", "", COPY.scale.empty);
 
   const galleryPeak = Math.max(...peaks);
 
   if (current.normalize === "gallery") {
-    minTick.textContent = Math.min(...cuts).toFixed(1);
-    maxTick.textContent = galleryPeak.toFixed(1);
-    caption.textContent = `one shared scale across these tiles, so colour means the same on each; pale end is the top-${percent}% cutoff, dark end the gallery peak`;
-    return;
+    return setScaleTicks("scale", Math.min(...cuts).toFixed(1), galleryPeak.toFixed(1), COPY.scale.shared(percent));
   }
 
-  minTick.textContent = "cutoff";
-  maxTick.textContent = "tile peak";
-  caption.textContent = `each tile spans its own top-${percent}% cutoff to its own peak (peaks ${Math.min(...peaks).toFixed(1)}–${galleryPeak.toFixed(1)} here), so colour is not comparable between tiles`;
+  return setScaleTicks("scale", "cutoff", "tile peak",
+                      COPY.scale.perTile(percent, Math.min(...peaks).toFixed(1), galleryPeak.toFixed(1)));
 }
 
 function renderGeneScale(tiles, geneMax) {
@@ -501,11 +474,9 @@ function renderGeneScale(tiles, geneMax) {
   const perTile = controls().normalize === "tile";
   const cells = tiles.reduce((total, tile) => total + (geneStats(tile) || { cells: 0 }).cells, 0);
 
-  document.getElementById("geneScaleMin").textContent = "0";
-  document.getElementById("geneScaleMax").textContent = perTile ? "tile peak" : geneMax.toFixed(1);
-  document.getElementById("geneScaleCaption").textContent = perTile
-    ? `each tile spans 0 to its own ${state.gene} peak (gallery peak ${geneMax.toFixed(1)} log1p CPM per cell, ${cells} cells measured here)`
-    : `one shared scale, 0 to the gallery peak of ${geneMax.toFixed(1)} log1p CPM per cell across ${cells} measured cells`;
+  setScaleTicks("geneScale", "0", perTile ? "tile peak" : geneMax.toFixed(1), perTile
+    ? COPY.scale.genePerTile(state.gene, geneMax.toFixed(1), cells)
+    : COPY.scale.geneShared(geneMax.toFixed(1), cells));
 }
 
 /* ---------- 3D block manifold ---------- */
@@ -584,6 +555,14 @@ function scaleFrom(stops) {
 const ACTIVATION_SCALE = scaleFrom(BLOCK_STOPS);
 const EXPRESSION_SCALE = scaleFrom(GENE_STOPS);
 const MISSING_COLOUR = "#D7D5CE";
+const TISSUE_COLOURS = {
+  Bowel: "#B66D2A",
+  Breast: "#B64B63",
+  Lung: "#4E7D96",
+  Pancreas: "#8667A7",
+  Skin: "#3B8B70",
+  Unknown: MISSING_COLOUR,
+};
 
 // 2nd to 98th percentile, so one hot tile cannot flatten the whole ramp
 function robustRange(values) {
@@ -617,104 +596,70 @@ function tileHover(positions) {
     const row = payload.tile_rows[index];
     const split = tiles.train_row[row] >= 0 ? "training" : "held-out";
 
-    return `${tiles.tile_id[row]}<br>slide ${tiles.slides[tiles.slide_code[row]]} · ${split}`
-      + `<br>block activation ${payload.activation[index]}`;
+    return COPY.hover.tile(tiles.tile_id[row], tiles.slides[tiles.slide_code[row]],
+                          tiles.tissues[tiles.tissue_code[row]], split, payload.activation[index]);
   });
 }
 
-function tileXYZ(positions) {
-  const payload = state.blockManifold;
+// the cross-block map and the tile manifolds both hold parallel x/y/z arrays, so one picker serves both
+function xyz(source, rows) {
+  return { x: subset(source.x, rows), y: subset(source.y, rows), z: subset(source.z, rows) };
+}
 
-  return {
-    x: positions.map((index) => payload.x[index]),
-    y: positions.map((index) => payload.y[index]),
-    z: positions.map((index) => payload.z[index]),
-  };
+// every manifold trace is this same scatter3d shell, so callers pass only what differs
+function markers(name, coords, hover, marker, options) {
+  return Object.assign({ type: "scatter3d", mode: "markers", name: name, ...coords, text: hover,
+                        hoverinfo: "text", marker: marker }, options || {});
+}
+
+// one colourbar spec, so a ramp reads the same wherever it appears
+function colourbar(title) {
+  return { title: { text: title, side: "right", font: { size: 11 } }, thickness: 13, len: 0.62 };
 }
 
 // tiles with no value are drawn in grey rather than dropped, so the shape of the manifold survives
 function tileValueTraces(positions, values, title, scale, missingLabel) {
+  const payload = state.blockManifold;
   const known = positions.filter((index) => values[index] !== null && Number.isFinite(values[index]));
   const missing = positions.filter((index) => values[index] === null || !Number.isFinite(values[index]));
   const [low, high] = robustRange(known.map((index) => values[index]));
   const traces = [];
 
   if (missing.length) {
-    traces.push({
-      type: "scatter3d",
-      mode: "markers",
-      name: `${missingLabel} (${missing.length.toLocaleString()})`,
-      ...tileXYZ(missing),
-      text: tileHover(missing),
-      hoverinfo: "text",
-      marker: { size: 2.2, color: MISSING_COLOUR, opacity: 0.5 },
-    });
+    traces.push(markers(`${missingLabel} (${missing.length.toLocaleString()})`, xyz(payload, missing),
+                       tileHover(missing), { size: 2.2, color: MISSING_COLOUR, opacity: 0.5 }));
   }
 
-  traces.push({
-    type: "scatter3d",
-    mode: "markers",
-    name: title,
-    ...tileXYZ(known),
-    text: tileHover(known),
-    hoverinfo: "text",
-    marker: {
-      size: 3.0,
-      color: known.map((index) => values[index]),
-      colorscale: scale,
-      cmin: low,
-      cmax: high,
-      opacity: 0.9,
-      colorbar: { title: { text: title, side: "right", font: { size: 11 } }, thickness: 13, len: 0.62 },
-    },
-    showlegend: false,
-  });
+  traces.push(markers(title, xyz(payload, known), tileHover(known), {
+    size: 3.0,
+    color: known.map((index) => values[index]),
+    colorscale: scale,
+    cmin: low,
+    cmax: high,
+    opacity: 0.9,
+    colorbar: colourbar(title),
+  }, { showlegend: false }));
 
   return traces;
 }
 
-// one trace per busiest slide, so the eye can tell slide structure from biology
-function slideTraces(positions, topSlides) {
+// one fixed-colour trace per tissue keeps labels comparable across blocks
+function tissueTraces(positions) {
   const payload = state.blockManifold;
   const tiles = state.manifold.tiles;
-  const counts = new Map();
+  const tissueOf = (index) => tiles.tissue_code[payload.tile_rows[index]];
 
-  positions.forEach((index) => {
-    const code = tiles.slide_code[payload.tile_rows[index]];
-    counts.set(code, (counts.get(code) || 0) + 1);
+  const present = [...new Set(positions.map(tissueOf))]
+    .sort((first, second) => tiles.tissues[first].localeCompare(tiles.tissues[second]));
+
+  return present.map((code, position) => {
+    const tissue = tiles.tissues[code];
+    const rows = positions.filter((index) => tissueOf(index) === code);
+    const colour = TISSUE_COLOURS[tissue] || MANIFOLD_PALETTE[position % MANIFOLD_PALETTE.length];
+
+    return markers(`${tissue} (${rows.length.toLocaleString()})`, xyz(payload, rows), tileHover(rows),
+                  { size: 3.0, color: colour, opacity: tissue === "Unknown" ? 0.55 : 0.9 });
   });
-
-  const ordered = [...counts.entries()].sort((first, second) => second[1] - first[1]).slice(0, topSlides).map(([code]) => code);
-  const shown = new Set(ordered);
-  const traces = [];
-
-  const rest = positions.filter((index) => !shown.has(tiles.slide_code[payload.tile_rows[index]]));
-  if (rest.length) {
-    traces.push({
-      type: "scatter3d",
-      mode: "markers",
-      name: `${counts.size - ordered.length} other slides (${rest.length.toLocaleString()})`,
-      ...tileXYZ(rest),
-      text: tileHover(rest),
-      hoverinfo: "text",
-      marker: { size: 2.2, color: MISSING_COLOUR, opacity: 0.55 },
-    });
-  }
-
-  ordered.forEach((code, position) => {
-    const rows = positions.filter((index) => tiles.slide_code[payload.tile_rows[index]] === code);
-    traces.push({
-      type: "scatter3d",
-      mode: "markers",
-      name: `${tiles.slides[code]} (${rows.length.toLocaleString()})`,
-      ...tileXYZ(rows),
-      text: tileHover(rows),
-      hoverinfo: "text",
-      marker: { size: 3.0, color: MANIFOLD_PALETTE[position % MANIFOLD_PALETTE.length], opacity: 0.9 },
-    });
-  });
-
-  return traces;
 }
 
 function pathwayTileValues(positions) {
@@ -754,10 +699,11 @@ function blockHover(indices) {
 
   return indices.map((i) => {
     const code = state.manifold.labels.code[i];
-    const dominant = code >= 0 ? legend[code].name : code === -2 ? "other supported pathway" : "no supported pathway";
-    return `${blocks.dictionaries[blocks.dictionary_code[i]]} · block ${blocks.block[i]}`
-      + `<br>firing fraction ${blocks.firing_fraction[i]}`
-      + `<br>dominant: ${dominant}`;
+    const dominant = code >= 0 ? legend[code].name
+      : code === -2 ? COPY.hover.dominantOther : COPY.hover.dominantNone;
+
+    return COPY.hover.block(blocks.dictionaries[blocks.dictionary_code[i]], blocks.block[i],
+                           blocks.firing_fraction[i], dominant);
   });
 }
 
@@ -789,11 +735,15 @@ function selectedLabel() {
   return `${blocks.dictionaries[blocks.dictionary_code[at]]} #${blocks.block[at]}`;
 }
 
+function blockLabel(block) {
+  return `${block.dictionary} #${block.block}`;
+}
+
 // the card's own name, needed to explain the rare block that transfers but is not in the embedding
 function selectedCardLabel() {
   const block = state.detail.blocks[state.blockIndex];
 
-  return block ? `${block.dictionary} #${block.block}` : null;
+  return block ? blockLabel(block) : null;
 }
 
 // a haloed, labelled, floor-tethered marker, because a thin ring is unfindable among 3,354 points
@@ -802,36 +752,24 @@ function highlightTraces() {
   const at = selectedRow();
   if (at < 0) return [];
 
-  const point = { x: blocks.x[at], y: blocks.y[at], z: blocks.z[at] };
   const label = selectedLabel();
-  const floor = axisRange(blocks.z)[0];
+  const spot = { x: [blocks.x[at]], y: [blocks.y[at]], z: [blocks.z[at]] };
 
   return [{
     type: "scatter3d",
     mode: "lines",
-    x: [point.x, point.x], y: [point.y, point.y], z: [floor, point.z],
+    x: [blocks.x[at], blocks.x[at]], y: [blocks.y[at], blocks.y[at]], z: [axisRange(blocks.z)[0], blocks.z[at]],
     line: { color: HIGHLIGHT, width: 2.5, dash: "dot" },
     hoverinfo: "skip",
     showlegend: false,
-  }, {
-    type: "scatter3d",
-    mode: "markers",
-    x: [point.x], y: [point.y], z: [point.z],
-    marker: { size: 26, color: HIGHLIGHT, opacity: 0.18, line: { width: 0 } },
-    hoverinfo: "skip",
-    showlegend: false,
-  }, {
-    type: "scatter3d",
-    mode: "markers+text",
-    name: `selected block: ${label}`,
-    x: [point.x], y: [point.y], z: [point.z],
-    marker: { size: 13, color: "rgba(0,0,0,0)", line: { color: HIGHLIGHT, width: 3.5 }, symbol: "circle" },
-    text: [label],
-    textposition: "top center",
-    textfont: { size: 12, color: HIGHLIGHT, family: "Inter, system-ui, sans-serif" },
-    hovertemplate: `selected: ${label}<br>firing fraction ${blocks.firing_fraction[at]}<extra></extra>`,
-    showlegend: true,
-  }];
+  },
+  markers("halo", spot, null, { size: 26, color: HIGHLIGHT, opacity: 0.18, line: { width: 0 } },
+         { hoverinfo: "skip", showlegend: false }),
+  markers(`selected block: ${label}`, spot, [label],
+         { size: 13, color: "rgba(0,0,0,0)", line: { color: HIGHLIGHT, width: 3.5 }, symbol: "circle" },
+         { mode: "markers+text", textposition: "top center",
+           textfont: { size: 12, color: HIGHLIGHT, family: "Inter, system-ui, sans-serif" },
+           hovertemplate: COPY.hover.selected(label, blocks.firing_fraction[at]), showlegend: true })];
 }
 
 function subset(values, rows) {
@@ -851,25 +789,16 @@ function continuousTrace(rows, values, title, scale) {
   const picked = subset(values, rows);
   const bound = effectBound(picked);
 
-  return [{
-    type: "scatter3d",
-    mode: "markers",
-    name: title,
-    x: subset(blocks.x, rows), y: subset(blocks.y, rows), z: subset(blocks.z, rows),
-    text: blockHover(rows),
-    hoverinfo: "text",
-    marker: {
-      size: 2.9,
-      color: picked.map((value) => (value === null ? 0 : value)),
-      colorscale: scale || "RdBu",
-      reversescale: Boolean(!scale),
-      cmin: -bound,
-      cmax: bound,
-      opacity: 0.88,
-      colorbar: { title: { text: title, side: "right", font: { size: 11 } }, thickness: 13, len: 0.62 },
-    },
-    showlegend: false,
-  }];
+  return [markers(title, xyz(blocks, rows), blockHover(rows), {
+    size: 2.9,
+    color: picked.map((value) => (value === null ? 0 : value)),
+    colorscale: scale || "RdBu",
+    reversescale: Boolean(!scale),
+    cmin: -bound,
+    cmax: bound,
+    opacity: 0.88,
+    colorbar: colourbar(title),
+  }, { showlegend: false })];
 }
 
 function dominantTraces(rows) {
@@ -879,29 +808,16 @@ function dominantTraces(rows) {
 
   const background = rows.filter((index) => labels.code[index] < 0);
   if (background.length) {
-    traces.push({
-      type: "scatter3d",
-      mode: "markers",
-      name: `no dominant pathway (${background.length})`,
-      x: subset(blocks.x, background), y: subset(blocks.y, background), z: subset(blocks.z, background),
-      text: blockHover(background),
-      hoverinfo: "text",
-      marker: { size: 2.0, color: "#D7D5CE", opacity: 0.5 },
-    });
+    traces.push(markers(`no dominant pathway (${background.length})`, xyz(blocks, background),
+                       blockHover(background), { size: 2.0, color: MISSING_COLOUR, opacity: 0.5 }));
   }
 
   labels.legend.forEach((entry, code) => {
     const rowsFor = rows.filter((index) => labels.code[index] === code);
     if (!rowsFor.length) return;
-    traces.push({
-      type: "scatter3d",
-      mode: "markers",
-      name: `${entry.name.slice(0, 38)} (${rowsFor.length})`,
-      x: subset(blocks.x, rowsFor), y: subset(blocks.y, rowsFor), z: subset(blocks.z, rowsFor),
-      text: blockHover(rowsFor),
-      hoverinfo: "text",
-      marker: { size: 3.4, color: MANIFOLD_PALETTE[code % MANIFOLD_PALETTE.length], opacity: 0.92 },
-    });
+
+    traces.push(markers(`${entry.name.slice(0, 38)} (${rowsFor.length})`, xyz(blocks, rowsFor), blockHover(rowsFor),
+                       { size: 3.4, color: MANIFOLD_PALETTE[code % MANIFOLD_PALETTE.length], opacity: 0.92 }));
   });
 
   return traces;
@@ -911,24 +827,15 @@ function dictionaryTrace(rows) {
   const blocks = state.manifold.blocks;
   const layers = subset(blocks.layer, rows);
 
-  return [{
-    type: "scatter3d",
-    mode: "markers",
-    name: "layer",
-    x: subset(blocks.x, rows), y: subset(blocks.y, rows), z: subset(blocks.z, rows),
-    text: blockHover(rows),
-    hoverinfo: "text",
-    marker: {
-      size: 2.9,
-      color: layers,
-      colorscale: "Viridis",
-      cmin: Math.min(...layers),
-      cmax: Math.max(...layers),
-      opacity: 0.88,
-      colorbar: { title: { text: "encoder layer", side: "right", font: { size: 11 } }, thickness: 13, len: 0.62 },
-    },
-    showlegend: false,
-  }];
+  return [markers("layer", xyz(blocks, rows), blockHover(rows), {
+    size: 2.9,
+    color: layers,
+    colorscale: "Viridis",
+    cmin: Math.min(...layers),
+    cmax: Math.max(...layers),
+    opacity: 0.88,
+    colorbar: colourbar("encoder layer"),
+  }, { showlegend: false })];
 }
 
 // remember the viewpoint so switching colourings never throws the camera back to default
@@ -938,10 +845,39 @@ function bindCameraMemory(id) {
   });
 }
 
+// both views finish the same way: draw into the one holder, then keep the camera binding alive
+async function paintManifold(traces, title, subtitle, legend, coords) {
+  const holder = document.getElementById("manifoldMain");
+  await Plotly.react(holder, traces, manifoldLayout(title, subtitle, legend, coords), PLOT_CONFIG);
+
+  if (!holder.dataset.bound) {
+    bindCameraMemory("manifoldMain");
+    holder.dataset.bound = "1";
+  }
+}
+
+// a view with nothing to draw replaces the plot with the reason
+function manifoldMessage(text) {
+  const holder = document.getElementById("manifoldMain");
+  Plotly.purge(holder);
+  holder.innerHTML = `<p class="gallery-note" style="padding:16px">${text}</p>`;
+  document.getElementById("manifoldNote").textContent = "";
+}
+
 function activateManifoldTab(view) {
   document.querySelectorAll("#manifoldTabs button").forEach((button) => {
     button.classList.toggle("active", button.dataset.view === view);
   });
+}
+
+// the two views are built from different inputs, so each carries its own construction note
+function syncRecipe() {
+  const cross = state.manifoldView === "cross";
+  document.getElementById("recipeCross").classList.toggle("hidden", !cross);
+  document.getElementById("recipeTile").classList.toggle("hidden", cross);
+  if (cross) return;
+
+  if (state.blockManifold) document.getElementById("recipeGroupSize").textContent = state.blockManifold.group_size;
 }
 
 // the gene tab only exists while a gene the tiles can be coloured by is selected
@@ -963,6 +899,7 @@ async function renderManifold() {
   activateManifoldTab(state.manifoldView);
   document.getElementById("crossControl").classList.toggle("hidden", state.manifoldView !== "cross");
   document.getElementById("scopeControl").classList.toggle("hidden", state.manifoldView === "cross");
+  syncRecipe();
 
   if (state.manifoldView === "cross") return renderCrossBlockMap();
 
@@ -971,25 +908,20 @@ async function renderManifold() {
 
 // the selected block's own manifold: its tiles, embedded from the coordinates that block assigns them
 async function renderBlockManifold(geneAvailable) {
-  const holder = document.getElementById("manifoldMain");
   const note = document.getElementById("manifoldNote");
   const hint = document.getElementById("manifoldHint");
   const card = state.detail.blocks[state.blockIndex];
   const payload = state.blockManifold;
   const entry = state.bundle.pathways[state.pathway];
+  const label = blockLabel(card);
 
   if (!payload) {
-    Plotly.purge(holder);
-    holder.innerHTML = `<p class="gallery-note" style="padding:16px">No tile manifold exported for
-      ${card.dictionary} #${card.block}. Manifolds exist for the ${state.manifold.exported.size} blocks that appear as cards.</p>`;
+    manifoldMessage(COPY.tile.missing(label, state.manifold.exported.size));
     hint.textContent = "";
-    note.textContent = "";
     return;
   }
 
-  const capped = payload.n_tiles >= state.manifold.maxTiles;
-  hint.textContent = `${card.dictionary} #${card.block} · ${payload.n_tiles.toLocaleString()} tiles where this block fires,`
-    + ` embedded from its own ${payload.group_size} coordinates`;
+  hint.textContent = COPY.tile.hint(label, payload.n_tiles.toLocaleString(), payload.group_size);
 
   const positions = tileRows();
   let traces = [];
@@ -1003,70 +935,54 @@ async function renderBlockManifold(geneAvailable) {
     // a slower fetch must not paint over a newer selection
     if (!gene || gene.symbol !== state.gene || state.manifoldView !== "gene") return;
 
-    const values = geneTileValues(positions);
-    traces = tileValueTraces(positions, values, `${state.gene} count`, EXPRESSION_SCALE, "gene not on this slide panel");
-    title = `${state.gene} expression inside ${card.dictionary} #${card.block}`;
-    subtitle = `each point is one tile this block fires on, coloured by measured ${state.gene} counts`;
+    traces = tileValueTraces(positions, geneTileValues(positions), `${state.gene} count`, EXPRESSION_SCALE,
+                            "gene not on this slide panel");
+    title = COPY.tile.gene.title(state.gene, label);
+    subtitle = COPY.tile.gene.subtitle(state.gene);
     legend = true;
-    note.innerHTML = `This is <b>${state.gene}</b> alone on the block's own manifold, so it answers whether the gene
-      separates within the block: if the green tiles occupy one region, this block's ${payload.group_size} coordinates encode
-      something ${state.gene} tracks. Grey tiles come from slides whose panel does not measure it. Switch to
-      <b>Pathway score</b> to compare against the whole ${entry.name} set on the same tile positions.`;
+    note.innerHTML = COPY.tile.gene.note(state.gene, payload.group_size, entry.name);
   } else if (state.manifoldView === "activation") {
     traces = tileValueTraces(positions, payload.activation, "block activation", ACTIVATION_SCALE, "no activation");
-    title = `Activation of ${card.dictionary} #${card.block} across its tiles`;
-    subtitle = "gated block norm per tile, the same quantity the tile gallery shows per patch";
-    note.textContent = "Activation magnitude usually varies smoothly across the manifold, so a sharp boundary here means the"
-      + " block's coordinates carry structure beyond how strongly it fires.";
-  } else if (state.manifoldView === "slide") {
-    traces = slideTraces(positions, 10);
-    title = `Slide of origin inside ${card.dictionary} #${card.block}`;
-    subtitle = `${state.manifold.tiles.slides.length} slides contribute tiles; the 10 busiest are coloured`;
+    title = COPY.tile.activation.title(label);
+    subtitle = COPY.tile.activation.subtitle;
+    note.textContent = COPY.tile.activation.note;
+  } else if (state.manifoldView === "tissue") {
+    const tiles = state.manifold.tiles;
+    const present = new Set(positions.map((index) => tiles.tissues[tiles.tissue_code[payload.tile_rows[index]]]));
+
+    traces = tissueTraces(positions);
+    title = COPY.tile.tissue.title(label);
+    subtitle = COPY.tile.tissue.subtitle([...present].filter((tissue) => tissue !== "Unknown").length, tiles.slides.length);
     legend = true;
-    note.textContent = "This is the control view: if a region of the manifold is one slide only, any biology read off that"
-      + " region is slide-specific rather than a property of the block.";
+    note.textContent = COPY.tile.tissue.note;
   } else {
-    if (!state.tilePathway) {
-      Plotly.purge(holder);
-      holder.innerHTML = `<p class="gallery-note" style="padding:16px">No per-tile score exported for ${entry.pathway_id}.</p>`;
-      note.textContent = "";
-      return;
-    }
-    const values = pathwayTileValues(positions);
-    traces = tileValueTraces(positions, values, `${entry.name} score`, "Viridis", "held-out tile, not scored");
-    title = `${entry.name} score inside ${card.dictionary} #${card.block}`;
-    subtitle = `each point is one tile this block fires on, coloured by its ${entry.pathway_id} score`;
+    if (!state.tilePathway) return manifoldMessage(COPY.tile.noScore(entry.pathway_id));
+
+    traces = tileValueTraces(positions, pathwayTileValues(positions), `${entry.name} score`, "Viridis",
+                            "held-out tile, not scored");
+    title = COPY.tile.pathway.title(entry.name, label);
+    subtitle = COPY.tile.pathway.subtitle(entry.pathway_id);
     legend = true;
-    note.innerHTML = `The cloud is the manifold of <b>${card.dictionary} #${card.block}</b> itself: its
-      ${payload.group_size} coordinates over the ${payload.n_tiles.toLocaleString()} tiles where it fires, reduced to 3D. If the
-      pathway score varies along one direction of this cloud, the block resolves that pathway internally rather than merely
-      firing on it.`
-      + (geneAvailable ? ` Click <b>${state.gene} expression</b> to recolour the same tiles by that gene.` : "");
+    note.innerHTML = COPY.tile.pathway.note(label, payload.group_size, payload.n_tiles.toLocaleString())
+      + (geneAvailable ? COPY.tile.pathway.geneSwitch(state.gene) : "");
   }
 
-  if (capped) {
-    note.innerHTML += ` Tiles are capped at ${state.manifold.maxTiles.toLocaleString()} per block, sampled proportionally
-      across the training and held-out splits.`;
+  if (payload.n_tiles >= state.manifold.maxTiles) {
+    note.innerHTML += COPY.tile.capped(state.manifold.maxTiles.toLocaleString());
   }
 
-  await Plotly.react(holder, traces, manifoldLayout(title, subtitle, legend, payload), PLOT_CONFIG);
-
-  if (!holder.dataset.bound) {
-    bindCameraMemory("manifoldMain");
-    holder.dataset.bound = "1";
-  }
+  await paintManifold(traces, title, subtitle, legend, payload);
 }
 
 // the secondary view: one point per block, which compares blocks rather than looking inside one
 async function renderCrossBlockMap() {
-  const holder = document.getElementById("manifoldMain");
   const note = document.getElementById("manifoldNote");
-  const hint = document.getElementById("manifoldHint");
+  const blocks = state.manifold.blocks;
   const entry = state.bundle.pathways[state.pathway];
-  const label = state.bundle.collection_label || "pathway";
+  const collection = state.bundle.collection_label || "pathway";
+  const total = blocks.n_blocks.toLocaleString();
 
-  hint.textContent = `${state.manifold.blocks.n_blocks.toLocaleString()} estimable blocks, one point each, placed by their`
-    + " 1,656-gene training effect signature";
+  document.getElementById("manifoldHint").textContent = COPY.cross.hint(total);
 
   const rows = manifoldRows();
   let traces = [];
@@ -1075,55 +991,47 @@ async function renderCrossBlockMap() {
   let legend = false;
 
   if (state.crossColour === "layer") {
+    const layers = blocks.dictionaries.map((name) => name.split(" ")[0].slice(1)).join(", ");
+
     traces = dictionaryTrace(rows);
-    title = "Cross-block map by encoder layer";
-    subtitle = `every point is one block from one of the ${state.manifold.blocks.dictionaries.length} dictionaries, coloured by the layer that dictionary was fit on`;
-    note.innerHTML = `A block belongs to exactly one dictionary and therefore to exactly one layer, so this colour is a single
-      number per point, not a range. The ${state.manifold.blocks.dictionaries.length} dictionaries were fit independently on
-      layers ${state.manifold.blocks.dictionaries.map((name) => name.split(" ")[0].slice(1)).join(", ")}, each contributing 512
-      blocks. Layer is the dominant structure here: blocks from neighbouring layers land near each other.`;
+    title = COPY.cross.layer.title;
+    subtitle = COPY.cross.layer.subtitle(blocks.dictionaries.length);
+    note.innerHTML = COPY.cross.layer.note(blocks.dictionaries.length, layers);
   } else if (state.crossColour === "gene" && state.gene && state.manifold.genes.has(state.gene)) {
     const coords = await loadJson(`data/manifold/genes/${state.gene}.json`);
     if (state.crossColour !== "gene" || coords.symbol !== state.gene) return;
 
-    const stats = state.manifold.genes.get(state.gene);
     traces = continuousTrace(rows, coords.values, `${state.gene} effect`);
-    title = `${state.gene} effect across blocks`;
-    subtitle = `gene-level training partial effect per block · ${stats.n_supported_blocks} blocks held-out supported`;
-    note.textContent = `Red blocks rise with ${state.gene}, blue fall with it. This is one number per block, so it says which`
-      + ` blocks track the gene, not how the gene separates inside any one of them.`;
+    title = COPY.cross.gene.title(state.gene);
+    subtitle = COPY.cross.gene.subtitle(state.manifold.genes.get(state.gene).n_supported_blocks);
+    note.textContent = COPY.cross.gene.note(state.gene);
   } else if (state.crossColour === "coordinate" && state.manifold.pathway) {
-    traces = continuousTrace(rows, state.manifold.pathway.values, "training effect");
-    title = `${state.manifold.pathway.name} effect across blocks`;
-    subtitle = `training partial effect per block · ${state.manifold.pathway.supported_blocks.length.toLocaleString()} blocks held-out supported`;
-    note.textContent = "Red blocks rise with the pathway score, blue fall with it; grey-white blocks are unrelated to it.";
+    const pathway = state.manifold.pathway;
+
+    traces = continuousTrace(rows, pathway.values, "training effect");
+    title = COPY.cross.pathway.title(pathway.name);
+    subtitle = COPY.cross.pathway.subtitle(pathway.supported_blocks.length.toLocaleString());
+    note.textContent = COPY.cross.pathway.note;
   } else {
     traces = dominantTraces(rows);
-    title = `Dominant held-out-supported ${label} pathway per block`;
-    subtitle = `${state.manifold.labels.legend.length} most frequent pathways coloured, ${state.manifold.labels.n_other} blocks dominated by another`;
+    title = COPY.cross.dominant.title(collection);
+    subtitle = COPY.cross.dominant.subtitle(state.manifold.labels.legend.length, state.manifold.labels.n_other);
     legend = true;
-    note.textContent = "Each block is coloured by the single supported association with the largest absolute held-out effect.";
+    note.textContent = COPY.cross.dominant.note;
   }
 
-  note.innerHTML = `<b>This view is one point per block, not a block's own manifold.</b> It compares blocks by how similarly
-    they respond across the 1,656 genes, so nearby points are blocks with similar gene effects. ` + note.innerHTML;
+  note.innerHTML = COPY.cross.prefix + note.innerHTML;
 
   const marked = highlightTraces();
   const marker = selectedLabel();
   if (marker) {
-    subtitle = `${subtitle} · marked block ${marker}`;
-    note.innerHTML += ` The magenta ring and dotted stem mark <b>${marker}</b>, the block selected in the cards above.`;
+    subtitle = `${subtitle} · ${COPY.cross.markedSubtitle(marker)}`;
+    note.innerHTML += COPY.cross.marked(marker);
   } else {
-    note.innerHTML += ` Nothing is ringed: <b>${selectedCardLabel()}</b> transfers on ${entry.pathway_id} but is not one of the
-      ${state.manifold.blocks.n_blocks.toLocaleString()} estimable blocks here, so it has no position in this map.`;
+    note.innerHTML += COPY.cross.unmarked(selectedCardLabel(), entry.pathway_id, total);
   }
 
-  await Plotly.react(holder, traces.concat(marked), manifoldLayout(title, subtitle, legend || marked.length > 0), PLOT_CONFIG);
-
-  if (!holder.dataset.bound) {
-    bindCameraMemory("manifoldMain");
-    holder.dataset.bound = "1";
-  }
+  await paintManifold(traces.concat(marked), title, subtitle, legend || marked.length > 0);
 }
 
 async function loadManifold() {
@@ -1207,7 +1115,7 @@ function renderGallery() {
   gallery.innerHTML = "";
 
   if (!tiles.length) {
-    note.textContent = "No tiles available for this view.";
+    note.textContent = COPY.gallery.empty;
     return;
   }
 
@@ -1216,15 +1124,15 @@ function renderGallery() {
   renderScaleBar(tiles);
   renderGeneScale(tiles, geneMax);
 
-  const geneNote = state.gene ? ` Green squares show <b>${state.gene}</b> expression in the cells measured inside each tile.` : "";
+  const geneNote = state.gene ? COPY.gallery.geneClause(state.gene) : "";
   note.innerHTML = (state.mode === "score"
-    ? `Tiles ranked by <b>${pathway.name}</b> expression score (training slides), the same six for every block. Blue shows where the selected block <b>${block.dictionary} #${block.block}</b> fires.`
-    : `Tiles ranked by peak patch activation of block <b>${block.dictionary} #${block.block}</b>. Blue lights the strongest ${Math.round(controls().fraction * 100)}% of firing patches on each tile.`) + geneNote;
+    ? COPY.gallery.byScore(pathway.name, blockLabel(block))
+    : COPY.gallery.byBlock(blockLabel(block), Math.round(controls().fraction * 100))) + geneNote;
 
   tiles.forEach((tile) => {
     const card = document.createElement("div");
     card.className = "tile-card";
-    const score = tile.pathway_score === null || tile.pathway_score === undefined ? "&mdash;" : tile.pathway_score.toFixed(3);
+    const score = tileScore(tile);
     const silent = tile.n_firing === 0 ? '<div class="row silent">this block is silent here</div>' : "";
     const coverage = state.mode === "score"
       ? `<div class="row"><span>blocks firing here</span><b>${tile.n_blocks_firing}/${pathway.blocks.length}</b></div>`
@@ -1256,21 +1164,13 @@ function renderGallery() {
 function openModal(tile, block, maxValue, geneMax) {
   const pathway = state.detail;
   document.getElementById("modal").classList.remove("hidden");
-  document.getElementById("modalTitle").textContent = `${block.dictionary} block #${block.block} on ${tile.slide_id} tile ${tile.source_h5_row}`;
-  document.getElementById("modalMeta").innerHTML =
-    `${pathway.name} (${pathway.pathway_id}) &nbsp;·&nbsp; ${tile.tissue} &nbsp;·&nbsp; ${tile.split} split &nbsp;·&nbsp; <code>${tile.sequence_id}</code>`;
+  document.getElementById("modalTitle").textContent = COPY.modal.title(block, tile);
+  document.getElementById("modalMeta").innerHTML = COPY.modal.meta(pathway, tile);
 
   const sorted = tile.patches.slice().sort((a, b) => b - a);
-  document.getElementById("modalStats").innerHTML = `
-    block held-out effect <b>${block.heldout_effect.toFixed(3)}</b> &nbsp;·&nbsp;
-    train effect <b>${block.train_effect.toFixed(3)}</b> &nbsp;·&nbsp;
-    &Delta;R&sup2; <b>${block.delta_r2.toFixed(4)}</b> &nbsp;·&nbsp;
-    tile activity <b>${tile.activity.toFixed(3)}</b> &nbsp;·&nbsp;
-    pathway score <b>${tile.pathway_score === null || tile.pathway_score === undefined ? "—" : tile.pathway_score.toFixed(3)}</b><br />
-    patches firing <b>${tile.n_firing}/${state.bundle.tokens_per_tile}</b> &nbsp;·&nbsp;
-    peak patch norm <b>${tile.max_patch.toFixed(3)}</b> &nbsp;·&nbsp;
-    peak : mean-firing <b>${tile.peak_to_mean.toFixed(2)}&times;</b> &nbsp;·&nbsp;
-    top-5 patch norms <b>${sorted.slice(0, 5).map((v) => v.toFixed(2)).join(", ")}</b>`;
+  const top = sorted.slice(0, 5).map((value) => value.toFixed(2)).join(", ");
+  document.getElementById("modalStats").innerHTML =
+    COPY.modal.stats(block, tile, tileScore(tile), state.bundle.tokens_per_tile, top);
 
   drawTile(document.getElementById("modalRaw"), tile, maxValue, { overlay: false });
   drawTile(document.getElementById("modalOverlay"), tile, maxValue, { opacity: Math.max(controls().opacity, 0.85), grid: true, geneMax: geneMax });
@@ -1283,8 +1183,7 @@ function openModal(tile, block, maxValue, geneMax) {
 
   if (genes) {
     drawGeneHeat(document.getElementById("modalGene"), tile, geneMax);
-    document.getElementById("modalGeneCaption").innerHTML =
-      `${state.gene} per cell &mdash; ${genes.expressing} of ${genes.occupied} measured patches, ${genes.cells} cells, peak ${genes.peak.toFixed(1)}<br />grey = no cell measured, pale = cell without transcript`;
+    document.getElementById("modalGeneCaption").innerHTML = COPY.modal.geneCaption(state.gene, genes);
   }
 }
 
@@ -1295,7 +1194,7 @@ async function reloadAssets() {
   button.disabled = true;
   label.textContent = "refetching…";
 
-  const assets = ["index.html", "app.js", "styles.css", "data/collections.json", `data/${state.slug}/index.json`,
+  const assets = ["index.html", "app.js", "copy.js", "styles.css", "data/collections.json", `data/${state.slug}/index.json`,
     "data/manifold/blocks.json", "data/manifold/genes_index.json", `data/${state.slug}/manifold/labels.json`];
   if (state.pathway !== null) assets.push(`data/${state.slug}/pathways/${state.bundle.pathways[state.pathway].pathway_id}.json`);
 
@@ -1348,13 +1247,29 @@ async function selectCollection(slug) {
 
 function renderBundleLabel() {
   const collection = state.bundle.collection_label || "KEGG";
-  document.getElementById("bundleLabel").textContent =
-    `${state.bundle.label} · ${state.bundle.pathways.length} ${collection} gene sets · ${state.bundle.patch_grid}×${state.bundle.patch_grid} patch grid`;
+  document.getElementById("bundleLabel").textContent = COPY.bundleLabel(state.bundle, collection);
   document.getElementById("sourceNote").textContent = state.bundle.encoder_note;
+}
+
+function toggleSidebar() {
+  const layout = document.querySelector(".layout");
+  const button = document.getElementById("sidebarToggle");
+  const collapsed = layout.classList.toggle("sidebar-collapsed");
+  const visible = !collapsed;
+
+  button.setAttribute("aria-expanded", String(visible));
+  button.title = visible ? "Hide pathway list" : "Show pathway list";
+  document.getElementById("sidebarToggleGlyph").textContent = visible ? "‹" : "›";
+
+  requestAnimationFrame(() => {
+    const plot = document.getElementById("manifoldMain");
+    if (plot && plot.data) Plotly.Plots.resize(plot);
+  });
 }
 
 function bindControls() {
   document.getElementById("search").addEventListener("input", (event) => renderSidebar(event.target.value));
+  document.getElementById("sidebarToggle").addEventListener("click", toggleSidebar);
   document.getElementById("reload").addEventListener("click", reloadAssets);
 
   document.querySelectorAll("#manifoldTabs button").forEach((button) => {
