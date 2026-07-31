@@ -12,11 +12,16 @@ const state = {
   manifold: null,
   manifoldView: "pathway",
   crossColour: "dominant",
-  manifoldCamera: null,
+  manifoldCameras: {},
   blockManifold: null,
   tilePathway: null,
   tileGene: null,
 };
+
+const SIDEBAR_KEY = "interp.sidebarWidth";
+const SIDEBAR_DEFAULT = 288;
+const SIDEBAR_MIN = 200;
+const SIDEBAR_MAX = 620;
 
 // one in-flight promise per URL, so a repeated selection never refetches
 const jsonCache = new Map();
@@ -276,8 +281,7 @@ async function selectPathway(index) {
   document.getElementById("basicCorrelation").classList.add("hidden");
   document.getElementById("geneList").innerHTML = "";
   document.getElementById("blockList").innerHTML = "";
-  document.getElementById("gallery").innerHTML = "";
-  document.getElementById("galleryNote").textContent = COPY.loading;
+  document.getElementById("gallery").innerHTML = `<p class="gallery-note">${COPY.loading}</p>`;
 
   renderSidebar(document.getElementById("search").value);
 
@@ -287,13 +291,11 @@ async function selectPathway(index) {
   if (state.pathway !== index) return;
 
   if (state.detail instanceof Error) {
-    document.getElementById("geneHint").textContent = "";
-    document.getElementById("galleryNote").textContent = COPY.loadFailed(entry.pathway_id, state.detail.message);
+    document.getElementById("gallery").innerHTML = `<p class="gallery-note">${COPY.loadFailed(entry.pathway_id, state.detail.message)}</p>`;
     return;
   }
 
-  // keep a gene selected only while the new pathway also contains it
-  if (state.gene && !state.detail.genes.some((gene) => gene.symbol === state.gene)) state.gene = null;
+  keepGeneIfScored();
 
   renderGenes();
   renderBlocks();
@@ -303,31 +305,31 @@ async function selectPathway(index) {
   if (state.pathway === index) renderManifold();
 }
 
+// a gene overlay only has patch values on tiles whose block offered that gene, so the selection
+// cannot outlive the card that made it
+function keepGeneIfScored() {
+  const block = state.detail.blocks[state.blockIndex];
+  if (state.gene && !block.genes.some((gene) => gene.symbol === state.gene)) {
+    state.gene = null;
+    state.manifoldView = "pathway";
+  }
+}
+
 function renderGenes() {
-  const pathway = state.detail;
+  const block = state.detail.blocks[state.blockIndex];
   const holder = document.getElementById("geneList");
-  const hint = document.getElementById("geneHint");
   holder.innerHTML = "";
 
-  // genes with zero counts everywhere are non-estimable, so they are counted rather than ranked
-  const undetected = pathway.n_undetected_genes ? COPY.genes.undetectedClause(pathway.n_undetected_genes) : "";
+  const strongest = Math.max(...block.genes.map((gene) => gene.clustering));
 
-  if (!pathway.genes.length) {
-    hint.textContent = COPY.genes.noneDetected(pathway.n_pathway_genes);
-    return;
-  }
-
-  hint.textContent = COPY.genes.hint(pathway.genes.length, pathway.n_pathway_genes, undetected);
-  const strongest = Math.max(...pathway.genes.map((gene) => gene.mean));
-
-  pathway.genes.forEach((gene) => {
+  block.genes.forEach((gene) => {
     const chip = document.createElement("div");
     // dashed border marks genes absent from some slide panels
     chip.className = `gene-chip${gene.train_slides < 46 ? " partial" : ""}${state.gene === gene.symbol ? " active" : ""}`;
-    chip.title = COPY.genes.chipTitle(gene);
+    chip.title = COPY.genes.chipTitle(gene, blockLabel(block));
     chip.innerHTML = `
-      <div class="grow"><span class="sym">${gene.symbol}</span><span class="lvl">${gene.mean.toFixed(2)}</span></div>
-      <div class="meter"><span style="width:${strongest > 0 ? (gene.mean / strongest) * 100 : 0}%"></span></div>`;
+      <div class="grow"><span class="sym">${gene.symbol}</span><span class="lvl">${gene.clustering.toFixed(2)} ${gene.activation_r >= 0 ? "↑" : "↓"}</span></div>
+      <div class="meter"><span style="width:${strongest > 0 ? (gene.clustering / strongest) * 100 : 0}%"></span></div>`;
     chip.addEventListener("click", () => {
       state.gene = state.gene === gene.symbol ? null : gene.symbol;
 
@@ -340,20 +342,6 @@ function renderGenes() {
     });
     holder.appendChild(chip);
   });
-
-  renderGeneNote();
-}
-
-function renderGeneNote() {
-  const note = document.getElementById("geneNote");
-
-  if (!state.gene) {
-    note.classList.add("hidden");
-    return;
-  }
-
-  note.classList.remove("hidden");
-  note.innerHTML = COPY.genes.overlay(state.gene);
 }
 
 function renderBasicCorrelation() {
@@ -392,19 +380,23 @@ function renderBlocks() {
     const width = strongest > 0 ? (Math.abs(block.heldout_effect) / strongest) * 100 : 0;
     card.innerHTML = `
       <div class="bhead">
-        <span class="dict">${block.dictionary}</span>
         <span class="bid">#${block.block}</span>
       </div>
       <table>
-        <tr><td>effect on held-out tiles</td><td class="val">${block.heldout_effect.toFixed(3)}</td></tr>
-        <tr><td>effect on training tiles</td><td class="val">${block.train_effect.toFixed(3)}</td></tr>
-        <tr><td>&Delta;R&sup2;</td><td class="val">${block.delta_r2.toFixed(4)}</td></tr>
-        <tr><td>firing frac.</td><td class="val">${block.firing_fraction.toFixed(3)}</td></tr>
+        <tr title="${COPY.blocks.heldoutR}"><td>held-out r</td><td class="val">${block.heldout_effect.toFixed(3)}</td></tr>
+        <tr title="${COPY.blocks.trainR}"><td>training r</td><td class="val">${block.train_effect.toFixed(3)}</td></tr>
+        <tr title="${COPY.blocks.deltaR2}"><td>&Delta;R&sup2; held-out</td><td class="val">${block.delta_r2.toFixed(4)}</td></tr>
+        <tr title="${COPY.blocks.firing}"><td>firing frac.</td><td class="val">${block.firing_fraction.toFixed(3)}</td></tr>
       </table>
       <div class="bar"><span style="width:${width}%"></span></div>`;
     card.addEventListener("click", async () => {
       state.blockIndex = index;
+
+      // the cards rank genes inside this block, so a gene the new block cannot score is dropped
+      keepGeneIfScored();
+
       renderBlocks();
+      renderGenes();
       renderGallery();
 
       // the manifold belongs to this block, so selecting a card loads a different embedding
@@ -434,33 +426,28 @@ function tileScore(tile) {
   return tile.pathway_score === null || tile.pathway_score === undefined ? "n/a" : tile.pathway_score.toFixed(3);
 }
 
-// both ramps label their two ends and caption themselves, from the same three elements
-function setScaleTicks(prefix, low, high, caption) {
+// both ramps label their two ends, from the same two elements
+function setScaleTicks(prefix, low, high) {
   document.getElementById(`${prefix}Min`).textContent = low;
   document.getElementById(`${prefix}Max`).textContent = high;
-  document.getElementById(`${prefix}Caption`).textContent = caption;
 }
 
 // label the ramp with the values its two ends actually correspond to
 function renderScaleBar(tiles) {
   const current = controls();
-  const percent = Math.round(current.fraction * 100);
   const peaks = tiles.map((tile) => tile.max_patch).filter((value) => value > 0);
   const cuts = tiles.map((tile) => cutoff(tile, current.fraction)).filter((value) => Number.isFinite(value));
 
-  if (!peaks.length) return setScaleTicks("scale", "", "", COPY.scale.empty);
-
-  const galleryPeak = Math.max(...peaks);
+  if (!peaks.length) return setScaleTicks("scale", "", "");
 
   if (current.normalize === "gallery") {
-    return setScaleTicks("scale", Math.min(...cuts).toFixed(1), galleryPeak.toFixed(1), COPY.scale.shared(percent));
+    return setScaleTicks("scale", Math.min(...cuts).toFixed(1), Math.max(...peaks).toFixed(1));
   }
 
-  return setScaleTicks("scale", "cutoff", "tile peak",
-                      COPY.scale.perTile(percent, Math.min(...peaks).toFixed(1), galleryPeak.toFixed(1)));
+  return setScaleTicks("scale", "cutoff", "tile peak");
 }
 
-function renderGeneScale(tiles, geneMax) {
+function renderGeneScale(geneMax) {
   const holder = document.getElementById("geneScale");
 
   if (!state.gene) {
@@ -471,12 +458,7 @@ function renderGeneScale(tiles, geneMax) {
   holder.classList.remove("hidden");
   document.getElementById("geneScaleName").textContent = state.gene;
 
-  const perTile = controls().normalize === "tile";
-  const cells = tiles.reduce((total, tile) => total + (geneStats(tile) || { cells: 0 }).cells, 0);
-
-  setScaleTicks("geneScale", "0", perTile ? "tile peak" : geneMax.toFixed(1), perTile
-    ? COPY.scale.genePerTile(state.gene, geneMax.toFixed(1), cells)
-    : COPY.scale.geneShared(geneMax.toFixed(1), cells));
+  setScaleTicks("geneScale", "0", controls().normalize === "tile" ? "tile peak" : geneMax.toFixed(1));
 }
 
 /* ---------- 3D block manifold ---------- */
@@ -512,8 +494,24 @@ function manifoldAxis(title, values) {
   };
 }
 
-function manifoldLayout(title, subtitle, showLegend, coords) {
+// a legend of many categories cannot sit over the cube, so it claims a band on the left and the cube keeps the middle
+const LEGEND_WIDTH = 290;
+
+// the axis titles and ticks are drawn outside the cube, so the band only takes width they and the cube cannot use
+const AXIS_FURNITURE = 120;
+
+function legendGutter(holder) {
+  const width = holder.clientWidth;
+  const cube = holder.clientHeight - 66;
+  const spare = (width - cube - AXIS_FURNITURE) / 2;
+
+  return Math.min(LEGEND_WIDTH, Math.max(0, spare)) / width;
+}
+
+function manifoldLayout(id, title, subtitle, showLegend, coords) {
   const blocks = coords || state.manifold.blocks;
+  const banded = showLegend === "gutter";
+  const gutter = banded ? legendGutter(document.getElementById(id)) : 0;
 
   return {
     title: {
@@ -527,17 +525,20 @@ function manifoldLayout(title, subtitle, showLegend, coords) {
       yaxis: manifoldAxis("UMAP 2", blocks.y),
       zaxis: manifoldAxis("UMAP 3", blocks.z),
       aspectmode: "cube",
-      camera: state.manifoldCamera || { eye: { x: 1.45, y: 1.45, z: 1.05 } },
+      camera: state.manifoldCameras[id] || { eye: { x: 1.45, y: 1.45, z: 1.05 } },
+      domain: { x: [gutter, 1 - gutter], y: [0, 1] },
     },
     showlegend: Boolean(showLegend),
     legend: {
       itemsizing: "constant",
       font: { size: 10.5 },
-      bgcolor: "rgba(255,255,255,0.85)",
+      bgcolor: banded ? "#FFFFFF" : "rgba(255,255,255,0.85)",
       bordercolor: "#DEDCD4",
       borderwidth: 1,
-      x: 0.01,
-      y: 0.99,
+      x: banded ? 0 : 0.01,
+      xanchor: "left",
+      y: banded ? 0.5 : 0.99,
+      yanchor: banded ? "middle" : "top",
     },
     margin: { l: 4, r: 4, t: 62, b: 4 },
     paper_bgcolor: "#FFFFFF",
@@ -552,7 +553,6 @@ function scaleFrom(stops) {
   return stops.map((stop, index) => [index / (stops.length - 1), `rgb(${stop[0]},${stop[1]},${stop[2]})`]);
 }
 
-const ACTIVATION_SCALE = scaleFrom(BLOCK_STOPS);
 const EXPRESSION_SCALE = scaleFrom(GENE_STOPS);
 const MISSING_COLOUR = "#D7D5CE";
 const TISSUE_COLOURS = {
@@ -702,8 +702,7 @@ function blockHover(indices) {
     const dominant = code >= 0 ? legend[code].name
       : code === -2 ? COPY.hover.dominantOther : COPY.hover.dominantNone;
 
-    return COPY.hover.block(blocks.dictionaries[blocks.dictionary_code[i]], blocks.block[i],
-                           blocks.firing_fraction[i], dominant);
+    return COPY.hover.block(blocks.block[i], blocks.firing_fraction[i], dominant);
   });
 }
 
@@ -728,15 +727,14 @@ function selectedRow() {
 }
 
 function selectedLabel() {
-  const blocks = state.manifold.blocks;
   const at = selectedRow();
   if (at < 0) return null;
 
-  return `${blocks.dictionaries[blocks.dictionary_code[at]]} #${blocks.block[at]}`;
+  return `block #${state.manifold.blocks.block[at]}`;
 }
 
 function blockLabel(block) {
-  return `${block.dictionary} #${block.block}`;
+  return `block #${block.block}`;
 }
 
 // the card's own name, needed to explain the rare block that transfers but is not in the embedding
@@ -838,29 +836,42 @@ function dictionaryTrace(rows) {
   }, { showlegend: false })];
 }
 
-// remember the viewpoint so switching colourings never throws the camera back to default
+const MANIFOLD_PLOTS = ["manifoldMain", "manifoldSide"];
+
+// each plot rotates alone, so its viewpoint survives a recolouring without touching its neighbour
 function bindCameraMemory(id) {
   document.getElementById(id).on("plotly_relayout", (event) => {
-    if (event["scene.camera"]) state.manifoldCamera = event["scene.camera"];
+    if (event["scene.camera"]) state.manifoldCameras[id] = event["scene.camera"];
   });
 }
 
-// both views finish the same way: draw into the one holder, then keep the camera binding alive
-async function paintManifold(traces, title, subtitle, legend, coords) {
-  const holder = document.getElementById("manifoldMain");
-  await Plotly.react(holder, traces, manifoldLayout(title, subtitle, legend, coords), PLOT_CONFIG);
+// both views finish the same way: draw into one holder, then keep the camera binding alive
+async function paintManifold(id, traces, title, subtitle, legend, coords) {
+  const holder = document.getElementById(id);
+
+  // an earlier message left plain markup behind, which react would draw around
+  if (!holder.dataset.bound) holder.innerHTML = "";
+
+  await Plotly.react(holder, traces, manifoldLayout(id, title, subtitle, legend, coords), PLOT_CONFIG);
+
+  // pairing changes the holder's width without a window resize, so the drawing has to be told to refill it
+  Plotly.Plots.resize(holder);
 
   if (!holder.dataset.bound) {
-    bindCameraMemory("manifoldMain");
+    bindCameraMemory(id);
     holder.dataset.bound = "1";
   }
 }
 
-// a view with nothing to draw replaces the plot with the reason
+// a view with nothing to draw replaces the plots with the reason
 function manifoldMessage(text) {
-  const holder = document.getElementById("manifoldMain");
-  Plotly.purge(holder);
-  holder.innerHTML = `<p class="gallery-note" style="padding:16px">${text}</p>`;
+  MANIFOLD_PLOTS.forEach((id) => {
+    const holder = document.getElementById(id);
+    Plotly.purge(holder);
+    delete holder.dataset.bound;
+    holder.innerHTML = id === "manifoldMain" ? `<p class="gallery-note" style="padding:16px">${text}</p>` : "";
+  });
+
   document.getElementById("manifoldNote").textContent = "";
 }
 
@@ -875,9 +886,6 @@ function syncRecipe() {
   const cross = state.manifoldView === "cross";
   document.getElementById("recipeCross").classList.toggle("hidden", !cross);
   document.getElementById("recipeTile").classList.toggle("hidden", cross);
-  if (cross) return;
-
-  if (state.blockManifold) document.getElementById("recipeGroupSize").textContent = state.blockManifold.group_size;
 }
 
 // the gene tab only exists while a gene the tiles can be coloured by is selected
@@ -896,12 +904,16 @@ async function renderManifold() {
   if (!state.manifold || !state.detail) return;
 
   const geneAvailable = syncGeneTab();
+  const cross = state.manifoldView === "cross";
   activateManifoldTab(state.manifoldView);
-  document.getElementById("crossControl").classList.toggle("hidden", state.manifoldView !== "cross");
-  document.getElementById("scopeControl").classList.toggle("hidden", state.manifoldView === "cross");
+  document.getElementById("crossControl").classList.toggle("hidden", !cross);
+  document.getElementById("scopeControl").classList.toggle("hidden", cross);
+
+  // the cross-block map is one map of its own, so only the tile views come as a pair
+  document.getElementById("manifoldFrame").classList.toggle("paired", !cross);
   syncRecipe();
 
-  if (state.manifoldView === "cross") return renderCrossBlockMap();
+  if (cross) return renderCrossBlockMap();
 
   return renderBlockManifold(geneAvailable);
 }
@@ -909,7 +921,6 @@ async function renderManifold() {
 // the selected block's own manifold: its tiles, embedded from the coordinates that block assigns them
 async function renderBlockManifold(geneAvailable) {
   const note = document.getElementById("manifoldNote");
-  const hint = document.getElementById("manifoldHint");
   const card = state.detail.blocks[state.blockIndex];
   const payload = state.blockManifold;
   const entry = state.bundle.pathways[state.pathway];
@@ -917,11 +928,8 @@ async function renderBlockManifold(geneAvailable) {
 
   if (!payload) {
     manifoldMessage(COPY.tile.missing(label, state.manifold.exported.size));
-    hint.textContent = "";
     return;
   }
-
-  hint.textContent = COPY.tile.hint(label, payload.n_tiles.toLocaleString(), payload.group_size);
 
   const positions = tileRows();
   let traces = [];
@@ -937,33 +945,19 @@ async function renderBlockManifold(geneAvailable) {
 
     traces = tileValueTraces(positions, geneTileValues(positions), `${state.gene} count`, EXPRESSION_SCALE,
                             "gene not on this slide panel");
-    title = COPY.tile.gene.title(state.gene, label);
-    subtitle = COPY.tile.gene.subtitle(state.gene);
+    title = COPY.tile.gene.title(state.gene);
+    subtitle = COPY.tile.gene.subtitle(label);
     legend = true;
-    note.innerHTML = COPY.tile.gene.note(state.gene, payload.group_size, entry.name);
-  } else if (state.manifoldView === "activation") {
-    traces = tileValueTraces(positions, payload.activation, "block activation", ACTIVATION_SCALE, "no activation");
-    title = COPY.tile.activation.title(label);
-    subtitle = COPY.tile.activation.subtitle;
-    note.textContent = COPY.tile.activation.note;
-  } else if (state.manifoldView === "tissue") {
-    const tiles = state.manifold.tiles;
-    const present = new Set(positions.map((index) => tiles.tissues[tiles.tissue_code[payload.tile_rows[index]]]));
-
-    traces = tissueTraces(positions);
-    title = COPY.tile.tissue.title(label);
-    subtitle = COPY.tile.tissue.subtitle([...present].filter((tissue) => tissue !== "Unknown").length, tiles.slides.length);
-    legend = true;
-    note.textContent = COPY.tile.tissue.note;
+    note.innerHTML = COPY.tile.gene.note(state.gene, entry.name);
   } else {
     if (!state.tilePathway) return manifoldMessage(COPY.tile.noScore(entry.pathway_id));
 
-    traces = tileValueTraces(positions, pathwayTileValues(positions), `${entry.name} score`, "Viridis",
+    traces = tileValueTraces(positions, pathwayTileValues(positions), "pathway score", "Viridis",
                             "held-out tile, not scored");
-    title = COPY.tile.pathway.title(entry.name, label);
-    subtitle = COPY.tile.pathway.subtitle(entry.pathway_id);
+    title = COPY.tile.pathway.title(entry.name);
+    subtitle = COPY.tile.pathway.subtitle(label, entry.pathway_id);
     legend = true;
-    note.innerHTML = COPY.tile.pathway.note(label, payload.group_size, payload.n_tiles.toLocaleString())
+    note.innerHTML = COPY.tile.pathway.note(payload.n_tiles.toLocaleString())
       + (geneAvailable ? COPY.tile.pathway.geneSwitch(state.gene) : "");
   }
 
@@ -971,7 +965,18 @@ async function renderBlockManifold(geneAvailable) {
     note.innerHTML += COPY.tile.capped(state.manifold.maxTiles.toLocaleString());
   }
 
-  await paintManifold(traces, title, subtitle, legend, payload);
+  await paintManifold("manifoldMain", traces, title, subtitle, legend, payload);
+  await paintTissue(positions, payload);
+}
+
+// the right-hand plot: the same tile positions, coloured by the slide's tissue of origin
+async function paintTissue(positions, payload) {
+  const tiles = state.manifold.tiles;
+  const present = new Set(positions.map((index) => tiles.tissues[tiles.tissue_code[payload.tile_rows[index]]]));
+  const known = [...present].filter((tissue) => tissue !== "Unknown").length;
+
+  await paintManifold("manifoldSide", tissueTraces(positions), COPY.tile.tissue.title,
+                     COPY.tile.tissue.subtitle(known, tiles.slides.length), true, payload);
 }
 
 // the secondary view: one point per block, which compares blocks rather than looking inside one
@@ -981,8 +986,6 @@ async function renderCrossBlockMap() {
   const entry = state.bundle.pathways[state.pathway];
   const collection = state.bundle.collection_label || "pathway";
   const total = blocks.n_blocks.toLocaleString();
-
-  document.getElementById("manifoldHint").textContent = COPY.cross.hint(total);
 
   const rows = manifoldRows();
   let traces = [];
@@ -995,8 +998,8 @@ async function renderCrossBlockMap() {
 
     traces = dictionaryTrace(rows);
     title = COPY.cross.layer.title;
-    subtitle = COPY.cross.layer.subtitle(blocks.dictionaries.length);
-    note.innerHTML = COPY.cross.layer.note(blocks.dictionaries.length, layers);
+    subtitle = COPY.cross.layer.subtitle;
+    note.innerHTML = COPY.cross.layer.note(layers);
   } else if (state.crossColour === "gene" && state.gene && state.manifold.genes.has(state.gene)) {
     const coords = await loadJson(`data/manifold/genes/${state.gene}.json`);
     if (state.crossColour !== "gene" || coords.symbol !== state.gene) return;
@@ -1016,7 +1019,7 @@ async function renderCrossBlockMap() {
     traces = dominantTraces(rows);
     title = COPY.cross.dominant.title(collection);
     subtitle = COPY.cross.dominant.subtitle(state.manifold.labels.legend.length, state.manifold.labels.n_other);
-    legend = true;
+    legend = "gutter";
     note.textContent = COPY.cross.dominant.note;
   }
 
@@ -1031,7 +1034,7 @@ async function renderCrossBlockMap() {
     note.innerHTML += COPY.cross.unmarked(selectedCardLabel(), entry.pathway_id, total);
   }
 
-  await paintManifold(traces.concat(marked), title, subtitle, legend || marked.length > 0);
+  await paintManifold("manifoldMain", traces.concat(marked), title, subtitle, legend || marked.length > 0);
 }
 
 async function loadManifold() {
@@ -1111,23 +1114,17 @@ function renderGallery() {
   const pathway = state.detail;
   const { tiles, block } = activeTiles();
   const gallery = document.getElementById("gallery");
-  const note = document.getElementById("galleryNote");
   gallery.innerHTML = "";
 
   if (!tiles.length) {
-    note.textContent = COPY.gallery.empty;
+    gallery.innerHTML = `<p class="gallery-note">${COPY.gallery.empty}</p>`;
     return;
   }
 
   const maxValue = Math.max(...tiles.map((t) => t.max_patch));
   const geneMax = state.gene ? Math.max(0, ...tiles.map((tile) => (geneStats(tile) || { peak: 0 }).peak)) : 0;
   renderScaleBar(tiles);
-  renderGeneScale(tiles, geneMax);
-
-  const geneNote = state.gene ? COPY.gallery.geneClause(state.gene) : "";
-  note.innerHTML = (state.mode === "score"
-    ? COPY.gallery.byScore(pathway.name, blockLabel(block))
-    : COPY.gallery.byBlock(blockLabel(block), Math.round(controls().fraction * 100))) + geneNote;
+  renderGeneScale(geneMax);
 
   tiles.forEach((tile) => {
     const card = document.createElement("div");
@@ -1189,10 +1186,7 @@ function openModal(tile, block, maxValue, geneMax) {
 
 // re-fetch the scripts, styles and data past the browser cache, then reload with the fresh copies
 async function reloadAssets() {
-  const button = document.getElementById("reload");
-  const label = document.getElementById("reloadLabel");
-  button.disabled = true;
-  label.textContent = "refetching…";
+  document.getElementById("reload").disabled = true;
 
   const assets = ["index.html", "app.js", "copy.js", "styles.css", "data/collections.json", `data/${state.slug}/index.json`,
     "data/manifold/blocks.json", "data/manifold/genes_index.json", `data/${state.slug}/manifold/labels.json`];
@@ -1236,7 +1230,6 @@ async function selectCollection(slug) {
   state.bundle = await loadJson(`data/${slug}/index.json`);
   await loadManifold();
   renderCollectionTabs();
-  renderBundleLabel();
   renderSidebar(document.getElementById("search").value);
 
   // gene sets do not carry across collections, so fall back to the strongest one
@@ -1245,10 +1238,11 @@ async function selectCollection(slug) {
   if (state.bundle.pathways.length) selectPathway(same >= 0 ? same : 0);
 }
 
-function renderBundleLabel() {
-  const collection = state.bundle.collection_label || "KEGG";
-  document.getElementById("bundleLabel").textContent = COPY.bundleLabel(state.bundle, collection);
-  document.getElementById("sourceNote").textContent = state.bundle.encoder_note;
+function resizeManifold() {
+  requestAnimationFrame(() => {
+    MANIFOLD_PLOTS.map((id) => document.getElementById(id)).filter((plot) => plot && plot.data)
+      .forEach((plot) => Plotly.Plots.resize(plot));
+  });
 }
 
 function toggleSidebar() {
@@ -1261,15 +1255,51 @@ function toggleSidebar() {
   button.title = visible ? "Hide pathway list" : "Show pathway list";
   document.getElementById("sidebarToggleGlyph").textContent = visible ? "‹" : "›";
 
-  requestAnimationFrame(() => {
-    const plot = document.getElementById("manifoldMain");
-    if (plot && plot.data) Plotly.Plots.resize(plot);
+  resizeManifold();
+}
+
+function setSidebarWidth(width, remember) {
+  const clamped = Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, Math.round(width)));
+  document.querySelector(".layout").style.setProperty("--sidebar-width", `${clamped}px`);
+
+  if (remember) localStorage.setItem(SIDEBAR_KEY, String(clamped));
+
+  resizeManifold();
+}
+
+function bindSidebarResize() {
+  const handle = document.getElementById("sidebarResize");
+  const stored = Number(localStorage.getItem(SIDEBAR_KEY));
+
+  if (stored) setSidebarWidth(stored, false);
+
+  handle.addEventListener("pointerdown", (event) => {
+    const origin = document.getElementById("pathwaySidebar").getBoundingClientRect().left;
+
+    handle.classList.add("dragging");
+    document.body.classList.add("resizing");
+    event.preventDefault();
+
+    const drag = (move) => setSidebarWidth(move.clientX - origin, false);
+    const stop = (up) => {
+      window.removeEventListener("pointermove", drag);
+      window.removeEventListener("pointerup", stop);
+      handle.classList.remove("dragging");
+      document.body.classList.remove("resizing");
+      setSidebarWidth(up.clientX - origin, true);
+    };
+
+    window.addEventListener("pointermove", drag);
+    window.addEventListener("pointerup", stop);
   });
+
+  handle.addEventListener("dblclick", () => setSidebarWidth(SIDEBAR_DEFAULT, true));
 }
 
 function bindControls() {
   document.getElementById("search").addEventListener("input", (event) => renderSidebar(event.target.value));
   document.getElementById("sidebarToggle").addEventListener("click", toggleSidebar);
+  bindSidebarResize();
   document.getElementById("reload").addEventListener("click", reloadAssets);
 
   document.querySelectorAll("#manifoldTabs button").forEach((button) => {
@@ -1325,7 +1355,6 @@ async function init() {
   await loadManifold();
 
   renderCollectionTabs();
-  renderBundleLabel();
   renderSidebar("");
   bindControls();
   if (state.bundle.pathways.length) selectPathway(0);

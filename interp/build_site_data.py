@@ -15,6 +15,13 @@ BLOCKS_PER_DICTIONARY = 512
 TOKENS_PER_TILE = 196
 PATCH_GRID = 14
 
+# gene cards are ranked by clustering over a block's own tile geometry; a gene too sparsely
+# detected inside that block cannot support the statistic, so it is dropped rather than ranked last
+GENE_NEIGHBOURS = 10
+MIN_GENE_MEASURED_TILES = 500
+MIN_GENE_NONZERO_TILES = 40
+MIN_GENE_DETECTION = 0.03
+
 DEFAULT_XENIUM = "/home/viraj/silico-folder/data/spatial_shards_hest_v1/xenium"
 DEFAULT_OUT = "/home/viraj/yrraadi-io.github.io/interp"
 
@@ -319,48 +326,206 @@ def load_activity(root, task_index, cache):
     return cache[task_index]
 
 
-def load_pathway_genes(root, limit):
+def gene_reference_table(root):
 
-    """Rank each pathway's measured genes by mean training expression.
-
-    Expression is the pipeline's ``log1p(raw_count / library_size * 1e6)`` transform, and the
-    per-gene mean is the same one used to standardize genes when building pathway scores.
+    """Load the per-gene expression scale and panel coverage the cards report alongside clustering.
 
     Args:
         root (Path): Gene/pathway analysis output root.
-        limit (int): Genes to keep per pathway.
-
-    Genes the pipeline marks non-estimable (zero counts everywhere, hence a NaN standard deviation)
-    are excluded from the ranking and counted separately, matching their exclusion from pathway scores.
 
     Returns:
-        dict: pathway id -> {"genes": list of gene records, "n_genes": int measured gene count,
-            "n_undetected": int genes never detected in training tiles}.
+        pandas.DataFrame: indexed by axis_index with gene_symbol, mean, std, and the number of
+            training and held-out slides whose panel measures the gene
     """
 
-    sets = pd.read_parquet(root / "expanded_kegg_gene_sets.parquet")
     axis = pd.read_parquet(root / "gene_axis_resolved.parquet", columns=["axis_index", "gene_symbol", "measured_train_slides", "measured_heldout_slides"])
     params = pd.read_parquet(root / "gene_score_parameters_train.parquet")
 
-    table = axis.merge(params, on="axis_index", how="left").set_index("axis_index")
+    return axis.merge(params, on="axis_index", how="left").set_index("axis_index")
+
+
+def tile_gene_expression(root):
+
+    """Rebuild the per-tile gene expression the association analysis was fit on.
+
+    Mirrors the pipeline transform, ``log1p(raw_count / raw_library_size * 1e6)``, and blanks every
+    value the analysis could not use: panel entries a slide never measured, QC-failed tiles, and
+    tiles with an empty library. Blanks stay NaN so they are excluded rather than read as zero.
+
+    Args:
+        root (Path): Gene/pathway analysis output root.
+
+    Returns:
+        tuple: (tile ids [n_tiles] str, slide ordinals [n_tiles] int,
+            expression [n_tiles, gene_axis] float32 with NaN where unusable)
+    """
+
+    covariates = pd.read_parquet(root / "tile_covariates.parquet", columns=["tile_id", "slide_id", "raw_library_size", "qc_eligible"])
+    counts = pd.read_parquet(root / "tile_gene_counts.parquet", columns=["tile_id", "count", "measured"])
+
+    covariates["tile_id"] = covariates["tile_id"].astype(str)
+    counts["tile_id"] = counts["tile_id"].astype(str)
+    counts = counts.set_index("tile_id").loc[covariates["tile_id"]].reset_index()
+
+    # shape: [n_tiles, gene_axis]
+    raw = np.vstack(counts["count"].to_numpy()).astype(np.float32)
+    measured = np.vstack(counts["measured"].to_numpy())
+
+    library = covariates["raw_library_size"].to_numpy(float)
+    expression = np.log1p(np.divide(raw * 1e6, library[:, None], out=np.full(raw.shape, np.nan, dtype=np.float32), where=library[:, None] > 0))
+    expression[~measured] = np.nan
+    expression[~covariates["qc_eligible"].to_numpy()] = np.nan
+
+    return covariates["tile_id"].to_numpy(), pd.factorize(covariates["slide_id"].to_numpy())[0], expression
+
+
+def manifold_clustering(values, neighbours, slides):
+
+    """Score how tightly one gene's expression clusters over a block's own tile geometry.
+
+    The statistic is Moran's I on the block's nearest-neighbour graph: the mean product of
+    standardized expression between a tile and its neighbours. It is high when tiles that agree on
+    the gene sit together in the coordinates this block assigns them. The slide-centred variant
+    removes each slide's mean first, which separates real within-slide structure from the fact that
+    one slide's tiles both cluster in the block's space and share a expression level.
+
+    Args:
+        values (numpy.ndarray): Gene expression per block tile [n_tiles], NaN where unusable.
+        neighbours (numpy.ndarray): Neighbour row indices [n_tiles, GENE_NEIGHBOURS].
+        slides (numpy.ndarray): Slide ordinal per block tile [n_tiles].
+
+    Returns:
+        tuple: (Moran's I float, slide-centred Moran's I float)
+    """
+
+    scores = []
+    for centred in (False, True):
+        series = values.astype(np.float64)
+
+        if centred:
+            usable = np.isfinite(series)
+            total = np.bincount(slides[usable], weights=series[usable], minlength=slides.max() + 1)
+            seen = np.bincount(slides[usable], minlength=slides.max() + 1)
+            series = series - np.where(seen > 0, total / np.maximum(seen, 1), 0.0)[slides]
+
+        standard = (series - np.nanmean(series)) / np.nanstd(series)
+        scores.append(float(np.nanmean(standard[:, None] * standard[neighbours])))
+
+    return scores[0], scores[1]
+
+
+def block_gene_ranking(root, profile, payload, limit):
+
+    """Rank every displayed block's pathway genes by how tightly they cluster inside that block.
+
+    A block's manifold is its own coordinate space: the ``group_size`` numbers it assigns each tile
+    it fires on. Ranking there answers which of a pathway's genes the block separates internally,
+    rather than which are simply abundant, so the cards change with the selected block.
+
+    Args:
+        root (Path): Gene/pathway analysis output root.
+        profile (dict): Model profile from ``MODELS``.
+        payload (dict): Pathway id -> {"blocks": [...]} from ``collect_tile_requests``.
+        limit (int): Genes to keep per block.
+
+    Returns:
+        dict: (pathway id, block_global_index) -> {"genes": records, "n_scored": int,
+            "n_measured": int}
+    """
+
+    from scipy.spatial import cKDTree
+
+    reference = gene_reference_table(root)
+    sets = pd.read_parquet(root / "expanded_kegg_gene_sets.parquet").set_index("pathway_id")
+    tiles, slides, expression = tile_gene_expression(root)
+
+    # one pass per dictionary: its coordinate cube is far too large to hold for all of them at once
+    work = {}
+    for pathway, entry in payload.items():
+        for block in entry["blocks"]:
+            work.setdefault((block["layer"], block["group_size"]), []).append((pathway, block["block_global_index"], block["block"]))
 
     out = {}
-    for row in sets.itertuples():
-        frame = table.loc[list(row.axis_indices)].reset_index()
-        detected = frame.loc[np.isfinite(frame["mean"]) & np.isfinite(frame["std"]) & (frame["std"] > 0)].sort_values("mean", ascending=False)
+    scored = {}
 
-        genes = [{
-            "symbol": str(item.gene_symbol),
-            "axis_index": int(item.axis_index),
-            "mean": round(float(item.mean), 3),
-            "std": round(float(item.std), 3),
-            "train_slides": int(item.measured_train_slides),
-            "heldout_slides": int(item.measured_heldout_slides),
-        } for item in detected.head(limit).itertuples()]
+    for (layer, group_size), requests in sorted(work.items()):
+        path = root / "tile_block_activity" / f"task_{task_index_of(profile, layer, group_size):02d}.parquet"
+        frame = pd.read_parquet(path, columns=["tile_id", "signed_coordinate_mean", "activity"])
+        frame["tile_id"] = frame["tile_id"].astype(str)
+        frame = frame.set_index("tile_id").loc[tiles].reset_index()
 
-        out[row.pathway_id] = {"genes": genes, "n_genes": int(row.n_measured_genes), "n_undetected": int(len(frame) - len(detected))}
+        # shape: [n_tiles, n_blocks, group_size]
+        cube = np.vstack(frame["signed_coordinate_mean"].to_numpy()).astype(np.float32).reshape(len(frame), -1, group_size)
+        activity = np.vstack(frame["activity"].to_numpy()).astype(np.float32)
+
+        print(f"ranking genes for {len(requests)} block cards on L{layer} gs{group_size}", flush=True)
+
+        for pathway, global_index, local_block in requests:
+            # shape: [n_tiles, group_size]
+            coordinates = cube[:, local_block, :]
+            live = np.flatnonzero(np.abs(coordinates).sum(axis=1) > 0)
+
+            neighbours = cKDTree(coordinates[live]).query(coordinates[live], k=GENE_NEIGHBOURS + 1)[1][:, 1:]
+            firing = activity[live, local_block]
+            here = slides[live]
+
+            genes = []
+            axis_indices = list(sets.at[pathway, "axis_indices"])
+            for axis_index in axis_indices:
+                axis_index = int(axis_index)
+                key = (global_index, axis_index)
+
+                if key not in scored:
+                    scored[key] = score_gene(expression[live, axis_index], neighbours, here, firing, reference.loc[axis_index], axis_index)
+
+                if scored[key]: genes.append(scored[key])
+
+            genes.sort(key=lambda record: -record["clustering"])
+            out[(pathway, global_index)] = {"genes": genes[:limit], "n_scored": len(genes), "n_measured": len(axis_indices)}
+
+        del cube, activity
 
     return out
+
+
+def score_gene(values, neighbours, slides, firing, reference, axis_index):
+
+    """Build one gene card for one block, or nothing when the gene is too sparse to score.
+
+    Args:
+        values (numpy.ndarray): Gene expression over the block's tiles [n_tiles], NaN where unusable.
+        neighbours (numpy.ndarray): Neighbour row indices [n_tiles, GENE_NEIGHBOURS].
+        slides (numpy.ndarray): Slide ordinal per block tile [n_tiles].
+        firing (numpy.ndarray): Block activation per block tile [n_tiles].
+        reference (pandas.Series): This gene's row of ``gene_reference_table``.
+        axis_index (int): Gene axis position.
+
+    Returns:
+        dict: gene card record, or None when the detection floors are not met
+    """
+
+    usable = np.isfinite(values)
+    nonzero = int((values[usable] > 0).sum())
+
+    if usable.sum() < MIN_GENE_MEASURED_TILES or nonzero < MIN_GENE_NONZERO_TILES: return None
+    if nonzero / usable.sum() < MIN_GENE_DETECTION: return None
+
+    clustering, slide_adjusted = manifold_clustering(values, neighbours, slides)
+    activation = np.corrcoef(values[usable], firing[usable])[0, 1] if values[usable].std() > 0 else 0.0
+
+    return {
+        "symbol": str(reference["gene_symbol"]),
+        "axis_index": axis_index,
+        "clustering": round(float(clustering), 3),
+        "clustering_slide_adjusted": round(float(slide_adjusted), 3),
+        "activation_r": round(float(activation), 3),
+        "detection": round(float(nonzero / usable.sum()), 3),
+        "n_tiles": int(usable.sum()),
+        "mean": round(float(reference["mean"]), 3),
+        "std": round(float(reference["std"]), 3),
+        "train_slides": int(reference["measured_train_slides"]),
+        "heldout_slides": int(reference["measured_heldout_slides"]),
+    }
 
 
 def tile_rows(identity):
@@ -1035,10 +1200,11 @@ def main():
     print(f"selected {len(ordered)} pathways with held-out support", flush=True)
 
     tile_scores = load_pathway_tile_scores(root, ordered)
-    gene_table = load_pathway_genes(root, args.genes)
 
     payload, needed, pairs = collect_tile_requests(root, per_pathway, tile_scores, args.candidates, args.score_candidates, activity_cache, blocks_index, profile)
     print(f"{len(needed)} unique dictionary-tile encodes, {len(pairs)} block-tile pairs", flush=True)
+
+    rankings = block_gene_ranking(root, profile, payload, args.genes)
 
     # the analysis labels the held-out split "heldout"; the activation directory is "held_out"
     identity, _ = load_activity(root, 0, activity_cache)
@@ -1053,6 +1219,10 @@ def main():
 
         # keep the candidates whose peak patch is strongest, so overlays show localized structure
         for block in entry["blocks"]:
+            ranking = rankings[(pathway, block["block_global_index"])]
+            block["genes"] = ranking["genes"]
+            block["n_scored_genes"] = ranking["n_scored"]
+
             for tile in block["tiles"]:
                 tile.update(patch_stats(patches[(block["block_global_index"], tile["sequence_id"])]))
 
@@ -1086,34 +1256,46 @@ def main():
 
         entry["score_tiles"] = kept
 
+        # the pathway-level list is every symbol some block card offers, best clustering first
+        union = {}
+        for block in entry["blocks"]:
+            for gene in block["genes"]:
+                if gene["symbol"] not in union or gene["clustering"] > union[gene["symbol"]]["clustering"]:
+                    union[gene["symbol"]] = gene
+
         pathways_out.append({
             "pathway_id": pathway,
             "name": names[pathway] if pathway in names else pathway,
             "n_supported_blocks": int(counts[pathway]),
-            "genes": gene_table[pathway]["genes"],
-            "n_pathway_genes": gene_table[pathway]["n_genes"],
-            "n_undetected_genes": gene_table[pathway]["n_undetected"],
+            "genes": sorted(union.values(), key=lambda record: -record["clustering"]),
+            "n_pathway_genes": rankings[(pathway, entry["blocks"][0]["block_global_index"])]["n_measured"],
             "blocks": entry["blocks"],
             "score_tiles": entry["score_tiles"],
         })
 
-    # localize each pathway's displayed genes inside its displayed tiles
-    requests = {}
+    # a block's tiles carry only that block's cards; the pathway-score tiles serve every block, so
+    # they carry the union and stay overlayable whichever block the viewer selects
+    wanted = []
     for item in pathways_out:
-        symbols = {gene["symbol"] for gene in item["genes"]}
-        for tile in [tile for block in item["blocks"] for tile in block["tiles"]] + item["score_tiles"]:
-            requests.setdefault((tile["slide_id"], tile["source_h5_row"]), set()).update(symbols)
+        union = [gene["symbol"] for gene in item["genes"]]
+        for block in item["blocks"]:
+            symbols = [gene["symbol"] for gene in block["genes"]]
+            wanted.extend((tile, symbols) for tile in block["tiles"])
+
+        wanted.extend((tile, union) for tile in item["score_tiles"])
+
+    requests = {}
+    for tile, symbols in wanted:
+        requests.setdefault((tile["slide_id"], tile["source_h5_row"]), set()).update(symbols)
 
     print(f"localizing genes in {len(requests)} tiles across {len({slide for slide, _ in requests})} slides", flush=True)
     maps = gene_patch_maps(Path(args.xenium), requests)
 
-    for item in pathways_out:
-        symbols = [gene["symbol"] for gene in item["genes"]]
-        for tile in [tile for block in item["blocks"] for tile in block["tiles"]] + item["score_tiles"]:
-            entry = maps[(tile["slide_id"], tile["source_h5_row"])]
-            tile["gene_patch"] = entry["patch"]
-            tile["gene_cells"] = entry["cells"]
-            tile["gene_values"] = {symbol: entry["genes"][symbol] for symbol in symbols if symbol in entry["genes"]}
+    for tile, symbols in wanted:
+        entry = maps[(tile["slide_id"], tile["source_h5_row"])]
+        tile["gene_patch"] = entry["patch"]
+        tile["gene_cells"] = entry["cells"]
+        tile["gene_values"] = {symbol: entry["genes"][symbol] for symbol in symbols if symbol in entry["genes"]}
 
     # a light index keeps startup fast; per-pathway payloads load on demand
     pathway_dir = data_dir / "pathways"
@@ -1149,9 +1331,10 @@ def main():
     referenced = sorted({Path(path).name for path in seen.values()})
     write_atomic(data_dir / "tiles.json", compact_json({"tiles": referenced}))
 
+    # a bundle is a directory carrying an index.json; other data directories keep their own tiles.json
     keep = set()
-    for manifest in (out_dir / "data").glob("*/tiles.json"):
-        keep.update(json.loads(manifest.read_text())["tiles"])
+    for manifest in (out_dir / "data").glob("*/index.json"):
+        keep.update(json.loads((manifest.parent / "tiles.json").read_text())["tiles"])
 
     removed = 0
     for existing in tile_dir.glob("*.jpg"):

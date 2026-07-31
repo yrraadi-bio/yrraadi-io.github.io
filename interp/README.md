@@ -16,10 +16,6 @@ The two families differ in dictionary layout, activation sharding, checkpoint fo
 identity, all of which are described by the `MODELS` profiles in `build_site_data.py`. Both share
 `tile_id` as the tile key: Origin sets it to the sequence id, GigaPath to `SLIDE:source_row`.
 
-The header's **Reload assets** button re-fetches `index.html`, `app.js`, `styles.css` and the pathway
-data with `cache: "reload"` before reloading the page, which is the fix for a tab left open across a
-rebuild. The header also prints the data build stamp, so a successful refresh is visible.
-
 ## Quick start
 
 This directory is the published site, served at `/interp/` on GitHub Pages. Locally:
@@ -83,12 +79,22 @@ unmarked on the tile, and the modal's fourth panel separates the three cases exp
 cell measured, pale for a cell carrying no transcript, green for expression. Values are per-cell
 `log1p CPM`; at ~140 counts per cell they are coarse and read closer to detection than to level.
 
-"Top expressed genes" lists the pathway's measured genes ranked by mean training expression, taken
-from `gene_score_parameters_train.parquet` — the same per-gene mean the pipeline uses to standardize
-genes when it builds pathway scores. Because that scoring z-scores every gene, a highly expressed
-gene does not automatically dominate its pathway's score; the list describes expression level, and
-each chip's tooltip carries the standard deviation and slide coverage. A dashed border marks genes
-missing from some slide panels.
+"Genes clustered in this block" ranks the pathway's measured genes by how tightly each one clusters
+inside the selected block, so the list changes with the selected block rather than describing the
+pathway alone. The statistic is Moran's I of per-tile expression over a 10-nearest-neighbour graph
+built in the block's own coordinate space, the `group_size` numbers it assigns every tile it fires
+on, read from `signed_coordinate_mean`. It is high when tiles that agree on the gene sit together in
+that space, which is what makes the gene visibly separate when the manifold is recoloured by it.
+Expression is the pipeline's own `log1p(raw_count / raw_library_size * 1e6)`, blanked wherever the
+analysis could not use it: panel entries a slide never measured, QC-failed tiles, empty libraries.
+
+Ranking this way rather than by abundance means a gene needs enough signal inside the block to be
+scored at all, so genes below the detection floors are dropped instead of ranked last. Each chip
+also carries the arrow direction, whether the gene rises or falls with the block's activation, and
+its tooltip carries the slide-centred variant of the score. That variant removes each slide's own
+mean first and is much smaller than the raw score, which says most of the apparent clustering is
+slide identity: a slide's tiles both group in the block's space and share an expression level. A
+dashed border still marks genes missing from some slide panels.
 
 Blocks are restricted to held-out **supported** pathway associations, ranked by |held-out effect|.
 Tiles are shortlisted by mean block activity, then ranked by peak patch activation so overlays show

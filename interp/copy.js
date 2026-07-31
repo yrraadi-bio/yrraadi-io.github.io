@@ -9,59 +9,44 @@ const COPY = {
   loading: "loading…",
   loadFailed: (pathwayId, message) => `could not load ${pathwayId}.json (${message})`,
   supportedBlocks: (count) => `${count} block associations reproduced on held-out tiles`,
-  bundleLabel: (bundle, collection) =>
-    `${bundle.label} · ${bundle.pathways.length} ${collection} gene sets · ${bundle.patch_grid}×${bundle.patch_grid} patch grid`,
 
   genes: {
-    noneDetected: (measured) => `none of ${measured} measured genes were detected in training tiles`,
-    undetectedClause: (count) => `, ${count} never detected`,
-    hint: (shown, measured, undetected) =>
-      `${shown} of ${measured} measured genes${undetected}, by mean expression across training tiles (log1p CPM),`
-      + " click one to map it onto the tiles",
-    chipTitle: (gene) =>
-      `${gene.symbol} · mean ${gene.mean} log1p CPM · sd ${gene.std} · measured on ${gene.train_slides}/46 training`
-      + ` and ${gene.heldout_slides}/12 held-out slides · click to overlay its per-cell expression on the tiles`
-      + " and recolour the manifold by this gene",
-    overlay: (gene) => `Green squares mark <b>${gene}</b> transcripts in the cells measured inside each tile.
-      Xenium reads expression once per cell, so the green layer is the per-cell expression binned onto the same
-      14&times;14 grid as the block activation; patches with no measured cell stay unmarked.`,
+    chipTitle: (gene, blockLabel) =>
+      `${gene.symbol} · clustering ${gene.clustering}, Moran's I over the ${gene.n_tiles} tiles of ${blockLabel} where it`
+      + ` is measured · ${gene.clustering_slide_adjusted} once each slide's own mean is removed · ${gene.activation_r >= 0
+        ? "rises" : "falls"} with block activation, r ${gene.activation_r} · detected in`
+      + ` ${Math.round(gene.detection * 100)}% of those tiles · mean ${gene.mean} log1p CPM, sd ${gene.std} · measured on`
+      + ` ${gene.train_slides}/46 training and ${gene.heldout_slides}/12 held-out slides · click to overlay its per-cell`
+      + " expression on the tiles and recolour the manifold by this gene",
+  },
+
+  blocks: {
+    heldoutR: "Partial correlation between the pathway score and this block's activation magnitude on the 12 unseen"
+      + " slides, averaged over patients, with the covariate coefficients carried over from training.",
+    trainR: "The same partial correlation fit on the tiles of the 46 training slides.",
+    deltaR2: "Held-out variance in the pathway score explained by adding this block's activity to a covariates-only"
+      + " model, with every coefficient fit on training tiles.",
+    firing: "Fraction of tiles on which this block is active at all.",
   },
 
   correlation: {
     unavailable: "r unavailable",
     unavailableTitle: "Raw Pearson correlation is undefined because one input has no variance.",
     title: (pathwayName, block) =>
-      `Unadjusted Pearson correlation between ${pathwayName} score and ${block.dictionary} #${block.block} activation`
-      + ` magnitude across ${block.basic_r_n.toLocaleString()} training tiles. No covariate residualization; the block`
-      + " card reports the adjusted effect on held-out tiles.",
-  },
-
-  scale: {
-    empty: "no firing patches to scale",
-    shared: (percent) => `one shared scale across these tiles, so colour means the same on each; pale end is the`
-      + ` top-${percent}% cutoff, dark end the gallery peak`,
-    perTile: (percent, lowest, highest) => `each tile spans its own top-${percent}% cutoff to its own peak`
-      + ` (peaks ${lowest}–${highest} here), so colour is not comparable between tiles`,
-    genePerTile: (gene, galleryPeak, cells) => `each tile spans 0 to its own ${gene} peak (gallery peak`
-      + ` ${galleryPeak} log1p CPM per cell, ${cells} cells measured here)`,
-    geneShared: (galleryPeak, cells) => `one shared scale, 0 to the gallery peak of ${galleryPeak} log1p CPM per cell`
-      + ` across ${cells} measured cells`,
+      `Unadjusted Pearson correlation between ${pathwayName} score and the activation magnitude of block #${block.block}`
+      + ` across ${block.basic_r_n.toLocaleString()} training tiles. No covariates are residualized; the card reports the`
+      + " adjusted held-out r.",
   },
 
   gallery: {
     empty: "No tiles available for this view.",
-    byScore: (pathwayName, blockLabel) => `Tiles ranked by <b>${pathwayName}</b> expression score (training slides),`
-      + ` the same six for every block. Blue shows where the selected block <b>${blockLabel}</b> fires.`,
-    byBlock: (blockLabel, percent) => `Tiles ranked by peak patch activation of block <b>${blockLabel}</b>.`
-      + ` Blue lights the strongest ${percent}% of firing patches on each tile.`,
-    geneClause: (gene) => ` Green squares show <b>${gene}</b> expression in the cells measured inside each tile.`,
   },
 
   hover: {
     tile: (tileId, slide, tissue, split, activation) =>
       `${tileId}<br>slide ${slide} · ${tissue} · ${split}<br>block activation ${activation}`,
-    block: (dictionary, block, firingFraction, dominant) =>
-      `${dictionary} · block ${block}<br>firing fraction ${firingFraction}<br>dominant: ${dominant}`,
+    block: (block, firingFraction, dominant) =>
+      `block ${block}<br>firing fraction ${firingFraction}<br>dominant: ${dominant}`,
     dominantNone: "no supported pathway",
     dominantOther: "other supported pathway",
     selected: (blockLabel, firingFraction) =>
@@ -73,72 +58,54 @@ const COPY = {
     missing: (blockLabel, exported) => `No tile manifold exported for ${blockLabel}. Manifolds exist for the`
       + ` ${exported} blocks that appear as cards.`,
     noScore: (pathwayId) => `No per-tile score exported for ${pathwayId}.`,
-    hint: (blockLabel, tiles, groupSize) => `${blockLabel} · ${tiles} tiles where this block fires, embedded from its`
-      + ` own ${groupSize} coordinates`,
-    capped: (maxTiles) => ` Tiles are capped at ${maxTiles} per block, sampled proportionally across the training and`
-      + " held-out splits.",
+    capped: (maxTiles) => ` Tiles are capped at ${maxTiles} per block, sampled proportionally across the two splits.`,
 
     gene: {
-      title: (gene, blockLabel) => `${gene} expression inside ${blockLabel}`,
-      subtitle: (gene) => `each point is one tile this block fires on, coloured by measured ${gene} counts`,
-      note: (gene, groupSize, pathwayName) => `This is <b>${gene}</b> alone on the block's own manifold, so it answers
-        whether the gene separates within the block: if the green tiles occupy one region, this block's ${groupSize}
-        coordinates encode something ${gene} tracks. Grey tiles come from slides whose panel does not measure it. Switch
-        to <b>Pathway score</b> to compare against the whole ${pathwayName} set on the same tile positions.`,
-    },
-
-    activation: {
-      title: (blockLabel) => `Activation of ${blockLabel} across its tiles`,
-      subtitle: "gated block norm per tile, the same quantity the tile gallery shows per patch",
-      note: "Activation magnitude usually varies smoothly across the manifold, so a sharp boundary here means the"
-        + " block's coordinates carry structure beyond how strongly it fires.",
+      title: (gene) => `${gene} expression`,
+      subtitle: (blockLabel) => `tiles of ${blockLabel}, coloured by measured counts`,
+      note: (gene, pathwayName) => `Green tiles confined to one region indicate that the block's coordinates encode
+        structure <b>${gene}</b> tracks. Grey tiles come from slides whose panel omits it. Select <b>Pathway score</b> to
+        compare the full ${pathwayName} set on the same positions.`,
     },
 
     tissue: {
-      title: (blockLabel) => `Tissue of origin inside ${blockLabel}`,
-      subtitle: (known, slides) => `${known} known tissue types across ${slides} slides; colours are fixed across blocks`,
-      note: "This view shows whether the block manifold separates broad tissue types. Unknown marks two slides whose"
-        + " authoritative tissue labels were unavailable; hover still shows the source slide for every tile.",
+      title: "Tissue of origin",
+      subtitle: (known, slides) => `${known} types across ${slides} slides, same positions`,
     },
 
     pathway: {
-      title: (pathwayName, blockLabel) => `${pathwayName} score inside ${blockLabel}`,
-      subtitle: (pathwayId) => `each point is one tile this block fires on, coloured by its ${pathwayId} score`,
-      note: (blockLabel, groupSize, tiles) => `The pathway score is the mean training-standardized log1p-CPM expression
-        of genes in the set that are measured on that tile. The cloud is the manifold of <b>${blockLabel}</b> itself: its
-        ${groupSize} coordinates over the ${tiles} tiles where it fires, reduced to 3D. If the pathway score varies along
-        one direction of this cloud, the block resolves that pathway internally rather than merely firing on it.`,
-      geneSwitch: (gene) => ` Click <b>${gene} expression</b> to recolour the same tiles by that gene.`,
+      title: (pathwayName) => `${pathwayName} score`,
+      subtitle: (blockLabel, pathwayId) => `tiles of ${blockLabel}, coloured by ${pathwayId} score`,
+      note: (tiles) => `Each point is one of the ${tiles} tiles where this block fires. Both plots hold the same
+        positions and rotate independently, the left coloured by the pathway score and the right by the tissue the tile
+        came from; score varying along a direction the tissues do not follow indicates the block resolves the pathway
+        internally rather than tracking tissue identity.`,
+      geneSwitch: (gene) => ` Select <b>${gene} expression</b> to recolour the same tiles by that gene.`,
     },
   },
 
   // the cross-block map: one point per block
   cross: {
-    hint: (blocks) => `${blocks} estimable blocks, one point each, placed by their 1,656-gene training effect signature`,
-    prefix: `<b>This view is one point per block, not a block's own manifold.</b> It compares blocks by how similarly
-      they respond across the 1,656 genes, so nearby points are blocks with similar gene effects. `,
-    marked: (blockLabel) => ` The magenta ring and dotted stem mark <b>${blockLabel}</b>, the block selected in the
-      cards above.`,
+    prefix: `<b>Each point is one block, not one tile.</b> Blocks are compared by their effects across the 1,656 measured
+      genes, so neighbouring points have similar gene effects. `,
+    marked: (blockLabel) => ` The magenta ring marks <b>${blockLabel}</b>, selected in the cards above.`,
     unmarked: (blockLabel, pathwayId, blocks) => ` Nothing is ringed: <b>${blockLabel}</b> transfers on ${pathwayId} but
-      is not one of the ${blocks} estimable blocks here, so it has no position in this map.`,
-    markedSubtitle: (blockLabel) => `marked block ${blockLabel}`,
+      is not among the ${blocks} estimable blocks mapped here.`,
+    markedSubtitle: (blockLabel) => `${blockLabel} marked`,
 
     layer: {
       title: "Cross-block map by encoder layer",
-      subtitle: (dictionaries) => `every point is one block from one of the ${dictionaries} dictionaries, coloured by`
-        + " the layer that dictionary was fit on",
-      note: (dictionaries, layers) => `A block belongs to exactly one dictionary and therefore to exactly one layer, so
-        this colour is a single number per point, not a range. The ${dictionaries} dictionaries were fit independently on
-        layers ${layers}, each contributing 512 blocks. Layer is the dominant structure here: blocks from neighbouring
-        layers land near each other.`,
+      subtitle: "every point is one block, coloured by the encoder layer it was fit on",
+      note: (layers) => `Each block belongs to exactly one layer, so the colour is one value per point rather than a range.
+        Layers ${layers} were fit independently, yet blocks from neighbouring layers land near each other.`,
     },
 
     gene: {
       title: (gene) => `${gene} effect across blocks`,
       subtitle: (supported) => `gene-level training partial effect per block · ${supported} associations reproduced on`
         + " held-out tiles",
-      note: (gene) => `Red blocks rise with ${gene}, blue fall with it. This is one number per block, so it says which`
-        + " blocks track the gene, not how the gene separates inside any one of them.",
+      note: (gene) => `Red blocks rise with ${gene}, blue fall with it. One value per block, so it indicates which blocks`
+        + " track the gene, not how the gene separates within any one of them.",
     },
 
     pathway: {
@@ -155,13 +122,13 @@ const COPY = {
   },
 
   modal: {
-    title: (block, tile) => `${block.dictionary} block #${block.block} on ${tile.slide_id} tile ${tile.source_h5_row}`,
+    title: (block, tile) => `Block #${block.block} on ${tile.slide_id} tile ${tile.source_h5_row}`,
     meta: (pathway, tile) => `${pathway.name} (${pathway.pathway_id}) &nbsp;·&nbsp; ${tile.tissue} &nbsp;·&nbsp;`
       + ` ${tile.split} split &nbsp;·&nbsp; <code>${tile.sequence_id}</code>`,
     stats: (block, tile, score, tokens, topPatches) => `
-      effect on held-out tiles <b>${block.heldout_effect.toFixed(3)}</b> &nbsp;·&nbsp;
-      effect on training tiles <b>${block.train_effect.toFixed(3)}</b> &nbsp;·&nbsp;
-      &Delta;R&sup2; <b>${block.delta_r2.toFixed(4)}</b> &nbsp;·&nbsp;
+      held-out r <b>${block.heldout_effect.toFixed(3)}</b> &nbsp;·&nbsp;
+      training r <b>${block.train_effect.toFixed(3)}</b> &nbsp;·&nbsp;
+      &Delta;R&sup2; held-out <b>${block.delta_r2.toFixed(4)}</b> &nbsp;·&nbsp;
       tile activity <b>${tile.activity.toFixed(3)}</b> &nbsp;·&nbsp;
       pathway score <b>${score}</b><br />
       patches firing <b>${tile.n_firing}/${tokens}</b> &nbsp;·&nbsp;

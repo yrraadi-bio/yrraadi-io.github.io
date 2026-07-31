@@ -20,16 +20,14 @@
     </a>
     <span class="brand-rule" aria-hidden="true"></span>
     <div class="product-brand">
-      <span class="product-kicker">Research explorer</span>
       <h1>Pathway Explorer</h1>
-      <p id="bundleLabel" class="subtitle">loading…</p>
+      <p class="subtitle">Every block is a 16-dimensional feature.</p>
     </div>
   </div>
   <div class="topbar-right">
     <div class="tabs collection-tabs" id="collectionTabs"></div>
-    <p class="provenance">gated block norm per patch<br><span id="sourceNote"></span></p>
-    <button id="reload" class="btn-reload" title="Re-fetch the site scripts, styles and pathway data, bypassing the browser cache">
-      <span class="btn-icon" aria-hidden="true"></span><span id="reloadLabel">Reload assets</span>
+    <button id="reload" class="btn-reload" aria-label="Reload assets" title="Re-fetch the scripts, styles and pathway data, bypassing the browser cache">
+      <span class="btn-icon" aria-hidden="true">&#8635;</span>
     </button>
   </div>
 </header>
@@ -44,6 +42,7 @@
       <input id="search" type="search" placeholder="Search pathway name or id…" autocomplete="off" />
     </div>
     <div id="pathwayList" class="pathway-list"></div>
+    <div id="sidebarResize" class="sidebar-resize" role="separator" aria-orientation="vertical" title="Drag to resize the pathway list, double-click to reset"></div>
   </aside>
 
   <section class="content">
@@ -67,27 +66,26 @@
             <span id="supportedCount"></span>
           </p>
           <div class="pathway-explainer">
-            <p><strong>Pathway score:</strong> the mean training-standardized log1p-CPM expression of this pathway's genes measured on a tile. Positive means collectively above the training average; negative means below.</p>
-            <p><strong>Raw r:</strong> Pearson correlation between that score and the selected block's activation magnitude across training tiles. “Held-out” means the 12 unseen slides and their tiles, not unseen blocks.</p>
+            <p><strong>Pathway score:</strong> mean training-standardized log1p-CPM expression of the pathway's genes measured on a tile, positive above the training average and negative below.</p>
+            <p><strong>Raw r:</strong> Pearson correlation between that score and the selected block's activation magnitude across training tiles. Held-out refers to the 12 unseen slides and their tiles.</p>
+            <p><strong>Gene clustering:</strong> Moran's I of the gene over the selected block's manifold, high when tiles that agree on the gene sit together. Cards are ranked by it; the arrow gives the sign of the gene's correlation with block activation.</p>
+            <p><strong>Block cards:</strong> <em>held-out r</em> and <em>training r</em> are the same correlation as above with eight covariates removed from both sides (colour, tissue occupancy, cell count, library size), measured on the 12 unseen slides and on the 46 training slides. <em>ΔR² held-out</em> is what the block adds beyond those covariates: the held-out variance in the pathway score explained by a covariates-plus-block model minus a covariates-only model, both fit on training tiles, so 0.15 means the block accounts for a further 15% of the score's variance on slides it never saw. A card appears only when held-out r agrees in sign with training r, its patient-level bootstrap interval excludes zero, and ΔR² is positive.</p>
           </div>
         </div>
       </div>
 
-      <h3 class="section-title">Top expressed genes <span class="hint" id="geneHint"></span></h3>
+      <h3 class="section-title">Genes clustered in this block</h3>
       <div id="geneList" class="gene-list"></div>
-      <p id="geneNote" class="gene-note hidden"></p>
 
-      <h3 class="section-title">Top activating blocks <span class="hint">associations reproduced on held-out tiles, ranked by |effect on held-out tiles|, click to select</span></h3>
+      <h3 class="section-title">Top activating blocks</h3>
       <div id="blockList" class="block-list"></div>
 
       <div class="manifold-head">
-        <h3 class="section-title">Block manifold <span class="hint" id="manifoldHint"></span></h3>
+        <h3 class="section-title">Block manifold</h3>
         <div class="controls">
           <div class="tabs" id="manifoldTabs">
             <button data-view="pathway" class="active">Pathway score</button>
             <button data-view="gene" id="manifoldGeneTab" class="hidden">Gene expression</button>
-            <button data-view="activation">Block activation</button>
-            <button data-view="tissue">Tissue</button>
             <button data-view="cross">Cross-block map</button>
           </div>
           <label class="ctl" id="scopeControl">tiles
@@ -108,24 +106,25 @@
         </div>
       </div>
       <p id="manifoldNote" class="gallery-note"></p>
-      <div class="manifold-frame">
+      <div id="manifoldFrame" class="manifold-frame paired">
         <div id="manifoldMain" class="manifold-plot"></div>
+        <div id="manifoldSide" class="manifold-plot"></div>
       </div>
 
       <div class="manifold-recipe">
         <div id="recipeTile">
-          <p><strong>What this is.</strong> One point per tile this block fires on, placed by the
-            <span id="recipeGroupSize">16</span> numbers this block gives that tile, squeezed down to 3 by UMAP. Each block is
-            embedded on its own, so this layout is that block's alone.</p>
-          <p><strong>The axes.</strong> UMAP 1, 2 and 3 are not genes and not expression. They have no units, so only closeness
-            counts: tiles near each other look alike to this block. Tabs change the colour, never the positions.</p>
+          <p><strong>What this is.</strong> One point per tile the selected block fires on, positioned by the coordinates that
+            block assigns the tile and reduced to three dimensions by UMAP. Each block is embedded separately, so the layout
+            belongs to that block alone.</p>
+          <p><strong>The axes.</strong> UMAP 1, 2 and 3 carry no units and are neither genes nor expression, so only proximity
+            is meaningful. Both plots hold identical positions and rotate independently: tabs recolour the left plot, while
+            the right always shows tissue of origin.</p>
         </div>
         <div id="recipeCross" class="hidden">
-          <p><strong>What this is.</strong> One point per block, not per tile. A block is placed by how strongly it tracks each
-            of the 1,656 measured genes across training tiles, so 1,656 numbers per block, squeezed down to 3 by UMAP.</p>
-          <p><strong>The axes.</strong> UMAP 1, 2 and 3 are not genes and not predicted expression. The genes are the inputs
-            that got compressed away, which is why a gene or pathway shows as colour rather than as a direction. Only closeness
-            counts: blocks near each other track genes alike.</p>
+          <p><strong>What this is.</strong> One point per block rather than per tile, positioned by how strongly the block
+            tracks each of the 1,656 measured genes and reduced to three dimensions by UMAP.</p>
+          <p><strong>The axes.</strong> The genes are compressed away, which is why a gene or pathway appears as colour rather
+            than as a direction. Only proximity is meaningful.</p>
         </div>
       </div>
 
@@ -155,14 +154,11 @@
           <label class="ctl checkbox"><input id="showGrid" type="checkbox" /> patch grid</label>
         </div>
       </div>
-      <p id="galleryNote" class="gallery-note"></p>
-
       <div class="scalebar">
         <span class="scale-title">patch activation</span>
         <span id="scaleMin" class="tick"></span>
         <span class="ramp"></span>
         <span id="scaleMax" class="tick"></span>
-        <span id="scaleCaption" class="scale-caption"></span>
       </div>
 
       <div id="geneScale" class="scalebar hidden">
@@ -170,7 +166,6 @@
         <span id="geneScaleMin" class="tick"></span>
         <span class="ramp gene"></span>
         <span id="geneScaleMax" class="tick"></span>
-        <span id="geneScaleCaption" class="scale-caption"></span>
       </div>
       <div id="gallery" class="gallery"></div>
 
