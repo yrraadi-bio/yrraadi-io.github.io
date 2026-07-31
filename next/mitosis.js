@@ -2399,19 +2399,23 @@
         erail.style.height = (ep * 100).toFixed(1) + '%';
         // unclamped, so the last engine caption fades out on its own as the
         // closing act comes up rather than sticking at full opacity
-        syncCaptions(ecaptions, ep / E_SHARE, engineBeat);
-        if (vcopy) {
-            // held back until the engine act's last caption has gone: the two
-            // occupy the same column, and any overlap there is two paragraphs
-            // printed on top of each other
-            const o = smooth(clamp01((vq - 0.13) / 0.09));
-            vcopy.style.setProperty('--o', o.toFixed(3));
-            /* The closing act shares this stage, so it is the stage's last beat
-               and the readout has to count it. Without this the count sits at
-               its last engine caption while the rail beside it is only halfway
-               down, which reads as the page being stuck. */
-            if (engineBeat && o > 0.5) engineBeat.textContent = String(ecaptions.length + 1);
-        }
+        const lit = syncCaptions(ecaptions, ep / E_SHARE, engineBeat);
+
+        /* The closing act's own beats. Both are held back until the engine act's
+           last caption has gone, because all three occupy the same column and
+           any overlap there is headings printed on top of each other.
+
+           The readout has to count them, since they share this stage. Without
+           it the count sits at the last engine caption while the rail beside it
+           is only halfway down, which reads as the page being stuck. Whichever
+           block is carrying more than the captions are wins it. */
+        vcopies.forEach((el, i) => {
+            const w = V_COPY[i];
+            const o = smooth(clamp01((vq - w[0]) / V_COPY_FADE)) * (1 - smooth(clamp01((vq - w[1]) / V_COPY_FADE)));
+
+            el.style.setProperty('--o', o.toFixed(3));
+            if (engineBeat && o > lit) engineBeat.textContent = String(ecaptions.length + i + 1);
+        });
 
         return true;
     }
@@ -2432,7 +2436,14 @@
        travel down into this one instead of scrolling off the top and being
        rebuilt underneath. */
     let verdict = null;
-    const vcopy = document.querySelector('.verdict__copy');
+    const vcopies = Array.from(document.querySelectorAll('.verdict__copy'));
+
+    /* Where each closing beat fades in and where it starts fading out, in the
+       closing act's own 0..1. The handover is clean rather than crossfaded, and
+       the second lands fully up as the cohort starts separating, because the
+       two groups are what that beat is about. */
+    const V_COPY = [[0.13, 0.48], [0.56, 9]];
+    const V_COPY_FADE = 0.08;
 
     /* Start and length of each beat, in the closing act's own 0..1.
 
@@ -2892,9 +2903,19 @@
             if (o > best) { best = o; lead = i; }
         });
 
-        if (!readout) return;
-        const n = String(lead + 1);
-        if (readout.textContent !== n) readout.textContent = n;
+        /* Nothing legible means nothing to report, so the number is left where it
+           was rather than snapping back to the first beat. A stage whose captions
+           hand over to something else halfway down has gaps where no caption is
+           carrying anything, and a readout that reset in them counted backwards.
+
+           The winning opacity goes back to the caller, so a stage sharing its
+           chrome with a second set of copy can tell which of the two is leading. */
+        if (readout && best > 0) {
+            const n = String(lead + 1);
+            if (readout.textContent !== n) readout.textContent = n;
+        }
+
+        return best;
     }
 
     function renderMitosis(mp) {
@@ -3025,7 +3046,7 @@
         eq = STILL_ENGINE;
         renderEngine(STILL_ENGINE, 0);
         ecaptions.forEach(el => el.style.setProperty('--o', '1'));
-        if (vcopy) vcopy.style.setProperty('--o', '1');
+        vcopies.forEach(el => el.style.setProperty('--o', '1'));
     }
 
     /* Waits for the tissue and the cell atlas, then draws once. Bounded, because

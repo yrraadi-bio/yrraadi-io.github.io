@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?rev=trials-12">
+    <link rel="stylesheet" href="style.css?rev=engine-4">
     <link rel="icon" href="../assets/favicon.png" type="image/png">
     <link rel="preload" href="cells.webp" as="image" type="image/webp">
 </head>
@@ -415,7 +415,7 @@
             <canvas id="engineCanvas" aria-hidden="true"></canvas>
 
             <div class="progress" aria-hidden="true">
-                <p class="progress__count"><span id="engineBeat">1</span><span class="progress__of">/ 6</span></p>
+                <p class="progress__count"><span id="engineBeat">1</span><span class="progress__of">/ 7</span></p>
                 <div class="rail">
                     <div class="rail__fill" id="engineRail"></div>
                 </div>
@@ -423,7 +423,7 @@
 
             <a class="onward" href="#cases">Skip ahead</a>
 
-            <div class="captions" id="engineCaptions" role="group" aria-label="How the data engine works, in five steps">
+            <div class="captions" id="engineCaptions" role="group" aria-label="How the data engine works, in seven steps">
                 <figure class="caption" data-at="0.05">
                     <span class="caption__num">01</span>
                     <h2>It starts with a real tumor.</h2>
@@ -431,38 +431,36 @@
                 </figure>
                 <figure class="caption" data-at="0.22">
                     <span class="caption__num">02</span>
-                    <h2>The tissue is kept intact.</h2>
-                    <p>Blocks are sectioned onto spatial capture substrates and quality-controlled by hand, so the native architecture survives the prep and the position of every cell is preserved.</p>
+                    <h2>Regions of interest are identified.</h2>
+                    <p>Pathologist annotated regions are sectioned and captured on slides and subject to QC.</p>
                 </figure>
                 <figure class="caption" data-at="0.43">
                     <span class="caption__num">03</span>
-                    <h2>Every measurement keeps its address.</h2>
-                    <p>Spatial transcriptomics run alongside imaging-based morphology, with each reading anchored to the position in the tissue it came from. Expression is recorded together with the neighbors it was measured next to.</p>
+                    <h2>Matched spatial transcriptomics, H&amp;E imaging and clinical data for each patient tumor sample.</h2>
+                    <p>We capture spatially resolved gene expression at a subcellular resolution, paired with morphological images taken from the same slide and associated with select clinical labels.</p>
                 </figure>
                 <figure class="caption" data-at="0.64">
                     <span class="caption__num">04</span>
-                    <h2>One patient becomes one map.</h2>
-                    <p>Spatially resolved cell states, programs and niches: how this tumor is organized, and how that compares to the tumors already profiled.</p>
+                    <h2>Learn more from each patient sample. Spatially resolved cell states, cell-cell interactions, enrichment of pathways and biomarkers.</h2>
                 </figure>
                 <figure class="caption" data-at="0.81">
                     <span class="caption__num">05</span>
-                    <h2>Enough maps, and the models can predict.</h2>
-                    <p>Every map so far becomes training data. A new tumor arrives having only been cut and stained &mdash; nothing sequenced, no capture run &mdash; and the models infer its spatial expression from the H&amp;E alone.</p>
+                    <h2>We process retrospective and prospective cohorts. This allows us to leverage existing archives, while addressing bespoke data requirements.</h2>
                 </figure>
             </div>
 
             <!-- the closing act shares this canvas and this sticky box, so the
                  predicted slide travels down into it instead of scrolling off
-                 the top and being built again underneath -->
+                 the top and being built again underneath. It carries the last
+                 two beats of the stage: the call made on one tumor, and then
+                 the same call made across everyone screened -->
             <div class="verdict__copy">
-                <p class="engine__eyebrow">Who it is for</p>
-                <h2 class="verdict__lead">Which is how you know who to choose.</h2>
-                <p class="verdict__body">
-                    The predicted map is read for the programmes a drug acts on, and the tumor is
-                    called against the outcomes already recorded for the tumors nearest it. Run that
-                    across everyone screened and a population that shares one diagnosis separates
-                    into the patients a drug is predicted to work in and the patients it is not.
-                </p>
+                <span class="caption__num">06</span>
+                <h2 class="verdict__lead">Enough datapoints, and we can train models for clinical tasks. Use morphology alone to predict spatial gene expression, predict drug response, identify interpretable biomarkers.</h2>
+            </div>
+            <div class="verdict__copy">
+                <span class="caption__num">07</span>
+                <h2 class="verdict__lead">Improve outcomes in the clinic.</h2>
             </div>
         </div>
     </section>
@@ -712,9 +710,9 @@
         </footer>
     </section>
 
-    <script src="questions.js?rev=trials-12"></script>
+    <script src="questions.js?rev=engine-4"></script>
     <script src="platform.js?rev=embed-8"></script>
     <script src="palettes.js"></script>
-    <script src="mitosis.js?rev=trials-12"></script>
+    <script src="mitosis.js?rev=engine-4"></script>
 </body>
 </html>

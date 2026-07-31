@@ -1611,14 +1611,19 @@ body {
     .pivot { min-height: 62vh; padding: 8vh 7vw; }
     .engine { padding: 14vh 7vw 12vh; }
     /* the copy goes over the top of the frame rather than beside it, and the
-       grid is given the room below it by the canvas's own layout */
+       grid is given the room below it by the canvas's own layout. It starts
+       under the way out rather than level with it: the column runs the full
+       width here, so anything level with that button is printed through it */
     .verdict__copy {
         left: 7vw;
         right: 7vw;
-        top: 6vh;
+        top: 12vh;
         width: auto;
         transform: translateY(calc((1 - var(--o, 0)) * 22px));
     }
+    /* set at the caption size rather than above it: the closing beats run to the
+       same column at this width, and the room over the frame is what there is */
+    .verdict__lead { font-size: clamp(1.7rem, 2.85vw, 2.6rem); }
     .verdict__body { margin-top: 1rem; }
     /* three columns will not fit a phone, and the money is the payoff of the
        row rather than an aside, so it goes last and full width */
@@ -1740,7 +1745,8 @@ body {
     /* at rest these are read one after another rather than one at a time, so
        they are set as headings in a column instead of as display type */
     .caption h2,
-    .stage--engine .caption h2 { font-size: clamp(1.5rem, 2.4vw, 2rem); }
+    .stage--engine .caption h2,
+    .verdict__lead { font-size: clamp(1.5rem, 2.4vw, 2rem); }
 
     .caption p,
     .stage--engine .caption p { max-width: 68ch; }
