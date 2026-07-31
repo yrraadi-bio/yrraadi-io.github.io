@@ -814,8 +814,15 @@ body {
        without the beats after the mutation having to rush, and no longer than
        that. A caption holds for as long as the page is not being scrolled, so
        distance buys a reader nothing they cannot get by stopping, and it costs
-       everyone who wanted to get to the end. */
-    height: 760vh;
+       everyone who wanted to get to the end.
+
+       That argument stops holding at the end. 760vh carried twelve beats of one
+       drawing being added to, where a caption is a sentence and the picture
+       under it has changed by a little. The last two are dense charts read the
+       way a chart is read, and each one needs a screen and a half of stillness
+       after it has finished drawing itself, which is where the rest of this
+       went. The biology still gets its original 710vh of travel. */
+    height: 1400vh;
 }
 
 .stage__sticky {
@@ -895,6 +902,18 @@ body {
     max-width: 30ch;
 }
 
+/* one beat carries two paragraphs, and at this measure they close up into a
+   single block without it */
+.caption p + p { margin-top: 1.05rem; }
+
+/* The last two beats are charts, and the canvas draws them: swept out under the
+   scroll, over the grid of patients they are an argument about. What is here is
+   the same two charts as flat SVG, for the one branch that never runs the
+   canvas. With motion turned down the stage is a single still and a column of
+   prose, and without these the two beats resting entirely on their charts would
+   arrive as a pair of assertions with nothing under them. */
+.caption__plot { display: none; }
+
 /* ---------- Where you are, and how to leave ----------
 
    A stage is eight or nine screens of scrolling with no scrollbar worth reading
@@ -968,6 +987,92 @@ body {
     height: 0%;
     background: linear-gradient(180deg, var(--accent), var(--malignant));
     box-shadow: var(--rail-glow);
+}
+
+/* ---------- What the field is already spending ----------
+
+   Three beats of plain document between the two stages: volume, then the odds,
+   then what the odds are made of. It stays on paper and outside the island so
+   the lens gradient below keeps the height it was tuned against. */
+
+/* A full-width band, not a centred measure. Centring the section itself would
+   have painted the paper only as wide as the measure and left the body's blue
+   showing down both margins, which is the same trap the engine sections carry
+   a widened backdrop to get out of. The band is filled edge to edge instead and
+   the measure is held on the beats inside it.
+
+   The 7vw margin is the one the captions above and the drug table below both
+   start at, so a heading here lands on the same line they do. */
+/* The two chart beats are drawn on the canvas, swept out under the scroll. What
+   these dress is the flat copy of each that only the reduced-motion branch ever
+   shows, so nothing here animates: it is the finished chart or nothing. Both are
+   redrawn from published exhibits that carry no data labels, so these carry none
+   either. The numbers worth stating are stated in the caption. */
+.chart {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.chart + .panels { margin-top: 1.4rem; }
+
+.chart line {
+    stroke: rgba(11, 26, 47, 0.14);
+    vector-effect: non-scaling-stroke;
+}
+
+.chart text {
+    font-family: var(--sans);
+    font-weight: 400;
+    fill: var(--ink-faint);
+}
+
+.chart .pt {
+    fill: var(--ink-dim);
+    letter-spacing: 0.01em;
+}
+
+.trace {
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+}
+
+/* the breakdown panels go two up rather than four or five across, because a
+   prose column split five ways is five charts too small to read */
+.panels {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: clamp(16px, 3.5vw, 34px);
+}
+
+.key {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 26px;
+    margin-top: 1.5rem;
+    list-style: none;
+    font-size: 0.85rem;
+    color: var(--ink-dim);
+}
+
+.key__item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+.key__item span {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+}
+
+.key--line .key__item span {
+    width: 18px;
+    height: 3px;
+    border-radius: 2px;
 }
 
 /* ---------- The question the engine answers ---------- */
@@ -1081,11 +1186,14 @@ body {
     color: var(--accent);
 }
 
-.engine__cta {
+/* The way in sits with the argument for taking it rather than at the very
+   bottom of the page, where it was several screens past the last thing that
+   made the case for it. */
+.cases__cta {
     display: flex;
     flex-wrap: wrap;
     gap: 14px;
-    margin-top: 3.2rem;
+    margin-top: 3rem;
 }
 
 .btn {
@@ -1394,8 +1502,11 @@ body {
     color: var(--ink-faint);
 }
 
+/* 7rem here was clearing the call to action that used to sit above it. That has
+   moved up the page to the section that argues for it, so this is now the first
+   thing in the footer and has nothing to clear. */
 .engine__foot {
-    margin-top: 7rem;
+    margin-top: 2.5rem;
     font-size: 0.74rem;
     font-weight: 400;
     letter-spacing: 0.2em;
@@ -1548,6 +1659,11 @@ body {
     /* a turn is sized against the viewport it plays out in, so it stays in vh;
        it only needs to be a little shorter where scrolling is slower */
     :root { --turn: 58vh; }
+
+    /* Five panels across a phone would be five charts an inch wide, so they go
+       two up and the axis labels grow back to the size the rest of the page
+       sets its small type at. */
+    .panels { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 /* ---------- The page with motion turned down ----------
@@ -1573,6 +1689,8 @@ body {
     .app.is-loading .app__load { animation: none; transform: translateX(0); }
     .pivot__line.is-typing::after { animation: none; }
     .btn:hover { transform: none; }
+    .band { opacity: 1; transition: none; }
+    .trace { stroke-dashoffset: 0; transition: none; }
 
     .stage,
     .stage--engine { height: auto; }
@@ -1626,6 +1744,16 @@ body {
 
     .caption p,
     .stage--engine .caption p { max-width: 68ch; }
+
+    .caption__plot { display: block; margin-top: 1.8rem; }
+
+    .caption__src {
+        margin-top: 1rem;
+        font-size: 0.8rem;
+        font-weight: 400;
+        line-height: 1.6;
+        color: var(--ink-faint);
+    }
 
     .verdict__copy {
         position: static;

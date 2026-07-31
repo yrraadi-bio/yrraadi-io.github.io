@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Mock workspace</title>
+<!--
+  Stands in for the real workspace while the embed is being worked on, so the
+  handshake and the access hand-off can be driven without the demo host being up.
+  Point the window at it with:  data-demo="_demo_mock.html"
+  Carries the same two messages the demo build sends, and nothing else.
+-->
+<style>
+    :root { --canvas: #0a1120; --surface: #0e1626; --surface-2: #141f33; --border: rgba(148, 178, 224, .14); --text-1: #eef2f9; --text-2: #b0bdd2; --text-3: #79879f; --accent: #5b9be8; }
+    * { box-sizing: border-box; }
+    body { margin: 0; height: 100vh; display: grid; grid-template-rows: 38px 1fr; background: var(--canvas); color: var(--text-1); font: 13px Inter, system-ui, sans-serif; }
+    header { display: flex; align-items: center; gap: 10px; padding: 0 12px; border-bottom: 1px solid var(--border); background: var(--surface); color: var(--text-3); font-size: 11px; }
+    main { display: grid; grid-template-columns: 280px 1fr 360px; min-height: 0; }
+    aside { border-right: 1px solid var(--border); background: var(--surface); padding: 12px; }
+    .dock-right { border-right: 0; border-left: 1px solid var(--border); }
+    .tabs { display: flex; gap: 2px; margin-bottom: 12px; flex-wrap: wrap; }
+    .tabs button { border: 0; border-bottom: 1px solid transparent; background: none; color: var(--text-3); padding: 6px 7px; cursor: pointer; font: inherit; font-size: 11px; }
+    .tabs button.active { color: var(--text-1); border-color: var(--accent); }
+    .tabs button.locked::after { content: ' ·'; color: var(--accent); }
+    .canvas { display: grid; place-items: center; background: #070e18; color: var(--text-3); }
+    .row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border); color: var(--text-2); font-size: 11px; }
+</style>
+</head>
+<body>
+    <header>Origin Spatial &middot; mock &middot; NCBI784</header>
+    <main>
+        <aside>
+            <div class="row"><span>H&amp;E image</span><b>on</b></div>
+            <div class="row"><span>Predicted cells</span><b>on</b></div>
+            <div class="row"><span>Regions &amp; ROIs</span><b>on</b></div>
+        </aside>
+        <div class="canvas">viewer</div>
+        <aside class="dock-right">
+            <div class="tabs">
+                <button class="active">Tissue</button>
+                <button>Genes</button>
+                <button>Validation</button>
+                <button>Evidence</button>
+                <button class="locked" data-tab="Signatures">Signatures</button>
+                <button class="locked" data-tab="Regions">Regions</button>
+                <button class="locked" data-tab="Scores">Scores</button>
+            </div>
+            <div class="row"><span>Epithelial / Tumor</span><b>43.3%</b></div>
+            <div class="row"><span>Immune</span><b>31.8%</b></div>
+            <div class="row"><span>Fibroblast / Stroma</span><b>7.0%</b></div>
+        </aside>
+    </main>
+<script>
+    /* the one signal the parent waits on before it fades the poster out */
+    parent.postMessage({ type: 'origin:demo-ready' }, '*');
+
+    document.querySelectorAll('.locked').forEach(function (button) {
+        button.addEventListener('click', function () {
+            parent.postMessage({ type: 'origin:access', tab: button.dataset.tab }, '*');
+        });
+    });
+</script>
+</body>
+</html>

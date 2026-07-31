@@ -43,9 +43,20 @@
     // the difference between a patchwork and two halves
     const SUB_GEN = 6;
 
-    /* Where the three acts end, in scroll position. */
-    const GROW_END = 0.60;
-    const META_END = 0.75;
+    /* Where the acts end, in scroll position.
+
+       The biology used to run the whole stage. It now stops at TRIALS_A and the
+       last stretch belongs to two charts, so the three constants below are the
+       old ones scaled by that share: the growth and spread beats sit at exactly
+       the same point of their own act as they did before the charts existed. */
+    const TRIALS_A = 0.61;
+    const GROW_END = 0.60 * TRIALS_A;
+    const META_END = 0.75 * TRIALS_A;
+
+    /* Where the charts clear and the grid underneath them takes the stage back
+       for the last beat. It is inside the second chart's hold rather than after
+       it, so the shortlist builds up behind the chart as the chart is leaving. */
+    const TRIALS_B = 0.945;
 
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -173,6 +184,17 @@
        almost nothing divides, which is what makes the mutation land as a change
        of pace instead of more of the same. */
     const GEN_HEALTHY = [[0, 0], [0.085, 1], [0.26, 2], [0.52, 3], [0.72, 3.6], [1, 3.95]];
+
+    /* The growth clock against the growth act, which is not the identity.
+
+       The opening beat is one cell that has not divided yet, and its caption
+       says exactly that. Run straight, the first pinch is visibly under way at
+       around 214px into the stage while that caption is still on screen and does
+       not clear until 228px: the second beat's picture under the first beat's
+       sentence. So the clock arrives at the cell, stops while that beat has the
+       screen, and then catches up. It is back on the identity by the third beat,
+       which is why every beat from there on sits on the same frame it did. */
+    const GROW_CLOCK = [[0, 0], [0.025, 0.020], [0.11, 0.020], [0.33, 0.33], [1, 1]];
 
     // extra generations a mutated lineage buys per unit of scroll past its
     // onset, which is the whole of "grows out of control"
@@ -1666,6 +1688,330 @@
         }
     }
 
+    /* ---------- the trials act ----------
+
+       Both exhibits redrawn whole: the headline panel and the four breakdowns
+       beside it, every series, in the source's own colours. They are laid over
+       the cohort rather than in place of it, so the tissue the argument is
+       about never leaves the screen, and each is swept out left to right under
+       the scroll the way everything else in this stage is drawn.
+
+       Neither exhibit prints its data points, so these are read off the plots.
+       The shapes are the claim, and the numbers worth stating outright are in
+       the caption beside them. */
+
+    // phase 1, phase 3, and the stack between them, in the exhibits' own colours
+    const PHASES = ['77,163,216', '21,63,110', '58,166,74'];
+
+    /* Trial starts 2015 to 2024, as phase 1, the cumulative total through phase
+       2, and the total: three lines each filled to the axis and drawn top-down
+       stack the bands without any of them having to be a band. */
+    const STARTS = [
+        {
+            name: 'ONCOLOGY',
+            v: [[370, 450, 510, 545, 575, 620, 760, 730, 690, 680],
+                [990, 1180, 1330, 1390, 1425, 1450, 1770, 1680, 1580, 1550],
+                [1130, 1310, 1480, 1530, 1570, 1630, 1960, 1860, 1750, 1780]]
+        },
+        {
+            name: 'ONCOLOGY NON-RARE',
+            v: [[70, 90, 115, 130, 155, 175, 210, 220, 225, 235],
+                [160, 205, 270, 305, 360, 405, 490, 515, 525, 545],
+                [180, 230, 300, 340, 400, 450, 540, 570, 580, 600]]
+        },
+        {
+            name: 'ONCOLOGY RARE',
+            v: [[340, 400, 460, 490, 510, 540, 660, 610, 580, 590],
+                [890, 1050, 1220, 1290, 1310, 1330, 1650, 1480, 1420, 1440],
+                [1000, 1180, 1350, 1420, 1450, 1480, 1800, 1620, 1560, 1600]]
+        },
+        {
+            name: 'HAEMATOLOGICAL MALIGNANCIES',
+            v: [[90, 100, 110, 120, 130, 140, 160, 145, 130, 125],
+                [250, 265, 295, 320, 340, 355, 400, 355, 320, 310],
+                [280, 300, 330, 360, 380, 400, 450, 400, 360, 350]]
+        },
+        {
+            name: 'SOLID TUMORS',
+            v: [[330, 400, 460, 490, 500, 530, 700, 660, 630, 660],
+                [790, 950, 1120, 1170, 1200, 1250, 1540, 1480, 1440, 1550],
+                [900, 1080, 1250, 1300, 1330, 1400, 1700, 1640, 1590, 1720]]
+        }
+    ];
+
+    // the five series the second exhibit runs through every one of its panels
+    const SERIES = [
+        { name: 'ONCOLOGY', c: '77,163,216' },
+        { name: 'NON-RARE', c: '27,58,107' },
+        { name: 'RARE', c: '58,166,74' },
+        { name: 'SOLID TUMORS', c: '62,186,176' },
+        { name: 'HAEMATOLOGICAL', c: '224,166,32' }
+    ];
+
+    // success rate at each transition, and the four multiplied together, 2019 to
+    // 2024. One entry per series, in the order above.
+    const RATES = [
+        {
+            name: 'PHASE 1', span: 100, at: [0, 20, 40, 60, 80, 100],
+            v: [[38, 47, 50, 47, 42, 48], [39, 48, 51, 52, 41, 59], [34, 37, 45, 43, 43, 42],
+                [36, 49, 54, 55, 42, 64], [34, 30, 40, 38, 41, 41]]
+        },
+        {
+            name: 'PHASE 2', span: 100, at: [0, 20, 40, 60, 80, 100],
+            v: [[23, 27, 27, 24, 21, 18], [24, 28, 26, 23, 20, 17], [21, 26, 30, 31, 24, 19],
+                [25, 28, 26, 24, 21, 20], [20, 26, 36, 27, 22, 10]]
+        },
+        {
+            name: 'PHASE 3', span: 100, at: [0, 20, 40, 60, 80, 100],
+            v: [[65, 55, 45, 50, 47, 68], [70, 60, 34, 52, 34, 68], [64, 52, 47, 46, 52, 66],
+                [68, 46, 43, 55, 43, 73], [85, 62, 60, 48, 76, 48]]
+        },
+        {
+            name: 'REGULATORY', span: 100, at: [0, 20, 40, 60, 80, 100],
+            v: [[100, 100, 96, 75, 92, 100], [100, 100, 95, 85, 93, 100], [100, 100, 96, 72, 91, 100],
+                [100, 100, 94, 70, 90, 100], [100, 100, 97, 63, 93, 100]]
+        },
+        {
+            name: 'COMPOSITE', span: 15, at: [0, 5, 10, 15],
+            v: [[6.0, 6.8, 5.7, 5.0, 4.4, 6.3], [7.4, 7.3, 5.0, 5.9, 2.6, 8.5], [5.2, 5.3, 7.8, 5.3, 5.6, 4.5],
+                [6.1, 6.3, 6.0, 4.3, 5.1, 10.5], [5.9, 9.0, 9.4, 5.2, 4.0, 2.1]]
+        }
+    ];
+
+    /* The room a chart gets: the canvas between the caption column and the
+       progress rail on a wide screen, and all of it on a narrow one, where the
+       captions sit under the canvas instead of beside it. */
+    function chartBox() {
+        if (wide) return { x0: W * 0.34, x1: W * 0.935, y0: H * 0.11, y1: H * 0.88 };
+        return { x0: W * 0.07, x1: W * 0.95, y0: H * 0.04, y1: H * 0.72 };
+    }
+
+    function sweepClip(g, x0, x1, y0, y1, sweep) {
+        g.beginPath();
+        g.rect(x0 - 2, y0 - 60, (x1 - x0) * sweep + 2, (y1 - y0) + 120);
+        g.clip();
+    }
+
+    /* A row of colour chips and their names, wrapped to whatever fits. Returns
+       the height it used so the source line underneath knows where to sit. */
+    function legend(items, x, y, width, size, bar) {
+        const colw = width / Math.min(items.length, bar ? 5 : 3);
+        let row = 0;
+        items.forEach((it, i) => {
+            const col = i % Math.max(1, Math.floor(width / colw));
+            row = Math.floor(i / Math.max(1, Math.floor(width / colw)));
+            const px = x + col * colw;
+            const py = y + row * (size + 8);
+            ctx.fillStyle = `rgb(${it.c})`;
+            if (bar) ctx.fillRect(px, py - size * 0.5, 14, 2.4);
+            else ctx.fillRect(px, py - size * 0.8, 9, 9);
+            vtext(ctx, it.name, px + (bar ? 20 : 15), py, 0.62, false, size, 'left');
+        });
+        return (row + 1) * (size + 8);
+    }
+
+    /* One stacked-area panel. The three series are filled from their own line
+       down to the axis, drawn from the top of the stack down, so each covers
+       the tail of the one behind it and no band has to be computed. */
+    function areaPanel(s, x, y, w, h, sweep, small) {
+        const size = small ? 8 : 10;
+        const ax = x + (small ? 28 : 44);
+        const ay0 = y + (small ? 15 : 22);
+        const ay1 = y + h - (small ? 16 : 22);
+        const xAt = i => ax + (x + w - ax) * (i / 9);
+        const yAt = v => ay1 - (v / 2500) * (ay1 - ay0);
+
+        vtext(ctx, s.name, x, y + (small ? 5 : 8), small ? 0.58 : 0.78, false, size, 'left');
+
+        ctx.strokeStyle = `rgba(${ground.ink},0.12)`;
+        ctx.lineWidth = 1;
+        for (const v of [0, 500, 1000, 1500, 2000, 2500]) {
+            const gy = yAt(v);
+            ctx.beginPath();
+            ctx.moveTo(ax, gy);
+            ctx.lineTo(x + w, gy);
+            ctx.stroke();
+            vtext(ctx, v.toLocaleString('en-US'), ax - 6, gy + 3, 0.45, false, size - 1, 'right');
+        }
+
+        ctx.save();
+        sweepClip(ctx, ax, x + w, ay0, ay1, sweep);
+        for (let k = 2; k >= 0; k--) {
+            ctx.beginPath();
+            ctx.moveTo(xAt(0), yAt(s.v[k][0]));
+            for (let i = 1; i < 10; i++) ctx.lineTo(xAt(i), yAt(s.v[k][i]));
+            ctx.lineTo(xAt(9), ay1);
+            ctx.lineTo(xAt(0), ay1);
+            ctx.closePath();
+            ctx.fillStyle = `rgb(${PHASES[k]})`;
+            ctx.fill();
+        }
+        ctx.restore();
+
+        vtext(ctx, '2015', ax, ay1 + (small ? 12 : 16), 0.45, false, size - 1, 'left');
+        vtext(ctx, '2024', x + w, ay1 + (small ? 12 : 16), 0.45, false, size - 1, 'right');
+    }
+
+    /* The headline panel with the four breakdowns beside it on a wide screen and
+       under it on a narrow one, which is the exhibit's own arrangement. */
+    function startsBoxes(b, foot) {
+        const w = b.x1 - b.x0;
+        const h = (b.y1 - foot) - b.y0;
+        const out = [];
+
+        if (wide) {
+            const gx = w * 0.055;
+            const bw = w * 0.45;
+            const sx = b.x0 + bw + gx;
+            const sw = b.x1 - sx;
+            const sgx = sw * 0.10;
+            const spw = (sw - sgx) / 2;
+            const sgy = h * 0.11;
+            const sph = (h - sgy) / 2;
+            out.push({ x: b.x0, y: b.y0, w: bw, h: h });
+            for (let i = 0; i < 4; i++) {
+                out.push({ x: sx + (i % 2) * (spw + sgx), y: b.y0 + Math.floor(i / 2) * (sph + sgy), w: spw, h: sph });
+            }
+            return out;
+        }
+
+        const head = h * 0.44;
+        const sgy = h * 0.07;
+        const sgx = w * 0.09;
+        const spw = (w - sgx) / 2;
+        const sph = (h - head - sgy * 2) / 2;
+        out.push({ x: b.x0, y: b.y0, w: w, h: head });
+        for (let i = 0; i < 4; i++) {
+            out.push({ x: b.x0 + (i % 2) * (spw + sgx), y: b.y0 + head + sgy + Math.floor(i / 2) * (sph + sgy), w: spw, h: sph });
+        }
+        return out;
+    }
+
+    function drawStarts(alpha, sweep) {
+        const b = chartBox();
+        const size = wide ? 10 : 9;
+        const foot = wide ? 46 : 52;
+        const boxes = startsBoxes(b, foot);
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+
+        boxes.forEach((r, i) => areaPanel(STARTS[i], r.x, r.y, r.w, r.h, sweep, i > 0));
+
+        const keys = ['PHASE 1', 'PHASE 2', 'PHASE 3'].map((name, i) => ({ name: name, c: PHASES[i] }));
+        const used = legend(keys, b.x0, b.y1 - foot + 24, (b.x1 - b.x0) * (wide ? 0.45 : 1), size, false);
+        vtext(ctx, 'IQVIA GLOBAL ONCOLOGY TRENDS 2025 \u00b7 EXHIBIT 1 \u00b7 REDRAWN',
+            b.x0, b.y1 - foot + 26 + used, 0.4, false, size - 1, 'left');
+
+        ctx.restore();
+    }
+
+    function drawRates(alpha, sweep) {
+        const b = chartBox();
+        const cols = wide ? 5 : 2;
+        const rows = Math.ceil(RATES.length / cols);
+        const foot = wide ? 46 : 76;
+        const size = wide ? 9 : 8;
+        const gx = (b.x1 - b.x0) * (wide ? 0.03 : 0.10);
+        const h = (b.y1 - foot) - b.y0;
+        const gy = h * (wide ? 0 : 0.10);
+        const pw = ((b.x1 - b.x0) - gx * (cols - 1)) / cols;
+        const ph = (h - gy * (rows - 1)) / rows;
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+
+        RATES.forEach((r, i) => {
+            const x = b.x0 + (i % cols) * (pw + gx);
+            const y = b.y0 + Math.floor(i / cols) * (ph + gy);
+            const ax = x + (wide ? 30 : 30);
+            const ay0 = y + 22;
+            const ay1 = y + ph - 24;
+            const xAt = j => ax + (x + pw - ax) * (j / 5);
+            const yAt = v => ay1 - (v / r.span) * (ay1 - ay0);
+
+            vtext(ctx, r.name, x, y + 7, 0.72, false, size, 'left');
+
+            ctx.strokeStyle = `rgba(${ground.ink},0.12)`;
+            ctx.lineWidth = 1;
+            r.at.forEach(v => {
+                const py = yAt(v);
+                ctx.beginPath();
+                ctx.moveTo(ax, py);
+                ctx.lineTo(x + pw, py);
+                ctx.stroke();
+                vtext(ctx, v + (v ? '%' : ''), ax - 6, py + 3, 0.45, false, size - 1, 'right');
+            });
+
+            ctx.save();
+            sweepClip(ctx, ax, x + pw, ay0, ay1, sweep);
+            ctx.lineWidth = 1.7;
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
+            // drawn back to front, so the headline series finishes on top of the
+            // four it is the aggregate of
+            for (let k = SERIES.length - 1; k >= 0; k--) {
+                ctx.beginPath();
+                ctx.moveTo(xAt(0), yAt(r.v[k][0]));
+                for (let j = 1; j < 6; j++) ctx.lineTo(xAt(j), yAt(r.v[k][j]));
+                ctx.strokeStyle = `rgb(${SERIES[k].c})`;
+                ctx.stroke();
+            }
+            ctx.restore();
+
+            vtext(ctx, '2019', ax, ay1 + 16, 0.45, false, size - 1, 'left');
+            vtext(ctx, '2024', x + pw, ay1 + 16, 0.45, false, size - 1, 'right');
+        });
+
+        const used = legend(SERIES, b.x0, b.y1 - foot + 26, b.x1 - b.x0, size, true);
+        vtext(ctx, 'IQVIA GLOBAL ONCOLOGY TRENDS 2025 \u00b7 EXHIBIT 19 \u00b7 REDRAWN',
+            b.x0, b.y1 - foot + 28 + used, 0.4, false, size - 1, 'left');
+
+        ctx.restore();
+    }
+
+    /* Two charts, one act, and the difference matters. The wash that covers the
+       grid is its own envelope: up once as the act opens, held flat across both
+       charts and the handover between them, down once at the end. Tying it to
+       whichever chart was showing is what put the grid back on screen in the gap
+       between them, where it is nothing to do with either.
+
+       So the grid is legible at exactly two moments, both of them deliberate:
+       going under as the charts arrive, and coming back out from under them for
+       the last beat. Between those it is texture and nothing else.
+
+       Each chart draws quickly and then holds, because a chart is read while it
+       is still rather than while it is arriving. The hold is the long part of
+       both windows and is what the beat is actually for. */
+    function renderTrials(prog) {
+        const t = clamp01((prog - TRIALS_A) / (1 - TRIALS_A));
+
+        const wash = clamp01((t - 0.05) / 0.08) * (1 - clamp01((t - 0.87) / 0.07));
+        if (wash <= 0.004) return;
+
+        ctx.fillStyle = `rgba(247,248,251,${0.985 * wash})`;
+        ctx.fillRect(0, 0, W, H);
+
+        /* One leaves exactly as the other arrives, and both are pinned to where
+           the caption beside them changes: a chart at half strength under a
+           heading that is still at full is the same mistake as the grid showing
+           through, one layer up. */
+        const a1 = clamp01((t - 0.07) / 0.07) * (1 - clamp01((t - 0.51) / 0.05));
+        const a2 = clamp01((t - 0.56) / 0.06) * (1 - clamp01((t - 0.87) / 0.06));
+
+        if (a1 > 0.004) drawStarts(a1, smooth(clamp01((t - 0.08) / 0.16)));
+        if (a2 > 0.004) drawRates(a2, smooth(clamp01((t - 0.57) / 0.15)));
+    }
+
+    /* The grid fills, holds where it is for the length of the charts, then picks
+       its shortlist out once they have cleared. Holding rather than running on
+       underneath is what leaves the last beat of the stage something to do. */
+    function cohortQ(prog) {
+        if (prog <= TRIALS_A) return clamp01((prog - META_END) / (TRIALS_A - META_END)) * 0.76;
+        if (prog <= TRIALS_B) return 0.76;
+        return 0.76 + clamp01((prog - TRIALS_B) / (1 - TRIALS_B)) * 0.24;
+    }
+
     /* ---------- second stage: what we do with them ---------- */
 
     /* The same grid of patients, run through the operation. Same slots, same
@@ -2520,16 +2866,28 @@
         let lead = 0, best = -1;
         list.forEach((el, i) => {
             const at = parseFloat(el.dataset.at);
-            const prev = i > 0 ? parseFloat(list[i - 1].dataset.at) : at - 0.16;
             const next = i < list.length - 1 ? parseFloat(list[i + 1].dataset.at) : 1.4;
-            // each caption owns the window between the midpoints of its
-            // neighbours, so two are never legible at the same time
-            const start = (prev + at) / 2;
+            /* Each caption owns the window between the midpoints of its
+               neighbours, so two are never legible at the same time. The first
+               owns everything back to the top of the stage, which is as far
+               back as there is, rather than back to a neighbour invented for it
+               at a fixed distance behind. That invented neighbour sat outside
+               the stage, so the opening beat was already at full fade-in on the
+               stage's first frame and needed a second ramp bolted on top to stop
+               it appearing all at once. */
+            const start = i > 0 ? (parseFloat(list[i - 1].dataset.at) + at) / 2 : 0;
             const end = (at + next) / 2;
-            const fade = 0.03;
-            let o = clamp01((prog - start) / fade) *
-                    (1 - clamp01((prog - (end - fade)) / fade));
-            if (i === 0) o *= smooth(clamp01(prog / 0.04));
+
+            /* A crossfade is a share of the window it has to cross, not a fixed
+               slice of the stage. Pinned at 0.03 it was wider than the whole of
+               the opening beat's window once the stage grew and the beats inside
+               the biology were scaled to fit, so that beat began fading out
+               before it had finished fading in and never once reached full
+               opacity: the two ramps cancelled to a peak of about 0.15. */
+            const fade = Math.min(0.03, (end - start) * 0.34);
+            const o = clamp01((prog - start) / fade) *
+                      (1 - clamp01((prog - (end - fade)) / fade));
+
             el.style.setProperty('--o', o.toFixed(3));
             if (o > best) { best = o; lead = i; }
         });
@@ -2582,11 +2940,12 @@
         ground = GROUNDS.paper;
         ctx.clearRect(0, 0, W, H);
         if (prog <= GROW_END) {
-            renderMitosis(clamp01(prog / GROW_END));
+            renderMitosis(curveAt(GROW_CLOCK, clamp01(prog / GROW_END)));
         } else if (prog <= META_END) {
             renderSpread(clamp01((prog - GROW_END) / (META_END - GROW_END)));
         } else {
-            renderCohort(clamp01((prog - META_END) / (1 - META_END)));
+            renderCohort(cohortQ(prog));
+            if (prog > TRIALS_A) renderTrials(prog);
         }
     }
 
