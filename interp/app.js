@@ -367,6 +367,31 @@ function renderBasicCorrelation() {
   badge.title = COPY.correlation.title(state.detail.name, block);
 }
 
+// every card explains the same three numbers, so one panel is moved to whichever marker is asked
+function bindBlockInfo(marker) {
+  const panel = document.getElementById("blockInfo");
+
+  const show = () => {
+    panel.innerHTML = COPY.blocks.panel;
+    panel.classList.add("open");
+
+    // the cards wrap across the row, so the panel is nudged back inside the window
+    const mark = marker.getBoundingClientRect();
+    panel.style.left = `${Math.max(12, Math.min(mark.left - 6, window.innerWidth - panel.offsetWidth - 12))}px`;
+    panel.style.top = `${mark.bottom + 8}px`;
+  };
+
+  const hide = () => panel.classList.remove("open");
+
+  marker.addEventListener("mouseenter", show);
+  marker.addEventListener("focus", show);
+  marker.addEventListener("mouseleave", hide);
+  marker.addEventListener("blur", hide);
+
+  // the marker sits inside the card, whose click would swap the selected block
+  marker.addEventListener("click", (event) => event.stopPropagation());
+}
+
 function renderBlocks() {
   const pathway = state.detail;
   const holder = document.getElementById("blockList");
@@ -380,15 +405,18 @@ function renderBlocks() {
     const width = strongest > 0 ? (Math.abs(block.heldout_effect) / strongest) * 100 : 0;
     card.innerHTML = `
       <div class="bhead">
-        <span class="bid">#${block.block}</span>
+        <span class="bid">#${blockNumber(block.layer, block.block)}</span>
+        <span class="info card-info" tabindex="0" role="button" aria-label="${COPY.blocks.infoLabel}">
+          <span class="info-mark" aria-hidden="true">i</span>
+        </span>
       </div>
       <table>
         <tr title="${COPY.blocks.heldoutR}"><td>held-out r</td><td class="val">${block.heldout_effect.toFixed(3)}</td></tr>
         <tr title="${COPY.blocks.trainR}"><td>training r</td><td class="val">${block.train_effect.toFixed(3)}</td></tr>
         <tr title="${COPY.blocks.deltaR2}"><td>&Delta;R&sup2; held-out</td><td class="val">${block.delta_r2.toFixed(4)}</td></tr>
-        <tr title="${COPY.blocks.firing}"><td>firing frac.</td><td class="val">${block.firing_fraction.toFixed(3)}</td></tr>
       </table>
       <div class="bar"><span style="width:${width}%"></span></div>`;
+    bindBlockInfo(card.querySelector(".card-info"));
     card.addEventListener("click", async () => {
       state.blockIndex = index;
 
@@ -421,7 +449,7 @@ function activeTiles() {
   return { tiles: block.tiles, block: block };
 }
 
-// a tile from a held-out slide carries no pathway score, so it reads as n/a rather than as zero
+// a slide panel too thin to score the set leaves the tile without one, so it reads as n/a rather than as zero
 function tileScore(tile) {
   return tile.pathway_score === null || tile.pathway_score === undefined ? "n/a" : tile.pathway_score.toFixed(3);
 }
@@ -664,13 +692,11 @@ function tissueTraces(positions) {
 
 function pathwayTileValues(positions) {
   const payload = state.blockManifold;
-  const train = state.manifold.tiles.train_row;
   const scores = state.tilePathway.values;
   const values = new Array(payload.tile_rows.length).fill(null);
 
   positions.forEach((index) => {
-    const row = train[payload.tile_rows[index]];
-    if (row >= 0) values[index] = scores[row];
+    values[index] = scores[payload.tile_rows[index]];
   });
 
   return values;
@@ -702,7 +728,7 @@ function blockHover(indices) {
     const dominant = code >= 0 ? legend[code].name
       : code === -2 ? COPY.hover.dominantOther : COPY.hover.dominantNone;
 
-    return COPY.hover.block(blocks.block[i], blocks.firing_fraction[i], dominant);
+    return COPY.hover.block(blockNumber(blocks.layer[i], blocks.block[i]), dominant);
   });
 }
 
@@ -726,15 +752,21 @@ function selectedRow() {
   return state.manifold.blocks.block_global_index.indexOf(target);
 }
 
+// a block is named by the encoder layer it was fit on and its index inside that dictionary,
+// padded so the 512 indices of a dictionary line up in a column of cards
+function blockNumber(layer, block) {
+  return `${layer}-${String(block).padStart(3, "0")}`;
+}
+
 function selectedLabel() {
   const at = selectedRow();
   if (at < 0) return null;
 
-  return `block #${state.manifold.blocks.block[at]}`;
+  return `block #${blockNumber(state.manifold.blocks.layer[at], state.manifold.blocks.block[at])}`;
 }
 
 function blockLabel(block) {
-  return `block #${block.block}`;
+  return `block #${blockNumber(block.layer, block.block)}`;
 }
 
 // the card's own name, needed to explain the rare block that transfers but is not in the embedding
@@ -767,7 +799,7 @@ function highlightTraces() {
          { size: 13, color: "rgba(0,0,0,0)", line: { color: HIGHLIGHT, width: 3.5 }, symbol: "circle" },
          { mode: "markers+text", textposition: "top center",
            textfont: { size: 12, color: HIGHLIGHT, family: "Inter, system-ui, sans-serif" },
-           hovertemplate: COPY.hover.selected(label, blocks.firing_fraction[at]), showlegend: true })];
+           hovertemplate: COPY.hover.selected(label), showlegend: true })];
 }
 
 function subset(values, rows) {
@@ -944,7 +976,7 @@ async function renderBlockManifold(geneAvailable) {
     if (!gene || gene.symbol !== state.gene || state.manifoldView !== "gene") return;
 
     traces = tileValueTraces(positions, geneTileValues(positions), `${state.gene} count`, EXPRESSION_SCALE,
-                            "gene not on this slide panel");
+                            COPY.tile.gene.missing);
     title = COPY.tile.gene.title(state.gene);
     subtitle = COPY.tile.gene.subtitle(label);
     legend = true;
@@ -953,7 +985,7 @@ async function renderBlockManifold(geneAvailable) {
     if (!state.tilePathway) return manifoldMessage(COPY.tile.noScore(entry.pathway_id));
 
     traces = tileValueTraces(positions, pathwayTileValues(positions), "pathway score", "Viridis",
-                            "held-out tile, not scored");
+                            COPY.tile.pathway.missing);
     title = COPY.tile.pathway.title(entry.name);
     subtitle = COPY.tile.pathway.subtitle(label, entry.pathway_id);
     legend = true;

@@ -4,6 +4,20 @@
 // can change without touching behaviour. Values are plain strings or functions of the numbers
 // they quote. Short control labels stay in app.js next to the widgets they belong to.
 
+// each card metric is written once, then shown both as a row tooltip and inside the card's own panel
+const BLOCK_HELDOUT_R = "Partial correlation between the pathway score and this block's activation magnitude on the 12"
+  + " unseen slides, averaged over patients, with the covariate coefficients carried over from training. Eight"
+  + " covariates are removed from both sides: colour, tissue occupancy, cell count and library size.";
+
+const BLOCK_TRAIN_R = "The same partial correlation fit on the tiles of the 46 training slides.";
+
+const BLOCK_DELTA_R2 = "What the block adds beyond those covariates on slides it never saw: the held-out variance in the"
+  + " pathway score explained by a covariates-plus-block model minus a covariates-only model, both fit on training"
+  + " tiles. 0.15 means the block accounts for a further 15% of the score's variance.";
+
+const BLOCK_RULE = "A card appears only when held-out r agrees in sign with training r, its patient-level bootstrap"
+  + " interval excludes zero, and \u0394R\u00B2 is positive.";
+
 const COPY = {
   sidebarEmpty: "No pathway matches that search.",
   loading: "loading…",
@@ -21,19 +35,22 @@ const COPY = {
   },
 
   blocks: {
-    heldoutR: "Partial correlation between the pathway score and this block's activation magnitude on the 12 unseen"
-      + " slides, averaged over patients, with the covariate coefficients carried over from training.",
-    trainR: "The same partial correlation fit on the tiles of the 46 training slides.",
-    deltaR2: "Held-out variance in the pathway score explained by adding this block's activity to a covariates-only"
-      + " model, with every coefficient fit on training tiles.",
-    firing: "Fraction of tiles on which this block is active at all.",
+    heldoutR: BLOCK_HELDOUT_R,
+    trainR: BLOCK_TRAIN_R,
+    deltaR2: BLOCK_DELTA_R2,
+    panel: `<span><strong>held-out r:</strong> ${BLOCK_HELDOUT_R}</span>
+      <span><strong>training r:</strong> ${BLOCK_TRAIN_R}</span>
+      <span><strong>&Delta;R&sup2; held-out:</strong> ${BLOCK_DELTA_R2}</span>
+      <span>${BLOCK_RULE}</span>`,
+    infoLabel: "How to read these numbers",
   },
 
   correlation: {
     unavailable: "r unavailable",
     unavailableTitle: "Raw Pearson correlation is undefined because one input has no variance.",
     title: (pathwayName, block) =>
-      `Unadjusted Pearson correlation between ${pathwayName} score and the activation magnitude of block #${block.block}`
+      `Unadjusted Pearson correlation between ${pathwayName} score and the activation magnitude of block`
+      + ` #${blockNumber(block.layer, block.block)}`
       + ` across ${block.basic_r_n.toLocaleString()} training tiles. No covariates are residualized; the card reports the`
       + " adjusted held-out r.",
   },
@@ -45,12 +62,10 @@ const COPY = {
   hover: {
     tile: (tileId, slide, tissue, split, activation) =>
       `${tileId}<br>slide ${slide} · ${tissue} · ${split}<br>block activation ${activation}`,
-    block: (block, firingFraction, dominant) =>
-      `block ${block}<br>firing fraction ${firingFraction}<br>dominant: ${dominant}`,
+    block: (blockNumber, dominant) => `block #${blockNumber}<br>dominant: ${dominant}`,
     dominantNone: "no supported pathway",
     dominantOther: "other supported pathway",
-    selected: (blockLabel, firingFraction) =>
-      `selected: ${blockLabel}<br>firing fraction ${firingFraction}<extra></extra>`,
+    selected: (blockLabel) => `selected: ${blockLabel}<extra></extra>`,
   },
 
   // the selected block's own manifold: one point per tile
@@ -63,6 +78,7 @@ const COPY = {
     gene: {
       title: (gene) => `${gene} expression`,
       subtitle: (blockLabel) => `tiles of ${blockLabel}, coloured by measured counts`,
+      missing: "gene not on this slide panel",
       note: (gene, pathwayName) => `Green tiles confined to one region indicate that the block's coordinates encode
         structure <b>${gene}</b> tracks. Grey tiles come from slides whose panel omits it. Select <b>Pathway score</b> to
         compare the full ${pathwayName} set on the same positions.`,
@@ -76,7 +92,9 @@ const COPY = {
     pathway: {
       title: (pathwayName) => `${pathwayName} score`,
       subtitle: (blockLabel, pathwayId) => `tiles of ${blockLabel}, coloured by ${pathwayId} score`,
-      note: (tiles) => `Each point is one of the ${tiles} tiles where this block fires. Both plots hold the same
+      missing: "fewer than three pathway genes on this slide panel",
+      note: (tiles) => `Each point is one of the ${tiles} tiles where this block fires, training and held-out alike;
+        held-out tiles are scored with the standardization frozen on the training slides. Both plots hold the same
         positions and rotate independently, the left coloured by the pathway score and the right by the tissue the tile
         came from; score varying along a direction the tissues do not follow indicates the block resolves the pathway
         internally rather than tracking tissue identity.`,
@@ -122,7 +140,7 @@ const COPY = {
   },
 
   modal: {
-    title: (block, tile) => `Block #${block.block} on ${tile.slide_id} tile ${tile.source_h5_row}`,
+    title: (block, tile) => `Block #${blockNumber(block.layer, block.block)} on ${tile.slide_id} tile ${tile.source_h5_row}`,
     meta: (pathway, tile) => `${pathway.name} (${pathway.pathway_id}) &nbsp;·&nbsp; ${tile.tissue} &nbsp;·&nbsp;`
       + ` ${tile.split} split &nbsp;·&nbsp; <code>${tile.sequence_id}</code>`,
     stats: (block, tile, score, tokens, topPatches) => `

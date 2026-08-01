@@ -249,6 +249,45 @@ def collection_profile(root, profile):
             "name_suffix": COLLECTIONS[name]["name_suffix"]}
 
 
+PROPER_TOKENS = {"NOTCH": "Notch", "WNT": "Wnt", "HEDGEHOG": "Hedgehog", "P53": "p53", "DN": "down", "UP": "up"}
+
+ACRONYM_TOKENS = {"AKT", "DNA", "JAK", "KRAS", "MTOR", "MYC", "NFKB", "TGF", "TNFA", "UV"}
+
+
+def sentence_case(name):
+
+    """Lower a name written in capitals, keeping gene symbols and acronyms as they are.
+
+    MSigDB ships every Hallmark name capitalised throughout, which reads as shouting beside
+    KEGG's sentence-cased names. Names that are not fully capitalised are returned untouched.
+
+    Args:
+        name (str): Display name, such as ``TNFA SIGNALING VIA NFKB``.
+
+    Returns:
+        str: Name in sentence case, such as ``TNFA signaling via NFKB``.
+    """
+
+    if name != name.upper():
+        return name
+
+    tokens = name.split()
+    words = []
+    for token in tokens:
+        if token in PROPER_TOKENS:
+            words.append(PROPER_TOKENS[token])
+        elif token in ACRONYM_TOKENS or any(character.isdigit() for character in token):
+            words.append(token)
+        else:
+            words.append(token.lower())
+
+    # only a lowered leading word takes the capital, a symbol keeps the case it was given
+    if tokens[0] not in PROPER_TOKENS and words[0] != tokens[0]:
+        words[0] = words[0].capitalize()
+
+    return " ".join(words)
+
+
 def load_pathway_names(root, suffix=""):
 
     """Map frozen gene-set identifiers to short display names.
@@ -263,7 +302,7 @@ def load_pathway_names(root, suffix=""):
 
     sets = json.loads((root / "expanded_kegg_gene_sets.json").read_text())
 
-    return {key: (value["name"].replace(suffix, "") if suffix else value["name"]) for key, value in sets.items()}
+    return {key: sentence_case(value["name"].replace(suffix, "") if suffix else value["name"]) for key, value in sets.items()}
 
 
 def select_pathways(root, n_pathways, n_blocks):
@@ -550,7 +589,10 @@ def tile_rows(identity):
 
 def load_pathway_tile_scores(root, pathways):
 
-    """Build per-pathway tile scores keyed by tile id for the training split.
+    """Build per-pathway tile scores keyed by tile id over every tile, held-out included.
+
+    Held-out tiles are scored with the gene standardization frozen on the training slides, so the
+    score is a projection of training statistics rather than a fit to unseen data.
 
     Args:
         root (Path): Gene/pathway analysis output root.
@@ -560,18 +602,18 @@ def load_pathway_tile_scores(root, pathways):
         dict: pathway id -> dict mapping tile_id str to float score.
     """
 
-    counts = pd.read_parquet(root / "tile_gene_counts.parquet", columns=["tile_id", "split"])
-    order = counts[counts["split"] == "train"]["tile_id"].astype(str).to_numpy()
+    order = pd.read_parquet(root / "tile_gene_counts.parquet", columns=["tile_id"])["tile_id"].astype(str).to_numpy()
 
     wanted = set(pathways)
-    scores = pd.read_parquet(root / "tile_pathway_scores_train.parquet", columns=["tile_row", "pathway_id", "score"])
+    scores = pd.read_parquet(root / "tile_pathway_scores_all.parquet", columns=["tile_row", "pathway_id", "score"])
     scores = scores[scores["pathway_id"].isin(wanted)]
 
     out = {}
     for pathway, group in scores.groupby("pathway_id"):
         rows = group["tile_row"].to_numpy()
-        valid = rows < len(order)
-        out[pathway] = dict(zip(order[rows[valid]], group["score"].to_numpy()[valid].astype(float)))
+        values = group["score"].to_numpy().astype(float)
+        finite = np.isfinite(values)
+        out[pathway] = dict(zip(order[rows[finite]], values[finite]))
 
     return out
 
@@ -583,7 +625,7 @@ def basic_correlation(identity, activation, scores):
     Args:
         identity (pandas.DataFrame): Tile identity and split rows [n_tiles].
         activation (numpy.ndarray): Scalar block activation magnitude [n_tiles].
-        scores (dict): Training tile id to pathway score.
+        scores (dict): Tile id to pathway score, over every split.
 
     Returns:
         tuple: (Pearson r float or None, number of training tiles used)
@@ -892,7 +934,7 @@ def collect_tile_requests(root, per_pathway, tile_scores, n_candidates, n_score_
             pairs dict mapping (block_global_index, sequence_id) to None placeholder).
     """
 
-    lookup = blocks_index.set_index("block_global_index")[["layer", "group_size", "block", "firing_fraction", "contribution_stable_rank", "estimability_status"]]
+    lookup = blocks_index.set_index("block_global_index")[["layer", "group_size", "block", "contribution_stable_rank", "estimability_status"]]
 
     payload = {}
     needed = set()
@@ -940,7 +982,6 @@ def collect_tile_requests(root, per_pathway, tile_scores, n_candidates, n_score_
                 "delta_r2": round(float(row["delta_r2"]), 5),
                 "ci_low": round(float(row["ci_low"]), 4),
                 "ci_high": round(float(row["ci_high"]), 4),
-                "firing_fraction": round(float(meta["firing_fraction"]), 4),
                 "stable_rank": round(float(meta["contribution_stable_rank"]), 3),
                 "basic_r": round(basic_r, 4) if basic_r is not None else None,
                 "basic_r_n": basic_r_n,
@@ -953,8 +994,8 @@ def collect_tile_requests(root, per_pathway, tile_scores, n_candidates, n_score_
             lead = block_entries[0]
             identity, _ = load_activity(root, task_index_of(profile, lead["layer"], lead["group_size"]), activity_cache)
             rows = tile_rows(identity)
-            train_only = {sequence: score for sequence, score in tile_scores[pathway].items() if sequence in rows}
-            ranked = sorted(train_only.items(), key=lambda item: -item[1])[:n_score_candidates]
+            scored = {sequence: score for sequence, score in tile_scores[pathway].items() if sequence in rows}
+            ranked = sorted(scored.items(), key=lambda item: -item[1])[:n_score_candidates]
 
             for sequence_id, score in ranked:
                 position = rows[sequence_id]
