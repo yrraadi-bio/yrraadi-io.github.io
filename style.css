@@ -990,24 +990,14 @@ body {
     list-style: none;
 }
 
-/* Poured down three columns rather than laid across a grid. Seventeen divides by
-   nothing, so a grid of it always ends in a short row: five across stranded one name
-   alone, and lifting the three funds out to fix that made a tier of them, which is
-   not what they are. Down the columns the shortfall is a single missing name at the
-   foot of the last one, and the three tracks are the advisors' tracks, so the two
-   groups read as one block rather than two settings. */
+/* Across the rows, not down the columns: the order in the markup is deliberate, and
+   the first two rows are meant to be read as rows. Three of them, which are also the
+   advisors' three, so the two groups line up as one block. Seventeen leaves the last
+   row a name short of full, which is the least a number that divides by nothing can
+   leave anywhere. */
 .backing__list--names {
-    display: block;
-    columns: 3;
-    column-gap: 3.2vw;
-    margin-top: 2.2rem;
-}
-
-/* On every name, not between them: a margin that only sits between siblings is
-   dropped at the top of each new column, and the columns stop lining up. */
-.backing__list--names .person__name {
-    margin-bottom: 1.4rem;
-    break-inside: avoid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.4rem 3.2vw;
 }
 
 .person__name {
@@ -2269,11 +2259,7 @@ body {
         gap: 2.2rem 6vw;
         margin-top: 1.8rem;
     }
-    .backing__list--names {
-        columns: 2;
-        column-gap: 6vw;
-        margin-top: 1.8rem;
-    }
+    .backing__list--names { grid-template-columns: repeat(2, 1fr); }
     .stage { height: 580vh; }
     .stage--engine { height: 860vh; }
     .stage--engine .captions { width: auto; }
