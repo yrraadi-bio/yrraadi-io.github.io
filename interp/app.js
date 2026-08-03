@@ -367,31 +367,6 @@ function renderBasicCorrelation() {
   badge.title = COPY.correlation.title(state.detail.name, block);
 }
 
-// every card explains the same three numbers, so one panel is moved to whichever marker is asked
-function bindBlockInfo(marker) {
-  const panel = document.getElementById("blockInfo");
-
-  const show = () => {
-    panel.innerHTML = COPY.blocks.panel;
-    panel.classList.add("open");
-
-    // the cards wrap across the row, so the panel is nudged back inside the window
-    const mark = marker.getBoundingClientRect();
-    panel.style.left = `${Math.max(12, Math.min(mark.left - 6, window.innerWidth - panel.offsetWidth - 12))}px`;
-    panel.style.top = `${mark.bottom + 8}px`;
-  };
-
-  const hide = () => panel.classList.remove("open");
-
-  marker.addEventListener("mouseenter", show);
-  marker.addEventListener("focus", show);
-  marker.addEventListener("mouseleave", hide);
-  marker.addEventListener("blur", hide);
-
-  // the marker sits inside the card, whose click would swap the selected block
-  marker.addEventListener("click", (event) => event.stopPropagation());
-}
-
 function renderBlocks() {
   const pathway = state.detail;
   const holder = document.getElementById("blockList");
@@ -406,9 +381,6 @@ function renderBlocks() {
     card.innerHTML = `
       <div class="bhead">
         <span class="bid">#${blockNumber(block.layer, block.block)}</span>
-        <span class="info card-info" tabindex="0" role="button" aria-label="${COPY.blocks.infoLabel}">
-          <span class="info-mark" aria-hidden="true">i</span>
-        </span>
       </div>
       <table>
         <tr title="${COPY.blocks.heldoutR}"><td>held-out r</td><td class="val">${block.heldout_effect.toFixed(3)}</td></tr>
@@ -416,7 +388,6 @@ function renderBlocks() {
         <tr title="${COPY.blocks.deltaR2}"><td>&Delta;R&sup2; held-out</td><td class="val">${block.delta_r2.toFixed(4)}</td></tr>
       </table>
       <div class="bar"><span style="width:${width}%"></span></div>`;
-    bindBlockInfo(card.querySelector(".card-info"));
     card.addEventListener("click", async () => {
       state.blockIndex = index;
 
@@ -491,11 +462,25 @@ function renderGeneScale(geneMax) {
 
 /* ---------- 3D block manifold ---------- */
 
-const MANIFOLD_PALETTE = ["#4E728A", "#C4650D", "#2E6E4E", "#B23A48", "#7A4E7E", "#8A6D1B", "#D08BB0", "#556065", "#9FB233", "#2FA5A5"];
+// the theme's register: pastels, which are the only categorical colours that hold their hue on navy
+const MANIFOLD_PALETTE = ["#8FC0F0", "#F0A86A", "#7FD6A8", "#F08A7A", "#C4A2E8", "#E8CF7A", "#68C8CF", "#AAB8CC", "#C3D977", "#E3A6C8"];
 const AXIS_PAD = 0.04;
 
 // magenta sits outside every colour scale used for the points, so the marked block cannot blend in
-const HIGHLIGHT = "#E5007D";
+const HIGHLIGHT = "#FF5ECB";
+
+// the plot chrome tracks the site theme's tokens, so a plot reads as part of the page
+const CHROME = {
+  ink: "#f2f6fb",
+  muted: "rgba(224,235,248,0.62)",
+  subtle: "rgba(200,218,240,0.58)",
+  rule: "rgba(180,205,240,0.2)",
+  // the cube is ruled far more densely than the page, so its lines sit under the page's hairline
+  grid: "rgba(180,205,240,0.12)",
+  // a recess rather than a lit box, so the dark end of a sequential ramp still reads inside the cube
+  wall: "rgba(6,14,26,0.55)",
+  panel: "rgba(9,19,35,0.92)",
+};
 
 // Plotly's default cube pads well past the cloud, so axes are clamped to the data
 function axisRange(values) {
@@ -509,28 +494,45 @@ function axisRange(values) {
 
 function manifoldAxis(title, values) {
   return {
-    title: { text: title, font: { size: 12, color: "#1D272A" } },
+    title: { text: title, font: { size: 12, color: CHROME.muted } },
     range: axisRange(values),
     showbackground: true,
-    backgroundcolor: "#FCFCFB",
-    gridcolor: "#DEDCD4",
+    backgroundcolor: CHROME.wall,
+    gridcolor: CHROME.grid,
     zeroline: false,
     showticklabels: true,
     ticks: "outside",
-    tickfont: { size: 9, color: "#6F7472" },
+    tickfont: { size: 9.5, color: CHROME.muted },
     showspikes: false,
   };
 }
 
 // a legend of many categories cannot sit over the cube, so it claims a band on the left and the cube keeps the middle
-const LEGEND_WIDTH = 290;
+const LEGEND_WIDTH = 262;
 
 // the axis titles and ticks are drawn outside the cube, so the band only takes width they and the cube cannot use
 const AXIS_FURNITURE = 120;
 
+// a legend entry cut mid-word reads as a defect, so it stops at a word and says it was cut
+function shorten(text, limit) {
+  if (text.length <= limit) return text;
+
+  const cut = text.slice(0, limit);
+  const boundary = cut.lastIndexOf(" ");
+
+  return `${(boundary > limit * 0.6 ? cut.slice(0, boundary) : cut).replace(/[\s,;:]+$/, "")}…`;
+}
+
+// the serif title and its caption need their own band above the cube
+const TITLE_BAND = 70;
+const PLOT_PAD = 4;
+
+// the ramp lies in a band below the cube, which every plot reserves so the pair keeps one cube size
+const RAMP_BAND = 54;
+
 function legendGutter(holder) {
   const width = holder.clientWidth;
-  const cube = holder.clientHeight - 66;
+  const cube = holder.clientHeight - TITLE_BAND - RAMP_BAND;
   const spare = (width - cube - AXIS_FURNITURE) / 2;
 
   return Math.min(LEGEND_WIDTH, Math.max(0, spare)) / width;
@@ -538,15 +540,24 @@ function legendGutter(holder) {
 
 function manifoldLayout(id, title, subtitle, showLegend, coords) {
   const blocks = coords || state.manifold.blocks;
+  const holder = document.getElementById(id);
   const banded = showLegend === "gutter";
-  const gutter = banded ? legendGutter(document.getElementById(id)) : 0;
+  const gutter = banded ? legendGutter(holder) : 0;
+
+  // too narrow a band leaves the legend overhanging the cube, so it stops being an opaque panel
+  const tight = banded && gutter * holder.clientWidth < LEGEND_WIDTH;
+
+  // the page sets its headings in the theme's serif, so a plot title follows and its caption stays in Inter
+  const caption = subtitle
+    ? `<br><span style="font-family:Inter,system-ui,sans-serif;font-size:11.5px;fill:${CHROME.muted}">${subtitle}</span>`
+    : "";
 
   return {
     title: {
-      text: subtitle ? `${title}<br><sub>${subtitle}</sub>` : title,
+      text: `${title}${caption}`,
       x: 0.5,
       xanchor: "center",
-      font: { size: 15, color: "#1D272A" },
+      font: { family: "Instrument Serif, Georgia, serif", size: 21, color: CHROME.ink },
     },
     scene: {
       xaxis: manifoldAxis("UMAP 1", blocks.x),
@@ -559,18 +570,21 @@ function manifoldLayout(id, title, subtitle, showLegend, coords) {
     showlegend: Boolean(showLegend),
     legend: {
       itemsizing: "constant",
-      font: { size: 10.5 },
-      bgcolor: banded ? "#FFFFFF" : "rgba(255,255,255,0.85)",
-      bordercolor: "#DEDCD4",
+      font: { size: 10.5, color: CHROME.muted },
+      bgcolor: banded && !tight ? CHROME.panel : "rgba(9,19,35,0.78)",
+      bordercolor: CHROME.rule,
       borderwidth: 1,
       x: banded ? 0 : 0.01,
       xanchor: "left",
       y: banded ? 0.5 : 0.99,
       yanchor: banded ? "middle" : "top",
     },
-    margin: { l: 4, r: 4, t: 62, b: 4 },
-    paper_bgcolor: "#FFFFFF",
-    font: { family: "Inter, system-ui, sans-serif" },
+    margin: { l: PLOT_PAD, r: PLOT_PAD, t: TITLE_BAND, b: RAMP_BAND },
+    // the plot sits on the frame's glass, so it brings no paper of its own
+    paper_bgcolor: "rgba(0,0,0,0)",
+    font: { family: "Inter, system-ui, sans-serif", color: CHROME.muted },
+    hoverlabel: { bgcolor: CHROME.panel, bordercolor: CHROME.rule, font: { family: "Inter, system-ui, sans-serif", size: 11.5, color: CHROME.ink } },
+    modebar: { bgcolor: "rgba(0,0,0,0)", color: "rgba(200,218,240,0.4)", activecolor: "#7FB4FF" },
   };
 }
 
@@ -581,14 +595,18 @@ function scaleFrom(stops) {
   return stops.map((stop, index) => [index / (stops.length - 1), `rgb(${stop[0]},${stop[1]},${stop[2]})`]);
 }
 
-const EXPRESSION_SCALE = scaleFrom(GENE_STOPS);
-const MISSING_COLOUR = "#D7D5CE";
+// The tiles are drawn on pale tissue, where more expression has to mean darker. The manifold is points on
+// navy, where that would make the strongest tiles the ones that vanish, so the same greens run the other
+// way and the darkest stop is lifted clear of the ground.
+const EXPRESSION_SCALE = scaleFrom([[27, 94, 66], ...GENE_STOPS.slice(0, 4).reverse()]);
+// muted slate, so tiles carrying no value stay quiet against the ground rather than lighting up
+const MISSING_COLOUR = "#5B708C";
 const TISSUE_COLOURS = {
-  Bowel: "#B66D2A",
-  Breast: "#B64B63",
-  Lung: "#4E7D96",
-  Pancreas: "#8667A7",
-  Skin: "#3B8B70",
+  Bowel: "#E0A061",
+  Breast: "#EF8FA8",
+  Lung: "#87BFE0",
+  Pancreas: "#B79EE6",
+  Skin: "#6FC9A3",
   Unknown: MISSING_COLOUR,
 };
 
@@ -641,8 +659,12 @@ function markers(name, coords, hover, marker, options) {
 }
 
 // one colourbar spec, so a ramp reads the same wherever it appears
+// it lies below the cube like the gallery's scale bars, which also keeps the axis titles their room at the sides
 function colourbar(title) {
-  return { title: { text: title, side: "right", font: { size: 11 } }, thickness: 13, len: 0.62 };
+  return { title: { text: title, side: "top", font: { size: 10.5, color: CHROME.muted } },
+           orientation: "h", x: 0.5, xanchor: "center", y: 0, yanchor: "top", len: 0.52, thickness: 11,
+           xpad: 4, ypad: 4,
+           outlinecolor: CHROME.rule, outlinewidth: 1, tickfont: { size: 9.5, color: CHROME.subtle } };
 }
 
 // tiles with no value are drawn in grey rather than dropped, so the shape of the manifold survives
@@ -846,7 +868,7 @@ function dominantTraces(rows) {
     const rowsFor = rows.filter((index) => labels.code[index] === code);
     if (!rowsFor.length) return;
 
-    traces.push(markers(`${entry.name.slice(0, 38)} (${rowsFor.length})`, xyz(blocks, rowsFor), blockHover(rowsFor),
+    traces.push(markers(`${shorten(entry.name, 34)} (${rowsFor.length})`, xyz(blocks, rowsFor), blockHover(rowsFor),
                        { size: 3.4, color: MANIFOLD_PALETTE[code % MANIFOLD_PALETTE.length], opacity: 0.92 }));
   });
 
@@ -1231,21 +1253,22 @@ async function reloadAssets() {
   location.reload();
 }
 
-function renderCollectionTabs() {
-  const holder = document.getElementById("collectionTabs");
-  holder.innerHTML = "";
+// the collection the list is drawn from, chosen above the list itself
+function renderCollectionPicker() {
+  const picker = document.getElementById("collectionSelect");
+  picker.innerHTML = "";
 
-  // a single collection needs no switch, so the tabs stay out of the way
-  if (state.collections.length < 2) return;
+  // a single collection needs no switch, so the control stays out of the way
+  document.getElementById("collectionWrap").classList.toggle("hidden", state.collections.length < 2);
 
   state.collections.forEach((entry) => {
-    const button = document.createElement("button");
-    button.textContent = entry.collection_label;
-    button.title = `${entry.n_pathways} gene sets`;
-    button.className = entry.slug === state.slug ? "active" : "";
-    button.addEventListener("click", () => selectCollection(entry.slug));
-    holder.appendChild(button);
+    const option = document.createElement("option");
+    option.value = entry.slug;
+    option.textContent = `${entry.collection_label} · ${entry.n_pathways} sets`;
+    picker.appendChild(option);
   });
+
+  picker.value = state.slug;
 }
 
 async function selectCollection(slug) {
@@ -1261,7 +1284,7 @@ async function selectCollection(slug) {
 
   state.bundle = await loadJson(`data/${slug}/index.json`);
   await loadManifold();
-  renderCollectionTabs();
+  renderCollectionPicker();
   renderSidebar(document.getElementById("search").value);
 
   // gene sets do not carry across collections, so fall back to the strongest one
@@ -1328,8 +1351,34 @@ function bindSidebarResize() {
   handle.addEventListener("dblclick", () => setSidebarWidth(SIDEBAR_DEFAULT, true));
 }
 
+// The bar floats over the page rather than reserving a strip of it, so reading downward has to clear it:
+// it leaves on the way down and returns on the first move back up, where its controls are wanted.
+function bindDockLift() {
+  const dock = document.querySelector(".dock");
+  let last = window.scrollY;
+
+  const update = () => {
+    const at = window.scrollY;
+    const moved = at - last;
+
+    dock.classList.toggle("lifted", at > 6);
+
+    // the settling frames at the end of a gesture must not undo the direction it was going in
+    if (Math.abs(moved) > 6) dock.classList.toggle("gone", moved > 0 && at > 140);
+    if (at <= 140) dock.classList.remove("gone");
+
+    last = at;
+  };
+
+  window.addEventListener("scroll", update, { passive: true });
+  update();
+}
+
 function bindControls() {
+  bindDockLift();
+
   document.getElementById("search").addEventListener("input", (event) => renderSidebar(event.target.value));
+  document.getElementById("collectionSelect").addEventListener("change", (event) => selectCollection(event.target.value));
   document.getElementById("sidebarToggle").addEventListener("click", toggleSidebar);
   bindSidebarResize();
   document.getElementById("reload").addEventListener("click", reloadAssets);
@@ -1379,6 +1428,9 @@ function bindControls() {
 }
 
 async function init() {
+  // every card reports the same three numbers, so the heading explains them once
+  document.getElementById("blockInfo").innerHTML = COPY.blocks.panel;
+
   const manifest = await loadJson("data/collections.json");
   state.collections = manifest.collections;
   state.slug = state.collections[0].slug;
@@ -1386,7 +1438,7 @@ async function init() {
   state.bundle = await loadJson(`data/${state.slug}/index.json`);
   await loadManifold();
 
-  renderCollectionTabs();
+  renderCollectionPicker();
   renderSidebar("");
   bindControls();
   if (state.bundle.pathways.length) selectPathway(0);

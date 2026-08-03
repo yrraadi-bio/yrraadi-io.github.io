@@ -42,7 +42,6 @@ const COPY = {
       <span><strong>training r:</strong> ${BLOCK_TRAIN_R}</span>
       <span><strong>&Delta;R&sup2; held-out:</strong> ${BLOCK_DELTA_R2}</span>
       <span>${BLOCK_RULE}</span>`,
-    infoLabel: "How to read these numbers",
   },
 
   correlation: {
