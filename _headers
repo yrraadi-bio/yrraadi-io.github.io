@@ -39,14 +39,24 @@
 /assets/*
   Cache-Control: public, max-age=604800
 
-/drugs/*
-  Cache-Control: public, max-age=604800
-
 /blogs/:post/assets/*
   Cache-Control: public, max-age=604800
 
+# Covers the drug structures as well as the tissue plates at the root, which is why
+# there is no rule for /drugs/ itself: two rules matching one file get their values
+# joined with a comma, and a doubled Cache-Control is what that looked like.
 /*.webp
   Cache-Control: public, max-age=604800
+
+# Two files carry no usable extension for Cloudflare to guess from: the worklist is
+# named "runs" with nothing after it, and a Deep Zoom descriptor is XML behind a
+# .dzi. Both are fetched rather than navigated to, so they load either way, but a
+# response that declares what it is beats one that does not.
+/api/runs
+  Content-Type: application/json
+
+/api/slides/job/:job/dzi.dzi
+  Content-Type: application/xml
 
 # The deploy previews are the same site on a workers.dev name. One copy of it
 # belongs in an index and it is not that one.
