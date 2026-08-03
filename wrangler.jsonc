@@ -1,0 +1,25 @@
+{
+    "$schema": "node_modules/wrangler/config-schema.json",
+    "name": "origin-site",
+    "compatibility_date": "2026-08-03",
+
+    // dist/ is built by _dev/publish.sh and holds only what should be public; the
+    // repo root is not served directly because .git lives there.
+    //
+    // No "main" and no Worker script: every route here is a file on disk. The
+    // Worker script arrives with R2, when the slide tiles under api/ move out of
+    // the repo and have to be fetched from a bucket instead.
+    "assets": {
+        "directory": "./dist",
+        // A multi-page site rather than a single-page app: /blogs/muon/ has to
+        // resolve to its own index.html, not to the homepage's. The workspace
+        // under /platform/ takes its state from the query string, so it needs no
+        // path rewriting either.
+        "html_handling": "auto-trailing-slash",
+        "not_found_handling": "none"
+    },
+
+    "observability": {
+        "enabled": true
+    }
+}

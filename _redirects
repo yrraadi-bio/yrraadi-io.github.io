@@ -1,0 +1,8 @@
+# The three paths blog posts used to live at. Each one still holds a page that
+# meta-refreshes to the current URL, which works but tells a crawler nothing; a 301
+# moves the inbound links properly. The pages stay in place behind these as a
+# fallback.
+
+/temp_blog/* /introducing-axis/ 301
+/temp_blog2/* /introducing-axis/ 301
+/muon/* /blogs/muon/ 301

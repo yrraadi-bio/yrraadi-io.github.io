@@ -1,0 +1,54 @@
+# Response headers. Cloudflare's default for a static asset is
+# "public, max-age=0, must-revalidate", which is right for a page that changes when
+# we deploy and wrong for a slide tile that never changes, so the long lifetimes
+# below are the point of this file. GitHub Pages forced max-age=600 on everything
+# and gave no way to change it.
+#
+# The policy is report-only until we have seen real reports from real browsers.
+# Enforcing it as first written would have broken four blog posts: MathJax loads its
+# fonts from jsdelivr and Plotly builds functions from strings, so 'unsafe-eval' and
+# that origin are both load-bearing. 'unsafe-inline' is here because index.html
+# carries one inline script, which is also why this is a resource allowlist rather
+# than a defence against injected script.
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+  X-Frame-Options: SAMEORIGIN
+  Strict-Transport-Security: max-age=31536000
+  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://cdn.jsdelivr.net https://cdn.plot.ly; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' https://script.google.com https://www.google-analytics.com https://region1.google-analytics.com https://cdn.jsdelivr.net; worker-src 'self' blob:; frame-src 'self'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'
+
+# The slide pyramids and the baked run data are keyed to a job id, so a given URL
+# is the same bytes forever. This is the rule the tile-heavy pages live on: without
+# it every one of the 17,872 tiles is revalidated on every visit.
+/api/slides/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/api/jobs/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Vite writes a content hash into these filenames, so a change to the workspace
+# bundle changes the URL and the old one can be held indefinitely.
+/static/dist/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Artwork and video. The names carry no hash, so a week rather than a year: long
+# enough that a repeat visitor re-downloads none of the 15 MB of film, short enough
+# that replacing one lands without a rename.
+/assets/*
+  Cache-Control: public, max-age=604800
+
+/drugs/*
+  Cache-Control: public, max-age=604800
+
+/blogs/:post/assets/*
+  Cache-Control: public, max-age=604800
+
+/*.webp
+  Cache-Control: public, max-age=604800
+
+# The deploy previews are the same site on a workers.dev name. One copy of it
+# belongs in an index and it is not that one.
+https://:version.:subdomain.workers.dev/*
+  X-Robots-Tag: noindex

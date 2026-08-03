@@ -1,3 +1,8 @@
 .DS_Store
 **/.DS_Store
 blogs/muon/latex.zip
+
+# Assembled by _dev/publish.sh from what is already tracked here.
+dist/
+node_modules/
+.wrangler/
