@@ -1380,32 +1380,17 @@ body {
    around them. Someone who had read the whole argument arrived at a CC0 notice and
    nothing to do with it.
 
-   What is here now is the ask the argument earns, and under it a base the page can
-   stand on: the mark, the three sections, who backs us, and the credits demoted to
-   the last line, which is where a credit belongs. It runs to the page's own gutter
-   rather than to the engine's narrower measure, so the bottom of the page lines up
-   with the sections above it. */
+   What ends it now is a base the page can stand on: the mark, the three sections,
+   where to find us, and the credits demoted to the last line, which is where a
+   credit belongs. It runs to the page's own gutter rather than to the engine's
+   narrower measure, so the bottom of the page lines up with the sections above it.
+
+   There is no call to action down here. The section that argues for one carries it,
+   and the bar carries it the whole way down the page, so a third at the very bottom
+   was the same ask a third time. */
 .closing {
-    padding: 11vh var(--gut) 5vh;
+    padding: 9vh var(--gut) 5vh;
     background: var(--paper);
-}
-
-.closing__lead {
-    max-width: 28ch;
-    font-family: var(--serif);
-    font-weight: 400;
-    font-size: clamp(2.1rem, 3.9vw, 3.5rem);
-    line-height: 1.1;
-    letter-spacing: -0.012em;
-    color: var(--ink);
-}
-
-.closing__body {
-    max-width: 54ch;
-    margin-top: 1.6rem;
-    font-size: clamp(0.98rem, 1.12vw, 1.12rem);
-    line-height: 1.68;
-    color: var(--ink-dim);
 }
 
 .foot {
@@ -1413,7 +1398,6 @@ body {
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
     gap: 1.5rem 3vw;
-    margin-top: 13vh;
     padding-top: 2.6rem;
     border-top: 1px solid var(--rail);
 }
@@ -1524,8 +1508,7 @@ body {
 /* The way in sits with the argument for taking it rather than at the very
    bottom of the page, where it was several screens past the last thing that
    made the case for it. */
-.cases__cta,
-.closing__cta {
+.cases__cta {
     display: flex;
     flex-wrap: wrap;
     gap: 14px;
@@ -2358,12 +2341,11 @@ body {
     .case__num { font-size: 1.35rem; }
     /* the mark, the links and the badge will not share a line at this width, so
        the base stacks and everything in it starts at the same left edge */
-    .closing { padding: 10vh 7vw 5vh; }
+    .closing { padding: 8vh 7vw 5vh; }
     .foot {
         grid-template-columns: minmax(0, 1fr);
         justify-items: start;
         gap: 1.5rem;
-        margin-top: 10vh;
     }
     .foot__links {
         justify-content: flex-start;
