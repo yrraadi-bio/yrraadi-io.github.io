@@ -1373,13 +1373,100 @@ body {
     background: var(--paper);
 }
 
-/* The closing block is a way out of the page rather than the end of the
-   argument: the line it used to carry is now the heading of the section above
-   it, and what is left is a pair of buttons and a footer. It no longer needs
-   the room it was given to hold two paragraphs of prose. */
-.engine--tail {
-    padding-top: 9vh;
+/* ---------- The way out ----------
+
+   The page used to end on a credit for the artwork: two faint lines, inset to the
+   engine's measure rather than the page's, with most of a screen of empty paper
+   around them. Someone who had read the whole argument arrived at a CC0 notice and
+   nothing to do with it.
+
+   What is here now is the ask the argument earns, and under it a base the page can
+   stand on: the mark, the three sections, who backs us, and the credits demoted to
+   the last line, which is where a credit belongs. It runs to the page's own gutter
+   rather than to the engine's narrower measure, so the bottom of the page lines up
+   with the sections above it. */
+.closing {
+    padding: 11vh var(--gut) 5vh;
+    background: var(--paper);
 }
+
+.closing__lead {
+    max-width: 28ch;
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: clamp(2.1rem, 3.9vw, 3.5rem);
+    line-height: 1.1;
+    letter-spacing: -0.012em;
+    color: var(--ink);
+}
+
+.closing__body {
+    max-width: 54ch;
+    margin-top: 1.6rem;
+    font-size: clamp(0.98rem, 1.12vw, 1.12rem);
+    line-height: 1.68;
+    color: var(--ink-dim);
+}
+
+.foot {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 1.5rem 3vw;
+    margin-top: 13vh;
+    padding-top: 2.6rem;
+    border-top: 1px solid var(--rail);
+}
+
+/* The one on the paper, not the white one the hero and the bar carry. The blog
+   pages already use it, under the name it was exported with. */
+.foot__home img {
+    display: block;
+    width: clamp(96px, 8vw, 122px);
+    height: auto;
+}
+
+.foot__links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: clamp(16px, 2.4vw, 34px);
+}
+
+.foot__links a {
+    font-size: 0.7rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: var(--ink-dim);
+    transition: color 0.3s ease;
+}
+
+.foot__links a:hover { color: var(--ink); }
+
+/* The hero's badge is positioned into a corner, so only the two pieces inside it
+   are shared: the label takes the paper's ink and the mark is orange either way */
+.foot__yc {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    white-space: nowrap;
+    text-decoration: none;
+}
+
+.foot__yc:hover .yc__label { color: var(--ink); }
+
+.foot__note {
+    grid-column: 1 / -1;
+    margin-top: 2.2rem;
+    font-size: 0.72rem;
+    font-weight: 400;
+    letter-spacing: 0.12em;
+    line-height: 1.6;
+    color: var(--ink-faint);
+}
+
+.foot__note--src { margin-top: 0.55rem; }
 
 .engine__eyebrow {
     font-size: 0.72rem;
@@ -1420,7 +1507,8 @@ body {
 /* The way in sits with the argument for taking it rather than at the very
    bottom of the page, where it was several screens past the last thing that
    made the case for it. */
-.cases__cta {
+.cases__cta,
+.closing__cta {
     display: flex;
     flex-wrap: wrap;
     gap: 14px;
@@ -1552,8 +1640,11 @@ body {
    heading larger than an eyebrow: it is a shelf of what we have written rather
    than an act of the argument. It keeps the paper the section above it ends on,
    so the two read as one sheet and only the spacing says where one stops. */
+/* The step below is small because the block under it opens its own with 11vh of
+   its own. Both were carrying a full one and the two together left a screen of
+   blank paper between the last card and the closing line. */
 .research {
-    padding: 6vh var(--gut) 12vh;
+    padding: 6vh var(--gut) 4vh;
     background: var(--paper);
 }
 
@@ -2054,27 +2145,6 @@ body {
     text-underline-offset: 3px;
 }
 
-/* 7rem here was clearing the call to action that used to sit above it. That has
-   moved up the page to the section that argues for it, so this is now the first
-   thing in the footer and has nothing to clear. */
-.engine__foot {
-    margin-top: 2.5rem;
-    font-size: 0.74rem;
-    font-weight: 400;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--ink-faint);
-}
-
-/* The 0.7 opacity that used to be here compounded with the alpha already in
-   --ink-faint, which put the credit line near the floor of what is visible at
-   all. The tone is faint enough on its own. */
-.engine__foot--src {
-    margin-top: 0.7rem;
-    letter-spacing: 0.12em;
-    text-transform: none;
-}
-
 @media (max-width: 860px) {
     /* the links are gone at this width and the call to action is all that is
        left inside, so the bar drops its own shell and the pill stands alone */
@@ -2251,6 +2321,19 @@ body {
     .case__art { display: none; }
     .case__rate { text-align: right; }
     .case__num { font-size: 1.35rem; }
+    /* the mark, the links and the badge will not share a line at this width, so
+       the base stacks and everything in it starts at the same left edge */
+    .closing { padding: 10vh 7vw 5vh; }
+    .foot {
+        grid-template-columns: minmax(0, 1fr);
+        justify-items: start;
+        gap: 1.5rem;
+        margin-top: 10vh;
+    }
+    .foot__links {
+        justify-content: flex-start;
+        gap: 18px;
+    }
     /* the two halves of a name will not take a phone across */
     .gate__row { grid-template-columns: 1fr; }
     /* The lens is measured against the island, and the island is a completely
