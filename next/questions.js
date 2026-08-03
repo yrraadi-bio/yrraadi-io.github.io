@@ -8,7 +8,7 @@
     /* asterisks mark the words set in italic; they are stripped when the
        question is parsed and never reach the page */
     const QUESTIONS = [
-        'What if we made as many cancer drugs next year as we have in the last *100*?',
+        'What if we made as many cancer drugs next year as we have in the last *10*?',
         'What if every cancer drug that failed worked for *someone* else?',
         'What if we could see what a drug does *before* we spend a decade finding out?'
     ];
@@ -19,8 +19,6 @@
     const HOLD = 2400;      // full question on screen
     const OUT = 700;        // fade out
     const GAP = 320;        // blank beat before the next question types
-
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     const lead = el.querySelector('.q__lead');
     const rest = el.querySelector('.q__rest');
@@ -103,7 +101,7 @@
         if (!visible) return schedule(hide, 600);
         el.classList.remove('is-live');
         el.classList.add('is-out');
-        schedule(next, reduceMotion ? 60 : OUT);
+        schedule(next, OUT);
     }
 
     function next() {
@@ -118,11 +116,6 @@
         // is-live drops the transition on the tail so typed characters land
         // crisply instead of each one fading up
         el.classList.add('is-live');
-        if (reduceMotion) {
-            lead.textContent = LEAD;
-            paint(tail().length);
-            return schedule(hide, HOLD);
-        }
         el.classList.add('is-typing-lead');
         typeLead(1);
     }
@@ -136,45 +129,53 @@
     start();
 })();
 
-/* The pivot question types itself out the first time it is scrolled to. */
-(function () {
-    const el = document.getElementById('pivotLine');
-    if (!el) return;
+/* The bar overlaps the stage, so it gets out of the way on the way down and comes
+   back on the way up.
 
-    const text = el.textContent.trim();
-    const TYPE = 52;
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-    if (reduceMotion || !('IntersectionObserver' in window)) return;
-
-    el.textContent = '';
-
-    function type(i) {
-        el.textContent = text.slice(0, i);
-        if (i < text.length) return setTimeout(() => type(i + 1), TYPE);
-        el.classList.remove('is-typing');
-    }
-
-    const watch = new IntersectionObserver(entries => {
-        if (!entries[0].isIntersecting) return;
-        watch.disconnect();
-        el.classList.add('is-typing');
-        type(1);
-    }, { threshold: 0.6 });
-
-    watch.observe(el);
-})();
-
-/* The bar overlaps the stage once the page moves, so it only shows at the top. */
+   It used to leave at 60px and return only at the very top, which left twenty-six
+   thousand pixels of page with no way home and no navigation on it at all. Coming
+   back on a reverse is the one gesture that means "I want out of this" without
+   costing the page a control that is on screen the whole time. */
 (function () {
     const dock = document.querySelector('.dock');
     if (!dock) return;
 
+    const HOME = 60;    /* under this the bar belongs to the hero and is always up */
+    const REVEAL = 60;  /* upward travel that brings it back */
+
+    let last = window.scrollY;
+    let climbed = 0;
     let queued = false;
+
+    function show(afloat) {
+        dock.classList.remove('is-gone');
+        dock.classList.toggle('is-afloat', afloat);
+    }
 
     function sync() {
         queued = false;
-        dock.classList.toggle('is-gone', window.scrollY > 60);
+        const y = Math.max(0, window.scrollY);
+        const step = y - last;
+        last = y;
+
+        if (y <= HOME) {
+            climbed = 0;
+            show(false);
+            return;
+        }
+
+        /* Any downward travel puts it away and forgets what was climbed, so the
+           reveal is a deliberate reverse rather than the tail of a flick */
+        if (step > 0) {
+            climbed = 0;
+            dock.classList.add('is-gone');
+            return;
+        }
+
+        if (step < 0) {
+            climbed -= step;
+            if (climbed > REVEAL) show(true);
+        }
     }
 
     window.addEventListener('scroll', function () {

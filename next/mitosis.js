@@ -1,24 +1,22 @@
 /*
- * Scroll-driven cancer mock-up: one cell becomes a tumor, the tumor spreads,
- * and then it turns out to be one of millions. Three phases on one canvas.
+ * A tumor turns out to be one of millions. Three phases on one canvas.
  *
- * Growth (0 -> GROW_END). Scroll drives a generation count and cells are
- * placed along a binary lineage tree, relaxed so they pack instead of stack.
- * The count is per lineage rather than global, which is the point: healthy
- * tissue is on a shallow curve and divides a handful of times over a lot of
- * scrolling, and a lineage that has mutated is on a curve that keeps climbing.
- * Past the first mutation the coloured cells are the only ones still dividing,
- * so "grows out of control" is something the visitor watches happen rather
- * than something a caption asserts. A second lineage on the far side of the
- * mass mutates independently later, and subclones separate out of the first
- * clone as shades of the colour it already carries.
+ * Trials (0 -> BIO_A), scrolled. Two charts state the problem the rest of it
+ * explains, at the reader's pace because they are read rather than watched.
  *
- * Spread (GROW_END -> META_END). Cells leave the mass along vessels and seed
- * colonies away from it.
+ * The figure (BIO_A -> META_END), still. One labelled picture of a finished
+ * tumor, held while its caption is up. Cells are placed along a binary lineage
+ * tree, relaxed so they pack instead of stack, and the generation count is per
+ * lineage: healthy tissue divides a handful of times and a mutated lineage keeps
+ * going, which is what makes the mass a patchwork rather than a ball of one
+ * colour. One clone carries subclones as shades of the colour it already has, a
+ * second clone on the far side arose on its own, and cells that left along the
+ * vessels have settled away from it. The labels name all four, since colour alone
+ * cannot tell them apart and telling them apart is the point.
  *
- * Cohort (META_END -> 1). The camera pulls back off that tumor, which resolves
- * into a stained section, and takes its place in a grid of other patients'
- * sections. Same diagnosis, different disease.
+ * Cohort (META_END -> 1), scrolled. The camera pulls back off that tumor, which
+ * resolves into a stained section, and takes its place in a grid of other
+ * patients' sections. Same diagnosis, different disease.
  */
 (function () {
     const canvas = document.getElementById('mitosis');
@@ -45,20 +43,20 @@
 
     /* Where the acts end, in scroll position.
 
-       The biology used to run the whole stage. It now stops at TRIALS_A and the
-       last stretch belongs to two charts, so the three constants below are the
-       old ones scaled by that share: the growth and spread beats sit at exactly
-       the same point of their own act as they did before the charts existed. */
-    const TRIALS_A = 0.61;
-    const GROW_END = 0.60 * TRIALS_A;
-    const META_END = 0.75 * TRIALS_A;
+       The two charts open the stage: plenty of drugs being tried and very few of
+       them getting through is the problem, and the biology is the explanation, so
+       the problem is stated first. BIO_A is where they hand it over.
 
-    /* Where the charts clear and the grid underneath them takes the stage back
-       for the last beat. It is inside the second chart's hold rather than after
-       it, so the shortlist builds up behind the chart as the chart is leaving. */
-    const TRIALS_B = 0.945;
+       BIO_A to META_END is one still figure, where it was once nine beats of
+       animation over six and a half screens. Nothing in it moves and nothing in
+       it is driven by anything: a finished tumor, labelled, held for as long as
+       its caption is up. What the reader scrolls is what scrolling is for, the
+       charts either side of it, which are read rather than watched. */
+    const BIO_A = 0.501;
+    const META_END = 0.637;
 
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // where the grid has finished filling and starts picking its shortlist out
+    const COHORT_FULL = 0.815;
 
     const PALETTES = globalThis.CELL_PALETTES;
     const HEALTHY = PALETTES.healthy;
@@ -106,17 +104,36 @@
     let ground = GROUNDS.paper;
 
     let W = 0, H = 0, minDim = 0, cx = 0, cy = 0, wide = true;
+    // the band the figure sits in, and the half-extent it is drawn at
+    let figTop = 0, figBand = 0, figR = 0;
+    const figCy = () => figTop + figBand / 2;
     let dpr = 1;
+    /* The width the stylesheet stops widening the page at, matched to --page, and
+       the band the stage composes inside once it has.
+
+       Every horizontal place on this canvas is a fraction of the viewport, which
+       is right up to the point the copy over it stops being one: --gut holds the
+       caption column to a measure past 1454px, and the artwork carrying on out to
+       the edges met it coming the other way — on an ultrawide screen the cohort
+       grid was printed straight through the copy beside it. So past that width the
+       extra goes to the margins and the fractions are taken against the band,
+       which is the same thing as the viewport at every width below it. */
+    const PAGE = 1250;
+    const FRAME = Math.round(PAGE / 0.86);
+    let fx = 0, fw = 0;
+    // the band the trials charts get on a narrow screen, worked out on resize
+    let chartTop = 0, chartFloor = 0;
     // device pixels per canvas unit, so a cell is baked at the resolution it is
     // actually about to be shown at
     let pxScale = 1;
-    let targetP = 0, p = 0, camScale = 1;
+    let targetP = 0, p = 0;
     let cohort = null;
     // all seeded off the canvas size, so all are dropped on a resize
     let spread = null;
     let grown = null;
 
     const clamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
+    const clamp = (v, lo, hi) => v < lo ? lo : v > hi ? hi : v;
     const lerp = (a, b, t) => a + (b - a) * t;
     const smooth = t => t * t * (3 - 2 * t);
 
@@ -185,19 +202,11 @@
        of pace instead of more of the same. */
     const GEN_HEALTHY = [[0, 0], [0.085, 1], [0.26, 2], [0.52, 3], [0.72, 3.6], [1, 3.95]];
 
-    /* The growth clock against the growth act, which is not the identity.
-
-       The opening beat is one cell that has not divided yet, and its caption
-       says exactly that. Run straight, the first pinch is visibly under way at
-       around 214px into the stage while that caption is still on screen and does
-       not clear until 228px: the second beat's picture under the first beat's
-       sentence. So the clock arrives at the cell, stops while that beat has the
-       screen, and then catches up. It is back on the identity by the third beat,
-       which is why every beat from there on sits on the same frame it did. */
-    const GROW_CLOCK = [[0, 0], [0.025, 0.020], [0.11, 0.020], [0.33, 0.33], [1, 1]];
-
-    // extra generations a mutated lineage buys per unit of scroll past its
-    // onset, which is the whole of "grows out of control"
+    /* Extra generations a mutated lineage gets over a healthy one. The tree is
+       only ever built at mp = 1 now, so this sets how far ahead the clones end up
+       and nothing about any growth: it is the difference between a mass that is
+       plainly a patchwork and one whose clones are the same grain as the tissue
+       around them. */
     const MUT_RATE = 9.6;
 
     /* How much of a cell's size follows its own lineage's depth rather than the
@@ -260,11 +269,97 @@
         }
         minDim = Math.min(W, H);
         wide = W > 860;
-        // the frame is offset to clear the caption column beside it, and with
-        // motion turned down that column is underneath rather than alongside
-        cx = W * (wide && !reduceMotion ? 0.58 : 0.5);
+        fx = Math.max(0, (W - FRAME) / 2);
+        fw = W - fx * 2;
+        // the frame is offset to clear the caption column beside it
+        cx = fx + fw * (wide ? 0.58 : 0.5);
         cy = H * (wide ? 0.5 : 0.42);
+        measureTrials();
+        measureFigure();
+        measureChrome();
         measureStages();
+    }
+
+    /* Where the page's own furniture sits on top of the canvas, so a name on the
+       figure can be kept off it. Read off the elements rather than guessed at as
+       bands: the count, the rail and the way out are one strip along the floor,
+       in the corner on a desktop and across the full width on a phone. Taken on
+       resize, because reading layout per frame is what a canvas is for avoiding. */
+    const chromeBoxes = [];
+
+    function measureChrome() {
+        chromeBoxes.length = 0;
+        const box = canvas.getBoundingClientRect();
+        for (const el of stage.querySelectorAll('.progress, .onward')) {
+            const r = el.getBoundingClientRect();
+            if (!r.width) continue;
+            const pad = 8;
+            chromeBoxes.push({ x: r.left - box.left - pad, y: r.top - box.top - pad, w: r.width + pad * 2, h: r.height + pad * 2 });
+        }
+    }
+
+    /* The band the figure has to itself, and where its middle is.
+
+       Beside the prose on a wide screen that is the whole box. On a narrow one the
+       prose is underneath the figure rather than alongside it, and the strip
+       carrying the count and the way out is across the top, so the figure gets
+       what is left between them. It used to take the middle of the box regardless
+       and overhang both: on a small phone the copy starts at three fifths of the
+       canvas against three quarters on a tablet, and the bottom of the mass was
+       printed through the heading.
+
+       The mass is fitted to the band as well as centred in it, because on the
+       tightest layout the band is shorter than the mass wants to be and centring
+       alone would overhang it equally at both ends. */
+    function measureFigure() {
+        figTop = 0;
+        figBand = H;
+        figR = minDim * 0.418;
+
+        if (wide) return;
+
+        // the caption is anchored near the bottom of the box, so its top is what
+        // its own height leaves
+        let copy = 0;
+        for (const el of captions) {
+            if (el.hasAttribute('data-from')) copy = Math.max(copy, el.offsetHeight);
+        }
+
+        const short = H <= 560;
+        figTop = H * (short ? 0.04 : 0.08) + 32;
+        figBand = Math.max(H * 0.30, H * 0.88 - copy - 10 - figTop);
+        figR = Math.min(figR, figBand / 2);
+    }
+
+    /* Where the two charts start and stop on a narrow screen, where they share the
+       box with the caption instead of sitting beside it.
+
+       Both ends were fractions of the height, which held on the phone they were
+       set against and nowhere else: the caption is display type with a floor under
+       it, so on a 320px screen it grows to a third of the box and the charts were
+       printed through the heading, and on a landscape phone the count and the way
+       out across the top were printed through the plot.
+
+       So both ends are measured instead. The floor comes off the taller of the two
+       captions that actually carry a chart — the only two the wash is up for —
+       which are the ones with a flat plot in them for the still branch. Read here
+       rather than per frame, and read again when the webfont lands and changes
+       what a heading measures. */
+    function measureTrials() {
+        chartTop = H * 0.04;
+        chartFloor = H * 0.72;
+        if (wide) return;
+
+        let tall = 0;
+        for (const el of captions) {
+            if (el.querySelector('.caption__plot')) tall = Math.max(tall, el.offsetHeight);
+        }
+
+        // under the strip the count and the way out share, and above the caption,
+        // whose own offset from the bottom comes up on a short box
+        const short = H <= 560;
+        chartTop = H * (short ? 0.04 : 0.08) + 32;
+        chartFloor = Math.min(H * 0.76, H * (short ? 0.93 : 0.88) - tall - 14);
     }
 
     /* The expensive half: everything seeded off the canvas size, which has to
@@ -401,7 +496,6 @@
     const EASE_FAST = 0.55;
 
     function ease(cur, target) {
-        if (reduceMotion) return target;
         const k = lerp(EASE_SLOW, EASE_FAST, clamp01(vel / 1.8));
         return cur + (target - cur) * k;
     }
@@ -1028,23 +1122,29 @@
         /* Destinations are placed against the frame rather than struck off at
            a heading and a distance: the mass does not sit in the middle of the
            canvas, so a fixed distance puts two routes out of shot on the wide
-           layout and all three of them out on the narrow one. */
+           layout and all three of them out on the narrow one.
+
+           Vertically these are fractions of the figure's own band rather than of
+           the box, because on the narrow layout the band is the part of the box
+           the figure has: a colony placed against the frame there lands on the
+           strip along the top or in the prose underneath. On the wide layout the
+           band is the box and the two are the same thing. */
         const dest = wide
             ? [[0.90, 0.12], [0.93, 0.56], [0.82, 0.93]]
-            // the narrow layout puts the captions under the canvas, so the
-            // third route stops well short of the bottom of the frame
-            : [[0.90, 0.13], [0.94, 0.60], [0.17, 0.73]];
+            : [[0.88, 0.12], [0.92, 0.54], [0.12, 0.34]];
+
+        const cyy = figCy();
 
         const routes = dest.map((d, i) => {
-            const ex = W * d[0], ey = H * d[1];
-            const dx = ex - cx, dy = ey - cy;
+            const ex = fx + fw * d[0], ey = figTop + figBand * d[1];
+            const dx = ex - cx, dy = ey - cyy;
             const len = Math.hypot(dx, dy) || 1;
             const ux = dx / len, uy = dy / len;
             // routes leave from around the mass rather than from a point in
             // the middle of it, which is the difference between vessels
             // running past a tumor and a starburst
             const sx = cx + ux * minDim * 0.15 - uy * (rnd() - 0.5) * minDim * 0.16;
-            const sy = cy + uy * minDim * 0.15 + ux * (rnd() - 0.5) * minDim * 0.16;
+            const sy = cyy + uy * minDim * 0.15 + ux * (rnd() - 0.5) * minDim * 0.16;
             // and bowed well off the straight line for the same reason
             const bow = (rnd() < 0.5 ? -1 : 1) * len * (0.20 + rnd() * 0.22);
             return {
@@ -1109,24 +1209,29 @@
         ctx.restore();
     }
 
-    function renderSpread(q) {
+    /* The figure: a finished tumor, with the cells that have left it already
+       arrived where they were going.
+
+       This was three screens of scrolling once, one healthy cell dividing its way
+       to a patchwork of clones and then seeding colonies away from it, and the
+       reader had to crank all of it. It is one picture now. The growth was the
+       part that needed the scroll, and the growth is not what the caption is
+       about: the finished thing is, and a finished thing is a figure. */
+    function renderFigure() {
         if (!spread) initSpread();
 
-        const fade = smooth(clamp01(q / 0.3));
-        for (const r of spread.routes) drawVessel(r, fade);
+        noteBoxes.length = 0;
 
-        // the mass is done growing by now; it holds while things leave it
-        const mass = renderMitosis(1);
+        for (const r of spread.routes) drawVessel(r, 1);
+
+        const mass = renderMass();
+
+        // kept as they are drawn, so the name below can be hung off one of these
+        // cells rather than off the point the route was aimed at
+        const landed = [];
 
         for (const e of spread.escapees) {
-            const along = clamp01((q - e.t0) / e.dur);
-            if (along <= 0.001) continue;
-            /* Started clear of the middle of the mass, so a cell is first seen
-               at its rim rather than on top of the clone it left, and slowed
-               as it arrives, so cells settle at the far end instead of running
-               through it at the speed they set out at. */
-            const eased = 1 - Math.pow(1 - along, 2.4);
-            const t = (0.12 + 0.88 * eased) * e.stop;
+            const t = e.stop;
             const r = e.route;
             // perpendicular drift, so cells on one route do not run in file
             const nx = r.ey - r.sy, ny = r.sx - r.ex;
@@ -1143,11 +1248,67 @@
             scratch.v = e.v;
             scratch.lit = e.lit;
 
-            // eased in over the first of the journey, so a cell does not
-            // simply appear on the rim of the mass it came out of
-            ctx.globalAlpha = smooth(clamp01(along / 0.12));
+            landed.push({ route: r, x: scratch.px, y: scratch.py, r: scratch.pr });
             drawCell(scratch);
-            ctx.globalAlpha = 1;
+        }
+
+        /* Every name on the figure is placed here, after the whole of it is drawn,
+           and against a map of what the drawing has already taken. Naming as each
+           part went down meant the first names were placed against an empty canvas
+           and the cells arrived underneath them. */
+        occupy(mass.cells, cx, figCy(), mass.k);
+        for (const c of landed) noteBoxes.push({ x: c.x - c.r, y: c.y - c.r, w: c.r * 2, h: c.r * 2 });
+
+        /* The prose, which is the other thing on this screen. It is a column down
+           the left on a wide layout and a block under the figure on a narrow one,
+           and either way a name set into it is set on top of the sentence the
+           figure is illustrating. */
+        if (wide) noteBoxes.push({ x: fx, y: 0, w: fw * 0.30, h: H });
+        else noteBoxes.push({ x: fx, y: figTop + figBand, w: fw, h: H - figTop - figBand });
+
+        for (const b of chromeBoxes) noteBoxes.push(b);
+
+        // outside the mass transform, so a name is set at its own size rather than
+        // at whatever the camera happens to be doing to the cells
+        annotateClones(mass.cells, mass.k);
+
+        /* Named at a colony, where the cells have got to, rather than at the mass
+           they left: leaving is what the vessels show already, and being somewhere
+           else is the part that is the point.
+
+           This one leads inward, back toward the mass, where every other name on
+           the figure leads outward from it. The colonies are what the routes are
+           for and the routes all run to the same side of the frame, so all three
+           colonies sit hard against its edge: there is no paper out there to name
+           into, and a name pushed out anyway comes back set over the cells it is
+           pointing at. The paper is on the inside, in the gap the route crosses,
+           and a leader running from a colony back to the mass happens to say the
+           right thing about where the cells in it came from.
+
+           The colony nearest the mass's own height gets it, which keeps the name
+           clear of both the top of the frame and the way out at the bottom. */
+        if (landed.length) {
+            const cyy = figCy();
+            let route = spread.routes[0];
+            for (const r of spread.routes) {
+                if (Math.abs(r.ey - cyy) < Math.abs(route.ey - cyy)) route = r;
+            }
+
+            const dx = cx - route.ex, dy = cyy - route.ey;
+            const d = Math.hypot(dx, dy) || 1;
+            const ux = dx / d, uy = dy / d;
+
+            /* The colony's own cells, nearest the way back first, so the leader
+               ends on the near side of it and runs through the gap the route
+               crossed rather than back out through the colony. */
+            const pts = landed.filter(c => c.route === route)
+                .map(c => ({ x: c.x, y: c.y, along: c.x * ux + c.y * uy }))
+                .sort((a, b) => b.along - a.along);
+
+            // out into the middle of the gap the route crosses, which is the paper
+            // this name has; a fixed lead leaves it sitting on its own colony
+            const back = Math.max(noteLead(), d * 0.34);
+            if (pts.length) drawNote('metastases', pts, ux, uy, back, noteSize());
         }
     }
 
@@ -1479,8 +1640,8 @@
     /* Grid of slots for the cohort, kept clear of the caption column and
        progress rail. */
     function initCohort() {
-        const x0 = wide ? W * 0.375 : W * 0.05;
-        const x1 = wide ? W * 0.93 : W * 0.95;
+        const x0 = fx + fw * (wide ? 0.375 : 0.05);
+        const x1 = fx + fw * (wide ? 0.93 : 0.95);
         const y0 = wide ? H * 0.10 : H * 0.05;
         const y1 = wide ? H * 0.89 : H * 0.58;
         const rw = x1 - x0, rh = y1 - y0;
@@ -1592,6 +1753,238 @@
         g.fillText(text, x, y);
     }
 
+    const noteSize = () => Math.max(10, Math.round(minDim * 0.0135));
+
+    /* Where the names already on the figure ended up, so the next one can be put
+       somewhere else. Cleared once per drawing of the figure. */
+    const noteBoxes = [];
+
+    function noteFree(x, y, w, h) {
+        return !noteBoxes.some(b => x < b.x + b.w && x + w > b.x && y < b.y + b.h && y + h > b.y);
+    }
+
+    // how finely the mass is entered as taken, per side
+    const MASK = 5;
+
+    /* The drawing itself, entered as taken before any name is placed. Without it
+       the placement only knows about the other names and will happily set one over
+       the cells, which on a narrow screen is where its heading points.
+
+       Entered as a grid of squares rather than as one rectangle around the whole
+       mass. The mass is a blob in a rectangle that is a third corner by area, and
+       those corners are exactly where a name wants to sit: diagonally out from the
+       middle, near the thing it names. One rectangle gives them all away. */
+    function occupy(cells, ox, oy, k) {
+        let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+        for (const c of cells) {
+            const r = c.pr * SPAN;
+            if (c.px - r < x0) x0 = c.px - r;
+            if (c.py - r < y0) y0 = c.py - r;
+            if (c.px + r > x1) x1 = c.px + r;
+            if (c.py + r > y1) y1 = c.py + r;
+        }
+        if (x0 > x1) return;
+
+        const sw = (x1 - x0) / MASK, sh = (y1 - y0) / MASK;
+        const hit = new Uint8Array(MASK * MASK);
+        for (const c of cells) {
+            const r = c.pr * SPAN;
+            const i0 = Math.max(0, Math.floor((c.px - r - x0) / sw));
+            const i1 = Math.min(MASK - 1, Math.floor((c.px + r - x0) / sw));
+            const j0 = Math.max(0, Math.floor((c.py - r - y0) / sh));
+            const j1 = Math.min(MASK - 1, Math.floor((c.py + r - y0) / sh));
+            for (let j = j0; j <= j1; j++) {
+                for (let i = i0; i <= i1; i++) hit[j * MASK + i] = 1;
+            }
+        }
+
+        for (let j = 0; j < MASK; j++) {
+            for (let i = 0; i < MASK; i++) {
+                if (!hit[j * MASK + i]) continue;
+                noteBoxes.push({
+                    x: ox + (x0 + i * sw) * k, y: oy + (y0 + j * sh) * k,
+                    w: sw * k, h: sh * k
+                });
+            }
+        }
+    }
+
+    /* A name attached to a part of the drawing, in three pieces: a dot on the one
+       cell being named, a leader off that cell, and a shelf the name sits on top
+       of.
+
+       The name used to hang off the far end of the leader, level with it, which
+       asks the reader to work out which end of a diagonal line is the claim and
+       which is the label. Set on a shelf the line reads as the name's own
+       underline, and the only loose end left is the one touching the cell.
+
+       The leader runs into the named cell and stops on the dot at its centre,
+       rather than out at the edge of the mass or short of the cell's rim. Ending
+       it on the silhouette leaves a gap between the line and the dot, and the
+       reader is back to judging which cell a line that stops nearby is for.
+
+       Which of the cells it could point at is settled after the name is placed,
+       not before: the shortest leader is the one that crosses the least, and until
+       the name has a place there is no telling which cell that is.
+
+       args:
+           text (str): the name
+           pts (list): the cells the name may point at, [{x, y}] in canvas pixels,
+               the one furthest out along the heading first
+           dx, dy (number): unit heading the leader runs out along
+           lead (number): how far out the elbow sits before the shelf
+           size (number): type size, which every other measure here is taken from */
+    // headings tried either side of the one a name is given, in radians
+    const NOTE_TURNS = [0, 0.44, -0.44, 0.92, -0.92, 1.5, -1.5];
+
+    function drawNote(text, pts, dx, dy, lead, size) {
+        const ax = pts[0].x, ay = pts[0].y;
+
+        ctx.font = `500 ${size}px Inter, system-ui, sans-serif`;
+        // a shelf a little longer than its name, so the name sits on a line rather
+        // than on a rule cut to exactly its own width
+        const shelf = ctx.measureText(text).width + size * 0.7;
+        /* Held off the sides, because the box is not all the room there is: the
+           rail and the way out sit just outside it, and a name run up to the edge
+           reads as part of them. */
+        const edge = size * 1.2;
+        const rise = size * 0.52;
+        const box = size * 1.75 + rise;
+        const x0 = fx + edge, x1 = fx + fw - edge - shelf;
+
+        /* The nearest clear paper, looked for by stepping out along the heading and
+           by swinging either side of it. A heading alone is not enough: it is read
+           off where the thing being named sits in the mass, and on a narrow screen
+           the paper is not in that direction at all, so a name given only its own
+           heading walks out along it into the cells or off the frame. Sweeping the
+           distance first and the angle second keeps a name as close to its subject
+           as it can be while still landing somewhere legible. */
+        const spot = (turn, out) => {
+            const c = Math.cos(turn), s = Math.sin(turn);
+            const hx = ax + (dx * c - dy * s) * out;
+            const hy = ay + (dx * s + dy * c) * out;
+            return {
+                // the shelf leaves the elbow on whichever side of it has the paper
+                x: clamp(hx + shelf <= x1 ? hx : hx - shelf, x0, Math.max(x0, x1)),
+                y: clamp(hy, box, H - box * 0.35)
+            };
+        };
+
+        /* Failing everything, as far out along its own heading as the search was
+           willing to go. Anywhere is better than the fallback being the anchor,
+           which is the one place on the figure guaranteed to have a cell under it:
+           where nothing is free, the name would be set on top of its own subject. */
+        let at = spot(0, lead * 3);
+        for (let i = 0; i < 6; i++) {
+            const out = lead * (1 + i * 0.40);
+            const found = NOTE_TURNS.map(t => spot(t, out)).find(c => noteFree(c.x, c.y - box, shelf, box));
+            if (found) { at = found; break; }
+        }
+        const sx = at.x, sy = at.y;
+        noteBoxes.push({ x: sx, y: sy - box, w: shelf, h: box });
+
+        // the elbow is whichever end of the shelf the subject is on the side of
+        const ex = Math.abs(ax - sx) <= Math.abs(ax - (sx + shelf)) ? sx : sx + shelf;
+        let tip = pts[0], near = Infinity;
+        for (const c of pts) {
+            const d = Math.hypot(c.x - ex, c.y - sy);
+            if (d < near) { near = d; tip = c; }
+        }
+
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = `rgba(${ground.ink},0.38)`;
+        ctx.beginPath();
+        ctx.moveTo(tip.x, tip.y);
+        ctx.lineTo(ex, sy);
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(sx + shelf, sy);
+        ctx.stroke();
+
+        // the dot is the whole claim: this cell, not the neighbourhood of it
+        ctx.beginPath();
+        ctx.arc(tip.x, tip.y, Math.max(1.6, size * 0.17), 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${ground.ink},0.62)`;
+        ctx.fill();
+
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'alphabetic';
+        ctx.fillStyle = `rgba(${ground.ink},0.78)`;
+        ctx.fillText(text, sx + size * 0.35, sy - rise);
+        ctx.textAlign = 'center';
+    }
+
+    /* What the figure is of, named part by part.
+
+       It is a figure now rather than something the reader watches assemble, so
+       every name is up the whole time it is on screen and the set has to be
+       complete. Colour alone cannot tell a subclone from the clone it came out
+       of, or either of those from a clone that arose on its own, and those are
+       exactly the distinctions the caption is making: a tumor that is several
+       diseases at once and still changing. Unnamed, it is an attractive blob.
+
+       Named at every width. They used to be wide-screen only, on the reasoning
+       that a phone has no margin to label into; what that came to in practice was
+       that the reader who cannot see the labels is handed the attractive blob and
+       the reader who can is handed the argument. The room is made instead, by
+       drawing the mass smaller where the labels have to share the width with it. */
+    const FIGURE_NOTES = [
+        { text: 'normal tissue', pick: c => c.m <= 0.15 },
+        { text: 'a clone, from one mutation', pick: c => c.pal0 === PALETTES.primary && c.m > 0.15 && c.m2 <= 0.15 },
+        { text: 'subclones diverging from it', pick: c => c.m2 > 0.15 },
+        { text: 'a second, independent clone', pick: c => c.pal0 === PALETTES.second && c.m > 0.15 }
+    ];
+
+    const noteLead = () => Math.min(54, Math.max(22, minDim * 0.055));
+
+    function annotateClones(cells, k) {
+        const lead = noteLead();
+        const size = noteSize();
+        const cyy = figCy();
+
+        /* Read off the projected positions, not the modelled ones. The mass is
+           drawn in perspective, so a cell's place on the paper is its own position
+           divided down by its depth, and a dot put at the modelled position lands
+           beside the cell it is naming rather than on it. */
+        for (const note of FIGURE_NOTES) {
+            let sx = 0, sy = 0, n = 0;
+            for (const c of cells) {
+                if (!note.pick(c)) continue;
+                sx += c.px; sy += c.py; n++;
+            }
+            if (!n) continue;
+
+            let dx = sx / n, dy = sy / n;
+            const d = Math.hypot(dx, dy);
+            // a structure sitting on the middle of the mass has no side of its
+            // own, so it is given one rather than dividing by nothing
+            if (d < 0.001) { dx = 0.86; dy = -0.51; } else { dx /= d; dy /= d; }
+
+            /* Every cell the name is true of and can be seen, on paper and sorted
+               outward along the heading. The leader has to end on a cell that
+               actually is what the name says; which one is settled once the name
+               has a place. */
+            const shown = cells.filter(c => note.pick(c) && c.bare);
+            const pts = (shown.length ? shown : cells.filter(note.pick))
+                .map(c => ({ x: cx + c.px * k, y: cyy + c.py * k, along: c.px * dx + c.py * dy }))
+                .sort((a, b) => b.along - a.along);
+            const far = pts[0].along;
+
+            /* How far the mass reaches along that heading, rather than how far its
+               bounding circle does: the cluster is nowhere near round. The named
+               cell can be well inside that reach even while being the outermost of
+               its own kind, and an elbow set a fixed distance from the cell then
+               puts the name down on top of the cells in front of it. */
+            let ext = 0;
+            for (const c of cells) {
+                const along = c.px * dx + c.py * dy + c.pr;
+                if (along > ext) ext = along;
+            }
+            const clear = Math.max(0, ext - far) * k;
+
+            drawNote(note.text, pts, dx, dy, clear + lead, size);
+        }
+    }
+
     /* A patient the page has singled out: a ring drawn around the tumor and a
        little light underneath it, so the choice reads as made rather than
        announced. Used for the shortlist at the end of the cell stage and again
@@ -1629,17 +2022,21 @@
         // next thing down the page, so the tissue is fetched and the cutting
         // started here rather than costing the opening a download it cannot use
         loadStains();
-        growSections(reduceMotion ? 64 : 1);
+        growSections(1);
 
         const built = fullyGrown();
         const bound = boundsRadius(built.cells);
         const aura = auraTint(built.cells);
         const home = cohort.tumors[0];
         const e = smooth(clamp01(q / 0.5));
-        const startR = minDim * 0.38;
-        const shown = lerp(startR, home.slotR, e);
+        /* Started at exactly where the figure left it, in both size and place. Any
+           other number is a jump at the seam: the same tumor is on the screen
+           either side of it, and this act's whole move is the camera pulling back
+           off it. Off by a tenth, which is what a hardcoded fraction of the box
+           came to, it popped instead. */
+        const shown = lerp(figR, home.slotR, e);
 
-        const hx = lerp(cx, home.x, e), hy = lerp(cy, home.y, e);
+        const hx = lerp(cx, home.x, e), hy = lerp(figCy(), home.y, e);
         const k = shown / bound;
         ctx.save();
         ctx.translate(hx, hy);
@@ -1705,85 +2102,49 @@
 
     /* Trial starts 2015 to 2024, as phase 1, the cumulative total through phase
        2, and the total: three lines each filled to the axis and drawn top-down
-       stack the bands without any of them having to be a band. */
-    const STARTS = [
-        {
-            name: 'ONCOLOGY',
-            v: [[370, 450, 510, 545, 575, 620, 760, 730, 690, 680],
-                [990, 1180, 1330, 1390, 1425, 1450, 1770, 1680, 1580, 1550],
-                [1130, 1310, 1480, 1530, 1570, 1630, 1960, 1860, 1750, 1780]]
-        },
-        {
-            name: 'ONCOLOGY NON-RARE',
-            v: [[70, 90, 115, 130, 155, 175, 210, 220, 225, 235],
-                [160, 205, 270, 305, 360, 405, 490, 515, 525, 545],
-                [180, 230, 300, 340, 400, 450, 540, 570, 580, 600]]
-        },
-        {
-            name: 'ONCOLOGY RARE',
-            v: [[340, 400, 460, 490, 510, 540, 660, 610, 580, 590],
-                [890, 1050, 1220, 1290, 1310, 1330, 1650, 1480, 1420, 1440],
-                [1000, 1180, 1350, 1420, 1450, 1480, 1800, 1620, 1560, 1600]]
-        },
-        {
-            name: 'HAEMATOLOGICAL MALIGNANCIES',
-            v: [[90, 100, 110, 120, 130, 140, 160, 145, 130, 125],
-                [250, 265, 295, 320, 340, 355, 400, 355, 320, 310],
-                [280, 300, 330, 360, 380, 400, 450, 400, 360, 350]]
-        },
-        {
-            name: 'SOLID TUMORS',
-            v: [[330, 400, 460, 490, 500, 530, 700, 660, 630, 660],
-                [790, 950, 1120, 1170, 1200, 1250, 1540, 1480, 1440, 1550],
-                [900, 1080, 1250, 1300, 1330, 1400, 1700, 1640, 1590, 1720]]
-        }
-    ];
+       stack the bands without any of them having to be a band.
 
-    // the five series the second exhibit runs through every one of its panels
-    const SERIES = [
-        { name: 'ONCOLOGY', c: '77,163,216' },
-        { name: 'NON-RARE', c: '27,58,107' },
-        { name: 'RARE', c: '58,166,74' },
-        { name: 'SOLID TUMORS', c: '62,186,176' },
-        { name: 'HAEMATOLOGICAL', c: '224,166,32' }
-    ];
+       The headline series only. The exhibit breaks oncology into four sub-groups
+       beside it, and all four are the same shape as the total by construction, so
+       four extra panels on the beat that says the field is testing plenty of drugs
+       were four ways of saying the thing the big panel already said. */
+    const STARTS = {
+        name: 'ONCOLOGY',
+        v: [[370, 450, 510, 545, 575, 620, 760, 730, 690, 680],
+            [990, 1180, 1330, 1390, 1425, 1450, 1770, 1680, 1580, 1550],
+            [1130, 1310, 1480, 1530, 1570, 1630, 1960, 1860, 1750, 1780]]
+    };
 
-    // success rate at each transition, and the four multiplied together, 2019 to
-    // 2024. One entry per series, in the order above.
+    /* The one series the second exhibit's panels carry.
+
+       The exhibit runs five: oncology and the same four sub-groups. They sit
+       within a few points of each other the whole way, so the second beat was five
+       panels of five near-identical lines, and the claim it is making is about the
+       rate itself rather than about which sub-group is worst. */
+    const SERIES = [{ name: 'ONCOLOGY', c: '63,150,207' }];
+
+    /* Success rate at each of the three clinical phases, 2019 to 2024. The
+       exhibit carries the regulatory step and the composite of all four beside
+       these; the regulatory step is at or near 100 the whole way, which is a
+       rubber stamp rather than a trial reading out, and the composite is the
+       caption's own sentence drawn a fourth time. */
     const RATES = [
-        {
-            name: 'PHASE 1', span: 100, at: [0, 20, 40, 60, 80, 100],
-            v: [[38, 47, 50, 47, 42, 48], [39, 48, 51, 52, 41, 59], [34, 37, 45, 43, 43, 42],
-                [36, 49, 54, 55, 42, 64], [34, 30, 40, 38, 41, 41]]
-        },
-        {
-            name: 'PHASE 2', span: 100, at: [0, 20, 40, 60, 80, 100],
-            v: [[23, 27, 27, 24, 21, 18], [24, 28, 26, 23, 20, 17], [21, 26, 30, 31, 24, 19],
-                [25, 28, 26, 24, 21, 20], [20, 26, 36, 27, 22, 10]]
-        },
-        {
-            name: 'PHASE 3', span: 100, at: [0, 20, 40, 60, 80, 100],
-            v: [[65, 55, 45, 50, 47, 68], [70, 60, 34, 52, 34, 68], [64, 52, 47, 46, 52, 66],
-                [68, 46, 43, 55, 43, 73], [85, 62, 60, 48, 76, 48]]
-        },
-        {
-            name: 'REGULATORY', span: 100, at: [0, 20, 40, 60, 80, 100],
-            v: [[100, 100, 96, 75, 92, 100], [100, 100, 95, 85, 93, 100], [100, 100, 96, 72, 91, 100],
-                [100, 100, 94, 70, 90, 100], [100, 100, 97, 63, 93, 100]]
-        },
-        {
-            name: 'COMPOSITE', span: 15, at: [0, 5, 10, 15],
-            v: [[6.0, 6.8, 5.7, 5.0, 4.4, 6.3], [7.4, 7.3, 5.0, 5.9, 2.6, 8.5], [5.2, 5.3, 7.8, 5.3, 5.6, 4.5],
-                [6.1, 6.3, 6.0, 4.3, 5.1, 10.5], [5.9, 9.0, 9.4, 5.2, 4.0, 2.1]]
-        }
+        { name: 'PHASE 1', span: 100, at: [0, 20, 40, 60, 80, 100], v: [[38, 47, 50, 47, 42, 48]] },
+        { name: 'PHASE 2', span: 100, at: [0, 20, 40, 60, 80, 100], v: [[23, 27, 27, 24, 21, 18]] },
+        { name: 'PHASE 3', span: 100, at: [0, 20, 40, 60, 80, 100], v: [[65, 55, 45, 50, 47, 68]] }
     ];
 
     /* The room a chart gets: the canvas between the caption column and the
        progress rail on a wide screen, and all of it on a narrow one, where the
-       captions sit under the canvas instead of beside it. */
+       captions sit under the canvas instead of beside it.
+
+       Taken against the frame, or the chart is the one thing on an ultrawide
+       screen still stretching after everything around it has stopped: two thousand
+       pixels of plot with 10px axis labels on it, a thousand clear of the caption
+       it is being read against. */
     function chartBox() {
-        if (wide) return { x0: W * 0.34, x1: W * 0.935, y0: H * 0.11, y1: H * 0.88 };
-        return { x0: W * 0.07, x1: W * 0.95, y0: H * 0.04, y1: H * 0.72 };
+        if (wide) return { x0: fx + fw * 0.34, x1: fx + fw * 0.935, y0: H * 0.11, y1: H * 0.88 };
+        return { x0: fx + fw * 0.07, x1: fx + fw * 0.95, y0: chartTop, y1: chartFloor };
     }
 
     function sweepClip(g, x0, x1, y0, y1, sweep) {
@@ -1792,14 +2153,40 @@
         g.clip();
     }
 
+    /* How many chips fit across, taken from the widest name in the set rather than
+       from a fixed five: the second exhibit's five series carry names up to
+       HAEMATOLOGICAL, and five columns of a phone's width is 56px each, so they
+       were printed through one another. */
+    function chipWidth(items, size, bar) {
+        ctx.font = `500 ${size}px Inter, system-ui, sans-serif`;
+        let need = 0;
+        for (const it of items) need = Math.max(need, ctx.measureText(it.name).width);
+        return need + (bar ? 20 : 15) + 14;
+    }
+
+    function legendCols(items, width, size, bar) {
+        return Math.max(1, Math.min(items.length, Math.floor(width / chipWidth(items, size, bar))));
+    }
+
+    // the room a legend and the source line under it need, so the panels above
+    // them can be given what is left rather than a fixed allowance
+    function footFor(items, width, size, bar) {
+        const rows = Math.ceil(items.length / legendCols(items, width, size, bar));
+        return 26 + rows * (size + 8) + size + 7;
+    }
+
     /* A row of colour chips and their names, wrapped to whatever fits. Returns
        the height it used so the source line underneath knows where to sit. */
     function legend(items, x, y, width, size, bar) {
-        const colw = width / Math.min(items.length, bar ? 5 : 3);
+        const cols = legendCols(items, width, size, bar);
+        // a column is as wide as the widest chip, not as wide as its share of the
+        // box, so three keys under a full-width panel stay one group instead of
+        // being dealt across two feet of paper
+        const colw = Math.min(width / cols, chipWidth(items, size, bar));
         let row = 0;
         items.forEach((it, i) => {
-            const col = i % Math.max(1, Math.floor(width / colw));
-            row = Math.floor(i / Math.max(1, Math.floor(width / colw)));
+            const col = i % cols;
+            row = Math.floor(i / cols);
             const px = x + col * colw;
             const py = y + row * (size + 8);
             ctx.fillStyle = `rgb(${it.c})`;
@@ -1810,29 +2197,58 @@
         return (row + 1) * (size + 8);
     }
 
+    /* How many of a panel's gridlines get a number on them. Every one of them, if
+       there is a line's worth of room between them; every other one, if there is
+       half; and otherwise the two ends and nothing between.
+
+       A panel is as tall as the box it is in divides down to, and on a landscape
+       phone that came to forty pixels for six labels: the exhibits' own scale
+       printed as a single grey smudge where the axis should be. An unlabelled
+       gridline still carries its interval, so the ones that come off lose the
+       reader nothing they cannot get from the two that stay. */
+    function labelEvery(span, count, size) {
+        const gap = span / (count - 1);
+        if (gap >= size * 1.5) return 1;
+        if (gap * 2 >= size * 1.5) return 2;
+        return count - 1;
+    }
+
+    /* A size the text will fit the given width at, down to a floor, so a panel
+       name never runs past the panel it belongs to. */
+    function fitSize(text, width, size) {
+        ctx.font = `500 ${size}px Inter, system-ui, sans-serif`;
+        const w = ctx.measureText(text).width;
+        return w <= width ? size : Math.max(size * 0.74, size * (width / w));
+    }
+
     /* One stacked-area panel. The three series are filled from their own line
        down to the axis, drawn from the top of the stack down, so each covers
        the tail of the one behind it and no band has to be computed. */
-    function areaPanel(s, x, y, w, h, sweep, small) {
-        const size = small ? 8 : 10;
-        const ax = x + (small ? 28 : 44);
-        const ay0 = y + (small ? 15 : 22);
-        const ay1 = y + h - (small ? 16 : 22);
+    function areaPanel(s, x, y, w, h, sweep) {
+        const size = 10;
+        const ax = x + 44;
+        // room for the panel's name above and its years below, given up in
+        // proportion on a panel too short to spare it outright
+        const ay0 = y + Math.min(22, h * 0.2);
+        const ay1 = y + h - Math.min(22, h * 0.22);
         const xAt = i => ax + (x + w - ax) * (i / 9);
         const yAt = v => ay1 - (v / 2500) * (ay1 - ay0);
 
-        vtext(ctx, s.name, x, y + (small ? 5 : 8), small ? 0.58 : 0.78, false, size, 'left');
+        vtext(ctx, s.name, x, y + 8, 0.78, false, fitSize(s.name, w, size), 'left');
+
+        const marks = [0, 500, 1000, 1500, 2000, 2500];
+        const every = labelEvery(ay1 - ay0, marks.length, size - 1);
 
         ctx.strokeStyle = `rgba(${ground.ink},0.12)`;
         ctx.lineWidth = 1;
-        for (const v of [0, 500, 1000, 1500, 2000, 2500]) {
+        marks.forEach((v, i) => {
             const gy = yAt(v);
             ctx.beginPath();
             ctx.moveTo(ax, gy);
             ctx.lineTo(x + w, gy);
             ctx.stroke();
-            vtext(ctx, v.toLocaleString('en-US'), ax - 6, gy + 3, 0.45, false, size - 1, 'right');
-        }
+            if (i % every === 0) vtext(ctx, v.toLocaleString('en-US'), ax - 6, gy + 3, 0.45, false, size - 1, 'right');
+        });
 
         ctx.save();
         sweepClip(ctx, ax, x + w, ay0, ay1, sweep);
@@ -1848,59 +2264,41 @@
         }
         ctx.restore();
 
-        vtext(ctx, '2015', ax, ay1 + (small ? 12 : 16), 0.45, false, size - 1, 'left');
-        vtext(ctx, '2024', x + w, ay1 + (small ? 12 : 16), 0.45, false, size - 1, 'right');
+        const foot = Math.min(16, h * 0.16);
+        vtext(ctx, '2015', ax, ay1 + foot, 0.45, false, size - 1, 'left');
+        vtext(ctx, '2024', x + w, ay1 + foot, 0.45, false, size - 1, 'right');
     }
 
-    /* The headline panel with the four breakdowns beside it on a wide screen and
-       under it on a narrow one, which is the exhibit's own arrangement. */
-    function startsBoxes(b, foot) {
-        const w = b.x1 - b.x0;
-        const h = (b.y1 - foot) - b.y0;
-        const out = [];
+    /* Whether the room a chart has is wide enough against its own height to take
+       the exhibits' side-by-side arrangement.
 
-        if (wide) {
-            const gx = w * 0.055;
-            const bw = w * 0.45;
-            const sx = b.x0 + bw + gx;
-            const sw = b.x1 - sx;
-            const sgx = sw * 0.10;
-            const spw = (sw - sgx) / 2;
-            const sgy = h * 0.11;
-            const sph = (h - sgy) / 2;
-            out.push({ x: b.x0, y: b.y0, w: bw, h: h });
-            for (let i = 0; i < 4; i++) {
-                out.push({ x: sx + (i % 2) * (spw + sgx), y: b.y0 + Math.floor(i / 2) * (sph + sgy), w: spw, h: sph });
-            }
-            return out;
-        }
-
-        const head = h * 0.44;
-        const sgy = h * 0.07;
-        const sgx = w * 0.09;
-        const spw = (w - sgx) / 2;
-        const sph = (h - head - sgy * 2) / 2;
-        out.push({ x: b.x0, y: b.y0, w: w, h: head });
-        for (let i = 0; i < 4; i++) {
-            out.push({ x: b.x0 + (i % 2) * (spw + sgx), y: b.y0 + head + sgy + Math.floor(i / 2) * (sph + sgy), w: spw, h: sph });
-        }
-        return out;
+       The stylesheet breaks on width alone, and a landscape phone is narrow by
+       that reckoning while having twice the width it needs: the stacked layout put
+       five panels in two columns and three rows inside a box 743 by 172, which is
+       forty pixels of plot each, in a box that lays the same five out in one row
+       at four times the height. So the arrangement is chosen from the shape of the
+       room rather than from the screen it is on. */
+    function chartWide(b) {
+        return wide || (b.x1 - b.x0) > (b.y1 - b.y0) * 2.2;
     }
 
     function drawStarts(alpha, sweep) {
         const b = chartBox();
-        const size = wide ? 10 : 9;
-        const foot = wide ? 46 : 52;
-        const boxes = startsBoxes(b, foot);
+        const side = chartWide(b);
+        const size = side ? 10 : 9;
+        const keys = ['PHASE 1', 'PHASE 2', 'PHASE 3'].map((name, i) => ({ name: name, c: PHASES[i] }));
+        const w = b.x1 - b.x0;
+        const foot = footFor(keys, w, size, false);
 
         ctx.save();
         ctx.globalAlpha = alpha;
 
-        boxes.forEach((r, i) => areaPanel(STARTS[i], r.x, r.y, r.w, r.h, sweep, i > 0));
+        // the one panel takes the whole box now that the four breakdowns beside it
+        // are gone, so the shape the beat is about is read at full size
+        areaPanel(STARTS, b.x0, b.y0, w, (b.y1 - foot) - b.y0, sweep);
 
-        const keys = ['PHASE 1', 'PHASE 2', 'PHASE 3'].map((name, i) => ({ name: name, c: PHASES[i] }));
-        const used = legend(keys, b.x0, b.y1 - foot + 24, (b.x1 - b.x0) * (wide ? 0.45 : 1), size, false);
-        vtext(ctx, 'IQVIA GLOBAL ONCOLOGY TRENDS 2025 \u00b7 EXHIBIT 1 \u00b7 REDRAWN',
+        const used = legend(keys, b.x0, b.y1 - foot + 24, w, size, false);
+        vtext(ctx, 'IQVIA GLOBAL ONCOLOGY TRENDS 2025 \u00b7 EXHIBIT 1',
             b.x0, b.y1 - foot + 26 + used, 0.4, false, size - 1, 'left');
 
         ctx.restore();
@@ -1908,13 +2306,17 @@
 
     function drawRates(alpha, sweep) {
         const b = chartBox();
-        const cols = wide ? 5 : 2;
+        const side = chartWide(b);
+        // one row where there is the width for it, one column where there is not:
+        // three panels split two and one leaves a hole the reader has to account
+        // for, and half a phone is a thumbnail rather than a chart
+        const cols = side ? RATES.length : 1;
         const rows = Math.ceil(RATES.length / cols);
-        const foot = wide ? 46 : 76;
-        const size = wide ? 9 : 8;
-        const gx = (b.x1 - b.x0) * (wide ? 0.03 : 0.10);
+        const size = side ? 10 : 9;
+        const foot = footFor(SERIES, b.x1 - b.x0, size, true);
+        const gx = (b.x1 - b.x0) * (side ? 0.03 : 0.10);
         const h = (b.y1 - foot) - b.y0;
-        const gy = h * (wide ? 0 : 0.10);
+        const gy = h * (rows > 1 ? 0.10 : 0);
         const pw = ((b.x1 - b.x0) - gx * (cols - 1)) / cols;
         const ph = (h - gy * (rows - 1)) / rows;
 
@@ -1924,23 +2326,25 @@
         RATES.forEach((r, i) => {
             const x = b.x0 + (i % cols) * (pw + gx);
             const y = b.y0 + Math.floor(i / cols) * (ph + gy);
-            const ax = x + (wide ? 30 : 30);
-            const ay0 = y + 22;
-            const ay1 = y + ph - 24;
+            const ax = x + 30;
+            const ay0 = y + Math.min(22, ph * 0.2);
+            const ay1 = y + ph - Math.min(24, ph * 0.22);
             const xAt = j => ax + (x + pw - ax) * (j / 5);
             const yAt = v => ay1 - (v / r.span) * (ay1 - ay0);
 
             vtext(ctx, r.name, x, y + 7, 0.72, false, size, 'left');
 
+            const every = labelEvery(ay1 - ay0, r.at.length, size - 1);
+
             ctx.strokeStyle = `rgba(${ground.ink},0.12)`;
             ctx.lineWidth = 1;
-            r.at.forEach(v => {
+            r.at.forEach((v, j) => {
                 const py = yAt(v);
                 ctx.beginPath();
                 ctx.moveTo(ax, py);
                 ctx.lineTo(x + pw, py);
                 ctx.stroke();
-                vtext(ctx, v + (v ? '%' : ''), ax - 6, py + 3, 0.45, false, size - 1, 'right');
+                if (j % every === 0) vtext(ctx, v + (v ? '%' : ''), ax - 6, py + 3, 0.45, false, size - 1, 'right');
             });
 
             ctx.save();
@@ -1959,37 +2363,42 @@
             }
             ctx.restore();
 
-            vtext(ctx, '2019', ax, ay1 + 16, 0.45, false, size - 1, 'left');
-            vtext(ctx, '2024', x + pw, ay1 + 16, 0.45, false, size - 1, 'right');
+            const base = ay1 + Math.min(16, ph * 0.16);
+            vtext(ctx, '2019', ax, base, 0.45, false, size - 1, 'left');
+            vtext(ctx, '2024', x + pw, base, 0.45, false, size - 1, 'right');
         });
 
         const used = legend(SERIES, b.x0, b.y1 - foot + 26, b.x1 - b.x0, size, true);
-        vtext(ctx, 'IQVIA GLOBAL ONCOLOGY TRENDS 2025 \u00b7 EXHIBIT 19 \u00b7 REDRAWN',
+        vtext(ctx, 'IQVIA GLOBAL ONCOLOGY TRENDS 2025 \u00b7 EXHIBIT 19',
             b.x0, b.y1 - foot + 28 + used, 0.4, false, size - 1, 'left');
 
         ctx.restore();
     }
 
-    /* Two charts, one act, and the difference matters. The wash that covers the
-       grid is its own envelope: up once as the act opens, held flat across both
-       charts and the handover between them, down once at the end. Tying it to
-       whichever chart was showing is what put the grid back on screen in the gap
-       between them, where it is nothing to do with either.
+    /* Two charts, one act, and the difference matters. The wash they sit on is
+       its own envelope, held flat across both charts and the handover between
+       them and lifted once at the end. Tying it to whichever chart was showing
+       is what put the picture underneath back on screen in the gap between them,
+       where it is nothing to do with either.
 
-       So the grid is legible at exactly two moments, both of them deliberate:
-       going under as the charts arrive, and coming back out from under them for
-       the last beat. Between those it is texture and nothing else.
+       It opens at full rather than fading in, because the act starts at the top
+       of the stage and there is nothing to fade in from: the single cell waiting
+       under it is the one the biology opens on, and a wash that ramps up shows it
+       for a moment first. Lifting it at the end is that cell's entrance.
 
        Each chart draws quickly and then holds, because a chart is read while it
        is still rather than while it is arriving. The hold is the long part of
        both windows and is what the beat is actually for. */
     function renderTrials(prog) {
-        const t = clamp01((prog - TRIALS_A) / (1 - TRIALS_A));
+        const t = clamp01(prog / BIO_A);
 
-        const wash = clamp01((t - 0.05) / 0.08) * (1 - clamp01((t - 0.87) / 0.07));
+        const wash = 1 - clamp01((t - 0.93) / 0.07);
         if (wash <= 0.004) return;
 
-        ctx.fillStyle = `rgba(247,248,251,${0.985 * wash})`;
+        // opaque, not nearly so. It is the page's own paper to the byte and the
+        // grain sits above the canvas, so covering the cell completely costs
+        // nothing and leaving it at 0.985 put a ghost of it behind the panels
+        ctx.fillStyle = `rgba(247,248,251,${wash})`;
         ctx.fillRect(0, 0, W, H);
 
         /* One leaves exactly as the other arrives, and both are pinned to where
@@ -2003,13 +2412,12 @@
         if (a2 > 0.004) drawRates(a2, smooth(clamp01((t - 0.57) / 0.15)));
     }
 
-    /* The grid fills, holds where it is for the length of the charts, then picks
-       its shortlist out once they have cleared. Holding rather than running on
-       underneath is what leaves the last beat of the stage something to do. */
+    /* The grid fills, then picks its shortlist out. It no longer has to hold
+       partway while the charts pass over it, because they have gone by the time
+       it starts building. */
     function cohortQ(prog) {
-        if (prog <= TRIALS_A) return clamp01((prog - META_END) / (TRIALS_A - META_END)) * 0.76;
-        if (prog <= TRIALS_B) return 0.76;
-        return 0.76 + clamp01((prog - TRIALS_B) / (1 - TRIALS_B)) * 0.24;
+        if (prog <= COHORT_FULL) return clamp01((prog - META_END) / (COHORT_FULL - META_END)) * 0.76;
+        return 0.76 + clamp01((prog - COHORT_FULL) / (1 - COHORT_FULL)) * 0.24;
     }
 
     /* ---------- second stage: what we do with them ---------- */
@@ -2219,7 +2627,7 @@
             // has enough detail that the grid's pitch reads as a scattering of
             // dots rather than as a resolved map
             spots: buildSpots(layout, R, 0.115),
-            x: W * (wide ? 0.60 : 0.5),
+            x: fx + fw * (wide ? 0.60 : 0.5),
             // parked high enough that the closing act has somewhere to bring it
             // down to, since the one thing that act must not do is let this
             // slide leave the screen and arrive again
@@ -2232,8 +2640,8 @@
        becomes the thing the model was trained on: small, dim, off to one side. */
     function refFrame() {
         return wide
-            ? { s: 0.34, x: W * 0.855, y: H * 0.17 }
-            : { s: 0.42, x: W * 0.5, y: H * 0.11 };
+            ? { s: 0.34, x: fx + fw * 0.855, y: H * 0.17 }
+            : { s: 0.42, x: fx + fw * 0.5, y: H * 0.11 };
     }
 
     function drawQuery(g, arrive, infer, mute) {
@@ -2294,12 +2702,11 @@
         // be landed on directly
         loadStains();
         ensureHome();
-        // nothing here animates while the grid is being built, and with motion
-        // turned down there is no stutter to spread the work out for, so it is
-        // all done in one go rather than dribbled in over the first second
-        growSprites(reduceMotion ? 64 : 4);
-        growSections(reduceMotion ? 64 : 4);
-        growDrains(reduceMotion ? 64 : 4);
+        // dribbled in over the first second rather than built in one go, so the
+        // grid fills without a stutter on the frame it is asked for
+        growSprites(4);
+        growSections(4);
+        growDrains(4);
 
         const g = ectx;
         /* Whose patient a tumor is carries the first beat and is clutter by the
@@ -2392,11 +2799,11 @@
             const subject = ensureQuery();
             if (subject) {
                 if (!verdict) initVerdict(subject);
-                growVerdict(reduceMotion ? 64 : 2);
+                growVerdict(2);
                 renderVerdict(vq);
             }
         }
-        erail.style.height = (ep * 100).toFixed(1) + '%';
+        erail.style.setProperty('--p', (ep * 100).toFixed(1));
         // unclamped, so the last engine caption fades out on its own as the
         // closing act comes up rather than sticking at full opacity
         const lit = syncCaptions(ecaptions, ep / E_SHARE, engineBeat);
@@ -2513,8 +2920,8 @@
        there is exactly one of that slide on the page and this act cannot
        disagree with the one before it about where it is or what it looks like. */
     function initVerdict(q) {
-        const x0 = wide ? W * 0.36 : W * 0.05;
-        const x1 = wide ? W * 0.96 : W * 0.95;
+        const x0 = fx + fw * (wide ? 0.36 : 0.05);
+        const x1 = fx + fw * (wide ? 0.96 : 0.95);
         // the copy sits beside the grid on a wide screen and over the top of it
         // on a narrow one, where it is also at its tallest, so the grid starts
         // below the deepest the paragraph gets rather than beside it
@@ -2873,6 +3280,9 @@
        is. It takes the caption currently carrying the most opacity rather than
        the nearest data-at, so the number changes on the same frame the words
        under it do. */
+    // a beat that holds across an act rather than landing on a point says so
+    const spanOf = el => el.dataset.from === undefined ? null : [parseFloat(el.dataset.from), parseFloat(el.dataset.to)];
+
     function syncCaptions(list, prog, readout) {
         let lead = 0, best = -1;
         list.forEach((el, i) => {
@@ -2886,8 +3296,20 @@
                the stage, so the opening beat was already at full fade-in on the
                stage's first frame and needed a second ramp bolted on top to stop
                it appearing all at once. */
-            const start = i > 0 ? (parseFloat(list[i - 1].dataset.at) + at) / 2 : 0;
-            const end = (at + next) / 2;
+            /* Most beats are a point and take the window between their
+               neighbours. One is not: the biology beat is a whole act, held up
+               across the growth and the spread while a list inside it moves its
+               own highlight, and a window derived from a midpoint is nowhere near
+               wide enough for it. So a beat may declare its own span, and the
+               beats either side of it take that span's edge as their boundary
+               instead of splitting the difference with its centre. */
+            const own = spanOf(el);
+            const start = own ? own[0]
+                : i > 0 ? (spanOf(list[i - 1]) || [])[1] ?? (parseFloat(list[i - 1].dataset.at) + at) / 2
+                : 0;
+            const end = own ? own[1]
+                : i < list.length - 1 ? (spanOf(list[i + 1]) || [])[0] ?? (at + next) / 2
+                : (at + next) / 2;
 
             /* A crossfade is a share of the window it has to cross, not a fixed
                slice of the stage. Pinned at 0.03 it was wider than the whole of
@@ -2918,29 +3340,46 @@
         return best;
     }
 
-    function renderMitosis(mp) {
-        const built = mp >= 1 ? fullyGrown() : buildCells(mp);
+    /* Which cells can be seen, so that a name never puts its dot on one buried
+       behind the cell in front of it: the dot lands on paint that belongs to
+       something else and the name looks like it is pointing at the wrong colour.
+       The mass is painted back to front, so a cell is hidden if anything drawn
+       after it covers its middle. Worked out once per layout, since nothing about
+       it moves. */
+    function markSeen(built) {
+        if (built.seen) return;
+        built.seen = true;
+
+        const cells = built.cells;
+        for (let i = 0; i < cells.length; i++) {
+            const c = cells[i];
+            c.bare = true;
+            for (let j = i + 1; j < cells.length; j++) {
+                const o = cells[j];
+                if (Math.abs(o.px - c.px) > o.pr || Math.abs(o.py - c.py) > o.pr) continue;
+                if (Math.hypot(o.px - c.px, o.py - c.py) < o.pr * 0.92) { c.bare = false; break; }
+            }
+        }
+    }
+
+    function renderMass() {
+        const built = fullyGrown();
+        markSeen(built);
         const cells = built.cells;
         const bound = boundsRadius(cells);
-        // a still has the whole frame to itself rather than sharing it with the
-        // captions, so it is given more of it
-        const fit = Math.min(1, (minDim * (reduceMotion ? 0.46 : 0.38)) / Math.max(bound, 1));
-        // with motion turned down one still is drawn and nothing runs again, so
-        // the camera arrives at its fitted scale rather than converging on it
-        camScale = reduceMotion ? fit : camScale + (fit - camScale) * 0.12;
+        /* Fitted to its band outright rather than eased into it. The figure does
+           not move, so there is no arrival to play: a camera converging over a
+           second and a half would be the only thing on the screen changing, and
+           the reader has no reason to be watching it. */
+        const k = Math.min(1.1, figR / Math.max(bound, 1));
+        const cyy = figCy();
 
         const aura = auraTint(cells);
-        // The first cell arrives from the depth of the page, then settles into
-        // its exact scroll-driven state. This works independently of which
-        // hero question happened to be visible before the scroll began.
-        const intro = smooth(clamp01(mp / 0.018));
-        const k = camScale * lerp(0.24, 1.1, intro);
         ctx.save();
-        ctx.globalAlpha = intro;
-        ctx.translate(cx, cy + (1 - intro) * minDim * 0.05);
+        ctx.translate(cx, cyy);
         ctx.scale(k, k);
         pxScale = k * dpr;
-        drawAura(bound, aura.tint, (0.16 + aura.avgM * 0.1) * intro);
+        drawAura(bound, aura.tint, 0.16 + aura.avgM * 0.1);
         drawCluster(cells);
         pxScale = dpr;
         ctx.restore();
@@ -2954,20 +3393,20 @@
             if (c.m <= 0.5) continue;
             sum += c.r; n++;
         }
-        return { k, cellR: n ? sum / n : radiusAt(7) * minDim };
+        return { k, cells, cellR: n ? sum / n : radiusAt(7) * minDim };
     }
 
     function drawStory(prog) {
         ground = GROUNDS.paper;
         ctx.clearRect(0, 0, W, H);
-        if (prog <= GROW_END) {
-            renderMitosis(curveAt(GROW_CLOCK, clamp01(prog / GROW_END)));
-        } else if (prog <= META_END) {
-            renderSpread(clamp01((prog - GROW_END) / (META_END - GROW_END)));
+        if (prog <= META_END) {
+            renderFigure();
         } else {
             renderCohort(cohortQ(prog));
-            if (prog > TRIALS_A) renderTrials(prog);
         }
+
+        // over the top of the opening beats, and it clears to the cell they end on
+        if (prog < BIO_A) renderTrials(prog);
     }
 
     function frame() {
@@ -2981,7 +3420,7 @@
         const storyOn = sTop - y < vh && sTop + sTravel + vh - y > 0;
         if (storyOn) {
             drawStory(p);
-            railFill.style.height = (p * 100).toFixed(1) + '%';
+            railFill.style.setProperty('--p', (p * 100).toFixed(1));
             syncCaptions(captions, p, storyBeat);
         }
 
@@ -3008,7 +3447,7 @@
     let raf = 0;
 
     function kick() {
-        if (running || document.hidden || reduceMotion) return;
+        if (running || document.hidden) return;
         running = true;
         // restarting after an idle stretch, so the velocity sample is seeded at
         // the current position instead of measuring the whole jump as one frame
@@ -3020,49 +3459,6 @@
     function stop() {
         running = false;
         window.cancelAnimationFrame(raf);
-    }
-
-    /* ---------- the page with motion turned down ----------
-
-       The stages collapse to their content, the captions become an ordinary
-       column of prose, and each canvas is drawn exactly once. Nothing here is
-       tied to scroll position, which is the whole point: a visitor who asked
-       for less motion was previously given the same twenty-seven screens of
-       scroll-driven animation with only the easing removed.
-
-       One still per stage rather than one per beat, so what is drawn is the
-       state most of that stage's captions are about: the tumor at the end of
-       its growth, and the cohort with every map read off it. */
-    const STILL_ENGINE = 0.70;
-
-    function drawStills() {
-        drawStory(GROW_END);
-        captions.forEach(el => el.style.setProperty('--o', '1'));
-
-        if (!estage || !ectx) return;
-
-        ground = GROUNDS.paper;
-        ectx.clearRect(0, 0, W, H);
-        eq = STILL_ENGINE;
-        renderEngine(STILL_ENGINE, 0);
-        ecaptions.forEach(el => el.style.setProperty('--o', '1'));
-        vcopies.forEach(el => el.style.setProperty('--o', '1'));
-    }
-
-    /* Waits for the tissue and the cell atlas, then draws once. Bounded, because
-       an atlas that never downloads must not mean a canvas that never draws:
-       past the deadline the still is taken with whatever is loaded, which is the
-       fallback shader the scroll version would have used anyway. */
-    let stillTries = 0;
-
-    function stills() {
-        loadStains();
-        // the engine still is taken past the wash, so it wants the grey tissue too
-        if ((atlas.ready && HE.grayReady) || ++stillTries > 40) {
-            drawStills();
-            return;
-        }
-        window.setTimeout(stills, 120);
     }
 
     /* The single cell is the largest thing the page ever draws, so its sprites
@@ -3099,9 +3495,15 @@
 
     /* The stage offsets are measured off a laid-out document, and the captions
        are set in a webfont that changes their height when it lands, so they are
-       taken again once at each point the layout can still move under them. */
-    window.addEventListener('load', measureStages);
-    if (document.fonts) document.fonts.ready.then(measureStages);
+       taken again once at each point the layout can still move under them. The
+       room the charts get is read off a caption's height, so it goes with them. */
+    function remeasure() {
+        measureTrials();
+        measureStages();
+    }
+
+    window.addEventListener('load', remeasure);
+    if (document.fonts) document.fonts.ready.then(remeasure);
 
     resize();
     lastW = canvas.clientWidth;
@@ -3109,6 +3511,5 @@
     loadAtlas();
     prebake();
 
-    if (reduceMotion) stills();
-    else kick();
+    kick();
 })();

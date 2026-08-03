@@ -14,7 +14,7 @@
        A stripe needs edges, and an eased turn has none: it leaves and arrives at
        a standstill, so there is no point at which the page announces that a new
        block has started. */
-    --turn: 64vh;
+    --turn: 46vh;
     --ink: #f2f6fb;
     --ink-dim: rgba(224, 235, 248, 0.62);
     /* 0.34 came out at 2.5:1 against the navy, which is below AA for any size.
@@ -29,6 +29,25 @@
     --malignant: #ff7aa8;
     --serif: 'Instrument Serif', Georgia, serif;
     --sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    /* The measure the page stops growing at.
+
+       Every size on this page is set in vw with a ceiling, and all of those
+       ceilings are reached between 1450 and 1600px: past that the type is done
+       growing while a container told to take 86vw is not, so the only thing the
+       extra width buys is longer lines and more distance between the columns of
+       a row. The drug table was the clearest case of it — three columns pulled
+       two thousand pixels apart with the same 18px prose between them — and the
+       references under it the other half of the same problem, a 640px column of
+       small print pinned to the left edge of a screen five times that wide.
+
+       So past this width the gutters take the extra rather than the content, and
+       the composition a laptop gets is the one every larger screen gets. */
+    --page: 1250px;
+    /* the left edge every band starts at, and the inset the stage's own
+       furniture sits in, held the same distance outside the content as it is at
+       the width the stage was drawn against */
+    --gut: max(7vw, (100vw - var(--page)) / 2);
+    --gut-far: max(2.4vw, (100vw - var(--page)) / 2 - 66px);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -297,12 +316,38 @@ body {
     background: radial-gradient(50% 50% at 50% 50%, rgba(127, 180, 255, 0.18) 0%, rgba(127, 180, 255, 0) 72%);
 }
 
-/* the bar sits over the top of the stage, so it lifts away as soon as the page
-   starts moving and returns only at the very top */
+/* the bar sits over the top of the stage, so it lifts away on the way down and
+   comes back on the way up */
 .dock.is-gone {
     opacity: 0;
     transform: translateX(-50%) translateY(-18px);
     pointer-events: none;
+}
+
+/* The bar's own colours are tuned for the navy it starts on. Floating, it spends
+   most of its life over the paper the stages are drawn on, where a half-opaque
+   navy washes out to grey and takes the light type standing on it down with it.
+   The halo goes for the same reason: a blue glow on paper is a smudge. */
+.dock.is-afloat {
+    background: rgba(10, 23, 43, 0.9);
+    border-color: rgba(150, 190, 245, 0.22);
+}
+
+.dock.is-afloat::before { display: none; }
+
+/* Only shown on the bar that has come back mid-page. At the top of the page the
+   hero is already carrying the mark a couple of lines below, and the way home
+   from the top of the page is nowhere. */
+.dock__home {
+    display: none;
+    align-items: center;
+}
+
+.dock.is-afloat .dock__home { display: flex; }
+
+.dock__home img {
+    display: block;
+    width: 74px;
 }
 
 .dock__links {
@@ -324,6 +369,7 @@ body {
 
 /* the bar's own call to action: a ring rather than a fill, so the bar reads as
    one piece of glass with a button drawn on it instead of two stacked pills */
+/* A button rather than a link, because what it opens is a form on this page */
 .access {
     display: inline-flex;
     align-items: center;
@@ -332,7 +378,11 @@ body {
     padding: 0 16px;
     border-radius: 100px;
     border: 1px solid rgba(190, 216, 250, 0.34);
+    background: none;
+    cursor: pointer;
     color: var(--ink);
+    font-family: inherit;
+    font-weight: inherit;
     font-size: 0.68rem;
     letter-spacing: 0.16em;
     text-transform: uppercase;
@@ -424,9 +474,18 @@ body {
    transparent, so each one needs that to land inside 100%: the first at
    12 + 0.64 x 52 = 45%, the second at 72 + 0.68 x 38 = 98%. */
 .opening {
-    /* the window's width, kept here because the corner pills line their outer
-       edges up with its own and have to be told the same number */
-    --app-w: min(1340px, 96vw);
+    /* The window's width, kept here because the corner pills line their outer
+       edges up with its own and have to be told the same number.
+
+       Three terms, and each of them is doing something. 96vw is the phone, where
+       the window is all the width there is bar a margin. 1340px was the whole rule
+       and it held the window to that on any screen wider than a laptop: at 2560 it
+       was half the width and at 3440 barely a third, a product screenshot marooned
+       in navy on exactly the displays with the room to show it properly. So past
+       the laptop it goes back to a share of the viewport, and 2240px is where that
+       stops, because the workspace inside is real UI at 9 to 11px and a window
+       wider than that is asking a reader to track across it. */
+    --app-w: min(96vw, max(1340px, 76vw), 2240px);
     background:
         radial-gradient(90% 52% at 22% 12%, var(--navy-600) 0%, rgba(25, 59, 103, 0) 64%),
         radial-gradient(76% 38% at 84% 72%, var(--navy-700) 0%, rgba(16, 43, 77, 0) 68%),
@@ -520,17 +579,24 @@ body {
        above both at 70. */
     z-index: 61;
     width: var(--app-w);
-    /* taller than the room left under the question, so its bottom edge sits
-       below the fold and is reached by scrolling into the navy under it */
-    height: clamp(380px, 82vh, 980px);
+    /* Taller than the room left under the question, so its bottom edge sits below
+       the fold and is reached by scrolling into the navy under it. The cap was
+       980px, which on a 1440-tall display cut the window back to two thirds of the
+       height while the same rule gave a laptop four fifths. */
+    height: clamp(380px, 82vh, 1180px);
     margin-top: clamp(6px, 1.3vh, 16px);
     border-radius: 18px;
     overflow: hidden;
     text-align: left;
     background: linear-gradient(180deg, rgba(18, 38, 66, 0.66) 0%, rgba(9, 20, 38, 0.72) 100%);
     border: 1px solid rgba(150, 190, 245, 0.15);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    /* No backdrop blur. What is behind this window is the hero's own gradient and
+       nothing else — the workspace is inside it, not under it — and blurring a
+       gradient returns the gradient: with it off, no pixel of the window moves by
+       more than 5 of 255. What it did cost was every frame the hero was scrolled,
+       because the blur is recomputed over the whole panel each time the backdrop
+       moves under it: 139ms a frame at this size and 98ms at the smaller one it
+       used to be, against 17ms with it gone. */
     box-shadow: 0 46px 100px rgba(2, 7, 16, 0.62),
                 inset 0 1px 0 rgba(220, 236, 255, 0.09);
     opacity: 0;
@@ -730,6 +796,26 @@ body {
     background: rgba(30, 55, 95, 0.55);
 }
 
+/* Shown only once the frame has the touch, and only where the touch is the way
+   the window is driven. It has to live on the bar rather than over the workspace:
+   anything inside the frame's box is either under the frame or on top of the
+   corner the workspace keeps a control in, and this is the one thing on the page
+   that must stay pressable while the frame is holding everything else. */
+.app__done {
+    margin-left: auto;
+    display: none;
+    padding: 3px 11px;
+    border: 1px solid rgba(180, 205, 240, 0.24);
+    border-radius: 100px;
+    background: rgba(180, 205, 240, 0.08);
+    color: var(--ink-dim);
+    font-family: inherit;
+    font-size: 0.58rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
 .app__hint {
     position: absolute;
     z-index: 5;
@@ -743,6 +829,10 @@ body {
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     color: var(--ink-dim);
+    /* centred off left: 50%, so it shrink-wraps against half the window rather
+       than all of it and the handheld label broke across two lines with room to
+       spare on both sides of it */
+    white-space: nowrap;
     font-size: 0.64rem;
     letter-spacing: 0.14em;
     text-transform: uppercase;
@@ -806,23 +896,106 @@ body {
     mask-image: radial-gradient(72% 72% at 50% 42%, #000 0%, rgba(0, 0, 0, 0) 100%);
 }
 
+/* A phone used to get a baked still here instead of the workspace, because the
+   frame was never mounted below 860px and the grid on its own read as a box that
+   had failed to load rather than one waiting to be opened. The workspace runs
+   here now, so the still is 134KB fetched to be covered a second later, and the
+   grid goes back to being what it is everywhere else: what is under the frame
+   while the frame is booting. platform-poster.webp and its 640 are no longer
+   served by anything. */
+
+/* ---------- Who is behind it ----------
+
+   Two lists directly under the workspace, closing out the opening block before
+   the page turns to paper. Set as lists rather than as cards: there are no
+   photographs, no biographies and nothing to click, so a grid of boxes would be
+   nineteen empty frames around nineteen names.
+
+   It carries no fill of its own beyond the flat ground the class gives it. The
+   hero above spends both of its pools before its bottom edge so that it hands
+   over exactly var(--ground), and the turn below starts from the same colour; a
+   block between them that painted anything else would reopen that join.
+
+   Held to the same left edge and the same capped measure as every block on the
+   paper half, rather than to the window's own width above it. Past the cap the
+   window keeps growing and this does not, which is the difference between five
+   columns of names and ten. */
+/* Bottom padding is small because the turn below opens on a flat run of the same
+   navy, so a full pad here and the head of the gradient were stacking into most
+   of a screen of nothing between the last investor and the first chart */
+.backing {
+    position: relative;
+    padding: 6vh var(--gut) 3vh;
+}
+
+.backing__group + .backing__group { margin-top: 7vh; }
+
+/* the rule the drug table draws under its rows, taken from the token that flips
+   with the ground so it reads the same on navy as it does on paper */
+.backing__head {
+    padding-bottom: 1.1rem;
+    border-bottom: 1px solid var(--rail);
+    font-size: 0.74rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+}
+
+/* Counted rather than fitted. Left to size themselves to their longest entry
+   both lists ended up with a column they could not fill: the three advisors sat
+   in a four-column grid with a dead quarter beside them, and sixteen investors
+   fell 5-5-5-1, leaving the last name alone on a row of its own. Four across
+   divides the investors exactly and three gives each advisor an equal share. */
+.backing__list {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2.4rem 3.2vw;
+    margin-top: 2.2rem;
+    list-style: none;
+}
+
+.backing__list--names {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.4rem 3.2vw;
+}
+
+.person__name {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: clamp(1.2rem, 1.6vw, 1.5rem);
+    line-height: 1.2;
+    letter-spacing: -0.008em;
+    color: var(--ink);
+}
+
+.person__role {
+    margin-top: 0.5rem;
+    font-size: 0.74rem;
+    font-weight: 400;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    line-height: 1.6;
+    text-wrap: pretty;
+    color: var(--ink-faint);
+}
+
 /* ---------- Scroll stage ---------- */
 
 .stage {
     position: relative;
-    /* Long enough that the stretch of regulated division has room to feel slow
-       without the beats after the mutation having to rush, and no longer than
-       that. A caption holds for as long as the page is not being scrolled, so
-       distance buys a reader nothing they cannot get by stopping, and it costs
-       everyone who wanted to get to the end.
+    /* Two thirds of this used to be the biology: six and a half screens of
+       scrolling to get one healthy cell through mitosis, driver mutations, two
+       independent clones, branched subclones and metastasis, on a page read by
+       people who have known all of it since their second year.
 
-       That argument stops holding at the end. 760vh carried twelve beats of one
-       drawing being added to, where a caption is a sentence and the picture
-       under it has changed by a little. The last two are dense charts read the
-       way a chart is read, and each one needs a screen and a half of stillness
-       after it has finished drawing itself, which is where the rest of this
-       went. The biology still gets its original 710vh of travel. */
-    height: 1400vh;
+       It is down to one screen because it is no longer scrolled. A tumor forming
+       is a thing to watch, not a thing to crank, so it runs on a clock and the
+       beat is only as long as its caption needs. What the reader scrolls through
+       is what scrolling is good for: two exhibits studied at their own pace,
+       keeping the distance worked out against a reader, and three beats of
+       argument that earn a screen each. */
+    height: 820vh;
 }
 
 .stage__sticky {
@@ -857,7 +1030,7 @@ body {
 
 .captions {
     position: absolute;
-    left: 7vw;
+    left: var(--gut);
     top: 50%;
     transform: translateY(-50%);
     width: min(30ch, 40vw);
@@ -906,6 +1079,18 @@ body {
    single block without it */
 .caption p + p { margin-top: 1.05rem; }
 
+
+/* These are set large in a column about thirty characters wide, which is narrow
+   enough that greedy wrapping regularly drops the closing word of a sentence
+   onto a line of its own: a heading reading "respond to a / drug." over a
+   subtext ending "most critically in / Phase 2." is two orphans stacked.
+   Balancing evens the lines out instead, and pretty only lifts the last line. */
+.caption h2,
+.verdict__lead { text-wrap: balance; }
+
+.caption p,
+.verdict__body { text-wrap: pretty; }
+
 /* The last two beats are charts, and the canvas draws them: swept out under the
    scroll, over the grid of patients they are an argument about. What is here is
    the same two charts as flat SVG, for the one branch that never runs the
@@ -923,17 +1108,33 @@ body {
    unbounded scroll into a known number of beats, which is the difference
    between committing to a page and being trapped in one.
 
-   The way out sits under it, because the two answers a visitor wants at that
-   moment are how much is left and how to stop. */
-.progress {
+   The way out sits with it, because the two answers a visitor wants at that
+   moment are how much is left and how to stop.
+
+   One strip along the bottom edge, on every screen. The rail used to stand on
+   end in the right gutter, which is a two-pixel column the artwork was laid out
+   to clear — but the count above it is forty pixels wide and clears nothing, so
+   on the two chart beats it was printed over the plot, and the cohort grids run
+   past it as well. There is no column narrow enough to hold a legible number and
+   wide enough to be worth composing around.
+
+   The floor is the one band that is clear at every beat: the artwork is composed
+   against the middle of the box on the wide arrangement and above the copy on the
+   narrow one, and neither reaches it. */
+.aside {
     position: absolute;
-    right: 2.4vw;
-    top: 50%;
-    transform: translateY(-50%);
+    right: var(--gut-far);
+    bottom: 6vh;
+    z-index: 5;
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: 13px;
+    gap: 18px;
+}
+
+.progress {
+    display: flex;
+    align-items: center;
+    gap: 11px;
 }
 
 .progress__count {
@@ -950,8 +1151,8 @@ body {
 
 .rail {
     position: relative;
-    width: 2px;
-    height: 26vh;
+    width: min(13vw, 150px);
+    height: 2px;
     border-radius: 2px;
     background: var(--rail);
 }
@@ -959,10 +1160,6 @@ body {
 /* Quiet, and never in front of the artwork: it takes the far column the rail
    already owns rather than the middle of the stage. */
 .onward {
-    position: absolute;
-    right: 2.4vw;
-    bottom: 6vh;
-    z-index: 5;
     padding: 7px 15px;
     border: 1px solid var(--rail);
     border-radius: 100px;
@@ -981,11 +1178,15 @@ body {
 }
 
 /* the glow reads as light leaking off the rail on blue and as a grey blur on
-   paper, so the paper ground drops it rather than recolouring it */
+   paper, so the paper ground drops it rather than recolouring it.
+
+   Driven by a bare number rather than a length, which is what let the same
+   script fill it while it was standing on end on one screen and lying down on
+   another. It lies down on both now, and the number costs nothing to keep. */
 .rail__fill {
-    width: 100%;
-    height: 0%;
-    background: linear-gradient(180deg, var(--accent), var(--malignant));
+    width: calc(var(--p, 0) * 1%);
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--malignant));
     box-shadow: var(--rail-glow);
 }
 
@@ -1039,12 +1240,12 @@ body {
     vector-effect: non-scaling-stroke;
 }
 
-/* the breakdown panels go two up rather than four or five across, because a
-   prose column split five ways is five charts too small to read */
+/* the three phases in a row, so the run of them is the thing being read rather
+   than each panel on its own */
 .panels {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: clamp(16px, 3.5vw, 34px);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: clamp(12px, 2.2vw, 24px);
 }
 
 .key {
@@ -1093,27 +1294,18 @@ body {
     line-height: 1.14;
     letter-spacing: -0.015em;
     max-width: 22ch;
-    /* two lines held open so nothing shifts as the question types */
-    min-height: 2.28em;
     color: var(--ink);
-}
-
-.pivot__line.is-typing::after {
-    content: '';
-    display: inline-block;
-    width: 0.05em;
-    height: 0.78em;
-    margin-left: 0.07em;
-    vertical-align: -0.05em;
-    background: var(--accent);
-    animation: caret-blink 1s steps(1) infinite;
 }
 
 /* ---------- Data engine ---------- */
 
+/* The box is capped and the inset is not, so past the cap the inset is the only
+   term still growing and it eats the measure from both sides: 950px of column at
+   a laptop width came down to 630 on an ultrawide. Stopping the inset where the
+   box stops holds the column at the width it was set for. */
 .engine {
     position: relative;
-    padding: 18vh 8vw 15vh;
+    padding: 18vh clamp(26px, 8vw, 116px) 15vh;
     max-width: 1180px;
     margin: 0 auto;
 }
@@ -1196,12 +1388,18 @@ body {
     margin-top: 3rem;
 }
 
+/* Set on both an anchor and a button, so the type and the box have to be stated
+   rather than inherited from either one */
 .btn {
     display: inline-block;
     padding: 13px 26px;
+    border: 0;
     border-radius: 100px;
     background: var(--ink);
+    cursor: pointer;
     color: var(--navy-900);
+    font-family: inherit;
+    font-weight: inherit;
     font-size: 0.86rem;
     letter-spacing: 0.02em;
     text-decoration: none;
@@ -1239,7 +1437,7 @@ body {
    the captions sit and is faded in on scroll progress the same way they are. */
 .verdict__copy {
     position: absolute;
-    left: 7vw;
+    left: var(--gut);
     top: 50%;
     transform: translateY(calc(-50% + (1 - var(--o, 0)) * 22px));
     width: min(34ch, 30vw);
@@ -1276,7 +1474,7 @@ body {
    is only worth making with the figures attached and a reference on each one. */
 .cases {
     position: relative;
-    padding: 16vh 7vw 10vh;
+    padding: 16vh var(--gut) 10vh;
     background: var(--paper);
 }
 
@@ -1296,6 +1494,99 @@ body {
     margin-top: 1.6rem;
     font-size: clamp(0.98rem, 1.12vw, 1.12rem);
     line-height: 1.68;
+    color: var(--ink-dim);
+}
+
+/* ---------- What we have written ----------
+
+   The three posts, carried over from the old site and reset in this page's
+   type. They keep the film that ran on each card there, because the subject of
+   all three is something moving — a sequence being designed, an optimiser
+   descending, a model generating — and a still of any of them is a coloured
+   smear.
+
+   The card is the link rather than a box containing one: the whole of it is the
+   target, which is what a visitor on a phone will aim at anyway.
+
+   It sits inside the trials section, between the argument and the seven drugs it
+   is made against, so it takes no ground and no gutter of its own: the paper
+   under it is already painted and the margins are already held. The 8vh above it
+   is the same step the drugs take below it. */
+.research { margin-top: 8vh; }
+
+.research__head {
+    padding-bottom: 1.1rem;
+    border-bottom: 1px solid var(--rail);
+    font-size: 0.74rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+}
+
+.research__list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 3.4rem 3.2vw;
+    margin-top: 3rem;
+    list-style: none;
+}
+
+.paper__link {
+    display: flex;
+    flex-direction: column;
+    text-decoration: none;
+    color: inherit;
+}
+
+/* A fixed shape rather than the film's own, so three posts shot at three
+   different aspect ratios still line their titles up. */
+.paper__art {
+    display: block;
+    overflow: hidden;
+    aspect-ratio: 16 / 10;
+    border-radius: 12px;
+    background: rgba(11, 26, 47, 0.06);
+}
+
+.paper__film {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.paper__link:hover .paper__film { transform: scale(1.03); }
+
+.paper__date {
+    display: block;
+    margin-top: 1.5rem;
+    font-size: 0.72rem;
+    font-weight: 400;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+}
+
+.paper__title {
+    display: block;
+    margin-top: 0.7rem;
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: clamp(1.25rem, 1.75vw, 1.6rem);
+    line-height: 1.18;
+    letter-spacing: -0.008em;
+    text-wrap: balance;
+    color: var(--ink);
+}
+
+.paper__desc {
+    display: block;
+    margin-top: 0.7rem;
+    font-size: 0.92rem;
+    line-height: 1.6;
+    text-wrap: pretty;
     color: var(--ink-dim);
 }
 
@@ -1502,6 +1793,183 @@ body {
     color: var(--ink-faint);
 }
 
+/* ---------- The way in ----------
+
+   Every "get access" on the page opens this. It is the one card on the site that
+   is asked for rather than scrolled to, so it keeps the dark ground the page
+   opens on whichever half of the document it is called from. */
+/* The same card the workspace puts in front of a locked panel, restated for the
+   page. Both ask a visitor for the same four things, so the two are held to one
+   set of measurements: everything below is the workspace's own access gate from
+   webapp/ui/src/styles.css, with its dark palette written out because the page
+   does not carry the workspace's tokens.
+
+   Margin restated, because the page's own reset zeroes the auto margins a modal
+   dialog is centred by and drops the card in the top left corner.
+
+   Height capped and the overflow given to the card rather than to this: a
+   landscape phone is 390px tall, which is shorter than four fields and a button,
+   and a dialog that overflows a viewport it is centred in loses the same amount
+   off the top and the bottom at once — the heading and the way out both. */
+/* Width set rather than capped: a dialog is fit-content by default, and once the
+   phone rules stack the two name fields the card shrank to the width of one of
+   them and sat as a column in the middle of the screen. */
+.gate {
+    width: min(392px, calc(100vw - 32px));
+    max-height: 92vh;
+    margin: auto;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: #eef2f9;
+    font-size: 13px;
+    overflow: visible;
+}
+
+/* The workspace blurs the panel behind its card and washes the canvas over it.
+   The page has no canvas, so the backdrop does both jobs at once. */
+.gate::backdrop {
+    background: rgba(10, 17, 32, 0.62);
+    backdrop-filter: blur(7px) saturate(0.7);
+    -webkit-backdrop-filter: blur(7px) saturate(0.7);
+}
+
+.gate__card {
+    position: relative;
+    display: grid;
+    gap: 14px;
+    max-height: 92vh;
+    overflow-y: auto;
+    padding: 24px 26px 22px;
+    border: 1px solid rgba(148, 178, 224, 0.22);
+    border-radius: 10px;
+    background: rgba(14, 22, 38, 0.72);
+    backdrop-filter: blur(20px) saturate(1.4);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4);
+    box-shadow: 0 32px 80px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+/* Drawn as the workspace's corner control, on the opposite corner because this
+   one closes the form rather than returning to the view behind it */
+.gate__close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border: 1px solid transparent;
+    border-radius: 5px;
+    background: none;
+    cursor: pointer;
+    color: #79879f;
+}
+
+.gate__close:hover {
+    border-color: rgba(148, 178, 224, 0.14);
+    background: #141f33;
+    color: #eef2f9;
+}
+
+/* The whole of what the card says. It used to carry an eyebrow and a line of
+   copy above the fields; four labelled boxes and a button named "request access"
+   already say what this is, and the prose was only restating the heading. */
+.gate__head {
+    font-family: var(--sans);
+    font-size: 17px;
+    font-weight: 500;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+    text-align: center;
+    color: #eef2f9;
+}
+
+.gate__form {
+    display: grid;
+    gap: 11px;
+}
+
+/* the two halves of a name, which read as one line and should be entered as one */
+.gate__row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+/* min-width, because a grid track will not go under the widest its contents
+   insist on and a text input insists on about 240px, which put the pair of them
+   ninety pixels wider than the card they are in: the second name box was drawn
+   hanging off its right edge. */
+.gate__field {
+    display: grid;
+    min-width: 0;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0;
+    text-transform: none;
+    color: #b0bdd2;
+}
+
+.gate__field input {
+    min-width: 0;
+    height: 32px;
+    padding: 0 8px;
+    border: 1px solid rgba(148, 178, 224, 0.13);
+    border-radius: 4px;
+    background: rgba(10, 17, 32, 0.55);
+    color: #eef2f9;
+    font-family: inherit;
+    font-size: 11px;
+}
+
+.gate__field input:focus {
+    outline: none;
+    border-color: #5b9be8;
+}
+
+/* Marked on the field rather than listed under the form, because what is wrong
+   is which box is empty and that is only answerable at the box. */
+.gate__field.is-bad input { border-color: #ec7a74; }
+
+.gate__send {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 33px;
+    margin-top: 3px;
+    padding: 0 11px;
+    border: 1px solid #5b9be8;
+    border-radius: 4px;
+    background: #5b9be8;
+    color: #07101f;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.gate__send:disabled {
+    opacity: 0.6;
+    cursor: progress;
+}
+
+.gate__status {
+    font-size: 11px;
+    line-height: 1.5;
+    color: #b0bdd2;
+}
+
+.gate__status:empty { display: none; }
+
+.gate__status.is-bad { color: #ec7a74; }
+
+.gate__link {
+    color: inherit;
+    text-underline-offset: 3px;
+}
+
 /* 7rem here was clearing the call to action that used to sit above it. That has
    moved up the page to the section that argues for it, so this is now the first
    thing in the footer and has nothing to clear. */
@@ -1536,6 +2004,16 @@ body {
         -webkit-backdrop-filter: none;
     }
     .dock__links { display: none; }
+    /* The shell comes back for the bar that has returned mid-page. Without it the
+       mark is a white logo standing on the white paper the stages are drawn on,
+       and there is nothing holding it to the button beside it. */
+    .dock.is-afloat {
+        padding: 5px 5px 5px 16px;
+        backdrop-filter: blur(18px) saturate(140%);
+        -webkit-backdrop-filter: blur(18px) saturate(140%);
+        box-shadow: 0 20px 46px rgba(2, 8, 18, 0.5), inset 0 1px 0 rgba(220, 236, 255, 0.1);
+    }
+    .dock__home img { width: 64px; }
     /* nothing is held out to the sides here, so the pair goes back into the flow
        above the question, side by side and cut down enough to fit a phone
        across */
@@ -1553,32 +2031,62 @@ body {
     }
     .brand img { width: 96px; }
     .yc { gap: 7px; }
+    /* the one thing on the page a visitor is meant to press, so it keeps a
+       thumb's worth of height even where everything beside it is cut down */
     .access {
-        min-height: 30px;
-        padding: 0 14px;
-        font-size: 0.62rem;
+        min-height: 36px;
+        padding: 0 16px;
+        font-size: 0.64rem;
         letter-spacing: 0.1em;
     }
-    .yc__label { font-size: 0.62rem; letter-spacing: 0.1em; }
+    /* set with the pill it stands beside, so the pair reads as one row */
+    .yc__label { font-size: 0.64rem; letter-spacing: 0.1em; }
     .yc__mark { width: 16px; height: 16px; font-size: 10px; }
     .opening { padding: 11vh 5vw 8vh; }
     /* the longest question runs to three lines at this measure, and the window
        must not move when it is the one being typed */
     .question { min-height: 3.48em; }
-    .app { height: clamp(280px, 52vh, 470px); }
-    .app__tab { width: 38px; }
-    /* A three-dock workstation has no usable size in a box this short, so the
-       frame is never mounted here at all: a tap hands the visitor to the
-       workspace in a tab of its own, where it has the room. Nothing is holding
-       the page's scroll, so the only hint worth showing is the one that says
-       where a tap goes. */
-    .app__hint { opacity: 1; }
-    .app.is-ready .app__hint--interact,
-    .app.is-engaged .app__hint--release { display: none; }
-    .app__hint--handheld { display: inline; }
+    /* The workspace runs here, so the window is given the height to run it in
+       rather than the height of a picture of it. Its docks arrive closed at this
+       width and open one at a time over the slide, which is what makes a
+       three-dock workstation fit a phone at all. */
+    .app { height: clamp(420px, 72vh, 620px); }
+    /* Same two states as anywhere else — tap to take the wheel, and a way to give
+       it back — worded for a finger. The release is the Done button on the bar
+       rather than a line of text, because the text names a key this screen does
+       not have. */
+    .app.is-ready:not(.is-engaged) .app__hint--interact { display: none; }
+    /* the whole pill, not just its label: with the release line gone and the
+       handheld one only shown before engaging, what was left was an unlabelled
+       lozenge sitting on the workspace, and the label is the only reason the pill
+       is there */
+    .app.is-engaged .app__hint { display: none; }
+    /* qualified, or the base rule hiding every span in the pill outranks it on
+       element count and the pill comes up empty the other way round */
+    .app.is-ready:not(.is-engaged) .app__hint--handheld { display: inline; }
+    /* The bar gains eight pixels here because it is carrying the only way out of
+       the frame, and a 20px control is not something a thumb hits first time. The
+       body's height is measured off the bar, so it comes down by the same eight. */
+    .app__bar { height: 34px; }
+    .app__body { height: calc(100% - 34px); }
+    .app.is-engaged .app__done { display: block; }
+    .app__done { padding: 6px 14px; }
     /* no room for it beside the chips at this width */
     .app__meta { display: none; }
-    .stage { height: 680vh; }
+    /* Decoration, and the window has none of the room for it that it had when the
+       bar was the widest thing in a picture of a workspace */
+    .app__tabs { display: none; }
+    /* A designation runs to two or three lines at this measure, so the advisors
+       stack; the bare names still pair up, because sixteen of them in a single
+       column is a screen of scrolling for a list that is read at a glance. */
+    .backing { padding: 4vh 7vw 3vh; }
+    .backing__list {
+        grid-template-columns: 1fr;
+        gap: 2.2rem 6vw;
+        margin-top: 1.8rem;
+    }
+    .backing__list--names { grid-template-columns: repeat(2, 1fr); }
+    .stage { height: 580vh; }
     .stage--engine { height: 860vh; }
     .stage--engine .captions { width: auto; }
     .stage--engine .caption p { max-width: none; }
@@ -1596,17 +2104,25 @@ body {
         transform: translateY(calc((1 - var(--o, 0)) * 22px));
     }
     .caption p { max-width: none; }
-    .progress { right: 5vw; gap: 10px; }
-    .rail { height: 18vh; }
-    .progress__count { font-size: 0.62rem; }
-    /* the caption column runs to the bottom of the box at this width, so the way
-       out goes up beside the rail instead of under it */
-    .onward {
+    /* The strip takes the full width here rather than sitting in a corner of it,
+       so the count goes to one edge and the way out to the other. It used to run
+       across the top, where the canvas draws: on the tissue beats the rail ran a
+       line through two of the sections and the button sat on a third. Under the
+       caption is the one band that is reliably empty, and the copy stops at 12vh. */
+    .aside {
+        bottom: 4vh;
+        left: 5vw;
         right: 5vw;
-        bottom: auto;
-        top: 8vh;
-        padding: 6px 12px;
-        font-size: 0.6rem;
+        justify-content: space-between;
+        gap: 12px;
+    }
+    .rail { width: min(26vw, 132px); }
+    .progress__count { font-size: 0.64rem; }
+    /* a corner link on a phone is a target before it is a label, so it keeps a
+       tappable height rather than shrinking with its type */
+    .onward {
+        padding: 9px 15px;
+        font-size: 0.64rem;
     }
     .pivot { min-height: 62vh; padding: 8vh 7vw; }
     .engine { padding: 14vh 7vw 12vh; }
@@ -1639,6 +2155,8 @@ body {
         text-align: left;
     }
     .case__who { margin-top: 1.1rem; }
+    /* the two halves of a name will not take a phone across */
+    .gate__row { grid-template-columns: 1fr; }
     /* The lens is measured against the island, and the island is a completely
        different shape here: a nearly square block on desktop becomes a column
        five times taller than it is wide. The same 92% that puts the rim far out
@@ -1663,111 +2181,71 @@ body {
     }
     /* a turn is sized against the viewport it plays out in, so it stays in vh;
        it only needs to be a little shorter where scrolling is slower */
-    :root { --turn: 58vh; }
+    :root { --turn: 42vh; }
 
-    /* Five panels across a phone would be five charts an inch wide, so they go
-       two up and the axis labels grow back to the size the rest of the page
-       sets its small type at. */
-    .panels { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    /* A third of a phone is not a chart, it is a thumbnail of one, so the three
+       stack and each gets the column's full width. The canvas beats do the same at
+       this width, and the still article should not be the cramped one. */
+    .panels { grid-template-columns: minmax(0, 1fr); }
 }
 
-/* ---------- The page with motion turned down ----------
+/* ---------- The narrowest phones ----------
 
-   What used to be here removed the easing, the caret and the grain drift, and
-   left everything else in place: the two stages kept their full height, so a
-   visitor who had asked for less motion still had twenty-seven screens of
-   scroll-driven animation to crank through, and got a slightly worse version of
-   it because the easing that smoothed the canvas was the part that had been
-   taken away.
-
-   So the stages stop being stages. Each collapses to its content, the sticky box
-   becomes an ordinary block, and the canvas is drawn once and never again. The
-   captions were already the whole argument in prose; laid out in a column under
-   the still they read as an illustrated article, which is what this page is when
-   it is not moving. */
-@media (prefers-reduced-motion: reduce) {
-    .q__lead, .q__rest { transition-duration: 0.01s; }
-    .question.is-typing-lead .q__lead::after,
-    .question.is-typing-rest .q__rest::after { animation: none; }
-    .app { animation: none; opacity: 1; }
-    .app__load { animation: none; }
-    .app.is-loading .app__load { animation: none; transform: translateX(0); }
-    .pivot__line.is-typing::after { animation: none; }
-    .btn:hover { transform: none; }
-    .band { opacity: 1; transition: none; }
-    .trace { stroke-dashoffset: 0; transition: none; }
-
-    .stage,
-    .stage--engine { height: auto; }
-
-    .stage__sticky {
-        position: static;
-        height: auto;
-        overflow: visible;
-        padding: 10vh 7vw 4vh;
-    }
-
-    /* Capped rather than sized to the viewport, so the still is composed the same
-       way on any screen and the caption under it is above the fold: a still that
-       fills the window on its own reads as another full-height act, which is the
-       thing this whole branch exists to get away from. */
-    .stage__sticky canvas {
-        position: static;
-        width: 100%;
-        height: min(62vh, 560px);
-    }
-
-    /* both of these are answers to "how far through this am I", and there is no
-       longer a through to be part of */
-    .progress,
-    .onward { display: none; }
-
-    .captions,
-    .stage--engine .captions {
-        position: static;
-        width: auto;
-        max-width: 68ch;
-        margin: 6vh auto 0;
-        transform: none;
-    }
-
-    .caption,
-    .stage--engine .caption {
-        position: static;
-        width: auto;
-        opacity: 1;
-        transform: none;
-        will-change: auto;
-    }
-
-    .caption + .caption { margin-top: 3.4rem; }
-
-    /* at rest these are read one after another rather than one at a time, so
-       they are set as headings in a column instead of as display type */
+   The caption sizes above have a floor rather than a vw term all the way down,
+   because a heading that keeps shrinking with the screen stops being display
+   type. On a 320px screen that floor is the widest thing on the page: a
+   three-word heading takes three lines of it, and on the two chart beats those
+   three lines are three lines the charts under them do not get. A little under
+   the floor is still display type at this width, and it buys the picture back. */
+@media (max-width: 380px) {
     .caption h2,
     .stage--engine .caption h2,
-    .verdict__lead { font-size: clamp(1.5rem, 2.4vw, 2rem); }
+    .verdict__lead { font-size: clamp(1.6rem, 10.4vw, 2.35rem); }
+    .captions { left: 6vw; right: 6vw; }
+    .verdict__copy { left: 6vw; right: 6vw; }
+}
+
+/* ---------- Short viewports ----------
+
+   A landscape phone, a split window, a netbook. Everything on this page that is
+   composed rather than laid out is sized against the viewport's height, and at
+   400px of it there is not enough for display type and a picture both: the
+   caption alone took two thirds of the stage and the charts were squeezed into
+   the strip that was left, flat enough that their axis labels ran into each
+   other. Height is the scarce term here, so the type is set against it and the
+   room goes back to the canvas. */
+@media (max-height: 560px) {
+    .caption h2,
+    .stage--engine .caption h2,
+    .verdict__lead { font-size: clamp(1.2rem, 5.6vh, 2.2rem); }
 
     .caption p,
-    .stage--engine .caption p { max-width: 68ch; }
-
-    .caption__plot { display: block; margin-top: 1.8rem; }
-
-    .caption__src {
-        margin-top: 1rem;
-        font-size: 0.8rem;
-        font-weight: 400;
-        line-height: 1.6;
-        color: var(--ink-faint);
+    .stage--engine .caption p,
+    .verdict__body {
+        font-size: clamp(0.82rem, 2.8vh, 1rem);
+        line-height: 1.5;
     }
 
-    .verdict__copy {
-        position: static;
-        width: auto;
-        max-width: 68ch;
-        margin: 6vh auto 0;
-        opacity: 1;
-        transform: none;
-        will-change: auto;
+    .caption__num { margin-bottom: 0.45rem; }
+    .caption h2 { margin-bottom: 0.5rem; }
+    .verdict__body { margin-top: 0.8rem; }
+}
+
+/* The rest of it is the narrow arrangement's own geometry, where the copy is
+   anchored to an edge rather than centred: on a wide screen a short box is still
+   a column beside a picture and nothing needs moving. The strip across the top is
+   a fixed few pixels tall whatever the height is, so it comes up out of the way
+   of a box this short, and the copy at the bottom does the same. */
+@media (max-height: 560px) and (max-width: 860px) {
+    .captions { bottom: 7vh; }
+    /* clear of the strip above it, which is a fixed height and so takes a larger
+       share of a box this short */
+    .verdict__copy { top: 11vh; }
+    /* the copy is nearly on the bottom edge in a box this short, so the strip
+       goes back across the top: there is no band under the caption to take it */
+    .aside {
+        top: 4vh;
+        bottom: auto;
     }
 }
+

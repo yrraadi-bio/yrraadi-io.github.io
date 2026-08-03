@@ -4,24 +4,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>What if · Origin Bio</title>
-    <meta name="description" content="What if we made as many cancer drugs next year as we have in the last 100?">
+    <meta name="description" content="What if we made as many cancer drugs next year as we have in the last 10?">
 
     <meta property="og:type" content="website">
     <meta property="og:title" content="What if · Origin Bio">
-    <meta property="og:description" content="What if we made as many cancer drugs next year as we have in the last 100?">
+    <meta property="og:description" content="What if we made as many cancer drugs next year as we have in the last 10?">
     <meta property="og:url" content="https://origin.bio/next/">
     <meta property="og:image" content="https://origin.bio/assets/thumbnail-og.jpg">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="What if · Origin Bio">
-    <meta name="twitter:description" content="What if we made as many cancer drugs next year as we have in the last 100?">
+    <meta name="twitter:description" content="What if we made as many cancer drugs next year as we have in the last 10?">
     <meta name="twitter:image" content="https://origin.bio/assets/thumbnail-og.jpg">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?rev=engine-4">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css?rev=dock-1">
     <link rel="icon" href="../assets/favicon.png" type="image/png">
     <link rel="preload" href="cells.webp" as="image" type="image/webp">
+
+    <!-- A reload starts the page again rather than where it was left. Both acts are
+         scroll-driven and build from their own first frame, so a restored position
+         drops the visitor into a canvas that was never drawn. Set here, before the
+         browser has a position to restore. An anchor is still honoured. -->
+    <script>
+        if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+        addEventListener('pageshow', function () { if (!location.hash) scrollTo(0, 0); });
+    </script>
 </head>
 <body>
 
@@ -30,15 +39,18 @@
     <a class="skip" href="#cases">Skip to the evidence</a>
 
     <header class="dock">
+        <a class="dock__home" href="#workspace" aria-label="Back to the top">
+            <img src="../assets/logo-full.png" alt="Origin Bio">
+        </a>
+
         <nav class="dock__links">
-            <a href="../index.html">Platform</a>
             <a href="#engine">Data engine</a>
-            <a href="../index.html#research">Research</a>
+            <a href="#research">Research</a>
         </nav>
-        <a class="access" href="mailto:yash@origin.bio">Get Access <span aria-hidden="true">&rarr;</span></a>
+        <button class="access" type="button" data-access>Get Access <span aria-hidden="true">&rarr;</span></button>
     </header>
 
-    <section class="opening ground--dark">
+    <section class="opening ground--dark" id="workspace">
         <div class="corners">
             <a class="brand" href="../index.html" aria-label="Origin Bio home">
                 <img src="../assets/logo-full.png" alt="Origin Bio">
@@ -51,7 +63,7 @@
             </a>
         </div>
 
-        <h1 class="question" id="question"><span class="q__text"><span class="q__lead">What if</span><span class="q__rest"> we made as many cancer drugs next year as we have in the last <em>100</em>?</span></span></h1>
+        <h1 class="question" id="question"><span class="q__text"><span class="q__lead">What if</span><span class="q__rest"> we made as many cancer drugs next year as we have in the last <em>10</em>?</span></span></h1>
 
         <div class="app" data-demo="/platform?embed=1&amp;view=review&amp;job=a5707cf5dd6b&amp;theme=dark">
             <div class="app__bar">
@@ -67,6 +79,8 @@
                     <span class="app__meta-dot" aria-hidden="true"></span>
                     <span class="app__meta-text">Lung (NCBI857) &middot; 57,252 predicted cells</span>
                 </p>
+
+                <button class="app__done" type="button">Done</button>
             </div>
             <div class="app__body">
                 <span class="app__load" aria-hidden="true"></span>
@@ -82,7 +96,7 @@
                 <p class="app__hint" aria-hidden="true">
                     <span class="app__hint--interact">Click to interact</span>
                     <span class="app__hint--release">Esc to scroll on</span>
-                    <span class="app__hint--handheld">Tap to open the workspace</span>
+                    <span class="app__hint--handheld">Tap to interact</span>
                 </p>
 
                 <p class="app__fallback" role="status">
@@ -93,67 +107,67 @@
         </div>
     </section>
 
+    <section class="backing ground--dark" id="backing">
+        <div class="backing__group">
+            <h2 class="backing__head">Advisors</h2>
+            <ul class="backing__list">
+                <li class="person">
+                    <p class="person__name">Dr. Manolis Kellis</p>
+                    <p class="person__role">Professor of Computer Science, MIT &middot; Broad Institute</p>
+                </li>
+                <li class="person">
+                    <p class="person__name">Dr. Nicole Paulk</p>
+                    <p class="person__role">Founder &amp; CEO, Siren Biotechnology &middot; UCSF</p>
+                </li>
+                <li class="person">
+                    <p class="person__name">Dr. Rashid Bashir</p>
+                    <p class="person__role">Dean, Grainger College of Engineering, UIUC</p>
+                </li>
+            </ul>
+        </div>
+
+        <div class="backing__group">
+            <h2 class="backing__head">Investors</h2>
+            <ul class="backing__list backing__list--names">
+                <li class="person__name">Y Combinator</li>
+                <li class="person__name">Topology</li>
+                <li class="person__name">Glasswing</li>
+                <li class="person__name">Philip Bogdanov</li>
+                <li class="person__name">Shyaamal Anadkat</li>
+                <li class="person__name">Pablo Lubroth</li>
+                <li class="person__name">Colin Evans</li>
+                <li class="person__name">Kaz Nejatian</li>
+                <li class="person__name">Asaf Ezra</li>
+                <li class="person__name">Allen Nie</li>
+                <li class="person__name">Dylan Abruscato</li>
+                <li class="person__name">Jai Malhotra</li>
+                <li class="person__name">Gaby Goldberg</li>
+                <li class="person__name">Eli Brown</li>
+                <li class="person__name">Aaryaman Vir Shah</li>
+                <li class="person__name">Jeff Henriod</li>
+            </ul>
+        </div>
+    </section>
+
     <div class="turn turn--light" id="turnLight" aria-hidden="true"></div>
 
     <section class="stage ground--paper" id="stage">
         <div class="stage__sticky">
             <canvas id="mitosis" aria-hidden="true"></canvas>
 
-            <div class="progress" aria-hidden="true">
-                <p class="progress__count"><span id="storyBeat">1</span><span class="progress__of">/ 14</span></p>
-                <div class="rail">
-                    <div class="rail__fill" id="railFill"></div>
+            <div class="aside">
+                <div class="progress" aria-hidden="true">
+                    <p class="progress__count"><span id="storyBeat">1</span><span class="progress__of">/ 6</span></p>
+                    <div class="rail">
+                        <div class="rail__fill" id="railFill"></div>
+                    </div>
                 </div>
+
+                <a class="onward" href="#pivot">Skip ahead</a>
             </div>
 
-            <a class="onward" href="#pivot">Skip ahead</a>
-
-            <div class="captions" id="captions" role="group" aria-label="How one cell becomes a tumor, and what the field does about it, in fourteen steps">
-                <figure class="caption" data-at="0.009">
-                    <h2>Healthy cells have tightly regulated growth.</h2>
-                    <p>During interphase cells grow and make a copy of their DNA.</p>
-                </figure>
-                <figure class="caption" data-at="0.070">
-                    <h2>And controlled division.</h2>
-                    <p>In the mitotic phase the cell separates its DNA and splits its cytoplasm.</p>
-                </figure>
-                <figure class="caption" data-at="0.116">
-                    <h2>Proliferation stays regulated.</h2>
-                </figure>
-                <figure class="caption" data-at="0.189">
-                    <h2>Oncogenic driver mutations arise.</h2>
-                    <p>Changes in the DNA cause cells to divide rapidly, escape control signals and programmed cell death.</p>
-                </figure>
-                <figure class="caption" data-at="0.244">
-                    <h2>The mutant clone expands.</h2>
-                    <p>The cancer cells divide excessively to give rise to a malignant tumor.</p>
-                </figure>
-                <figure class="caption" data-at="0.287">
-                    <h2>A second clone may initiate independently.</h2>
-                    <p>A second, unrelated cell acquires a mutation of its own. A cancer can begin more than once in the same tissue.</p>
-                </figure>
-                <figure class="caption" data-at="0.336">
-                    <h2>The clone diverges into subclones.</h2>
-                    <p>Tumors may undergo branched evolution. Multiple subclones can co-exist.</p>
-                </figure>
-                <figure class="caption" data-at="0.406">
-                    <h2>Cancer cells metastasize.</h2>
-                    <p>Through programmes like EMT, cells detach from their neighbours and enter the bloodstream and lymphatic system.</p>
-                </figure>
-                <figure class="caption" data-at="0.490">
-                    <h2>Together, they form one patient's tumor.</h2>
-                    <p>A unique mixture of clones and subclones, coexisting within the same piece of tissue.</p>
-                </figure>
-                <figure class="caption" data-at="0.547">
-                    <h2>20.6 million new cases and 10 million deaths every year.</h2>
-                    <p>Each one the result of evolution under the selective pressure of a unique environment: the tissue, the immune environment, metabolism, nutrients and more.</p>
-                </figure>
-                <figure class="caption" data-at="0.598">
-                    <h2>Most patients are unlikely to respond to a drug.</h2>
-                    <p>The variation that is characteristic of the disease warrants clearly identifying the patient profiles that will benefit from each medicine, ensuring higher success most critically in Phase 2.</p>
-                    <p>Which is where the two charts below meet. Phase 2 is the phase oncology runs most and clears least: nearly half of the trials started in 2024, and fewer than one in five of them getting through.</p>
-                </figure>
-                <figure class="caption" data-at="0.739">
+            <div class="captions" id="captions" role="group" aria-label="How much the field is testing, why so little of it works, and what one tumor turns out to be, in six steps">
+                <figure class="caption" data-at="0.156">
                     <h2>We have no shortage of new drugs being tested.</h2>
                     <div class="caption__plot">
 <svg class="chart" viewBox="0 0 560 430" role="img" aria-label="Oncology clinical trial starts by year, 2015 to 2024, stacked by phase. Starts rise from about 1,130 in 2015 to a peak near 1,960 in 2021, then settle around 1,780 in 2024. Phase 2 is the largest band throughout.">
@@ -176,97 +190,15 @@
 <text class="pn" x="46" y="422" font-size="13">2015</text>
 <text class="pn" x="560" y="422" font-size="13" text-anchor="end">2024</text>
 </svg>
-<div class="panels">
-<svg class="chart" viewBox="0 0 300 250" role="img" aria-label="Oncology non-rare trial starts by year, 2015 to 2024, stacked by phase, following the same shape as the total.">
-<text class="pt" x="0" y="13" font-size="13">Oncology non-rare</text>
-<line x1="42" y1="220" x2="300" y2="220"/>
-<text class="pn" x="35" y="220" font-size="11" text-anchor="end">0</text>
-<line x1="42" y1="181.8" x2="300" y2="181.8"/>
-<text class="pn" x="35" y="181.8" font-size="11" text-anchor="end">500</text>
-<line x1="42" y1="143.6" x2="300" y2="143.6"/>
-<text class="pn" x="35" y="143.6" font-size="11" text-anchor="end">1,000</text>
-<line x1="42" y1="105.4" x2="300" y2="105.4"/>
-<text class="pn" x="35" y="105.4" font-size="11" text-anchor="end">1,500</text>
-<line x1="42" y1="67.2" x2="300" y2="67.2"/>
-<text class="pn" x="35" y="67.2" font-size="11" text-anchor="end">2,000</text>
-<line x1="42" y1="29" x2="300" y2="29"/>
-<text class="pn" x="35" y="29" font-size="11" text-anchor="end">2,500</text>
-<polygon fill="#3aa64a" points="42,206.25 70.67,202.43 99.33,197.08 128,194.02 156.67,189.44 185.33,185.62 214,178.74 242.67,176.45 271.33,175.69 300,174.16 300,220 42,220"/>
-<polygon fill="#153f6e" points="42,207.78 70.67,204.34 99.33,199.37 128,196.7 156.67,192.5 185.33,189.06 214,182.56 242.67,180.65 271.33,179.89 300,178.36 300,220 42,220"/>
-<polygon fill="#4da3d8" points="42,214.65 70.67,213.12 99.33,211.21 128,210.07 156.67,208.16 185.33,206.63 214,203.96 242.67,203.19 271.33,202.81 300,202.05 300,220 42,220"/>
-<text class="pn" x="42" y="242" font-size="11">2015</text>
-<text class="pn" x="300" y="242" font-size="11" text-anchor="end">2024</text>
-</svg>
-<svg class="chart" viewBox="0 0 300 250" role="img" aria-label="Oncology rare trial starts by year, 2015 to 2024, stacked by phase, following the same shape as the total.">
-<text class="pt" x="0" y="13" font-size="13">Oncology rare</text>
-<line x1="42" y1="220" x2="300" y2="220"/>
-<text class="pn" x="35" y="220" font-size="11" text-anchor="end">0</text>
-<line x1="42" y1="181.8" x2="300" y2="181.8"/>
-<text class="pn" x="35" y="181.8" font-size="11" text-anchor="end">500</text>
-<line x1="42" y1="143.6" x2="300" y2="143.6"/>
-<text class="pn" x="35" y="143.6" font-size="11" text-anchor="end">1,000</text>
-<line x1="42" y1="105.4" x2="300" y2="105.4"/>
-<text class="pn" x="35" y="105.4" font-size="11" text-anchor="end">1,500</text>
-<line x1="42" y1="67.2" x2="300" y2="67.2"/>
-<text class="pn" x="35" y="67.2" font-size="11" text-anchor="end">2,000</text>
-<line x1="42" y1="29" x2="300" y2="29"/>
-<text class="pn" x="35" y="29" font-size="11" text-anchor="end">2,500</text>
-<polygon fill="#3aa64a" points="42,143.6 70.67,129.85 99.33,116.86 128,111.51 156.67,109.22 185.33,106.93 214,82.48 242.67,96.23 271.33,100.82 300,97.76 300,220 42,220"/>
-<polygon fill="#153f6e" points="42,152 70.67,139.78 99.33,126.79 128,121.44 156.67,119.92 185.33,118.39 214,93.94 242.67,106.93 271.33,111.51 300,109.98 300,220 42,220"/>
-<polygon fill="#4da3d8" points="42,194.02 70.67,189.44 99.33,184.86 128,182.56 156.67,181.04 185.33,178.74 214,169.58 242.67,173.4 271.33,175.69 300,174.92 300,220 42,220"/>
-<text class="pn" x="42" y="242" font-size="11">2015</text>
-<text class="pn" x="300" y="242" font-size="11" text-anchor="end">2024</text>
-</svg>
-<svg class="chart" viewBox="0 0 300 250" role="img" aria-label="Haematological malignancies trial starts by year, 2015 to 2024, stacked by phase, following the same shape as the total.">
-<text class="pt" x="0" y="13" font-size="13">Haematological malignancies</text>
-<line x1="42" y1="220" x2="300" y2="220"/>
-<text class="pn" x="35" y="220" font-size="11" text-anchor="end">0</text>
-<line x1="42" y1="181.8" x2="300" y2="181.8"/>
-<text class="pn" x="35" y="181.8" font-size="11" text-anchor="end">500</text>
-<line x1="42" y1="143.6" x2="300" y2="143.6"/>
-<text class="pn" x="35" y="143.6" font-size="11" text-anchor="end">1,000</text>
-<line x1="42" y1="105.4" x2="300" y2="105.4"/>
-<text class="pn" x="35" y="105.4" font-size="11" text-anchor="end">1,500</text>
-<line x1="42" y1="67.2" x2="300" y2="67.2"/>
-<text class="pn" x="35" y="67.2" font-size="11" text-anchor="end">2,000</text>
-<line x1="42" y1="29" x2="300" y2="29"/>
-<text class="pn" x="35" y="29" font-size="11" text-anchor="end">2,500</text>
-<polygon fill="#3aa64a" points="42,198.61 70.67,197.08 99.33,194.79 128,192.5 156.67,190.97 185.33,189.44 214,185.62 242.67,189.44 271.33,192.5 300,193.26 300,220 42,220"/>
-<polygon fill="#153f6e" points="42,200.9 70.67,199.75 99.33,197.46 128,195.55 156.67,194.02 185.33,192.88 214,189.44 242.67,192.88 271.33,195.55 300,196.32 300,220 42,220"/>
-<polygon fill="#4da3d8" points="42,213.12 70.67,212.36 99.33,211.6 128,210.83 156.67,210.07 185.33,209.3 214,207.78 242.67,208.92 271.33,210.07 300,210.45 300,220 42,220"/>
-<text class="pn" x="42" y="242" font-size="11">2015</text>
-<text class="pn" x="300" y="242" font-size="11" text-anchor="end">2024</text>
-</svg>
-<svg class="chart" viewBox="0 0 300 250" role="img" aria-label="Solid tumors trial starts by year, 2015 to 2024, stacked by phase, following the same shape as the total.">
-<text class="pt" x="0" y="13" font-size="13">Solid tumors</text>
-<line x1="42" y1="220" x2="300" y2="220"/>
-<text class="pn" x="35" y="220" font-size="11" text-anchor="end">0</text>
-<line x1="42" y1="181.8" x2="300" y2="181.8"/>
-<text class="pn" x="35" y="181.8" font-size="11" text-anchor="end">500</text>
-<line x1="42" y1="143.6" x2="300" y2="143.6"/>
-<text class="pn" x="35" y="143.6" font-size="11" text-anchor="end">1,000</text>
-<line x1="42" y1="105.4" x2="300" y2="105.4"/>
-<text class="pn" x="35" y="105.4" font-size="11" text-anchor="end">1,500</text>
-<line x1="42" y1="67.2" x2="300" y2="67.2"/>
-<text class="pn" x="35" y="67.2" font-size="11" text-anchor="end">2,000</text>
-<line x1="42" y1="29" x2="300" y2="29"/>
-<text class="pn" x="35" y="29" font-size="11" text-anchor="end">2,500</text>
-<polygon fill="#3aa64a" points="42,151.24 70.67,137.49 99.33,124.5 128,120.68 156.67,118.39 185.33,113.04 214,90.12 242.67,94.7 271.33,98.52 300,88.59 300,220 42,220"/>
-<polygon fill="#153f6e" points="42,159.64 70.67,147.42 99.33,134.43 128,130.61 156.67,128.32 185.33,124.5 214,102.34 242.67,106.93 271.33,109.98 300,101.58 300,220 42,220"/>
-<polygon fill="#4da3d8" points="42,194.79 70.67,189.44 99.33,184.86 128,182.56 156.67,181.8 185.33,179.51 214,166.52 242.67,169.58 271.33,171.87 300,169.58 300,220 42,220"/>
-<text class="pn" x="42" y="242" font-size="11">2015</text>
-<text class="pn" x="300" y="242" font-size="11" text-anchor="end">2024</text>
-</svg>
-</div>
 <ul class="key"><li class="key__item"><span style="background:#4da3d8"></span>Phase 1</li><li class="key__item"><span style="background:#153f6e"></span>Phase 2</li><li class="key__item"><span style="background:#3aa64a"></span>Phase 3</li></ul>
-                        <p class="caption__src">Redrawn from exhibit 1 of IQVIA Global Oncology Trends 2025</p>
+                        <p class="caption__src">Exhibit 1 of IQVIA Global Oncology Trends 2025</p>
                     </div>
                 </figure>
-                <figure class="caption" data-at="0.914">
-                    <h2>However composite success rates are very low &mdash; especially in oncology.</h2>
+                <figure class="caption" data-at="0.396">
+                    <h2>However composite success rates are very low.</h2>
                     <div class="caption__plot">
 <div class="panels">
-<svg class="chart" viewBox="0 0 300 250" role="img" aria-label="Phase 1 success rate, 2019 to 2024, for oncology and its four sub-groups: every series rises from the high thirties to between 41 and 64 per cent.">
+<svg class="chart" viewBox="0 0 300 250" role="img" aria-label="Oncology phase 1 success rate by year, 2019 to 2024. It rises from 38 per cent in 2019 to a peak of 50 in 2021, dips to 42 in 2023 and ends at 48.">
 <text class="pt" x="0" y="13" font-size="13">Phase 1</text>
 <line x1="44" y1="220" x2="300" y2="220"/>
 <text class="pn" x="37" y="220" font-size="11" text-anchor="end">0</text>
@@ -280,15 +212,11 @@
 <text class="pn" x="37" y="67.2" font-size="11" text-anchor="end">80%</text>
 <line x1="44" y1="29" x2="300" y2="29"/>
 <text class="pn" x="37" y="29" font-size="11" text-anchor="end">100%</text>
-<polyline class="trace" fill="none" stroke="#c78f12" points="44,155.06 95.2,162.7 146.4,143.6 197.6,147.42 248.8,141.69 300,141.69"/>
-<polyline class="trace" fill="none" stroke="#2fa79d" points="44,151.24 95.2,126.41 146.4,116.86 197.6,114.95 248.8,139.78 300,97.76"/>
-<polyline class="trace" fill="none" stroke="#31923f" points="44,155.06 95.2,149.33 146.4,134.05 197.6,137.87 248.8,137.87 300,139.78"/>
-<polyline class="trace" fill="none" stroke="#1b3a6b" points="44,145.51 95.2,128.32 146.4,122.59 197.6,120.68 248.8,141.69 300,107.31"/>
 <polyline class="trace" fill="none" stroke="#3f96cf" points="44,147.42 95.2,130.23 146.4,124.5 197.6,130.23 248.8,139.78 300,128.32"/>
 <text class="pn" x="44" y="242" font-size="11">2019</text>
 <text class="pn" x="300" y="242" font-size="11" text-anchor="end">2024</text>
 </svg>
-<svg class="chart" viewBox="0 0 300 250" role="img" aria-label="Phase 2 success rate, 2019 to 2024, for oncology and its four sub-groups: every series peaks around 2021 and ends lower than it started, between 10 and 20 per cent.">
+<svg class="chart" viewBox="0 0 300 250" role="img" aria-label="Oncology phase 2 success rate by year, 2019 to 2024. It peaks at 27 per cent in 2020 and 2021, then falls every year to 18 in 2024, below where it started.">
 <text class="pt" x="0" y="13" font-size="13">Phase 2</text>
 <line x1="44" y1="220" x2="300" y2="220"/>
 <text class="pn" x="37" y="220" font-size="11" text-anchor="end">0</text>
@@ -302,15 +230,11 @@
 <text class="pn" x="37" y="67.2" font-size="11" text-anchor="end">80%</text>
 <line x1="44" y1="29" x2="300" y2="29"/>
 <text class="pn" x="37" y="29" font-size="11" text-anchor="end">100%</text>
-<polyline class="trace" fill="none" stroke="#c78f12" points="44,181.8 95.2,170.34 146.4,151.24 197.6,168.43 248.8,177.98 300,200.9"/>
-<polyline class="trace" fill="none" stroke="#2fa79d" points="44,172.25 95.2,166.52 146.4,170.34 197.6,174.16 248.8,179.89 300,181.8"/>
-<polyline class="trace" fill="none" stroke="#31923f" points="44,179.89 95.2,170.34 146.4,162.7 197.6,160.79 248.8,174.16 300,183.71"/>
-<polyline class="trace" fill="none" stroke="#1b3a6b" points="44,174.16 95.2,166.52 146.4,170.34 197.6,176.07 248.8,181.8 300,187.53"/>
 <polyline class="trace" fill="none" stroke="#3f96cf" points="44,176.07 95.2,168.43 146.4,168.43 197.6,174.16 248.8,179.89 300,185.62"/>
 <text class="pn" x="44" y="242" font-size="11">2019</text>
 <text class="pn" x="300" y="242" font-size="11" text-anchor="end">2024</text>
 </svg>
-<svg class="chart" viewBox="0 0 300 250" role="img" aria-label="Phase 3 success rate, 2019 to 2024, for oncology and its four sub-groups: the series dip through the middle of the period and recover to between 48 and 73 per cent.">
+<svg class="chart" viewBox="0 0 300 250" role="img" aria-label="Oncology phase 3 success rate by year, 2019 to 2024. It falls from 65 per cent in 2019 to 45 in 2021, recovers unevenly and ends at 68, the highest of the three phases throughout.">
 <text class="pt" x="0" y="13" font-size="13">Phase 3</text>
 <line x1="44" y1="220" x2="300" y2="220"/>
 <text class="pn" x="37" y="220" font-size="11" text-anchor="end">0</text>
@@ -324,60 +248,28 @@
 <text class="pn" x="37" y="67.2" font-size="11" text-anchor="end">80%</text>
 <line x1="44" y1="29" x2="300" y2="29"/>
 <text class="pn" x="37" y="29" font-size="11" text-anchor="end">100%</text>
-<polyline class="trace" fill="none" stroke="#c78f12" points="44,57.65 95.2,101.58 146.4,105.4 197.6,128.32 248.8,74.84 300,128.32"/>
-<polyline class="trace" fill="none" stroke="#2fa79d" points="44,90.12 95.2,132.14 146.4,137.87 197.6,114.95 248.8,137.87 300,80.57"/>
-<polyline class="trace" fill="none" stroke="#31923f" points="44,97.76 95.2,120.68 146.4,130.23 197.6,132.14 248.8,120.68 300,93.94"/>
-<polyline class="trace" fill="none" stroke="#1b3a6b" points="44,86.3 95.2,105.4 146.4,155.06 197.6,120.68 248.8,155.06 300,90.12"/>
 <polyline class="trace" fill="none" stroke="#3f96cf" points="44,95.85 95.2,114.95 146.4,134.05 197.6,124.5 248.8,130.23 300,90.12"/>
 <text class="pn" x="44" y="242" font-size="11">2019</text>
 <text class="pn" x="300" y="242" font-size="11" text-anchor="end">2024</text>
 </svg>
-<svg class="chart" viewBox="0 0 300 250" role="img" aria-label="Regulatory success rate, 2019 to 2024, for oncology and its four sub-groups: all series sit at or near 100 per cent apart from a dip to between 63 and 85 in 2022.">
-<text class="pt" x="0" y="13" font-size="13">Regulatory</text>
-<line x1="44" y1="220" x2="300" y2="220"/>
-<text class="pn" x="37" y="220" font-size="11" text-anchor="end">0</text>
-<line x1="44" y1="181.8" x2="300" y2="181.8"/>
-<text class="pn" x="37" y="181.8" font-size="11" text-anchor="end">20%</text>
-<line x1="44" y1="143.6" x2="300" y2="143.6"/>
-<text class="pn" x="37" y="143.6" font-size="11" text-anchor="end">40%</text>
-<line x1="44" y1="105.4" x2="300" y2="105.4"/>
-<text class="pn" x="37" y="105.4" font-size="11" text-anchor="end">60%</text>
-<line x1="44" y1="67.2" x2="300" y2="67.2"/>
-<text class="pn" x="37" y="67.2" font-size="11" text-anchor="end">80%</text>
-<line x1="44" y1="29" x2="300" y2="29"/>
-<text class="pn" x="37" y="29" font-size="11" text-anchor="end">100%</text>
-<polyline class="trace" fill="none" stroke="#c78f12" points="44,29 95.2,29 146.4,34.73 197.6,99.67 248.8,42.37 300,29"/>
-<polyline class="trace" fill="none" stroke="#2fa79d" points="44,29 95.2,29 146.4,40.46 197.6,86.3 248.8,48.1 300,29"/>
-<polyline class="trace" fill="none" stroke="#31923f" points="44,29 95.2,29 146.4,36.64 197.6,82.48 248.8,46.19 300,29"/>
-<polyline class="trace" fill="none" stroke="#1b3a6b" points="44,29 95.2,29 146.4,38.55 197.6,57.65 248.8,42.37 300,29"/>
-<polyline class="trace" fill="none" stroke="#3f96cf" points="44,29 95.2,29 146.4,36.64 197.6,76.75 248.8,44.28 300,29"/>
-<text class="pn" x="44" y="242" font-size="11">2019</text>
-<text class="pn" x="300" y="242" font-size="11" text-anchor="end">2024</text>
-</svg>
-<svg class="chart" viewBox="0 0 300 250" role="img" aria-label="Composite success rate, 2019 to 2024, for oncology and its four sub-groups: the four multiplied together, which keeps every series between 2 and 10.5 per cent throughout.">
-<text class="pt" x="0" y="13" font-size="13">Composite</text>
-<line x1="44" y1="220" x2="300" y2="220"/>
-<text class="pn" x="37" y="220" font-size="11" text-anchor="end">0</text>
-<line x1="44" y1="156.33" x2="300" y2="156.33"/>
-<text class="pn" x="37" y="156.33" font-size="11" text-anchor="end">5%</text>
-<line x1="44" y1="92.67" x2="300" y2="92.67"/>
-<text class="pn" x="37" y="92.67" font-size="11" text-anchor="end">10%</text>
-<line x1="44" y1="29" x2="300" y2="29"/>
-<text class="pn" x="37" y="29" font-size="11" text-anchor="end">15%</text>
-<polyline class="trace" fill="none" stroke="#c78f12" points="44,144.87 95.2,105.4 146.4,100.31 197.6,153.79 248.8,169.07 300,193.26"/>
-<polyline class="trace" fill="none" stroke="#2fa79d" points="44,142.33 95.2,139.78 146.4,143.6 197.6,165.25 248.8,155.06 300,86.3"/>
-<polyline class="trace" fill="none" stroke="#31923f" points="44,153.79 95.2,152.51 146.4,120.68 197.6,152.51 248.8,148.69 300,162.7"/>
-<polyline class="trace" fill="none" stroke="#1b3a6b" points="44,125.77 95.2,127.05 146.4,156.33 197.6,144.87 248.8,186.89 300,111.77"/>
-<polyline class="trace" fill="none" stroke="#3f96cf" points="44,143.6 95.2,133.41 146.4,147.42 197.6,156.33 248.8,163.97 300,139.78"/>
-<text class="pn" x="44" y="242" font-size="11">2019</text>
-<text class="pn" x="300" y="242" font-size="11" text-anchor="end">2024</text>
-</svg>
 </div>
-<ul class="key key--line"><li class="key__item"><span style="background:#3f96cf"></span>Oncology</li><li class="key__item"><span style="background:#1b3a6b"></span>Non-rare</li><li class="key__item"><span style="background:#31923f"></span>Rare</li><li class="key__item"><span style="background:#2fa79d"></span>Solid tumors</li><li class="key__item"><span style="background:#c78f12"></span>Haematological</li></ul>
-                        <p class="caption__src">Redrawn from exhibit 19 of IQVIA Global Oncology Trends 2025, oncology series</p>
+<ul class="key key--line"><li class="key__item"><span style="background:#3f96cf"></span>Oncology</li></ul>
+                        <p class="caption__src">Exhibit 19 of IQVIA Global Oncology Trends 2025, oncology series</p>
                     </div>
                 </figure>
-                <figure class="caption" data-at="0.988">
+                <figure class="caption" data-at="0.571" data-from="0.496" data-to="0.644">
+                    <h2>But why?</h2>
+                    <p>Cancers are heterogenous and rapidly evolving. This makes it hard to determine who is likely to benefit from a drug at population scale.</p>
+                </figure>
+                <figure class="caption" data-at="0.704">
+                    <h2>20.6 million new cases and 10 million deaths every year.</h2>
+                    <p>Each one the result of evolution under the selective pressure of a unique environment: the tissue, the immune environment, metabolism, nutrients and more.</p>
+                </figure>
+                <figure class="caption" data-at="0.820">
+                    <h2>Most patients are unlikely to respond to a drug.</h2>
+                    <p>The variation that is characteristic of the disease warrants clearly identifying the patient profiles that will benefit from each medicine, ensuring higher success most critically in Phase&nbsp;2.</p>
+                </figure>
+                <figure class="caption" data-at="0.946">
                     <h2>Response could be predicted before enrollment.</h2>
                     <p>Not after the trial reads out, but before it is designed.</p>
                 </figure>
@@ -390,7 +282,7 @@
         <div class="turn" aria-hidden="true"></div>
 
         <section class="pivot ground--dark" id="pivot">
-            <h2 class="pivot__line" id="pivotLine">How do we know who to choose?</h2>
+            <h2 class="pivot__line">How do we know who will respond?</h2>
         </section>
 
         <section class="engine engine--head ground--dark" id="engine">
@@ -414,14 +306,16 @@
         <div class="stage__sticky">
             <canvas id="engineCanvas" aria-hidden="true"></canvas>
 
-            <div class="progress" aria-hidden="true">
-                <p class="progress__count"><span id="engineBeat">1</span><span class="progress__of">/ 7</span></p>
-                <div class="rail">
-                    <div class="rail__fill" id="engineRail"></div>
+            <div class="aside">
+                <div class="progress" aria-hidden="true">
+                    <p class="progress__count"><span id="engineBeat">1</span><span class="progress__of">/ 7</span></p>
+                    <div class="rail">
+                        <div class="rail__fill" id="engineRail"></div>
+                    </div>
                 </div>
-            </div>
 
-            <a class="onward" href="#cases">Skip ahead</a>
+                <a class="onward" href="#cases">Skip ahead</a>
+            </div>
 
             <div class="captions" id="engineCaptions" role="group" aria-label="How the data engine works, in seven steps">
                 <figure class="caption" data-at="0.05">
@@ -441,11 +335,13 @@
                 </figure>
                 <figure class="caption" data-at="0.64">
                     <span class="caption__num">04</span>
-                    <h2>Learn more from each patient sample. Spatially resolved cell states, cell-cell interactions, enrichment of pathways and biomarkers.</h2>
+                    <h2>Learn more from each patient sample.</h2>
+                    <p>Spatially resolved cell states, cell-cell interactions, enrichment of pathways and biomarkers.</p>
                 </figure>
                 <figure class="caption" data-at="0.81">
                     <span class="caption__num">05</span>
-                    <h2>We process retrospective and prospective cohorts. This allows us to leverage existing archives, while addressing bespoke data requirements.</h2>
+                    <h2>We process retrospective and prospective cohorts.</h2>
+                    <p>This allows us to leverage existing archives, while addressing bespoke data requirements.</p>
                 </figure>
             </div>
 
@@ -456,7 +352,8 @@
                  the same call made across everyone screened -->
             <div class="verdict__copy">
                 <span class="caption__num">06</span>
-                <h2 class="verdict__lead">Enough datapoints, and we can train models for clinical tasks. Use morphology alone to predict spatial gene expression, predict drug response, identify interpretable biomarkers.</h2>
+                <h2 class="verdict__lead">Enough datapoints, and we can train models for clinical tasks.</h2>
+                <p class="verdict__body">Use morphology alone to predict spatial gene expression, predict drug response, identify interpretable biomarkers.</p>
             </div>
             <div class="verdict__copy">
                 <span class="caption__num">07</span>
@@ -482,10 +379,46 @@
                 drug acts on, each one more people treated and a market that does not exist today.
             </p>
             <div class="cases__cta">
-                <a href="mailto:yash@origin.bio" class="btn">Get in touch</a>
-                <a href="../index.html" class="btn btn--ghost">See the platform</a>
+                <button class="btn" type="button" data-access>Get in touch</button>
+                <a href="#workspace" class="btn btn--ghost">See the platform</a>
             </div>
         </header>
+
+        <section class="research" id="research">
+            <h2 class="research__head">Research</h2>
+            <ul class="research__list">
+                <li class="paper">
+                    <a class="paper__link" href="../blogs/switch/">
+                        <span class="paper__art">
+                            <video class="paper__film" data-film="../blogs/switch/assets/switch.mp4" muted loop playsinline preload="none" aria-hidden="true"></video>
+                        </span>
+                        <span class="paper__date">Mar 13, 2026</span>
+                        <span class="paper__title">10,000 AI-designed regulatory DNA sequences</span>
+                        <span class="paper__desc">AI-designed proximal enhancer-like sequences across three cell types, with predicted activity and 3D structures.</span>
+                    </a>
+                </li>
+                <li class="paper">
+                    <a class="paper__link" href="../blogs/muon/">
+                        <span class="paper__art">
+                            <video class="paper__film" data-film="../blogs/muon/assets/optimizer_gif.mp4" muted loop playsinline preload="none" aria-hidden="true"></video>
+                        </span>
+                        <span class="paper__date">Mar 5, 2026</span>
+                        <span class="paper__title">Does Muon improve regulatory DNA learning?</span>
+                        <span class="paper__desc">Benchmarking Muon and Adam variants for regulatory DNA modeling.</span>
+                    </a>
+                </li>
+                <li class="paper">
+                    <a class="paper__link" href="../introducing-axis/">
+                        <span class="paper__art">
+                            <video class="paper__film" data-film="../assets/Blog_video_website_final.mp4" muted loop playsinline preload="none" aria-hidden="true"></video>
+                        </span>
+                        <span class="paper__date">Oct 8, 2025</span>
+                        <span class="paper__title">Introducing Axis</span>
+                        <span class="paper__desc">The first AI model that generates regulatory DNA elements and predicts their function.</span>
+                    </a>
+                </li>
+            </ul>
+        </section>
 
         <ol class="cases__list">
             <li class="case">
@@ -710,9 +643,45 @@
         </footer>
     </section>
 
-    <script src="questions.js?rev=engine-4"></script>
-    <script src="platform.js?rev=embed-8"></script>
+    <dialog class="gate" id="gate" aria-labelledby="gateHead">
+        <div class="gate__card">
+            <button class="gate__close" type="button" data-access-close aria-label="Close">
+                <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg>
+            </button>
+
+            <h2 class="gate__head" id="gateHead">Request access</h2>
+
+            <form class="gate__form" id="gateForm" novalidate>
+                <div class="gate__row">
+                    <label class="gate__field">
+                        <span>First name</span>
+                        <input name="firstName" type="text" autocomplete="given-name" required>
+                    </label>
+                    <label class="gate__field">
+                        <span>Last name</span>
+                        <input name="lastName" type="text" autocomplete="family-name" required>
+                    </label>
+                </div>
+                <label class="gate__field">
+                    <span>Work email</span>
+                    <input name="email" type="email" autocomplete="email" required>
+                </label>
+                <label class="gate__field">
+                    <span>Company</span>
+                    <input name="company" type="text" autocomplete="organization" required>
+                </label>
+
+                <button class="gate__send" type="submit">Request access</button>
+                <p class="gate__status" role="status"></p>
+            </form>
+        </div>
+    </dialog>
+
+    <script src="questions.js?rev=dock-1"></script>
+    <script src="access.js?rev=gate-2"></script>
+    <script src="research.js?rev=film-1"></script>
+    <script src="platform.js?rev=embed-10"></script>
     <script src="palettes.js"></script>
-    <script src="mitosis.js?rev=engine-4"></script>
+    <script src="mitosis.js?rev=motion-1"></script>
 </body>
 </html>

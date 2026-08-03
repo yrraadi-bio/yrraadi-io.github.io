@@ -8,18 +8,17 @@
     const demo = app.dataset.demo;
     if (!body || !demo) return;
 
-    const ACCESS_TO = 'yash@origin.bio';
     const REACHABLE = 12000;  /* silence past this and the host is called unreachable */
     const SETTLE = 4200;      /* engaged hint retires this long after the last gesture */
 
     /* Only the workspace's own origin is allowed to drive anything on this page */
     const allowed = new URL(demo, window.location.href).origin;
 
-    /* A phone cannot give a three-dock workstation a usable size, so the frame is
-       never mounted there and a tap opens it in a tab of its own instead. Read
-       live rather than once: a tablet turned on its side crosses this line
-       without a reload. */
-    const narrow = window.matchMedia('(max-width: 860px)');
+    /* A phone drives this window the same way a desktop does, and needs one thing
+       a desktop does not: something to press to give the page its scroll back.
+       There is no Escape key to release with, and a frame that has taken the
+       touch is a frame the visitor cannot scroll off. */
+    const done = app.querySelector('.app__done');
 
     let frame = null;
     let deadline = 0;
@@ -58,7 +57,7 @@
     }
 
     function mount() {
-        if (frame || narrow.matches) return;
+        if (frame) return;
 
         app.classList.add('is-loading');
 
@@ -91,16 +90,17 @@
        no click can reach that picker anyway, so dismissing here costs nothing and
        leaving the card up would block the control underneath it. */
     body.addEventListener('pointerdown', function () {
-        if (narrow.matches) {
-            window.open(demo, '_blank', 'noopener');
-            return;
-        }
         app.classList.add('is-acked');
         if (app.classList.contains('is-engaged')) hold();
         else engage();
     });
 
-    /* Both ways out: the key, and going about the rest of the page */
+    /* The way out on a phone, where there is no key to press and the frame under
+       the finger is holding the scroll. It sits in the window's own title bar,
+       outside the frame, so it is reachable while the workspace has the touch. */
+    done.addEventListener('click', release);
+
+    /* Both ways out on a desktop: the key, and going about the rest of the page */
     document.addEventListener('keydown', function (event) {
         if (event.key === 'Escape') release();
     });
@@ -126,14 +126,13 @@
             return;
         }
 
-        /* The locked tabs ask for access from inside the frame, which cannot
-           navigate the top window itself. The tab that was reached for rides along
-           in the subject, because which wall someone hit is the useful half of the
-           signal and this is the only place it survives. */
+        /* The locked tabs ask for access from inside the frame, which cannot open
+           anything on the top window itself, so the request is handed to the page's
+           own form. The tab that was reached for rides along, because which wall
+           someone hit is the useful half of the signal. */
         if (event.data.type === 'origin:access') {
             const tab = String(event.data.tab || '').slice(0, 40);
-            const subject = tab ? 'Platform access \u2014 ' + tab : 'Platform access';
-            window.location.href = 'mailto:' + ACCESS_TO + '?subject=' + encodeURIComponent(subject);
+            document.dispatchEvent(new CustomEvent('origin:access', { detail: { tab: tab } }));
         }
     });
 })();
