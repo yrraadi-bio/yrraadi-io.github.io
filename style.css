@@ -285,13 +285,14 @@ body {
 /* ---------- Floating menu bar ---------- */
 
 .dock {
+    --dock-gap: clamp(20px, 3.4vw, 52px);
     position: fixed;
     top: 22px;
     left: 50%;
     z-index: 70;
     display: flex;
     align-items: center;
-    gap: clamp(20px, 3.4vw, 52px);
+    gap: var(--dock-gap);
     /* the call to action inside carries its own ring, so the right end is cut
        back to that ring while the left keeps the full inset */
     padding: 5px 5px 5px 28px;
@@ -303,7 +304,18 @@ body {
     box-shadow: 0 20px 46px rgba(2, 8, 18, 0.5),
                 inset 0 1px 0 rgba(220, 236, 255, 0.1);
     transform: translateX(-50%);
-    transition: opacity 0.45s ease, transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+    /* The floating bar and the hero's bar are the same element in two states, and
+       everything that differs between them is listed here. Only opacity and
+       transform used to be, so arriving at the top of the page repainted the shell
+       in a single frame while the bar itself was still gliding: the glass changed
+       colour, the halo appeared, and the mark vanished, all at once and none of it
+       in time with the other. */
+    transition: opacity 0.45s ease,
+                transform 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+                background-color 0.55s ease,
+                border-color 0.55s ease,
+                box-shadow 0.55s ease,
+                padding 0.55s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* the halo the bar floats in */
@@ -313,7 +325,9 @@ body {
     inset: -160% -8%;
     z-index: -1;
     pointer-events: none;
+    opacity: 1;
     background: radial-gradient(50% 50% at 50% 50%, rgba(127, 180, 255, 0.18) 0%, rgba(127, 180, 255, 0) 72%);
+    transition: opacity 0.55s ease;
 }
 
 /* the bar sits over the top of the stage, so it lifts away on the way down and
@@ -333,17 +347,42 @@ body {
     border-color: rgba(150, 190, 245, 0.22);
 }
 
-.dock.is-afloat::before { display: none; }
+.dock.is-afloat::before { opacity: 0; }
 
-/* Only shown on the bar that has come back mid-page. At the top of the page the
-   hero is already carrying the mark a couple of lines below, and the way home
-   from the top of the page is nowhere. */
+/* Only carried by the bar that has come back mid-page. At the top of the page the
+   hero is already showing the mark a couple of lines below, and the way home from
+   the top of the page is nowhere.
+
+   It collapses rather than disappears. Switching display made the bar change width
+   in one frame the moment the page reached the top, which reads as the bar breaking
+   rather than as the mark being handed back to the hero. The negative margin retires
+   the flex gap along with the width, so the button beside it slides over instead of
+   jumping, and visibility is held in the transition so the collapsed link leaves the
+   tab order only once it has finished going. */
 .dock__home {
-    display: none;
+    display: flex;
     align-items: center;
+    flex: none;
+    width: 0;
+    margin-right: calc(-1 * var(--dock-gap));
+    overflow: hidden;
+    opacity: 0;
+    visibility: hidden;
+    /* An even curve rather than the page's usual ease-out. That one puts nine tenths
+       of the movement in the first third, which on a collapse is read as the mark
+       being cut rather than handed over. */
+    transition: width 0.5s cubic-bezier(0.4, 0.02, 0.2, 1),
+                margin-right 0.5s cubic-bezier(0.4, 0.02, 0.2, 1),
+                opacity 0.42s ease,
+                visibility 0.5s;
 }
 
-.dock.is-afloat .dock__home { display: flex; }
+.dock.is-afloat .dock__home {
+    width: 74px;
+    margin-right: 0;
+    opacity: 1;
+    visibility: visible;
+}
 
 .dock__home img {
     display: block;
@@ -1508,11 +1547,15 @@ body {
    The card is the link rather than a box containing one: the whole of it is the
    target, which is what a visitor on a phone will aim at anyway.
 
-   It sits inside the trials section, between the argument and the seven drugs it
-   is made against, so it takes no ground and no gutter of its own: the paper
-   under it is already painted and the margins are already held. The 8vh above it
-   is the same step the drugs take below it. */
-.research { margin-top: 8vh; }
+   It is the last thing on the page before the footer, after the case the trials
+   section makes. It used to sit inside that section, which is why it carries no
+   heading larger than an eyebrow: it is a shelf of what we have written rather
+   than an act of the argument. It keeps the paper the section above it ends on,
+   so the two read as one sheet and only the spacing says where one stops. */
+.research {
+    padding: 6vh var(--gut) 12vh;
+    background: var(--paper);
+}
 
 .research__head {
     padding-bottom: 1.1rem;
@@ -1590,99 +1633,139 @@ body {
     color: var(--ink-dim);
 }
 
-.cases__list {
+/* One line per drug rather than a block each.
+
+   Seven blocks ran most of a page and spent that room repeating themselves: each
+   one said, in its own paragraph, that the marker does not find the responders.
+   Compressed to a table the seven say it at once, and the thing they have in
+   common becomes visible instead of argued — every bar is drawn against the same
+   full width, so what the reader sees is seven tracks that are almost entirely
+   empty. The paragraph under the table carries what the seven had to say. */
+.cases__table {
     margin-top: 8vh;
+    border-top: 1px solid rgba(11, 26, 47, 0.13);
+}
+
+/* Drug, what it is meant to be aimed with, who it is aimed at, how often it lands,
+   and what it earns either way. The money is pinned right so seven magnitudes line
+   up on their last digit rather than their first.
+
+   Every row is its own grid, so the money column is given a width rather than left
+   to its content: sized to the figure in it, a row holding $31.7B and a row holding
+   $0.4B hand different remainders to the columns beside them, and the bar drawn
+   across the response column comes out a different length in each row. Bars that
+   cannot be compared are worse than no bars. */
+.cases__head,
+.case {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.85fr) minmax(0, 1.15fr) minmax(0, 0.6fr) 104px;
+    grid-template-areas: "id mark grp rate num";
+    gap: 1.2rem 2.4vw;
+    align-items: center;
+}
+
+.cases__head {
+    padding-bottom: 0.9rem;
+    font-size: 0.68rem;
+    font-weight: 400;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+}
+
+.cases__head span:last-child { text-align: right; }
+
+.cases__list {
     list-style: none;
     border-top: 1px solid rgba(11, 26, 47, 0.13);
 }
 
-/* Name, then who it is for, then what that is worth. The money column is set to its
-   content and pinned right so seven different magnitudes line up on their last digit
-   rather than on their first. */
 .case {
-    display: grid;
-    grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.5fr) auto;
-    gap: 2.5rem 3.2vw;
-    align-items: start;
-    padding: 3.4rem 0;
+    padding: 1.5rem 0;
     border-bottom: 1px solid rgba(11, 26, 47, 0.13);
 }
 
+/* The render is down from a column of its own to a mark beside the name. Its file
+   is keyed to real alpha and trimmed to its own bounds, so nothing has to be
+   cropped away: the row only says how tall the thing is. Height rather than width,
+   because five are tall ribbon diagrams and two are wide skeletal drawings, and it
+   is the optical size they need to agree on. */
+.case__id {
+    grid-area: id;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.case__art {
+    flex: none;
+    width: 62px;
+    height: 62px;
+    object-fit: contain;
+    object-position: center;
+}
+
+.case__names { min-width: 0; }
+
 .case__name {
+    display: block;
     font-family: var(--serif);
     font-weight: 400;
-    font-size: clamp(1.5rem, 2.1vw, 2rem);
+    font-size: clamp(1.05rem, 1.3vw, 1.32rem);
     line-height: 1.15;
     color: var(--ink);
 }
 
-/* The render sits on the paper rather than in a frame. Its file is keyed to real
-   alpha and trimmed to its own bounds when it is baked, so there is no white
-   rectangle to hide behind a border and no source margin to crop away: the row
-   only has to say how tall the thing is.
-
-   Height rather than width, because the subjects are different shapes: five tall
-   ribbon diagrams and two wide skeletal drawings, and it is the optical size they
-   need to agree on. Fixing the height also keeps every drug's name the same
-   distance below the rule above it. */
-.case__art {
-    height: clamp(124px, 12.5vw, 188px);
-    margin-bottom: 1.6rem;
-}
-
-.case__art img {
-    display: block;
-    width: 100%;
-    height: 100%;
-    /* contain and a left origin, so a shape this box did not anticipate is
-       scaled to fit and hung off the column edge rather than cropped */
-    object-fit: contain;
-    object-position: left center;
-}
-
 .case__gen {
-    margin-top: 0.5rem;
-    font-size: 0.74rem;
+    display: block;
+    margin-top: 0.3rem;
+    font-size: 0.66rem;
     font-weight: 400;
-    letter-spacing: 0.14em;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    line-height: 1.45;
+    color: var(--ink-faint);
+}
+
+/* What the drug is supposed to be aimed with. Three rows have nothing to put here,
+   which is the column's whole point, so the words that say so are set lighter than
+   a real marker rather than dressed up to fill the space. */
+.case__mark {
+    grid-area: mark;
+    font-size: 0.82rem;
+    line-height: 1.55;
+    color: var(--ink-dim);
+}
+
+.case__mark--none { color: var(--ink-faint); }
+
+/* Who the figure beside it is a fraction of. A bare percentage here reads as
+   everyone with the diagnosis, and it never is, so the group travels with it. */
+.case__grp {
+    grid-area: grp;
+    font-size: 0.82rem;
+    line-height: 1.55;
+    color: var(--ink-dim);
+}
+
+/* What the figure actually measures, and in which trial. Apparatus rather than
+   argument, so it is set at the smallest size on the page. */
+.case__basis {
+    display: block;
+    margin-top: 0.3rem;
+    font-size: 0.66rem;
+    font-weight: 400;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
     line-height: 1.5;
     color: var(--ink-faint);
 }
 
-.case__chem {
-    margin-top: 0.9rem;
-    font-size: 0.72rem;
-    line-height: 1.7;
-    color: var(--ink-dim);
-}
-
-.case__chem b {
-    font-weight: 500;
-    color: var(--ink);
-}
-
-.case__who {
-    margin-top: 1.35rem;
-    font-size: clamp(0.92rem, 1.02vw, 1.02rem);
-    line-height: 1.66;
-    color: var(--ink-dim);
-}
-
-.case__who strong {
-    font-weight: 500;
-    color: var(--ink);
-}
-
-/* The response rate is the largest thing in the row, and the line under it is set
-   in sentence case rather than as a label so the two read as one sentence: this
-   percentage of eligible patients with that disease. The fraction is meaningless
-   without the group it is a fraction of, and a reader who meets a bare percentage
-   here will assume it means everyone with the diagnosis. */
 .case__rate {
+    grid-area: rate;
     font-family: var(--serif);
     font-weight: 400;
-    font-size: clamp(2rem, 3.1vw, 3rem);
+    font-size: clamp(1.35rem, 1.9vw, 1.85rem);
     line-height: 1;
     letter-spacing: -0.015em;
     white-space: nowrap;
@@ -1695,24 +1778,16 @@ body {
     color: var(--ink-faint);
 }
 
-.case__among {
-    margin-top: 0.6rem;
-    font-size: clamp(0.9rem, 1vw, 1rem);
-    line-height: 1.5;
-    color: var(--ink-dim);
-}
-
-/* What the figure above it actually measures, and in which trial. Apparatus rather
-   than argument, so it is set at the smallest size on the page and used again for
-   the two labels in the economics column. */
-.case__basis {
-    margin-top: 0.62rem;
-    font-size: 0.72rem;
-    font-weight: 400;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    line-height: 1.55;
-    color: var(--ink-faint);
+/* The number as a length as well as a figure. Every track is the width of the
+   column, so the fills are comparable between rows and the empty part of each one
+   is the patients the drug was given to and did nothing for. */
+.case__rate::after {
+    content: '';
+    display: block;
+    height: 3px;
+    margin-top: 0.55rem;
+    border-radius: 2px;
+    background: linear-gradient(to right, var(--accent) 0 calc(var(--r) * 100%), var(--rail) calc(var(--r) * 100%) 100%);
 }
 
 /* Superscript, and never underlined: a reference marker is apparatus rather than
@@ -1740,18 +1815,16 @@ body {
    by product, so the only honest figure is a median for the whole therapeutic class,
    and a figure that cannot vary between rows has no business in a column. It is
    stated once, in the prose above. */
-.case__econ {
-    justify-self: end;
-    text-align: right;
-}
-
 .case__num {
+    grid-area: num;
+    justify-self: end;
     font-family: var(--serif);
     font-weight: 400;
-    font-size: clamp(1.9rem, 3vw, 2.9rem);
+    font-size: clamp(1.35rem, 1.9vw, 1.85rem);
     line-height: 1;
     letter-spacing: -0.015em;
     white-space: nowrap;
+    text-align: right;
     color: var(--ink);
 }
 
@@ -1760,6 +1833,17 @@ body {
     font-size: 0.52em;
     letter-spacing: 0.02em;
     color: var(--ink-faint);
+}
+
+/* What the seven rows have in common, said once under them. It reads at the weight
+   of the argument above the table rather than of the apparatus below it, because it
+   is the point of the table and not a footnote to it. */
+.cases__verdict {
+    max-width: 74ch;
+    margin-top: 5vh;
+    font-size: clamp(0.98rem, 1.12vw, 1.12rem);
+    line-height: 1.68;
+    color: var(--ink-dim);
 }
 
 /* Numbered to match the markers in the rows, and targetable, so a marker is a
@@ -2013,6 +2097,7 @@ body {
         -webkit-backdrop-filter: blur(18px) saturate(140%);
         box-shadow: 0 20px 46px rgba(2, 8, 18, 0.5), inset 0 1px 0 rgba(220, 236, 255, 0.1);
     }
+    .dock.is-afloat .dock__home { width: 64px; }
     .dock__home img { width: 64px; }
     /* nothing is held out to the sides here, so the pair goes back into the flow
        above the question, side by side and cut down enough to fit a phone
@@ -2141,20 +2226,31 @@ body {
        same column at this width, and the room over the frame is what there is */
     .verdict__lead { font-size: clamp(1.7rem, 2.85vw, 2.6rem); }
     .verdict__body { margin-top: 1rem; }
-    /* three columns will not fit a phone, and the money is the payoff of the
-       row rather than an aside, so it goes last and full width */
     .cases { padding: 12vh 7vw 8vh; }
-    .cases__list { margin-top: 6vh; }
+    .cases__table { margin-top: 6vh; }
+    /* Five columns will not take a phone across, so the row folds into three lines:
+       what it is against how often it lands, what it is aimed with against what it
+       earns, and the group it was measured in underneath.
+
+       The right column is held at a fixed width rather than set to its content,
+       because the bar is drawn across that column and two bars of different widths
+       cannot be compared. */
+    .cases__head { display: none; }
     .case {
-        grid-template-columns: 1fr;
-        gap: 1.5rem;
-        padding: 2.6rem 0;
+        grid-template-columns: minmax(0, 1fr) 92px;
+        grid-template-areas:
+            "id rate"
+            "mark num"
+            "grp grp";
+        gap: 0.85rem 1.4rem;
+        align-items: start;
+        padding: 1.4rem 0;
     }
-    .case__econ {
-        justify-self: start;
-        text-align: left;
-    }
-    .case__who { margin-top: 1.1rem; }
+    /* The render goes. At the size a phone leaves it, it is a speck that costs the
+       generic name the room to stay on one line, and the name is the useful half */
+    .case__art { display: none; }
+    .case__rate { text-align: right; }
+    .case__num { font-size: 1.35rem; }
     /* the two halves of a name will not take a phone across */
     .gate__row { grid-template-columns: 1fr; }
     /* The lens is measured against the island, and the island is a completely
