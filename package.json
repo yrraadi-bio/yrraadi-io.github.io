@@ -1,0 +1,13 @@
+{
+    "name": "origin-site",
+    "private": true,
+    "description": "The origin.bio site, deployed to Cloudflare as a Workers static-assets project.",
+    "scripts": {
+        "build": "bash _dev/publish.sh",
+        "check": "bash _dev/publish.sh && wrangler deploy --dry-run",
+        "deploy": "bash _dev/publish.sh && wrangler deploy"
+    },
+    "devDependencies": {
+        "wrangler": "^4.118.0"
+    }
+}

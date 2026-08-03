@@ -30,6 +30,8 @@ rsync -a --link-dest="$PWD" \
     --exclude='/node_modules' \
     --exclude='/.wrangler' \
     --exclude='/wrangler.jsonc' \
+    --exclude='/package.json' \
+    --exclude='/package-lock.json' \
     --exclude='.DS_Store' \
     --exclude='/CNAME' \
     --exclude='/.nojekyll' \
@@ -44,7 +46,7 @@ echo "dist/ built: $(find "$OUT" -type f | wc -l) files, $(du -sh --apparent-siz
 
 # Anything that should not have shipped is a bug in the excludes above, so say so
 # here rather than after it is public.
-for path in .git .gitignore _dev .wrangler CNAME .nojekyll wrangler.jsonc; do
+for path in .git .gitignore _dev .wrangler node_modules CNAME .nojekyll wrangler.jsonc package.json package-lock.json; do
     if [ -e "$OUT/$path" ]; then
         echo "ERROR: $path reached dist/" >&2
         exit 1
