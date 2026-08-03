@@ -319,7 +319,11 @@ body {
                 background-color 0.55s ease,
                 border-color 0.55s ease,
                 box-shadow 0.55s ease,
-                padding 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+                padding 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+                /* only ever changes on a phone, where the bar rests below the wordmark
+                   and rises to the top once it is floating; it settles back rather than
+                   dropping the moment the page reaches the top */
+                top 0.55s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* the halo the bar floats in */
@@ -2155,7 +2159,11 @@ body {
     /* the links are gone at this width and the call to action is all that is
        left inside, so the bar drops its own shell and the pill stands alone */
     .dock {
-        top: 14px;
+        /* Below the wordmark and the backing rather than above them. All three sit on
+           one line on a wider screen; here they cannot, and the pill taking the top for
+           itself left the two of them stranded in the middle of the opening with a band
+           of navy over their heads. Identity first, then the thing to press. */
+        top: 76px;
         padding: 0;
         background: none;
         border-color: transparent;
@@ -2168,6 +2176,9 @@ body {
        mark is a white logo standing on the white paper the stages are drawn on,
        and there is nothing holding it to the button beside it. */
     .dock.is-afloat {
+        /* Once it has left the opening behind there is no wordmark above it to make
+           room for — it carries its own — so it takes the top back. */
+        top: 14px;
         padding: 5px 5px 5px 16px;
         backdrop-filter: blur(18px) saturate(140%);
         -webkit-backdrop-filter: blur(18px) saturate(140%);
@@ -2189,7 +2200,9 @@ body {
            centred with the gap between them, which is the huddle this replaced. */
         width: 100%;
         gap: 12px;
-        margin-bottom: 26px;
+        /* the lane the fixed pill hangs in, since it is out of the flow and the
+           question would otherwise be set underneath it */
+        margin-bottom: 68px;
     }
     .brand,
     .yc {
@@ -2209,7 +2222,9 @@ body {
     /* set with the pill it stands beside, so the pair reads as one row */
     .yc__label { font-size: 0.64rem; letter-spacing: 0.1em; }
     .yc__mark { width: 16px; height: 16px; font-size: 10px; }
-    .opening { padding: 11vh 5vw 8vh; }
+    /* The wordmark is the first thing on the page now, set where it sits on a wider
+       screen. The 11vh here was clearance for a pill that no longer starts above it. */
+    .opening { padding: 22px 5vw 8vh; }
     /* the longest question runs to three lines at this measure, and the window
        must not move when it is the one being typed */
     .question { min-height: 3.48em; }
