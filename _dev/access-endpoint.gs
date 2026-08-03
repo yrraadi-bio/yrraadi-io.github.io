@@ -31,7 +31,7 @@ function doPost(request) {
 
   if (!EMAIL_SHAPE.test(String(row.email || ''))) return reply({ ok: false, error: 'bad email' });
 
-  const sheet = open();
+  const sheet = requests();
   sheet.appendRow(COLUMNS.map(function (name) { return clip(row[name]); }));
 
   return reply({ ok: true });
@@ -43,7 +43,7 @@ function doGet() {
   return reply({ ok: true });
 }
 
-function open() {
+function requests() {
 
   const book = SpreadsheetApp.getActiveSpreadsheet();
   const found = book.getSheetByName(SHEET);

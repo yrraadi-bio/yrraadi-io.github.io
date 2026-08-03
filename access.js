@@ -7,16 +7,18 @@
     const form = document.getElementById('gateForm');
     if (!gate || !form) return;
 
-    /* Where a request is written down. Point this at a Google Apps Script web app
-       bound to the sheet and every submission appends a row. The body goes as
-       text/plain on purpose: any other content type makes the browser send a
-       preflight, which Apps Script does not answer.
+    /* Where a request is written down: a Google Apps Script web app bound to the
+       sheet, which appends one row per submission. The source is in
+       _dev/access-endpoint.gs, and an edit there only takes effect once it is
+       redeployed as a new version. The body goes as text/plain on purpose: any
+       other content type makes the browser send a preflight, which Apps Script
+       does not answer.
 
-       Until it is set, a submission cannot land anywhere and the form says so.
-       It does not fall back to a mail client: handing the visitor to their mail
-       is the thing this form exists to replace, and someone who has just typed
-       four fields should not be dropped into a blank message to type them again. */
-    const ENDPOINT = '';
+       If the request does not land, the form says so. It does not fall back to a
+       mail client: handing the visitor to their mail is the thing this form
+       exists to replace, and someone who has just typed four fields should not
+       be dropped into a blank message to type them again. */
+    const ENDPOINT = 'https://script.google.com/macros/s/AKfycbz6PYpVX-t76SajpE2E1MTHrK9dpanwm812hUZSwPWaJeteZh1RbXcTjUlljmINyELFMA/exec';
     const ACCESS_TO = 'yash@origin.bio';
 
     /* The address is offered as something to click rather than opened, so nothing
