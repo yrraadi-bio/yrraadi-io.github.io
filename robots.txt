@@ -1,0 +1,9 @@
+# The workspace is something the homepage frames, not somewhere to arrive from a
+# search result: on its own it is an app shell with every panel behind the gate.
+# Its data and bundle are not pages at all, and the tooling never was.
+
+User-agent: *
+Disallow: /platform/
+Disallow: /api/
+Disallow: /static/
+Disallow: /_dev/

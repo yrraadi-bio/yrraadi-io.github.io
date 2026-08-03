@@ -9,6 +9,7 @@ Usage:
     python3 _poster.py [job_dir] [out_dir]
 """
 
+import json
 import os
 import sys
 
@@ -19,7 +20,6 @@ from PIL import Image
 Image.MAX_IMAGE_PIXELS = None
 
 DEFAULT_JOB_DIR = "/mnt/bigdata/origin_webapp_jobs/17f983f0caf0"
-SLIDE_WIDTH = 30786
 
 # The lineage palette _CELLTYPE_COLORS serves from webapp/jobs.py, so a poster swatch matches the live canvas
 CELLTYPE_COLORS = {
@@ -42,7 +42,10 @@ CROP_MARGIN = 0.025
 CELL_OPACITY = 0.85
 STAMP_RADIUS = 2
 STAMP_SIGMA = 1.15
-WIDTHS = [1920, 960]
+# Only the widths the still is actually served at. It stands in for the frame on
+# handhelds, which is the one place the frame is never mounted, so a desktop-sized
+# copy would be a megabyte nothing ever asks for
+WIDTHS = [960, 640]
 
 
 def hex_to_rgb(value):
@@ -150,6 +153,26 @@ def cell_bounds(coords, scale, canvas):
     )
 
 
+def slide_width(job_dir):
+
+    """Read the width of the slide a job was run on, in slide pixels.
+
+    Cell coordinates are in that space, so this is the denominator that puts them
+    on the thumbnail. Read off the slide the run names rather than carried as a
+    constant, which is only ever right for the one job it was measured on.
+
+    Args:
+        job_dir (str): Finished job directory holding run.json
+
+    Returns:
+        int: Slide width in pixels
+    """
+
+    run = json.load(open(os.path.join(job_dir, "run.json")))
+
+    return Image.open(run["params"]["slide_path"]).width
+
+
 def build(job_dir, out_dir):
 
     """Render and write the poster at every delivery width.
@@ -164,7 +187,7 @@ def build(job_dir, out_dir):
     cell_type = np.load(os.path.join(job_dir, "cell_labels.npz"), allow_pickle=True)["cell_type"]
 
     canvas = (base.height * SUPERSAMPLE, base.width * SUPERSAMPLE)
-    scale = canvas[1] / SLIDE_WIDTH
+    scale = canvas[1] / slide_width(job_dir)
     colour, alpha = splat_cells(canvas, coords, cell_type, scale)
 
     # Composite the lineage layer over the slide at the canvas's own default cell opacity
