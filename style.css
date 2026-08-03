@@ -980,12 +980,8 @@ body {
     color: var(--ink-dim);
 }
 
-/* Counted rather than fitted. Left to size themselves to their longest entry both
-   lists ended up with a column they could not fill: the three advisors sat in a
-   four-column grid with a dead quarter beside them, and the investors fell 5-5-5-1,
-   leaving the last name alone on a row of its own. Three across gives each advisor an
-   equal share; four suits the investors, who now number fourteen with the funds
-   lifted out above them and so end two abreast rather than one. */
+/* Three across gives each advisor an equal share; left to size themselves to their
+   longest entry they sat in four columns with a dead quarter beside them. */
 .backing__list {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -994,22 +990,24 @@ body {
     list-style: none;
 }
 
+/* Poured down three columns rather than laid across a grid. Seventeen divides by
+   nothing, so a grid of it always ends in a short row: five across stranded one name
+   alone, and lifting the three funds out to fix that made a tier of them, which is
+   not what they are. Down the columns the shortfall is a single missing name at the
+   foot of the last one, and the three tracks are the advisors' tracks, so the two
+   groups read as one block rather than two settings. */
 .backing__list--names {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 1.4rem 3.2vw;
+    display: block;
+    columns: 3;
+    column-gap: 3.2vw;
+    margin-top: 2.2rem;
 }
 
-/* The funds stand ahead of the individuals rather than in line with them. As the
-   first three cells of the same grid they were indistinguishable from the people
-   beside them; on their own centred row in the heavier weight they read as the tier
-   they are. */
-.backing__funds {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 1.4rem 3.2vw;
-    margin-top: 2.2rem;
-    list-style: none;
+/* On every name, not between them: a margin that only sits between siblings is
+   dropped at the top of each new column, and the columns stop lining up. */
+.backing__list--names .person__name {
+    margin-bottom: 1.4rem;
+    break-inside: avoid;
 }
 
 .person__name {
@@ -1019,15 +1017,6 @@ body {
     line-height: 1.2;
     letter-spacing: -0.008em;
     color: var(--ink);
-}
-
-/* After .person__name rather than before it, or the 400 there wins on source order
-   and this does nothing. Instrument Serif is drawn at one weight only, so 600 is the
-   browser thickening the strokes itself; a little size carries the emphasis that the
-   face cannot. */
-.person__name--fund {
-    font-weight: 600;
-    font-size: clamp(1.3rem, 1.8vw, 1.7rem);
 }
 
 .person__role {
@@ -2272,7 +2261,7 @@ body {
        bar was the widest thing in a picture of a workspace */
     .app__tabs { display: none; }
     /* A designation runs to two or three lines at this measure, so the advisors
-       stack; the bare names still pair up, because sixteen of them in a single
+       stack; the bare names still pair up, because seventeen of them in a single
        column is a screen of scrolling for a list that is read at a glance. */
     .backing { padding: 4vh 7vw 3vh; }
     .backing__list {
@@ -2280,7 +2269,11 @@ body {
         gap: 2.2rem 6vw;
         margin-top: 1.8rem;
     }
-    .backing__list--names { grid-template-columns: repeat(2, 1fr); }
+    .backing__list--names {
+        columns: 2;
+        column-gap: 6vw;
+        margin-top: 1.8rem;
+    }
     .stage { height: 580vh; }
     .stage--engine { height: 860vh; }
     .stage--engine .captions { width: auto; }
