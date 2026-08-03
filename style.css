@@ -1732,9 +1732,12 @@ body {
    common becomes visible instead of argued — every bar is drawn against the same
    full width, so what the reader sees is seven tracks that are almost entirely
    empty. The paragraph under the table carries what the seven had to say. */
+/* No rule over the column labels. One under them separates the labels from the
+   rows, and a second above them was a hairline with nothing on the other side of
+   it — on a phone, where the labels are not drawn at all, the two landed a pixel
+   apart and read as one thick line. */
 .cases__table {
     margin-top: 8vh;
-    border-top: 1px solid rgba(11, 26, 47, 0.13);
 }
 
 /* Drug, what it is meant to be aimed with, who it is aimed at, how often it lands,
@@ -1881,22 +1884,37 @@ body {
     background: linear-gradient(to right, var(--accent) 0 calc(var(--r) * 100%), var(--rail) calc(var(--r) * 100%) 100%);
 }
 
-/* Superscript, and never underlined: a reference marker is apparatus rather than
-   an invitation, so it should be findable without competing with the number it
-   is attached to. */
-.case__cite {
-    margin-left: 0.28em;
-    font-size: 0.68em;
-    font-weight: 400;
-    vertical-align: super;
-    letter-spacing: 0.02em;
-    text-decoration: none;
-    color: var(--ink-faint);
-    transition: color 0.2s ease;
+/* The source sits on the thing it backs up rather than in a list at the foot of the
+   page: the trial named beside a rate is the link to the paper the rate came from,
+   and the render beside a drug is the link to the structure it was drawn from. Nine
+   numbered markers pointing at nine paragraphs of citation said the same thing at
+   far greater length, and a number is only a marker if there is a list to find. */
+/* Underlined in its own ink rather than in the rail's. At this size, under uppercase
+   set at the smallest type on the page, a hairline that light is not visible at all
+   and a source nobody can see is a source nobody opens. */
+.case__src {
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-color: currentColor;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+    transition: color 0.2s ease, text-decoration-color 0.2s ease;
 }
 
-.case__cite:hover,
-.case__cite:focus-visible { color: var(--accent); }
+.case__src:hover,
+.case__src:focus-visible {
+    color: var(--ink);
+    text-decoration-color: var(--accent);
+}
+
+.case__struct {
+    flex: none;
+    display: block;
+    line-height: 0;
+    transition: opacity 0.25s ease;
+}
+
+.case__struct:hover { opacity: 0.62; }
 
 /* What the drug earned, set to match the response rate at the other end of the row,
    because those two are the whole argument: this fraction of the people it was given
@@ -1937,35 +1955,13 @@ body {
     color: var(--ink-dim);
 }
 
-/* Numbered to match the markers in the rows, and targetable, so a marker is a
-   link to something rather than a decoration that implies one. */
-/* Set at 400 rather than the page's 300. At this size the light weight was
-   costing more legibility than the extra half-millimetre of height was
-   buying, and a reference is meant to be read once carefully. */
-.cases__refs {
-    max-width: 82ch;
-    margin-top: 9vh;
-    padding-left: 1.6rem;
-    font-size: 0.82rem;
-    font-weight: 400;
-    line-height: 1.7;
-    color: var(--ink-faint);
-}
-
-.cases__refs li {
-    margin-top: 0.42rem;
-    padding-left: 0.35rem;
-}
-
-.cases__refs li:target { color: var(--ink-dim); }
-
 /* The one place on the page where an underline is the point. These are the sources
-   the numbers in the table rest on, and a source nobody can tell is clickable is
-   just the block of grey text this used to be. */
+   the numbers rest on, and a source nobody can tell is clickable is just the block
+   of grey text this used to be. */
 .ref__link {
     color: var(--ink-dim);
     text-decoration: underline;
-    text-decoration-color: var(--rail);
+    text-decoration-color: currentColor;
     text-decoration-thickness: 1px;
     text-underline-offset: 2px;
     transition: color 0.2s ease, text-decoration-color 0.2s ease;
@@ -1975,15 +1971,6 @@ body {
 .ref__link:focus-visible {
     color: var(--ink);
     text-decoration-color: var(--accent);
-}
-
-.cases__note {
-    max-width: 78ch;
-    margin-top: 4vh;
-    font-size: 0.82rem;
-    font-weight: 400;
-    line-height: 1.75;
-    color: var(--ink-faint);
 }
 
 /* ---------- The way in ----------
@@ -2336,7 +2323,7 @@ body {
     }
     /* The render goes. At the size a phone leaves it, it is a speck that costs the
        generic name the room to stay on one line, and the name is the useful half */
-    .case__art { display: none; }
+    .case__struct { display: none; }
     .case__rate { text-align: right; }
     .case__num { font-size: 1.35rem; }
     /* the mark, the links and the badge will not share a line at this width, so
