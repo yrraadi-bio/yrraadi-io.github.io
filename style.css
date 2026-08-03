@@ -447,27 +447,22 @@ body {
    flow, which is why it is nothing at all up here */
 .corners { display: contents; }
 
-/* ---------- The two opening corners ----------
+/* ---------- The opening wordmark ----------
 
-   The bar between them holds the links and the call to action, so the wordmark
-   sits at one end of the opening and the backing at the other. Neither carries a
-   pill, so the bar is the only glass along the top and both corners read
-   straight off the navy. They are laid out against the block rather than the
-   viewport, so they scroll away with it. */
-.brand,
-.yc {
+   The bar holds the links and the call to action, so the wordmark sits at one end
+   of the opening and reads straight off the navy, carrying no pill of its own. It
+   is laid out against the block rather than the viewport, so it scrolls away with
+   it. */
+.brand {
     position: absolute;
     /* the bar is fixed 22px down and stands 44px tall, so matching both numbers
-       here is what puts all three on one centre line */
+       here is what puts the two on one centre line */
     top: 22px;
+    left: calc((100% - var(--app-w)) / 2);
     display: inline-flex;
     align-items: center;
     min-height: 44px;
     text-decoration: none;
-}
-
-.brand {
-    left: calc((100% - var(--app-w)) / 2);
 }
 
 .brand img {
@@ -475,38 +470,6 @@ body {
     width: clamp(92px, 8vw, 118px);
     height: auto;
     opacity: 0.92;
-}
-
-.yc {
-    right: calc((100% - var(--app-w)) / 2);
-    gap: 10px;
-    white-space: nowrap;
-}
-
-.yc:hover .yc__label { color: var(--ink); }
-
-.yc__label {
-    font-size: 0.7rem;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    white-space: nowrap;
-    color: var(--ink-dim);
-    transition: color 0.3s ease;
-}
-
-.yc__mark {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 19px;
-    height: 19px;
-    border-radius: 5px;
-    background: #f26522;
-    color: #fff;
-    font-family: var(--sans);
-    font-size: 12px;
-    font-weight: 700;
-    line-height: 1;
 }
 
 /* ---------- Opening question ---------- */
@@ -2135,61 +2098,50 @@ body {
 }
 
 @media (max-width: 860px) {
-    /* the links are gone at this width and the call to action is all that is
-       left inside, so the bar drops its own shell and the pill stands alone */
     .dock {
-        /* Below the wordmark and the backing rather than above them. All three sit on
-           one line on a wider screen; here they cannot, and the pill taking the top for
-           itself left the two of them stranded in the middle of the opening with a band
-           of navy over their heads. Identity first, then the thing to press. */
+        /* Below the wordmark rather than beside it. The two sit on one line on a wider
+           screen; here they cannot, and the bar taking the top for itself left the mark
+           stranded in the middle of the opening with a band of navy over its head. */
         top: 76px;
-        padding: 0;
-        background: none;
-        border-color: transparent;
-        box-shadow: none;
-        backdrop-filter: none;
-        -webkit-backdrop-filter: none;
+        padding: 5px 5px 5px 16px;
     }
-    .dock__links { display: none; }
-    /* The shell comes back for the bar that has returned mid-page. Without it the
-       mark is a white logo standing on the white paper the stages are drawn on,
-       and there is nothing holding it to the button beside it. */
+    /* Set with the button they stand beside, so the bar reads as one row and all three
+       fit across a phone. Nowrap because a flex item will shrink under its own text
+       before the bar admits it is too wide, and Data engine broke over two lines while
+       the bar looked like it fitted. */
+    .dock__links a { font-size: 0.64rem; letter-spacing: 0.1em; white-space: nowrap; }
     .dock.is-afloat {
         /* Once it has left the opening behind there is no wordmark above it to make
            room for — it carries its own — so it takes the top back. */
         top: 14px;
-        padding: 5px 5px 5px 16px;
-        backdrop-filter: blur(18px) saturate(140%);
-        -webkit-backdrop-filter: blur(18px) saturate(140%);
-        box-shadow: 0 20px 46px rgba(2, 8, 18, 0.5), inset 0 1px 0 rgba(220, 236, 255, 0.1);
     }
-    .dock.is-afloat .dock__home { width: 64px; }
-    .dock__home img { width: 64px; }
-    /* Nothing is held out to the sides here, so the pair falls back into the flow
-       above the question. What made them read as one cramped object was being centred
-       with ten pixels between them, not being on the same line: pushed to either edge
-       they sit where they sit on a wider screen, a wordmark in one corner and the
-       backing in the other, with the gutter between them. */
+    /* The mark stays collapsed here, floating or not. Four things do not fit across a
+       phone: with it the returning bar came to 399px on a 390px screen and hung off
+       both edges. The two links and the button are what the bar is for, so the way
+       home goes rather than one of them. The negative margin comes back with it, or
+       the gap it was cancelling is left behind as a hole at the head of the bar. */
+    .dock.is-afloat .dock__home {
+        width: 0;
+        margin-right: calc(-1 * var(--dock-gap));
+        opacity: 0;
+        visibility: hidden;
+    }
+    /* The wordmark is held out to the left corner at a wider width; here it falls back
+       into the flow at the top of the opening, and the opening centres its children,
+       so it needs the full width to have a left corner to sit in. */
     .corners {
         display: flex;
         align-items: center;
-        justify-content: space-between;
-        /* The opening centres its children, so without this the pair is only as wide
-           as the two of them and space-between has nothing to distribute: they end up
-           centred with the gap between them, which is the huddle this replaced. */
         width: 100%;
-        gap: 12px;
-        /* the lane the fixed pill hangs in, since it is out of the flow and the
+        /* the lane the fixed bar hangs in, since it is out of the flow and the
            question would otherwise be set underneath it */
         margin-bottom: 68px;
     }
-    .brand,
-    .yc {
+    .brand {
         position: static;
         min-height: 0;
     }
     .brand img { width: 96px; }
-    .yc { gap: 7px; }
     /* the one thing on the page a visitor is meant to press, so it keeps a
        thumb's worth of height even where everything beside it is cut down */
     .access {
@@ -2198,9 +2150,6 @@ body {
         font-size: 0.64rem;
         letter-spacing: 0.1em;
     }
-    /* set with the pill it stands beside, so the pair reads as one row */
-    .yc__label { font-size: 0.64rem; letter-spacing: 0.1em; }
-    .yc__mark { width: 16px; height: 16px; font-size: 10px; }
     /* The wordmark is the first thing on the page now, set where it sits on a wider
        screen. The 11vh here was clearance for a pill that no longer starts above it. */
     .opening { padding: 22px 5vw 8vh; }
@@ -2392,6 +2341,15 @@ body {
     .verdict__lead { font-size: clamp(1.6rem, 10.4vw, 2.35rem); }
     .captions { left: 6vw; right: 6vw; }
     .verdict__copy { left: 6vw; right: 6vw; }
+    /* Two links and a button is the whole bar, and none of them can be dropped, so
+       every measure across it comes in a little. At 320px it was running edge to
+       edge with no navy either side of it, which reads as the page overflowing. */
+    .dock {
+        --dock-gap: 12px;
+        padding-left: 12px;
+    }
+    .dock__links a { font-size: 0.58rem; letter-spacing: 0.06em; }
+    .access { padding: 0 13px; }
 }
 
 /* ---------- Short viewports ----------
