@@ -838,26 +838,6 @@ body {
     background: rgba(30, 55, 95, 0.55);
 }
 
-/* Shown only once the frame has the touch, and only where the touch is the way
-   the window is driven. It has to live on the bar rather than over the workspace:
-   anything inside the frame's box is either under the frame or on top of the
-   corner the workspace keeps a control in, and this is the one thing on the page
-   that must stay pressable while the frame is holding everything else. */
-.app__done {
-    margin-left: auto;
-    display: none;
-    padding: 3px 11px;
-    border: 1px solid rgba(180, 205, 240, 0.24);
-    border-radius: 100px;
-    background: rgba(180, 205, 240, 0.08);
-    color: var(--ink-dim);
-    font-family: inherit;
-    font-size: 0.58rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    cursor: pointer;
-}
-
 .app__hint {
     position: absolute;
     z-index: 5;
@@ -2253,13 +2233,6 @@ body {
        controls as well, onto the tissue, where it covers nothing that can be used
        until the tap it is asking for. */
     .app__hint { bottom: calc(48% + 60px); }
-    /* The bar gains eight pixels here because it is carrying the only way out of
-       the frame, and a 20px control is not something a thumb hits first time. The
-       body's height is measured off the bar, so it comes down by the same eight. */
-    .app__bar { height: 34px; }
-    .app__body { height: calc(100% - 34px); }
-    .app.is-engaged .app__done { display: block; }
-    .app__done { padding: 6px 14px; }
     /* no room for it beside the chips at this width */
     .app__meta { display: none; }
     /* Decoration, and the window has none of the room for it that it had when the

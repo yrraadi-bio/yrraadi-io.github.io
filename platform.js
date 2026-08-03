@@ -14,12 +14,6 @@
     /* Only the workspace's own origin is allowed to drive anything on this page */
     const allowed = new URL(demo, window.location.href).origin;
 
-    /* A phone drives this window the same way a desktop does, and needs one thing
-       a desktop does not: something to press to give the page its scroll back.
-       There is no Escape key to release with, and a frame that has taken the
-       touch is a frame the visitor cannot scroll off. */
-    const done = app.querySelector('.app__done');
-
     let frame = null;
     let deadline = 0;
     let settle = 0;
@@ -95,18 +89,17 @@
         else engage();
     });
 
-    /* The way out on a phone, where there is no key to press and the frame under
-       the finger is holding the scroll. It sits in the window's own title bar,
-       outside the frame, so it is reachable while the workspace has the touch. */
-    done.addEventListener('click', release);
-
-    /* Both ways out on a desktop: the key, and going about the rest of the page */
+    /* Escape is the way out where there is a key to press */
     document.addEventListener('keydown', function (event) {
         if (event.key === 'Escape') release();
     });
 
+    /* And the way out everywhere: going about the rest of the page. This is the only
+       one a phone has, so it takes the window's own title bar with it — the bar is
+       inside .app and would otherwise be dead to the touch, and it is the nearest
+       thing to hand when the frame below it is holding the scroll. */
     document.addEventListener('pointerdown', function (event) {
-        if (!app.contains(event.target)) release();
+        if (!body.contains(event.target)) release();
     }, true);
 
     window.addEventListener('message', function (event) {
