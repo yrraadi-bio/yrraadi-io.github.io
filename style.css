@@ -1444,17 +1444,34 @@ body {
 
 .foot__links a:hover { color: var(--ink); }
 
-/* The hero's badge is positioned into a corner, so only the two pieces inside it
-   are shared: the label takes the paper's ink and the mark is orange either way */
-.foot__yc {
-    display: inline-flex;
+/* The boxes are wider than the marks in them, so the row is pulled out by the
+   slack inside the last one to keep the mark itself on the page's right edge */
+.foot__social {
+    display: flex;
     align-items: center;
-    gap: 10px;
-    white-space: nowrap;
-    text-decoration: none;
+    gap: 2px;
+    margin-right: -9px;
 }
 
-.foot__yc:hover .yc__label { color: var(--ink); }
+/* The box is larger than the glyph so the target is thumb-sized on a phone
+   without the mark itself growing to match */
+.foot__soc {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    color: var(--ink-faint);
+    transition: color 0.3s ease;
+}
+
+.foot__soc svg {
+    width: 17px;
+    height: 17px;
+}
+
+.foot__soc:hover,
+.foot__soc:focus-visible { color: var(--ink); }
 
 .foot__note {
     grid-column: 1 / -1;
@@ -1959,6 +1976,24 @@ body {
 
 .cases__refs li:target { color: var(--ink-dim); }
 
+/* The one place on the page where an underline is the point. These are the sources
+   the numbers in the table rest on, and a source nobody can tell is clickable is
+   just the block of grey text this used to be. */
+.ref__link {
+    color: var(--ink-dim);
+    text-decoration: underline;
+    text-decoration-color: var(--rail);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+    transition: color 0.2s ease, text-decoration-color 0.2s ease;
+}
+
+.ref__link:hover,
+.ref__link:focus-visible {
+    color: var(--ink);
+    text-decoration-color: var(--accent);
+}
+
 .cases__note {
     max-width: 78ch;
     margin-top: 4vh;
@@ -2333,6 +2368,11 @@ body {
     .foot__links {
         justify-content: flex-start;
         gap: 18px;
+    }
+    /* stacked at this width, so the slack comes off the left of the row instead */
+    .foot__social {
+        margin-right: 0;
+        margin-left: -9px;
     }
     /* the two halves of a name will not take a phone across */
     .gate__row { grid-template-columns: 1fr; }
