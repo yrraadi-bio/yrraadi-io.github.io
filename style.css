@@ -285,7 +285,11 @@ body {
 /* ---------- Floating menu bar ---------- */
 
 .dock {
-    --dock-gap: clamp(20px, 3.4vw, 52px);
+    /* One measure for every step across the bar. The links used to carry a smaller
+       gap of their own, so the space before the button was the wider one and the bar
+       read as ending in a hole: Research sat closer to Data engine than to the thing
+       next to it. Both now come from here, so they cannot drift apart again. */
+    --dock-gap: clamp(16px, 2.2vw, 34px);
     position: fixed;
     top: 22px;
     left: 50%;
@@ -392,7 +396,7 @@ body {
 .dock__links {
     display: flex;
     align-items: center;
-    gap: clamp(16px, 2.2vw, 34px);
+    gap: var(--dock-gap);
 }
 
 .dock__links a {
@@ -981,11 +985,12 @@ body {
     color: var(--ink-dim);
 }
 
-/* Counted rather than fitted. Left to size themselves to their longest entry
-   both lists ended up with a column they could not fill: the three advisors sat
-   in a four-column grid with a dead quarter beside them, and sixteen investors
-   fell 5-5-5-1, leaving the last name alone on a row of its own. Four across
-   divides the investors exactly and three gives each advisor an equal share. */
+/* Counted rather than fitted. Left to size themselves to their longest entry both
+   lists ended up with a column they could not fill: the three advisors sat in a
+   four-column grid with a dead quarter beside them, and the investors fell 5-5-5-1,
+   leaving the last name alone on a row of its own. Three across gives each advisor an
+   equal share; four suits the investors, who now number fourteen with the funds
+   lifted out above them and so end two abreast rather than one. */
 .backing__list {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -999,6 +1004,19 @@ body {
     gap: 1.4rem 3.2vw;
 }
 
+/* The funds stand ahead of the individuals rather than in line with them. As the
+   first three cells of the same grid they were indistinguishable from the people
+   beside them; on their own centred row in the heavier weight they read as the tier
+   they are. */
+.backing__funds {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1.4rem 3.2vw;
+    margin-top: 2.2rem;
+    list-style: none;
+}
+
 .person__name {
     font-family: var(--serif);
     font-weight: 400;
@@ -1006,6 +1024,15 @@ body {
     line-height: 1.2;
     letter-spacing: -0.008em;
     color: var(--ink);
+}
+
+/* After .person__name rather than before it, or the 400 there wins on source order
+   and this does nothing. Instrument Serif is drawn at one weight only, so 600 is the
+   browser thickening the strokes itself; a little size carries the emphasis that the
+   face cannot. */
+.person__name--fund {
+    font-weight: 600;
+    font-size: clamp(1.3rem, 1.8vw, 1.7rem);
 }
 
 .person__role {
@@ -2175,15 +2202,19 @@ body {
     .dock.is-afloat .dock__home { width: 64px; }
     .dock__home img { width: 64px; }
     /* Nothing is held out to the sides here, so the pair falls back into the flow
-       above the question. Side by side they read as one cramped object: a wordmark
-       and a line of tracked-out caps with ten pixels between them, centred under a
-       bar that is down to a single pill. Stacked, each is its own line on the axis
-       the rest of the phone layout already uses. */
+       above the question. What made them read as one cramped object was being centred
+       with ten pixels between them, not being on the same line: pushed to either edge
+       they sit where they sit on a wider screen, a wordmark in one corner and the
+       backing in the other, with the gutter between them. */
     .corners {
         display: flex;
-        flex-direction: column;
         align-items: center;
-        gap: 13px;
+        justify-content: space-between;
+        /* The opening centres its children, so without this the pair is only as wide
+           as the two of them and space-between has nothing to distribute: they end up
+           centred with the gap between them, which is the huddle this replaced. */
+        width: 100%;
+        gap: 12px;
         margin-bottom: 26px;
     }
     .brand,
