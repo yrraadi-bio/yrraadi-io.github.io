@@ -94,6 +94,14 @@
             body: JSON.stringify(details)
         }).then(function (response) {
             if (!response.ok) throw new Error('access request rejected with ' + response.status);
+
+            return response.json();
+        }).then(function (body) {
+
+            /* A 200 only means the script ran. It answers with ok false when it
+               declined to write the row, and treating that as success is how a
+               request disappears while the visitor is told we will be in touch. */
+            if (!body.ok) throw new Error('access request not written: ' + body.error);
         });
     }
 

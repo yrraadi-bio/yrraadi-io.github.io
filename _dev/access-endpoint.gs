@@ -25,14 +25,24 @@ const LIMIT = 200;
 
 const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/* Long enough to outlast any realistic queue, since one append takes a fraction of
+   a second, and short enough that a caller waiting on it is not left hanging */
+const WAIT = 15000;
+
 function doPost(request) {
 
   const row = JSON.parse(request.postData.contents);
 
   if (!EMAIL_SHAPE.test(String(row.email || ''))) return reply({ ok: false, error: 'bad email' });
 
+  // Appends run one at a time: two at once can resolve the same bottom row and
+  // leave only one of the two requests written down.
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(WAIT)) return reply({ ok: false, error: 'busy' });
+
   const sheet = requests();
   sheet.appendRow(COLUMNS.map(function (name) { return clip(row[name]); }));
+  lock.releaseLock();
 
   return reply({ ok: true });
 }
