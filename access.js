@@ -145,8 +145,28 @@
     });
 
     /* The workspace in the hero asks from inside its frame, which cannot open a
-       dialog on this page itself */
+       dialog on this page itself. It collects the same four fields behind its own
+       gate, so when they arrive filled they are recorded rather than asked for a
+       second time; the frame has already told the visitor it went. The card only
+       opens if the request came without them, or if writing it down failed. */
     document.addEventListener('origin:access', function (event) {
-        open(event.detail && event.detail.tab ? 'Access \u2014 ' + event.detail.tab : '');
+        const detail = event.detail || {};
+        const from = detail.tab ? 'Access \u2014 ' + detail.tab : '';
+
+        if (!detail.email) {
+            open(from);
+            return;
+        }
+
+        subject = from || 'Platform access';
+
+        const details = row();
+        fields.forEach(function (input) { details[input.name] = detail[input.name] || ''; });
+
+        post(details).catch(function () {
+            fields.forEach(function (input) { input.value = details[input.name]; });
+            open(from);
+            say(FAILED, true, true);
+        });
     });
 })();

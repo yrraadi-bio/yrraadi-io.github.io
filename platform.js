@@ -126,13 +126,20 @@
             return;
         }
 
-        /* The locked tabs ask for access from inside the frame, which cannot open
-           anything on the top window itself, so the request is handed to the page's
-           own form. The tab that was reached for rides along, because which wall
-           someone hit is the useful half of the signal. */
+        /* The locked tabs ask for access from inside the frame, which cannot reach
+           the page's form itself. The four fields come with the request rather than
+           just the tab, so someone who has already filled them in behind the gate is
+           not handed an empty copy of the same form. The tab rides along too, because
+           which wall someone hit is the useful half of the signal. */
         if (event.data.type === 'origin:access') {
-            const tab = String(event.data.tab || '').slice(0, 40);
-            document.dispatchEvent(new CustomEvent('origin:access', { detail: { tab: tab } }));
+            const text = function (value) { return String(value == null ? '' : value).slice(0, 120); };
+            document.dispatchEvent(new CustomEvent('origin:access', { detail: {
+                tab: text(event.data.tab).slice(0, 40),
+                firstName: text(event.data.firstName),
+                lastName: text(event.data.lastName),
+                email: text(event.data.email),
+                company: text(event.data.company)
+            } }));
         }
     });
 })();
