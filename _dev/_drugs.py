@@ -13,7 +13,7 @@ pre-trimmed transparent render cannot be letterboxed and cannot be cropped: the
 layout only has to pick a height.
 
 Build step only, not something the page loads. Needs Pillow.
-Run from next/:  ./_drugs.py
+Run from the repository root:  _dev/_drugs.py
 """
 
 import io

@@ -42,7 +42,7 @@ PROF=$(mktemp -d)
     --window-size=$WINW,$WINH --force-device-scale-factor=2 \
     --virtual-time-budget=240000 --run-all-compositor-stages-before-draw $EXTRA \
     --screenshot="$OUT/$NAME.png" \
-    "http://localhost:8777/next/_probe.html?f=$FRAC&s=$STAGE&w=$WIDE&o=$OFF&$QS" >/dev/null 2>&1 &
+    "http://localhost:8777/_dev/_probe.html?f=$FRAC&s=$STAGE&w=$WIDE&o=$OFF&$QS" >/dev/null 2>&1 &
 PID=$!
 
 LAST=-1; STABLE=0; I=0

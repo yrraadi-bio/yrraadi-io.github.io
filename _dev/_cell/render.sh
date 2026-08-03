@@ -17,12 +17,12 @@ OUT="$CELL/out"
 mkdir -p "$OUT"
 rm -f "$OUT/$NAME.png"
 
-if ! curl -s -o /dev/null "http://localhost:$PORT/next/_cell/index.html"; then
+if ! curl -s -o /dev/null "http://localhost:$PORT/_dev/_cell/index.html"; then
     echo "no server on :$PORT" >&2
     exit 1
 fi
 
-URL="http://localhost:$PORT/next/_cell/index.html?w=$W&h=$H&dpr=$DPR"
+URL="http://localhost:$PORT/_dev/_cell/index.html?w=$W&h=$H&dpr=$DPR"
 [ -n "$EXTRA" ] && URL="$URL&$EXTRA"
 
 PROF="$CELL/.prof"

@@ -19,12 +19,12 @@ OUT="$CELL/out"
 mkdir -p "$OUT"
 rm -f "$OUT/$NAME.$FMT" "$OUT/$NAME.dom"
 
-if ! curl -s -o /dev/null "http://localhost:$PORT/next/_cell/atlas.html"; then
+if ! curl -s -o /dev/null "http://localhost:$PORT/_dev/_cell/atlas.html"; then
     echo "no server on :$PORT" >&2
     exit 1
 fi
 
-URL="http://localhost:$PORT/next/_cell/atlas.html?tile=$TILE"
+URL="http://localhost:$PORT/_dev/_cell/atlas.html?tile=$TILE"
 [ -n "$EXTRA" ] && URL="$URL&$EXTRA"
 [ "$FMT" = webp ] && URL="$URL&enc=webp"
 

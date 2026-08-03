@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { clamp, mix, makePerlin, makeFbm, lin, buildEnvironment } from './lib.js';
-import '../palettes.js';
+import '../../palettes.js';
 
 /* Bakes the cell sprite atlas the scroll canvas blits from.
 
