@@ -2,7 +2,9 @@
 **/.DS_Store
 blogs/muon/latex.zip
 
-# Assembled by _dev/publish.sh from what is already tracked here.
-dist/
+# Assembled by _dev/publish.sh from what is already tracked here. Anchored, or it also
+# catches static/dist, the workspace bundle, which is tracked and has to be: a rebuilt
+# bundle would be ignored on the way in and the deploy would go out with the old one.
+/dist/
 node_modules/
 .wrangler/

@@ -792,7 +792,7 @@ body {
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     box-shadow: 0 14px 38px rgba(3, 8, 18, 0.5);
-    text-align: left;
+    text-align: center;
     transition: opacity 0.35s ease, transform 0.35s ease;
 }
 
@@ -806,16 +806,11 @@ body {
 /* nothing to acknowledge when there is no workspace behind it to describe */
 .app.is-failed .app__ack { display: none; }
 
+/* Carries the cue's own colour now that the cue is the whole of it */
 .app__ack-text {
-    color: var(--ink);
+    color: var(--accent);
     font-size: 0.76rem;
     line-height: 1.5;
-}
-
-.app__ack-cue {
-    display: block;
-    margin-top: 4px;
-    color: var(--accent);
 }
 
 .app__ack-go {
@@ -2257,6 +2252,13 @@ body {
     /* qualified, or the base rule hiding every span in the pill outranks it on
        element count and the pill comes up empty the other way round */
     .app.is-ready:not(.is-engaged) .app__hint--handheld { display: inline; }
+    /* Clear of two things the bottom of the frame now holds: the data drawer, which is
+       open from the start at this width and takes 48% of the height, and the slide's
+       own scale bar and zoom controls just above it. At the usual 14px the pill sat on
+       the cell-type list and read as a label for it; the 60px is what lifts it off the
+       controls as well, onto the tissue, where it covers nothing that can be used
+       until the tap it is asking for. */
+    .app__hint { bottom: calc(48% + 60px); }
     /* The bar gains eight pixels here because it is carrying the only way out of
        the frame, and a 20px control is not something a thumb hits first time. The
        body's height is measured off the bar, so it comes down by the same eight. */
