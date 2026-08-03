@@ -976,9 +976,8 @@ body {
 
 /* Across the rows, not down the columns: the order in the markup is deliberate, and
    the first two rows are meant to be read as rows. Three of them, which are also the
-   advisors' three, so the two groups line up as one block. Seventeen leaves the last
-   row a name short of full, which is the least a number that divides by nothing can
-   leave anywhere. */
+   advisors' three, so the two groups line up as one block, and eighteen names fill
+   six rows of it exactly. */
 .backing__list--names {
     grid-template-columns: repeat(3, 1fr);
     gap: 1.4rem 3.2vw;
