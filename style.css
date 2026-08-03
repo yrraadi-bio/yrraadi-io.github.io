@@ -2174,15 +2174,17 @@ body {
     }
     .dock.is-afloat .dock__home { width: 64px; }
     .dock__home img { width: 64px; }
-    /* nothing is held out to the sides here, so the pair goes back into the flow
-       above the question, side by side and cut down enough to fit a phone
-       across */
+    /* Nothing is held out to the sides here, so the pair falls back into the flow
+       above the question. Side by side they read as one cramped object: a wordmark
+       and a line of tracked-out caps with ten pixels between them, centred under a
+       bar that is down to a single pill. Stacked, each is its own line on the axis
+       the rest of the phone layout already uses. */
     .corners {
         display: flex;
+        flex-direction: column;
         align-items: center;
-        justify-content: center;
-        gap: 10px;
-        margin-bottom: 22px;
+        gap: 13px;
+        margin-bottom: 26px;
     }
     .brand,
     .yc {
