@@ -190,6 +190,23 @@ def load_blocks_index(root, profile):
     return pd.concat(frames, ignore_index=True)
 
 
+def bundle_dirs(data_root):
+
+    """List the collection bundles under ``data``, ignoring the shared and derived directories.
+
+    A bundle is the only kind of directory carrying both a collection index and its own tile
+    manifest, which separates it from ``manifold`` and from the block-first index.
+
+    Args:
+        data_root (Path): Site ``data`` directory.
+
+    Returns:
+        list: bundle directories in name order
+    """
+
+    return sorted(path.parent for path in data_root.glob("*/index.json") if (path.parent / "tiles.json").is_file())
+
+
 def write_collection_manifest(data_root):
 
     """Refresh the manifest of built bundles that drives the site's collection tabs.
@@ -205,7 +222,7 @@ def write_collection_manifest(data_root):
     """
 
     entries = []
-    for index_path in sorted(data_root.glob("*/index.json")):
+    for index_path in [directory / "index.json" for directory in bundle_dirs(data_root)]:
         payload = json.loads(index_path.read_text())
         entries.append({
             "slug": payload["slug"] if "slug" in payload else index_path.parent.name,
@@ -1372,10 +1389,10 @@ def main():
     referenced = sorted({Path(path).name for path in seen.values()})
     write_atomic(data_dir / "tiles.json", compact_json({"tiles": referenced}))
 
-    # a bundle is a directory carrying an index.json; other data directories keep their own tiles.json
+    # every bundle's images are spared, so rebuilding one collection cannot prune another's tiles
     keep = set()
-    for manifest in (out_dir / "data").glob("*/index.json"):
-        keep.update(json.loads((manifest.parent / "tiles.json").read_text())["tiles"])
+    for directory in bundle_dirs(out_dir / "data"):
+        keep.update(json.loads((directory / "tiles.json").read_text())["tiles"])
 
     removed = 0
     for existing in tile_dir.glob("*.jpg"):

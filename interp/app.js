@@ -9,6 +9,11 @@ const state = {
   gene: null,
   collections: [],
   slug: null,
+  browse: "pathway",
+  blocks: null,
+  dominance: {},
+  blockPick: null,
+  blockSort: "valid",
   manifold: null,
   manifoldView: "pathway",
   crossColour: "dominant",
@@ -18,6 +23,25 @@ const state = {
   tileGene: null,
 };
 
+// every element the app touches is reached by id, so one helper stands for the lookup throughout
+function el(id) {
+  return document.getElementById(id);
+}
+
+// the tab strips are the one place a group of elements is addressed at once
+function tabs(id) {
+  return [...document.querySelectorAll(`#${id} button`)];
+}
+
+// a strip carries exactly one choice, so it is always marked from that choice rather than toggled
+function markTab(strip, key, value) {
+  tabs(strip).forEach((button) => button.classList.toggle("active", button.dataset[key] === value));
+}
+
+function bindTabs(strip, key, choose) {
+  tabs(strip).forEach((button) => button.addEventListener("click", () => choose(button.dataset[key])));
+}
+
 const SIDEBAR_KEY = "interp.sidebarWidth";
 const SIDEBAR_DEFAULT = 288;
 const SIDEBAR_MIN = 200;
@@ -26,14 +50,23 @@ const SIDEBAR_MAX = 620;
 // one in-flight promise per URL, so a repeated selection never refetches
 const jsonCache = new Map();
 
+// a refresh stamps a new epoch, which changes every URL and so misses the browser cache as well
+let epoch = 0;
+
+function bust(url) {
+  return epoch ? `${url}${url.includes("?") ? "&" : "?"}v=${epoch}` : url;
+}
+
 function loadJson(url) {
-  if (jsonCache.has(url)) return jsonCache.get(url);
-  const promise = fetch(url).then((response) => {
+  const target = bust(url);
+  if (jsonCache.has(target)) return jsonCache.get(target);
+
+  const promise = fetch(target).then((response) => {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return response.json();
   });
-  jsonCache.set(url, promise);
-  promise.catch(() => jsonCache.delete(url));
+  jsonCache.set(target, promise);
+  promise.catch(() => jsonCache.delete(target));
 
   return promise;
 }
@@ -41,24 +74,26 @@ function loadJson(url) {
 // read display settings straight from the inputs so restored form state never desyncs
 function controls() {
   return {
-    fraction: parseFloat(document.getElementById("fraction").value),
-    normalize: document.getElementById("normalize").value,
-    opacity: parseFloat(document.getElementById("opacity").value),
-    grid: document.getElementById("showGrid").checked,
+    fraction: parseFloat(el("fraction").value),
+    normalize: el("normalize").value,
+    opacity: parseFloat(el("opacity").value),
+    grid: el("showGrid").checked,
   };
 }
 
 const imageCache = new Map();
 
 function loadImage(src) {
-  if (imageCache.has(src)) return imageCache.get(src);
+  const target = bust(src);
+  if (imageCache.has(target)) return imageCache.get(target);
+
   const promise = new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error(`failed to load ${src}`));
-    img.src = src;
+    img.onerror = () => reject(new Error(`failed to load ${target}`));
+    img.src = target;
   });
-  imageCache.set(src, promise);
+  imageCache.set(target, promise);
   return promise;
 }
 
@@ -79,7 +114,7 @@ function interpolate(stops, t) {
   ];
 }
 
-// blue ramp for block activation, green for gene expression
+// blue ramp for the block norm, green for gene expression
 function ramp(t) { return interpolate(BLOCK_STOPS, t); }
 
 function geneRamp(t) { return interpolate(GENE_STOPS, t); }
@@ -236,29 +271,77 @@ function drawGeneHeat(canvas, tile, geneMax) {
     (value) => (value > 0 ? rgb(geneRamp(0.25 + 0.75 * Math.min(1, value / scale))) : "#f8fbf9"));
 }
 
+// |best_effect| never reaches 1, so the offset sorts every valid block ahead of every other one
+// while both groups stay ranked by the same correlation inside themselves
+const BLOCK_ORDER = {
+  valid: (block) => (validBlock(block.block_global_index) ? -2 : 0) - Math.abs(block.best_effect),
+  effect: (block) => -Math.abs(block.best_effect),
+  layer: (block) => block.layer * 1000 + block.block,
+};
+
+// a correlation is read by its sign as much as by its size, so the sign is always printed
+function signed(value) {
+  return `${value >= 0 ? "+" : "−"}${Math.abs(value).toFixed(3)}`;
+}
+
+// the block list is searched by its own number, its dictionary, and the sets it carries
+function blockHaystack(block) {
+  const sets = block.pathways.map((entry) => `${entry.name} ${entry.pathway_id}`).join(" ");
+
+  return `#${blockNumber(block.layer, block.block)} ${block.layer}-${block.block} ${block.dictionary} ${sets}`.toLowerCase();
+}
+
+function blockRows() {
+  const order = BLOCK_ORDER[state.blockSort];
+
+  return state.blocks.blocks.slice().sort((a, b) => order(a) - order(b)).map((block) => ({
+    hay: blockHaystack(block),
+    mark: validBlock(block.block_global_index) ? `<span class="valid-dot" title="${COPY.byBlock.validDot}"></span>` : "",
+    name: `#${blockNumber(block.layer, block.block)}`,
+    sub: `${block.dictionary} · r ${signed(block.best_effect)}`,
+    count: COPY.byBlock.listSets(block.n_sets),
+    active: state.blockPick === block.block_global_index,
+    select: () => selectBlock(block.block_global_index),
+  }));
+}
+
+function pathwayRows() {
+  return state.bundle.pathways.map((pathway, index) => ({
+    hay: `${pathway.name} ${pathway.pathway_id}`.toLowerCase(),
+    mark: "",
+    name: pathway.name,
+    sub: pathway.pathway_id,
+    count: `${pathway.n_supported_blocks} blk`,
+    active: state.pathway === index,
+    select: () => selectPathway(index),
+  }));
+}
+
+// both axes are browsed through the same list, so only the rows differ between them
 function renderSidebar(filter) {
-  const list = document.getElementById("pathwayList");
+  const byBlock = state.browse === "block";
+  const list = el("pathwayList");
   const needle = (filter || "").trim().toLowerCase();
   list.innerHTML = "";
 
-  state.bundle.pathways.forEach((pathway, index) => {
-    const hay = `${pathway.name} ${pathway.pathway_id}`.toLowerCase();
-    if (needle && !hay.includes(needle)) return;
+  (byBlock ? blockRows() : pathwayRows()).forEach((row) => {
+    if (needle && !row.hay.includes(needle)) return;
 
     const item = document.createElement("div");
-    item.className = `pathway-item${state.pathway === index ? " active" : ""}`;
+    item.className = `pathway-item${row.active ? " active" : ""}`;
     item.innerHTML = `
-      <div>
-        <div class="pname">${pathway.name}</div>
-        <div class="pid">${pathway.pathway_id}</div>
+      <div class="ptext">
+        <div class="pname">${row.mark}${row.name}</div>
+        <div class="pid" title="${row.sub}">${row.sub}</div>
       </div>
-      <span class="count">${pathway.n_supported_blocks} blk</span>`;
-    item.addEventListener("click", () => selectPathway(index));
+      <span class="count">${row.count}</span>`;
+    item.addEventListener("click", row.select);
     list.appendChild(item);
   });
 
   if (!list.children.length) {
-    list.innerHTML = `<p class="gallery-note" style="padding:10px">${COPY.sidebarEmpty}</p>`;
+    const empty = byBlock ? COPY.byBlock.listEmpty : COPY.sidebarEmpty;
+    list.innerHTML = `<p class="gallery-note" style="padding:10px">${empty}</p>`;
   }
 }
 
@@ -266,43 +349,98 @@ function loadPathway(pathwayId) {
   return loadJson(`data/${state.slug}/pathways/${pathwayId}.json`);
 }
 
+// one token per selection, so a slower document never paints over a newer choice in either view
+let request = 0;
+
 async function selectPathway(index) {
+  state.blockPick = null;
+
+  await showPathway(index, () => 0);
+}
+
+// paint everything that hangs off one pathway document; blockOf picks which of its cards is selected
+async function showPathway(index, blockOf) {
+  const token = ++request;
   const entry = state.bundle.pathways[index];
   state.pathway = index;
   state.blockIndex = 0;
 
-  document.getElementById("empty").classList.add("hidden");
-  document.getElementById("detail").classList.remove("hidden");
-  document.getElementById("pathwayName").textContent = entry.name;
-  document.getElementById("pathwayId").textContent = entry.pathway_id;
-  const template = state.bundle.pathway_url_template || "https://www.kegg.jp/pathway/{pathway_id}";
-  document.getElementById("keggLink").href = template.replace("{pathway_id}", entry.pathway_id);
-  document.getElementById("supportedCount").textContent = COPY.supportedBlocks(entry.n_supported_blocks);
-  document.getElementById("basicCorrelation").classList.add("hidden");
-  document.getElementById("geneList").innerHTML = "";
-  document.getElementById("blockList").innerHTML = "";
-  document.getElementById("gallery").innerHTML = `<p class="gallery-note">${COPY.loading}</p>`;
+  el("empty").classList.add("hidden");
+  el("detail").classList.remove("hidden");
+  el("basicCorrelation").classList.add("hidden");
+  el("geneList").innerHTML = "";
+  el("gallery").innerHTML = `<p class="gallery-note">${COPY.loading}</p>`;
+  renderHeader(entry);
 
-  renderSidebar(document.getElementById("search").value);
+  renderSidebar(el("search").value);
 
   state.detail = await loadPathway(entry.pathway_id).catch((error) => error);
-
-  // a later click may have won the race, so only paint if this pathway is still selected
-  if (state.pathway !== index) return;
+  if (token !== request) return;
 
   if (state.detail instanceof Error) {
-    document.getElementById("gallery").innerHTML = `<p class="gallery-note">${COPY.loadFailed(entry.pathway_id, state.detail.message)}</p>`;
+    el("gallery").innerHTML = `<p class="gallery-note">${COPY.loadFailed(entry.pathway_id, state.detail.message)}</p>`;
     return;
   }
 
+  state.blockIndex = blockOf(state.detail);
   keepGeneIfScored();
 
+  renderCards();
   renderGenes();
-  renderBlocks();
   renderGallery();
 
   await Promise.all([loadPathwayCoords(entry.pathway_id), loadTilePathway(entry.pathway_id), loadBlockManifold()]);
-  if (state.pathway === index) renderManifold();
+  if (token === request) renderManifold();
+}
+
+// the transposed view: one block, and every gene set it reproduces
+async function selectBlock(globalIndex) {
+  state.blockPick = globalIndex;
+
+  const block = blockEntry(globalIndex);
+  const current = state.pathway === null ? null : state.bundle.pathways[state.pathway].pathway_id;
+
+  // a block usually carries the set already on screen, and keeping it makes the two views comparable
+  await showAssociation(block.pathways.find((entry) => entry.pathway_id === current) || block.pathways[0]);
+}
+
+// one (block, set) pair, whichever collection the set belongs to
+async function showAssociation(entry) {
+  if (entry.slug !== state.slug) await useCollection(entry.slug);
+
+  const index = state.bundle.pathways.findIndex((pathway) => pathway.pathway_id === entry.pathway_id);
+
+  await showPathway(index, (document) => {
+    const at = document.blocks.findIndex((block) => block.block_global_index === state.blockPick);
+    return at < 0 ? 0 : at;
+  });
+}
+
+function blockEntry(globalIndex) {
+  return state.blocks.blocks.find((block) => block.block_global_index === globalIndex);
+}
+
+function renderHeader(entry) {
+  const name = el("pathwayName");
+  const lead = el("metaLead");
+  const summary = el("supportedCount");
+
+  if (state.browse === "block") {
+    const block = blockEntry(state.blockPick);
+
+    name.textContent = COPY.byBlock.title(blockNumber(block.layer, block.block));
+    lead.classList.add("hidden");
+    summary.innerHTML = COPY.byBlock.meta(block, COPY.byBlock.sets(block.n_sets));
+    return;
+  }
+
+  const template = state.bundle.pathway_url_template || "https://www.kegg.jp/pathway/{pathway_id}";
+
+  name.textContent = entry.name;
+  lead.classList.remove("hidden");
+  el("pathwayId").textContent = entry.pathway_id;
+  el("keggLink").href = template.replace("{pathway_id}", entry.pathway_id);
+  summary.textContent = COPY.supportedBlocks(entry.n_supported_blocks);
 }
 
 // a gene overlay only has patch values on tiles whose block offered that gene, so the selection
@@ -315,38 +453,62 @@ function keepGeneIfScored() {
   }
 }
 
+// the pathway view lists the genes this set puts inside the block; the block view pools all of its sets
+function geneCards() {
+  if (state.browse === "block") return blockEntry(state.blockPick).genes;
+
+  return state.detail.blocks[state.blockIndex].genes;
+}
+
+async function pickGene(gene) {
+  const scored = state.detail.blocks[state.blockIndex].genes.some((entry) => entry.symbol === gene.symbol);
+
+  // a pooled gene may be measured only by another of the block's sets, which then has to come forward
+  if (!scored) {
+    state.gene = gene.symbol;
+    state.manifoldView = "gene";
+
+    await showAssociation(blockEntry(state.blockPick).pathways.find((entry) => entry.pathway_id === gene.pathway_id));
+    return;
+  }
+
+  state.gene = state.gene === gene.symbol ? null : gene.symbol;
+
+  // selecting a gene recolours the manifold by that gene, deselecting returns to the pathway
+  state.manifoldView = state.gene ? "gene" : "pathway";
+
+  renderGenes();
+  renderGallery();
+  renderManifold();
+}
+
 function renderGenes() {
   const block = state.detail.blocks[state.blockIndex];
-  const holder = document.getElementById("geneList");
+  const holder = el("geneList");
+  const genes = geneCards();
   holder.innerHTML = "";
 
-  const strongest = Math.max(...block.genes.map((gene) => gene.clustering));
+  const strongest = Math.max(...genes.map((gene) => gene.clustering));
+  const sets = state.browse === "block" ? blockEntry(state.blockPick).pathways : [];
 
-  block.genes.forEach((gene) => {
+  genes.forEach((gene) => {
+    const source = sets.find((entry) => entry.pathway_id === gene.pathway_id);
     const chip = document.createElement("div");
     // dashed border marks genes absent from some slide panels
     chip.className = `gene-chip${gene.train_slides < 46 ? " partial" : ""}${state.gene === gene.symbol ? " active" : ""}`;
-    chip.title = COPY.genes.chipTitle(gene, blockLabel(block));
+    chip.title = COPY.genes.chipTitle(gene, blockLabel(block)) + (source ? COPY.genes.viaSet(source.name) : "");
     chip.innerHTML = `
       <div class="grow"><span class="sym">${gene.symbol}</span><span class="lvl">${gene.clustering.toFixed(2)} ${gene.activation_r >= 0 ? "↑" : "↓"}</span></div>
       <div class="meter"><span style="width:${strongest > 0 ? (gene.clustering / strongest) * 100 : 0}%"></span></div>`;
-    chip.addEventListener("click", () => {
-      state.gene = state.gene === gene.symbol ? null : gene.symbol;
-
-      // selecting a gene recolours the manifold by that gene, deselecting returns to the pathway
-      state.manifoldView = state.gene ? "gene" : "pathway";
-
-      renderGenes();
-      renderGallery();
-      renderManifold();
-    });
+    chip.addEventListener("click", () => pickGene(gene));
     holder.appendChild(chip);
   });
 }
 
 function renderBasicCorrelation() {
-  const badge = document.getElementById("basicCorrelation");
-  const output = document.getElementById("basicCorrelationValue");
+  const badge = el("basicCorrelation");
+  const output = el("basicCorrelationValue");
+
   if (!state.detail || !state.detail.blocks.length) {
     badge.classList.add("hidden");
     return;
@@ -362,48 +524,121 @@ function renderBasicCorrelation() {
     return;
   }
 
-  output.textContent = `r ${value >= 0 ? "+" : "−"}${Math.abs(value).toFixed(3)}`;
+  output.textContent = `r ${signed(value)}`;
   badge.classList.add(value >= 0 ? "positive" : "negative");
   badge.title = COPY.correlation.title(state.detail.name, block);
 }
 
-function renderBlocks() {
-  const pathway = state.detail;
-  const holder = document.getElementById("blockList");
-  const strongest = Math.max(...pathway.blocks.map((b) => Math.abs(b.heldout_effect)));
-  holder.innerHTML = "";
-  renderBasicCorrelation();
+// the two views differ only in which axis is a list of cards, so one place decides which one is drawn
+function renderCards() {
+  const byBlock = state.browse === "block";
 
-  pathway.blocks.forEach((block, index) => {
+  el("blocksSection").classList.toggle("hidden", byBlock);
+  el("setsSection").classList.toggle("hidden", !byBlock);
+
+  if (byBlock) return renderSets();
+
+  return renderBlocks();
+}
+
+// the three numbers every card reports, whichever axis the card is on
+function effectRows(entry) {
+  return `<table>
+      <tr title="${COPY.blocks.heldoutR}"><td>held-out r</td><td class="val">${entry.heldout_effect.toFixed(3)}</td></tr>
+      <tr title="${COPY.blocks.trainR}"><td>training r</td><td class="val">${entry.train_effect.toFixed(3)}</td></tr>
+      <tr title="${COPY.blocks.deltaR2}"><td>&Delta;R&sup2; held-out</td><td class="val">${entry.delta_r2.toFixed(4)}</td></tr>
+    </table>`;
+}
+
+// one list of cards ranked by |held-out r|, with the bar drawn against the strongest of them
+function fillCards(holder, entries, describe) {
+  const strongest = Math.max(...entries.map((entry) => Math.abs(entry.heldout_effect)), 0);
+  holder.innerHTML = "";
+
+  entries.forEach((entry, index) => {
+    const shown = describe(entry, index);
     const card = document.createElement("div");
-    card.className = `block-card${state.blockIndex === index ? " active" : ""}`;
-    const width = strongest > 0 ? (Math.abs(block.heldout_effect) / strongest) * 100 : 0;
+    card.className = `block-card${shown.extra}${shown.active ? " active" : ""}`;
+    if (shown.title) card.title = shown.title;
     card.innerHTML = `
       <div class="bhead">
-        <span class="bid">#${blockNumber(block.layer, block.block)}</span>
+        <span class="bid">${shown.head}</span>
+        ${shown.tag ? `<span class="tag">${shown.tag}</span>` : ""}
       </div>
-      <table>
-        <tr title="${COPY.blocks.heldoutR}"><td>held-out r</td><td class="val">${block.heldout_effect.toFixed(3)}</td></tr>
-        <tr title="${COPY.blocks.trainR}"><td>training r</td><td class="val">${block.train_effect.toFixed(3)}</td></tr>
-        <tr title="${COPY.blocks.deltaR2}"><td>&Delta;R&sup2; held-out</td><td class="val">${block.delta_r2.toFixed(4)}</td></tr>
-      </table>
-      <div class="bar"><span style="width:${width}%"></span></div>`;
-    card.addEventListener("click", async () => {
-      state.blockIndex = index;
-
-      // the cards rank genes inside this block, so a gene the new block cannot score is dropped
-      keepGeneIfScored();
-
-      renderBlocks();
-      renderGenes();
-      renderGallery();
-
-      // the manifold belongs to this block, so selecting a card loads a different embedding
-      await loadBlockManifold();
-      renderManifold();
-    });
+      ${effectRows(entry)}
+      <div class="bar"><span style="width:${strongest > 0 ? (Math.abs(entry.heldout_effect) / strongest) * 100 : 0}%"></span></div>`;
+    card.addEventListener("click", shown.select);
     holder.appendChild(card);
   });
+}
+
+// a block is valid when the held-out evidence singles out one of its sets
+function validBlock(globalIndex) {
+  return Boolean(state.dominance[globalIndex]);
+}
+
+// the one set a block's held-out evidence points at, decided at build time over every set it carries
+function isDominant(globalIndex, slug, pathwayId) {
+  const pick = state.dominance[globalIndex];
+
+  return Boolean(pick) && pick.slug === slug && pick.pathway_id === pathwayId;
+}
+
+// a card the rule did not pick keeps its numbers and loses its colour
+function dulled(picked) {
+  return picked ? "" : " dull";
+}
+
+// every gene set the selected block carries, as the transpose of the block cards
+function renderSets() {
+  const block = blockEntry(state.blockPick);
+  const current = state.bundle.pathways[state.pathway].pathway_id;
+  renderBasicCorrelation();
+
+  fillCards(el("setList"), block.pathways, (entry) => {
+    const picked = isDominant(block.block_global_index, entry.slug, entry.pathway_id);
+
+    return {
+      extra: ` set-card${dulled(picked)}`,
+      active: entry.pathway_id === current,
+      title: `${COPY.byBlock.setTitle(entry)} · ${COPY.blocks.mark(picked)}`,
+      head: entry.name,
+      tag: entry.collection_label,
+      select: () => showAssociation(entry),
+    };
+  });
+}
+
+function renderBlocks() {
+  renderBasicCorrelation();
+
+  fillCards(el("blockList"), state.detail.blocks, (block, index) => {
+    const picked = isDominant(block.block_global_index, state.slug, state.detail.pathway_id);
+
+    return {
+      extra: dulled(picked),
+      active: state.blockIndex === index,
+      title: COPY.blocks.mark(picked),
+      head: `#${blockNumber(block.layer, block.block)}`,
+      tag: "",
+      select: () => pickBlockCard(index),
+    };
+  });
+}
+
+async function pickBlockCard(index) {
+  state.blockIndex = index;
+
+  // the cards rank genes inside this block, so a gene the new block cannot score is dropped
+  keepGeneIfScored();
+
+  renderBlocks();
+  renderGenes();
+  renderGallery();
+
+  // the manifold belongs to this block, so selecting a card loads a different embedding
+  await loadBlockManifold();
+  renderManifold();
 }
 
 function activeTiles() {
@@ -427,8 +662,8 @@ function tileScore(tile) {
 
 // both ramps label their two ends, from the same two elements
 function setScaleTicks(prefix, low, high) {
-  document.getElementById(`${prefix}Min`).textContent = low;
-  document.getElementById(`${prefix}Max`).textContent = high;
+  el(`${prefix}Min`).textContent = low;
+  el(`${prefix}Max`).textContent = high;
 }
 
 // label the ramp with the values its two ends actually correspond to
@@ -447,7 +682,7 @@ function renderScaleBar(tiles) {
 }
 
 function renderGeneScale(geneMax) {
-  const holder = document.getElementById("geneScale");
+  const holder = el("geneScale");
 
   if (!state.gene) {
     holder.classList.add("hidden");
@@ -455,7 +690,7 @@ function renderGeneScale(geneMax) {
   }
 
   holder.classList.remove("hidden");
-  document.getElementById("geneScaleName").textContent = state.gene;
+  el("geneScaleName").textContent = state.gene;
 
   setScaleTicks("geneScale", "0", controls().normalize === "tile" ? "tile peak" : geneMax.toFixed(1));
 }
@@ -540,7 +775,7 @@ function legendGutter(holder) {
 
 function manifoldLayout(id, title, subtitle, showLegend, coords) {
   const blocks = coords || state.manifold.blocks;
-  const holder = document.getElementById(id);
+  const holder = el(id);
   const banded = showLegend === "gutter";
   const gutter = banded ? legendGutter(holder) : 0;
 
@@ -548,13 +783,17 @@ function manifoldLayout(id, title, subtitle, showLegend, coords) {
   const tight = banded && gutter * holder.clientWidth < LEGEND_WIDTH;
 
   // the page sets its headings in the theme's serif, so a plot title follows and its caption stays in Inter
-  const caption = subtitle
-    ? `<br><span style="font-family:Inter,system-ui,sans-serif;font-size:11.5px;fill:${CHROME.muted}">${subtitle}</span>`
+  // a long set name overruns the narrow half of a pair, so both lines are cut to what the panel holds
+  const heading = shorten(title, Math.max(20, Math.floor(holder.clientWidth / 10.5)));
+  const line = subtitle ? shorten(subtitle, Math.max(30, Math.floor(holder.clientWidth / 6))) : "";
+
+  const caption = line
+    ? `<br><span style="font-family:Inter,system-ui,sans-serif;font-size:11.5px;fill:${CHROME.muted}">${line}</span>`
     : "";
 
   return {
     title: {
-      text: `${title}${caption}`,
+      text: `${heading}${caption}`,
       x: 0.5,
       xanchor: "center",
       font: { family: "Instrument Serif, Georgia, serif", size: 21, color: CHROME.ink },
@@ -624,7 +863,7 @@ function robustRange(values) {
 // which tiles of the selected block to draw, given the split filter
 function tileRows() {
   const payload = state.blockManifold;
-  const scope = document.getElementById("manifoldScope").value;
+  const scope = el("manifoldScope").value;
   const positions = payload.tile_rows.map((value, index) => index);
   if (scope === "all") return positions;
 
@@ -894,14 +1133,14 @@ const MANIFOLD_PLOTS = ["manifoldMain", "manifoldSide"];
 
 // each plot rotates alone, so its viewpoint survives a recolouring without touching its neighbour
 function bindCameraMemory(id) {
-  document.getElementById(id).on("plotly_relayout", (event) => {
+  el(id).on("plotly_relayout", (event) => {
     if (event["scene.camera"]) state.manifoldCameras[id] = event["scene.camera"];
   });
 }
 
 // both views finish the same way: draw into one holder, then keep the camera binding alive
 async function paintManifold(id, traces, title, subtitle, legend, coords) {
-  const holder = document.getElementById(id);
+  const holder = el(id);
 
   // an earlier message left plain markup behind, which react would draw around
   if (!holder.dataset.bound) holder.innerHTML = "";
@@ -920,31 +1159,25 @@ async function paintManifold(id, traces, title, subtitle, legend, coords) {
 // a view with nothing to draw replaces the plots with the reason
 function manifoldMessage(text) {
   MANIFOLD_PLOTS.forEach((id) => {
-    const holder = document.getElementById(id);
+    const holder = el(id);
     Plotly.purge(holder);
     delete holder.dataset.bound;
     holder.innerHTML = id === "manifoldMain" ? `<p class="gallery-note" style="padding:16px">${text}</p>` : "";
   });
 
-  document.getElementById("manifoldNote").textContent = "";
-}
-
-function activateManifoldTab(view) {
-  document.querySelectorAll("#manifoldTabs button").forEach((button) => {
-    button.classList.toggle("active", button.dataset.view === view);
-  });
+  el("manifoldNote").textContent = "";
 }
 
 // the two views are built from different inputs, so each carries its own construction note
 function syncRecipe() {
   const cross = state.manifoldView === "cross";
-  document.getElementById("recipeCross").classList.toggle("hidden", !cross);
-  document.getElementById("recipeTile").classList.toggle("hidden", cross);
+  el("recipeCross").classList.toggle("hidden", !cross);
+  el("recipeTile").classList.toggle("hidden", cross);
 }
 
 // the gene tab only exists while a gene the tiles can be coloured by is selected
 function syncGeneTab() {
-  const tab = document.getElementById("manifoldGeneTab");
+  const tab = el("manifoldGeneTab");
   const available = Boolean(state.gene && state.manifold && state.manifold.genes.has(state.gene));
   tab.classList.toggle("hidden", !available);
   tab.textContent = available ? `${state.gene} expression` : "Gene expression";
@@ -959,12 +1192,12 @@ async function renderManifold() {
 
   const geneAvailable = syncGeneTab();
   const cross = state.manifoldView === "cross";
-  activateManifoldTab(state.manifoldView);
-  document.getElementById("crossControl").classList.toggle("hidden", !cross);
-  document.getElementById("scopeControl").classList.toggle("hidden", cross);
+  markTab("manifoldTabs", "view", state.manifoldView);
+  el("crossControl").classList.toggle("hidden", !cross);
+  el("scopeControl").classList.toggle("hidden", cross);
 
   // the cross-block map is one map of its own, so only the tile views come as a pair
-  document.getElementById("manifoldFrame").classList.toggle("paired", !cross);
+  el("manifoldFrame").classList.toggle("paired", !cross);
   syncRecipe();
 
   if (cross) return renderCrossBlockMap();
@@ -974,10 +1207,10 @@ async function renderManifold() {
 
 // the selected block's own manifold: its tiles, embedded from the coordinates that block assigns them
 async function renderBlockManifold(geneAvailable) {
-  const note = document.getElementById("manifoldNote");
+  const note = el("manifoldNote");
   const card = state.detail.blocks[state.blockIndex];
   const payload = state.blockManifold;
-  const entry = state.bundle.pathways[state.pathway];
+  const entry = state.detail;
   const label = blockLabel(card);
 
   if (!payload) {
@@ -1035,9 +1268,8 @@ async function paintTissue(positions, payload) {
 
 // the secondary view: one point per block, which compares blocks rather than looking inside one
 async function renderCrossBlockMap() {
-  const note = document.getElementById("manifoldNote");
+  const note = el("manifoldNote");
   const blocks = state.manifold.blocks;
-  const entry = state.bundle.pathways[state.pathway];
   const collection = state.bundle.collection_label || "pathway";
   const total = blocks.n_blocks.toLocaleString();
 
@@ -1083,9 +1315,9 @@ async function renderCrossBlockMap() {
   const marker = selectedLabel();
   if (marker) {
     subtitle = `${subtitle} · ${COPY.cross.markedSubtitle(marker)}`;
-    note.innerHTML += COPY.cross.marked(marker);
+    note.innerHTML += COPY.cross.marked(marker, COPY.cross.where[state.browse]);
   } else {
-    note.innerHTML += COPY.cross.unmarked(selectedCardLabel(), entry.pathway_id, total);
+    note.innerHTML += COPY.cross.unmarked(selectedCardLabel(), state.detail.pathway_id, total);
   }
 
   await paintManifold("manifoldMain", traces.concat(marked), title, subtitle, legend || marked.length > 0);
@@ -1153,13 +1385,13 @@ async function loadTileGene(symbol) {
   return state.tileGene;
 }
 
+// a set with no exported per-block effects simply leaves the cross-block colouring empty
 async function loadPathwayCoords(pathwayId) {
   if (!state.manifold) return;
-  if (!state.manifold.pathways.has(pathwayId)) {
-    state.manifold.pathway = null;
-    return;
-  }
-  state.manifold.pathway = await loadJson(`data/${state.slug}/manifold/pathways/${pathwayId}.json`);
+
+  state.manifold.pathway = state.manifold.pathways.has(pathwayId)
+    ? await loadJson(`data/${state.slug}/manifold/pathways/${pathwayId}.json`).catch(() => null)
+    : null;
 }
 
 function renderGallery() {
@@ -1167,7 +1399,7 @@ function renderGallery() {
 
   const pathway = state.detail;
   const { tiles, block } = activeTiles();
-  const gallery = document.getElementById("gallery");
+  const gallery = el("gallery");
   gallery.innerHTML = "";
 
   if (!tiles.length) {
@@ -1214,52 +1446,81 @@ function renderGallery() {
 
 function openModal(tile, block, maxValue, geneMax) {
   const pathway = state.detail;
-  document.getElementById("modal").classList.remove("hidden");
-  document.getElementById("modalTitle").textContent = COPY.modal.title(block, tile);
-  document.getElementById("modalMeta").innerHTML = COPY.modal.meta(pathway, tile);
+  el("modal").classList.remove("hidden");
+  el("modalTitle").textContent = COPY.modal.title(block, tile);
+  el("modalMeta").innerHTML = COPY.modal.meta(pathway, tile);
 
   const sorted = tile.patches.slice().sort((a, b) => b - a);
   const top = sorted.slice(0, 5).map((value) => value.toFixed(2)).join(", ");
-  document.getElementById("modalStats").innerHTML =
+  el("modalStats").innerHTML =
     COPY.modal.stats(block, tile, tileScore(tile), state.bundle.tokens_per_tile, top);
 
-  drawTile(document.getElementById("modalRaw"), tile, maxValue, { overlay: false });
-  drawTile(document.getElementById("modalOverlay"), tile, maxValue, { opacity: Math.max(controls().opacity, 0.85), grid: true, geneMax: geneMax });
-  drawHeat(document.getElementById("modalHeat"), tile, maxValue);
+  drawTile(el("modalRaw"), tile, maxValue, { overlay: false });
+  drawTile(el("modalOverlay"), tile, maxValue, { opacity: Math.max(controls().opacity, 0.85), grid: true, geneMax: geneMax });
+  drawHeat(el("modalHeat"), tile, maxValue);
 
-  const figure = document.getElementById("modalGeneFigure");
+  const grid = state.bundle.patch_grid;
+  el("modalOverlayCaption").innerHTML = COPY.modal.overlayCaption(controls().fraction);
+  el("modalHeatCaption").innerHTML = COPY.modal.heatCaption(grid * grid);
+
+  const figure = el("modalGeneFigure");
   const genes = geneStats(tile);
-  document.getElementById("modalGrid").classList.toggle("with-gene", Boolean(genes));
+  el("modalGrid").classList.toggle("with-gene", Boolean(genes));
   figure.classList.toggle("hidden", !genes);
 
   if (genes) {
-    drawGeneHeat(document.getElementById("modalGene"), tile, geneMax);
-    document.getElementById("modalGeneCaption").innerHTML = COPY.modal.geneCaption(state.gene, genes);
+    drawGeneHeat(el("modalGene"), tile, geneMax);
+    el("modalGeneCaption").innerHTML = COPY.modal.geneCaption(state.gene, genes);
   }
 }
 
-// re-fetch the scripts, styles and data past the browser cache, then reload with the fresh copies
+// re-read the built data and repaint the cards, the plots and the tiles in place; the document itself
+// stays, so a change to the scripts or the styles still needs a browser reload
 async function reloadAssets() {
-  document.getElementById("reload").disabled = true;
+  const button = el("reload");
+  button.disabled = true;
 
-  const assets = ["index.html", "app.js", "copy.js", "styles.css", "data/collections.json", `data/${state.slug}/index.json`,
-    "data/manifold/blocks.json", "data/manifold/genes_index.json", `data/${state.slug}/manifold/labels.json`];
-  if (state.pathway !== null) assets.push(`data/${state.slug}/pathways/${state.bundle.pathways[state.pathway].pathway_id}.json`);
-
-  await Promise.all(assets.map((asset) => fetch(asset, { cache: "reload" }).catch(() => null)));
+  epoch = Date.now();
   jsonCache.clear();
   imageCache.clear();
 
-  location.reload();
+  const keptPathway = state.pathway === null ? null : state.bundle.pathways[state.pathway].pathway_id;
+  const keptBlock = state.blockPick;
+
+  state.collections = (await loadJson("data/collections.json")).collections;
+  if (!state.collections.some((entry) => entry.slug === state.slug)) state.slug = state.collections[0].slug;
+
+  state.bundle = await loadJson(`data/${state.slug}/index.json`);
+  await Promise.all([loadManifold(), loadDominance()]);
+  if (state.blocks) await loadBlockIndex();
+
+  renderCollectionPicker();
+  renderSidebar(el("search").value);
+  await reselect(keptPathway, keptBlock);
+
+  button.disabled = false;
+}
+
+// put the same selection back on screen, or the nearest one the rebuilt data still holds
+async function reselect(pathwayId, globalIndex) {
+  if (state.browse === "block") {
+    return selectBlock(blockEntry(globalIndex) ? globalIndex : state.blocks.blocks[0].block_global_index);
+  }
+
+  if (!state.bundle.pathways.length) return;
+
+  const at = state.bundle.pathways.findIndex((entry) => entry.pathway_id === pathwayId);
+
+  return selectPathway(at < 0 ? 0 : at);
 }
 
 // the collection the list is drawn from, chosen above the list itself
 function renderCollectionPicker() {
-  const picker = document.getElementById("collectionSelect");
+  const picker = el("collectionSelect");
   picker.innerHTML = "";
 
   // a single collection needs no switch, so the control stays out of the way
-  document.getElementById("collectionWrap").classList.toggle("hidden", state.collections.length < 2);
+  el("collectionWrap").classList.toggle("hidden", state.collections.length < 2);
 
   state.collections.forEach((entry) => {
     const option = document.createElement("option");
@@ -1271,21 +1532,26 @@ function renderCollectionPicker() {
   picker.value = state.slug;
 }
 
+// swap the collection every pathway lookup reads from, without deciding what is shown next
+async function useCollection(slug) {
+  state.slug = slug;
+  state.bundle = await loadJson(`data/${slug}/index.json`);
+  await loadManifold();
+  renderCollectionPicker();
+}
+
 async function selectCollection(slug) {
   if (slug === state.slug) return;
 
   const keptPathway = state.pathway === null ? null : state.bundle.pathways[state.pathway].pathway_id;
   const keptGene = state.gene;
 
-  state.slug = slug;
   state.pathway = null;
   state.detail = null;
   state.blockIndex = 0;
 
-  state.bundle = await loadJson(`data/${slug}/index.json`);
-  await loadManifold();
-  renderCollectionPicker();
-  renderSidebar(document.getElementById("search").value);
+  await useCollection(slug);
+  renderSidebar(el("search").value);
 
   // gene sets do not carry across collections, so fall back to the strongest one
   state.gene = keptGene;
@@ -1293,22 +1559,82 @@ async function selectCollection(slug) {
   if (state.bundle.pathways.length) selectPathway(same >= 0 ? same : 0);
 }
 
+// both axes grey their cards from this one map, so it is loaded before anything is drawn
+async function loadDominance() {
+  const payload = await loadJson("data/blocks/dominance.json");
+
+  state.dominance = payload.blocks;
+  el("blockInfo").innerHTML = COPY.blocks.panel(payload);
+}
+
+// the block index carries the cuts its panel quotes, so the panel is written as it arrives
+async function loadBlockIndex() {
+  state.blocks = await loadJson("data/blocks/index.json");
+  el("setInfo").innerHTML = COPY.byBlock.panel(state.blocks);
+}
+
+// the axis the list is browsed along: gene sets and their blocks, or blocks and their gene sets
+async function selectBrowse(browse) {
+  if (browse === state.browse) return;
+
+  state.browse = browse;
+  markTab("browseTabs", "browse", browse);
+
+  // a collection holds gene sets, while a block belongs to no single one, so the picker follows the axis
+  el("collectionSelect").classList.toggle("hidden", browse === "block");
+  el("blockSort").classList.toggle("hidden", browse !== "block");
+  el("search").placeholder = browse === "block"
+    ? "Search block number or gene set…" : "Search pathway name or id…";
+
+  if (browse === "block" && !state.blocks) await loadBlockIndex();
+
+  renderSidebar(el("search").value);
+
+  // the block carrying the set on screen is the one that continues the thought
+  if (browse === "block") return selectBlock(carriedBlock());
+
+  return selectPathway(state.pathway === null ? 0 : state.pathway);
+}
+
+// entering the block view from a pathway keeps the selected card, which is already a block of that set
+function carriedBlock() {
+  const selected = state.detail && state.detail.blocks[state.blockIndex];
+  if (selected && blockEntry(selected.block_global_index)) return selected.block_global_index;
+
+  return state.blocks.blocks[0].block_global_index;
+}
+
+// stepping the list is the quickest way to sweep it, and the selection is rebuilt on every step
+function stepList(delta) {
+  const items = [...document.querySelectorAll("#pathwayList .pathway-item")];
+  const at = items.findIndex((item) => item.classList.contains("active"));
+  const target = Math.min(items.length - 1, Math.max(0, at + delta));
+
+  if (at < 0 || target === at) return;
+
+  items[target].click();
+  requestAnimationFrame(() => {
+    const active = document.querySelector("#pathwayList .pathway-item.active");
+    if (active) active.scrollIntoView({ block: "nearest" });
+  });
+}
+
 function resizeManifold() {
   requestAnimationFrame(() => {
-    MANIFOLD_PLOTS.map((id) => document.getElementById(id)).filter((plot) => plot && plot.data)
+    MANIFOLD_PLOTS.map((id) => el(id)).filter((plot) => plot && plot.data)
       .forEach((plot) => Plotly.Plots.resize(plot));
   });
 }
 
 function toggleSidebar() {
   const layout = document.querySelector(".layout");
-  const button = document.getElementById("sidebarToggle");
+  const button = el("sidebarToggle");
   const collapsed = layout.classList.toggle("sidebar-collapsed");
   const visible = !collapsed;
 
   button.setAttribute("aria-expanded", String(visible));
   button.title = visible ? "Hide pathway list" : "Show pathway list";
-  document.getElementById("sidebarToggleGlyph").textContent = visible ? "‹" : "›";
+  el("sidebarToggleGlyph").textContent = visible ? "‹" : "›";
 
   resizeManifold();
 }
@@ -1323,13 +1649,13 @@ function setSidebarWidth(width, remember) {
 }
 
 function bindSidebarResize() {
-  const handle = document.getElementById("sidebarResize");
+  const handle = el("sidebarResize");
   const stored = Number(localStorage.getItem(SIDEBAR_KEY));
 
   if (stored) setSidebarWidth(stored, false);
 
   handle.addEventListener("pointerdown", (event) => {
-    const origin = document.getElementById("pathwaySidebar").getBoundingClientRect().left;
+    const origin = el("pathwaySidebar").getBoundingClientRect().left;
 
     handle.classList.add("dragging");
     document.body.classList.add("resizing");
@@ -1377,43 +1703,44 @@ function bindDockLift() {
 function bindControls() {
   bindDockLift();
 
-  document.getElementById("search").addEventListener("input", (event) => renderSidebar(event.target.value));
-  document.getElementById("collectionSelect").addEventListener("change", (event) => selectCollection(event.target.value));
-  document.getElementById("sidebarToggle").addEventListener("click", toggleSidebar);
+  el("search").addEventListener("input", (event) => renderSidebar(event.target.value));
+  el("collectionSelect").addEventListener("change", (event) => selectCollection(event.target.value));
+  el("sidebarToggle").addEventListener("click", toggleSidebar);
+  el("reload").addEventListener("click", reloadAssets);
   bindSidebarResize();
-  document.getElementById("reload").addEventListener("click", reloadAssets);
 
-  document.querySelectorAll("#manifoldTabs button").forEach((button) => {
-    button.addEventListener("click", () => {
-      state.manifoldView = button.dataset.view;
-      activateManifoldTab(state.manifoldView);
-      renderManifold();
-    });
-  });
+  bindTabs("browseTabs", "browse", selectBrowse);
 
-  document.getElementById("manifoldScope").addEventListener("change", renderManifold);
-
-  document.getElementById("crossColour").addEventListener("change", (event) => {
-    state.crossColour = event.target.value;
+  bindTabs("manifoldTabs", "view", (view) => {
+    state.manifoldView = view;
     renderManifold();
   });
 
-  document.querySelectorAll("#modeTabs button").forEach((button) => {
-    button.addEventListener("click", () => {
-      document.querySelectorAll("#modeTabs button").forEach((other) => other.classList.remove("active"));
-      button.classList.add("active");
-      state.mode = button.dataset.mode;
-      renderGallery();
+  bindTabs("modeTabs", "mode", (mode) => {
+    state.mode = mode;
+    markTab("modeTabs", "mode", mode);
+    renderGallery();
+  });
+
+  // a select that only changes what is drawn is bound by the state field it writes and what it repaints
+  const selects = {
+    blockSort: ["blockSort", () => renderSidebar(el("search").value)],
+    crossColour: ["crossColour", renderManifold],
+  };
+
+  Object.entries(selects).forEach(([id, [field, repaint]]) => {
+    el(id).addEventListener("change", (event) => {
+      state[field] = event.target.value;
+      repaint();
     });
   });
 
-  document.getElementById("opacity").addEventListener("input", renderGallery);
-  document.getElementById("fraction").addEventListener("change", renderGallery);
-  document.getElementById("normalize").addEventListener("change", renderGallery);
-  document.getElementById("showGrid").addEventListener("change", renderGallery);
+  el("manifoldScope").addEventListener("change", renderManifold);
+  el("opacity").addEventListener("input", renderGallery);
+  ["fraction", "normalize", "showGrid"].forEach((id) => el(id).addEventListener("change", renderGallery));
 
-  const modal = document.getElementById("modal");
-  document.getElementById("modalClose").addEventListener("click", () => modal.classList.add("hidden"));
+  const modal = el("modal");
+  el("modalClose").addEventListener("click", () => modal.classList.add("hidden"));
 
   // dismiss only when the press starts and ends on the backdrop itself
   let pressedBackdrop = false;
@@ -1424,19 +1751,25 @@ function bindControls() {
   });
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") modal.classList.add("hidden");
+
+    // the search field is left in: typing a filter and stepping its results is one gesture
+    const held = event.target.tagName === "SELECT" || !modal.classList.contains("hidden");
+    if (held) return;
+
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      stepList(event.key === "ArrowDown" ? 1 : -1);
+    }
   });
 }
 
 async function init() {
-  // every card reports the same three numbers, so the heading explains them once
-  document.getElementById("blockInfo").innerHTML = COPY.blocks.panel;
-
   const manifest = await loadJson("data/collections.json");
   state.collections = manifest.collections;
   state.slug = state.collections[0].slug;
 
   state.bundle = await loadJson(`data/${state.slug}/index.json`);
-  await loadManifold();
+  await Promise.all([loadManifold(), loadDominance()]);
 
   renderCollectionPicker();
   renderSidebar("");

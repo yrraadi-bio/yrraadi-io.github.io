@@ -5,7 +5,7 @@
 // they quote. Short control labels stay in app.js next to the widgets they belong to.
 
 // each card metric is written once, then shown both as a row tooltip and inside the card's own panel
-const BLOCK_HELDOUT_R = "Partial correlation between the pathway score and this block's activation magnitude on the 12"
+const BLOCK_HELDOUT_R = "Partial correlation between the pathway score and this block's tile norm on the 12"
   + " unseen slides, averaged over patients, with the covariate coefficients carried over from training. Eight"
   + " covariates are removed from both sides: colour, tissue occupancy, cell count and library size.";
 
@@ -18,37 +18,80 @@ const BLOCK_DELTA_R2 = "What the block adds beyond those covariates on slides it
 const BLOCK_RULE = "A card appears only when held-out r agrees in sign with training r, its patient-level bootstrap"
   + " interval excludes zero, and \u0394R\u00B2 is positive.";
 
+// the greying rule, which is one relation between a block and a set read from either side
+const BLOCK_DOMINANCE = "A block points at a set only when its strongest |held-out r| beats the mean of the block's"
+  + " other effects above 0.10 by a further 0.10, measured over every set the block reproduces rather than the few"
+  + " shown here. That set keeps its colour, the rest are greyed, and a block whose evidence singles out nothing"
+  + " greys entirely.";
+
+// what the rule cannot show, which is most of what it finds
+const BLOCK_UNEXPORTED = "The set a block points at is credited only where it has a card on that block, since a set"
+  + " with no card has no tiles, genes or colouring to stand on. Crediting the runner-up instead would name a set the"
+  + " evidence did not pick, so those blocks stay grey.";
+
 const COPY = {
   sidebarEmpty: "No pathway matches that search.",
   loading: "loading…",
   loadFailed: (pathwayId, message) => `could not load ${pathwayId}.json (${message})`,
   supportedBlocks: (count) => `${count} block associations reproduced on held-out tiles`,
 
+  // the same evidence read from the block's side: one block, every gene set it carries
+  byBlock: {
+    listEmpty: "No block matches that search.",
+    title: (number) => `Block #${number}`,
+    meta: (block, sets) => `${block.dictionary} &nbsp;·&nbsp; ${sets} &nbsp;·&nbsp; strongest held-out r`
+      + ` ${signed(block.best_effect)}`,
+    sets: (count) => `${count} gene set${count === 1 ? "" : "s"} carried`,
+    listSets: (count) => `${count} set${count === 1 ? "" : "s"}`,
+    validDot: "The held-out evidence singles out one of this block's sets and that set has a card here, so one of"
+      + " its cards is in colour. Blocks without one come after these in this order.",
+    panel: (index) => `<span>Every card is one gene set this block reproduces on held-out tissue, and the set selected
+      here is the one the genes, the manifold colouring and the tile overlays below follow.</span>
+      <span>Cards are ranked by |held-out r| and cut at the strongest ${index.sets_per_block}; the list on the left holds
+      the ${index.n_blocks} blocks that reproduce something at |r| ${index.min_effect.toFixed(2)} or above.</span>
+      <span><strong>held-out r:</strong> ${BLOCK_HELDOUT_R}</span>
+      <span><strong>training r:</strong> ${BLOCK_TRAIN_R}</span>
+      <span><strong>&Delta;R&sup2; held-out:</strong> ${BLOCK_DELTA_R2}</span>
+      <span>${BLOCK_RULE}</span>
+      <span><strong>Greyed cards:</strong> ${BLOCK_DOMINANCE} ${BLOCK_UNEXPORTED}</span>`,
+    setTitle: (entry) => `${entry.collection_label} · ${entry.name} (${entry.pathway_id}) · ${entry.n_scored_genes} of its`
+      + " genes scored inside this block · select it to colour the genes, the manifold and the tiles by this set",
+  },
+
   genes: {
     chipTitle: (gene, blockLabel) =>
       `${gene.symbol} · clustering ${gene.clustering}, Moran's I over the ${gene.n_tiles} tiles of ${blockLabel} where it`
       + ` is measured · ${gene.clustering_slide_adjusted} once each slide's own mean is removed · ${gene.activation_r >= 0
-        ? "rises" : "falls"} with block activation, r ${gene.activation_r} · detected in`
+        ? "rises" : "falls"} with the block norm, r ${gene.activation_r} · detected in`
       + ` ${Math.round(gene.detection * 100)}% of those tiles · mean ${gene.mean} log1p CPM, sd ${gene.std} · measured on`
       + ` ${gene.train_slides}/46 training and ${gene.heldout_slides}/12 held-out slides · click to overlay its per-cell`
       + " expression on the tiles and recolour the manifold by this gene",
+    viaSet: (name) => ` · reached through ${name}, the set that scores it here`,
   },
 
   blocks: {
     heldoutR: BLOCK_HELDOUT_R,
     trainR: BLOCK_TRAIN_R,
     deltaR2: BLOCK_DELTA_R2,
-    panel: `<span><strong>held-out r:</strong> ${BLOCK_HELDOUT_R}</span>
+    mark: (picked) => (picked
+      ? "in colour: this block's held-out evidence points at this set"
+      : "greyed: this is not the set this block's held-out evidence points at"),
+    panel: (dominance) => `<span><strong>held-out r:</strong> ${BLOCK_HELDOUT_R}</span>
       <span><strong>training r:</strong> ${BLOCK_TRAIN_R}</span>
       <span><strong>&Delta;R&sup2; held-out:</strong> ${BLOCK_DELTA_R2}</span>
-      <span>${BLOCK_RULE}</span>`,
+      <span>${BLOCK_RULE}</span>
+      <span><strong>Greyed cards:</strong> ${BLOCK_DOMINANCE} A set with no card in colour here is one no block
+      resolves on its own.</span>
+      <span>${BLOCK_UNEXPORTED} ${dominance.n_margin.toLocaleString()} of the
+      ${dominance.n_blocks_scored.toLocaleString()} blocks that reproduce anything single out a set, and
+      ${dominance.n_dominant} of those onto a set this build exported.</span>`,
   },
 
   correlation: {
     unavailable: "r unavailable",
     unavailableTitle: "Raw Pearson correlation is undefined because one input has no variance.",
     title: (pathwayName, block) =>
-      `Unadjusted Pearson correlation between ${pathwayName} score and the activation magnitude of block`
+      `Unadjusted Pearson correlation between ${pathwayName} score and the tile norm of block`
       + ` #${blockNumber(block.layer, block.block)}`
       + ` across ${block.basic_r_n.toLocaleString()} training tiles. No covariates are residualized; the card reports the`
       + " adjusted held-out r.",
@@ -60,7 +103,7 @@ const COPY = {
 
   hover: {
     tile: (tileId, slide, tissue, split, activation) =>
-      `${tileId}<br>slide ${slide} · ${tissue} · ${split}<br>block activation ${activation}`,
+      `${tileId}<br>slide ${slide} · ${tissue} · ${split}<br>block norm ${activation}`,
     block: (blockNumber, dominant) => `block #${blockNumber}<br>dominant: ${dominant}`,
     dominantNone: "no supported pathway",
     dominantOther: "other supported pathway",
@@ -76,7 +119,7 @@ const COPY = {
 
     gene: {
       title: (gene) => `${gene} expression`,
-      subtitle: (blockLabel) => `tiles of ${blockLabel}, coloured by measured counts`,
+      subtitle: (blockLabel) => `tiles of ${blockLabel}, coloured by mean log1p CPM`,
       missing: "gene not on this slide panel",
       note: (gene, pathwayName) => `Green tiles confined to one region indicate that the block's coordinates encode
         structure <b>${gene}</b> tracks. Grey tiles come from slides whose panel omits it. Select <b>Pathway score</b> to
@@ -105,7 +148,8 @@ const COPY = {
   cross: {
     prefix: `<b>Each point is one block, not one tile.</b> Blocks are compared by their effects across the 1,656 measured
       genes, so neighbouring points have similar gene effects. `,
-    marked: (blockLabel) => ` The magenta ring marks <b>${blockLabel}</b>, selected in the cards above.`,
+    marked: (blockLabel, where) => ` The magenta ring marks <b>${blockLabel}</b>, ${where}.`,
+    where: { pathway: "selected in the cards above", block: "the block this view is built around" },
     unmarked: (blockLabel, pathwayId, blocks) => ` Nothing is ringed: <b>${blockLabel}</b> transfers on ${pathwayId} but
       is not among the ${blocks} estimable blocks mapped here.`,
     markedSubtitle: (blockLabel) => `${blockLabel} marked`,
@@ -146,13 +190,19 @@ const COPY = {
       held-out r <b>${block.heldout_effect.toFixed(3)}</b> &nbsp;·&nbsp;
       training r <b>${block.train_effect.toFixed(3)}</b> &nbsp;·&nbsp;
       &Delta;R&sup2; held-out <b>${block.delta_r2.toFixed(4)}</b> &nbsp;·&nbsp;
-      tile activity <b>${tile.activity.toFixed(3)}</b> &nbsp;·&nbsp;
+      tile norm <b>${tile.activity.toFixed(3)}</b> &nbsp;·&nbsp;
       pathway score <b>${score}</b><br />
       patches firing <b>${tile.n_firing}/${tokens}</b> &nbsp;·&nbsp;
       peak patch norm <b>${tile.max_patch.toFixed(3)}</b> &nbsp;·&nbsp;
       peak : mean-firing <b>${tile.peak_to_mean.toFixed(2)}&times;</b> &nbsp;·&nbsp;
       top-5 patch norms <b>${topPatches}</b>`,
-    geneCaption: (gene, stats) => `${gene} per cell, ${stats.expressing} of ${stats.occupied} measured patches,`
-      + ` ${stats.cells} cells, peak ${stats.peak.toFixed(1)}<br />grey = no cell measured, pale = cell without transcript`,
+
+    // the overlay follows the highlight control, so its caption states the band it is showing
+    overlayCaption: (fraction) => (fraction >= 1 ? "block norm over H&amp;E, every firing patch"
+      : `block norm over H&amp;E, strongest ${Math.round(fraction * 100)}% of firing patches`),
+    heatCaption: (patches) => `block norm, all ${patches} patches`,
+    geneCaption: (gene, stats) => `${gene} log1p CPM, mean over each patch's cells<br />`
+      + `${stats.expressing}/${stats.occupied} patches with cells express it, peak ${stats.peak.toFixed(1)}, ${stats.cells} cells`
+      + "<br />grey = no cell measured, pale = cell without transcript",
   },
 };

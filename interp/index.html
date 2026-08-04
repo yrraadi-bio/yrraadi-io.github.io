@@ -21,7 +21,7 @@
   </a>
   <span class="dock-rule" aria-hidden="true"></span>
   <h1 class="dock-name">Pathway <em>Explorer</em></h1>
-  <button id="reload" class="btn-reload" aria-label="Reload assets" title="Re-fetch the scripts, styles and pathway data, bypassing the browser cache">
+  <button id="reload" class="btn-reload" aria-label="Reload assets" title="Re-read the built data past the browser cache and repaint the cards, plots and tiles, keeping the page as it is">
     <span class="btn-icon" aria-hidden="true">&#8635;</span>
   </button>
 </header>
@@ -29,8 +29,19 @@
 <main class="layout">
 
   <aside id="pathwaySidebar" class="sidebar">
+    <div class="browse-wrap">
+      <div class="tabs browse-tabs" id="browseTabs">
+        <button data-browse="pathway" class="active">Gene sets</button>
+        <button data-browse="block">Blocks</button>
+      </div>
+    </div>
     <div id="collectionWrap" class="collection-wrap">
       <select id="collectionSelect" class="collection-select" aria-label="Gene set collection"></select>
+          <select id="blockSort" class="collection-select hidden" aria-label="Order of the block list">
+            <option value="valid" selected>blocks with a set first</option>
+            <option value="effect">strongest held-out r</option>
+            <option value="layer">encoder layer order</option>
+          </select>
     </div>
     <div class="search-wrap">
       <button id="sidebarToggle" class="btn-sidebar" aria-controls="pathwaySidebar" aria-expanded="true" title="Hide pathway list">
@@ -58,31 +69,52 @@
             </span>
           </div>
           <p class="meta">
-            <a id="keggLink" target="_blank" rel="noopener"><span id="pathwayId"></span></a>
-            <span class="dot">·</span>
+            <span id="metaLead">
+              <a id="keggLink" target="_blank" rel="noopener"><span id="pathwayId"></span></a>
+              <span class="dot">·</span>
+            </span>
             <span id="supportedCount"></span>
             <span class="info" tabindex="0" role="button" aria-label="How to read these numbers">
               <span class="info-mark" aria-hidden="true">i</span>
               <span class="info-panel" role="tooltip">
                 <span><strong>Pathway score:</strong> mean training-standardized log1p-CPM expression of the pathway's genes measured on a tile, positive above the training average and negative below.</span>
-                <span><strong>Raw r:</strong> Pearson correlation between that score and the selected block's activation magnitude across training tiles. Held-out refers to the 12 unseen slides and their tiles.</span>
-                <span><strong>Gene clustering:</strong> Moran's I of the gene over the selected block's manifold, high when tiles that agree on the gene sit together. Cards are ranked by it; the arrow gives the sign of the gene's correlation with block activation.</span>
+                <span><strong>Block norm:</strong> L2 norm of the 16-dimensional coordinate a block assigns to a patch, zero wherever the block is not among that patch's active blocks; a tile's figure is the log1p of that norm averaged over its 196 patches.</span>
+                <span><strong>Raw r:</strong> Pearson correlation between that score and the selected block's tile norm across training tiles. Held-out refers to the 12 unseen slides and their tiles.</span>
               </span>
             </span>
           </p>
         </div>
       </div>
 
-      <h3 class="section-title">Genes clustered in this block</h3>
-      <div id="geneList" class="gene-list"></div>
+      <div id="blocksSection">
+        <h3 class="section-title">Top activating blocks
+          <span class="info" tabindex="0" role="button" aria-label="How to read these numbers">
+            <span class="info-mark" aria-hidden="true">i</span>
+            <span class="info-panel" id="blockInfo" role="tooltip"></span>
+          </span>
+        </h3>
+        <div id="blockList" class="block-list"></div>
+      </div>
 
-      <h3 class="section-title">Top activating blocks
-        <span class="info" tabindex="0" role="button" aria-label="How to read these numbers">
+      <div id="setsSection" class="hidden">
+        <h3 class="section-title">Strongest gene sets this block carries
+          <span class="info" tabindex="0" role="button" aria-label="How to read these numbers">
+            <span class="info-mark" aria-hidden="true">i</span>
+            <span class="info-panel" id="setInfo" role="tooltip"></span>
+          </span>
+        </h3>
+        <div id="setList" class="block-list"></div>
+      </div>
+
+      <h3 class="section-title">Genes clustered in this block
+        <span class="info" tabindex="0" role="button" aria-label="How these genes are ranked">
           <span class="info-mark" aria-hidden="true">i</span>
-          <span class="info-panel" id="blockInfo" role="tooltip"></span>
+          <span class="info-panel" role="tooltip">
+            <span>Clustering is Moran's I of the gene over the selected block's manifold, high when tiles that agree on the gene sit together. Cards are ranked by it, and the arrow gives the sign of the gene's correlation with the block norm.</span>
+          </span>
         </span>
       </h3>
-      <div id="blockList" class="block-list"></div>
+      <div id="geneList" class="gene-list"></div>
 
       <div class="manifold-head">
         <h3 class="section-title">Block manifold</h3>
@@ -134,7 +166,7 @@
         <h3 class="section-title">Top tiles</h3>
         <div class="controls">
           <div class="tabs" id="modeTabs">
-            <button data-mode="block" class="active">By block activation</button>
+            <button data-mode="block" class="active">By block norm</button>
             <button data-mode="score">By pathway score</button>
           </div>
           <label class="ctl">highlight
@@ -157,14 +189,14 @@
         </div>
       </div>
       <div class="scalebar">
-        <span class="scale-title">patch activation</span>
+        <span class="scale-title">block norm per patch</span>
         <span id="scaleMin" class="tick"></span>
         <span class="ramp"></span>
         <span id="scaleMax" class="tick"></span>
       </div>
 
       <div id="geneScale" class="scalebar hidden">
-        <span class="scale-title"><span id="geneScaleName"></span> expression</span>
+        <span class="scale-title"><span id="geneScaleName"></span> log1p CPM per patch</span>
         <span id="geneScaleMin" class="tick"></span>
         <span class="ramp gene"></span>
         <span id="geneScaleMax" class="tick"></span>
@@ -199,9 +231,9 @@
     <h3 id="modalTitle"></h3>
     <p id="modalMeta" class="modal-meta"></p>
     <div class="modal-grid" id="modalGrid">
-      <figure><canvas id="modalRaw" width="448" height="448"></canvas><figcaption>tile (H&amp;E)</figcaption></figure>
-      <figure><canvas id="modalOverlay" width="448" height="448"></canvas><figcaption>overlay, strongest patches only</figcaption></figure>
-      <figure><canvas id="modalHeat" width="448" height="448"></canvas><figcaption>14×14 patch map, every patch from 0 to peak</figcaption></figure>
+      <figure><canvas id="modalRaw" width="448" height="448"></canvas><figcaption>H&amp;E tile</figcaption></figure>
+      <figure><canvas id="modalOverlay" width="448" height="448"></canvas><figcaption id="modalOverlayCaption"></figcaption></figure>
+      <figure><canvas id="modalHeat" width="448" height="448"></canvas><figcaption id="modalHeatCaption"></figcaption></figure>
       <figure id="modalGeneFigure" class="hidden"><canvas id="modalGene" width="448" height="448"></canvas><figcaption id="modalGeneCaption"></figcaption></figure>
     </div>
     <p id="modalStats" class="modal-stats"></p>

@@ -37,6 +37,50 @@ python interp/build_site_data.py --model gigapath --pathways 400 --blocks 6 --ti
 
 `--pathways` caps at however many pathways have held-out support, 286 for either model.
 
+The explorer reads the same evidence along either axis, and the block-first axis inverts what the
+pathway documents already hold:
+
+```bash
+python interp/build_block_view.py
+```
+
+That writes `data/blocks/index.json`: every block whose best association clears `MIN_EFFECT` in
+held-out |r|, its strongest eight gene sets, and the genes it clusters pooled over those sets. Both
+cuts are constants at the top of the script, and they exist because the tail of blocks near |r| 0
+is not worth scrolling and a few blocks carry dozens of sets. Run it after
+`build_site_data.py`, since it reads that output rather than the analysis. A block's top tiles are
+identical in every set that lists it, which is why the block view can reuse a pathway document for
+its tiles instead of storing its own copy.
+
+The documents hold supported associations only, so the block view shows what reproduced and nothing
+else. Held-out r is averaged over 12 patients while training r is pooled over 46 slides, so the
+held-out figure is the noisier of the two and requiring it to hold selects its upper tail; a card's
+held-out r therefore reads high relative to its training r by construction.
+
+The same script also decides which cards keep their colour, since a block that tracks a dozen sets
+equally well has said nothing about any of them. A block points at one set when its strongest
+|held-out r| beats the mean of that block's other effects above `MIN_EFFECT` by a further
+`MIN_EFFECT`. Only held-out r enters the rule, and it is measured over every association the block
+reproduces, read from `pathway_transfer_heldout.parquet` rather than from the documents: the site
+exports 110 of the 335 sets that reproduce something, so a rule read off the documents would only
+ever nominate a block for a set it already ranked into, and it did. Under the documents alone, 96
+blocks looked like they pointed at a set, and for 61 of them the set was not the block's strongest
+reproduced association.
+
+The winner is credited only where it has a card on that block, because a set with no card has no
+tiles, genes or colouring to stand on, and crediting the runner-up instead would name a set the
+evidence did not pick. Of the 1,967 blocks that reproduce anything, 264 single out a set and 21 do so
+onto a set this build exported. That is the cost of the export cap rather than of the rule, and
+raising `--pathways` and `--blocks` is what moves the other 243.
+
+The result is written to `data/blocks/dominance.json` as `block_global_index -> {slug, pathway_id}`,
+1.4 KB, which the explorer loads up front and greys from along either axis: in the block view every
+set but the winner is greyed, and in the pathway view every block that does not point at the set on
+screen is greyed. Crediting only drawable winners also means a credited block always has a card in
+its own pathway's document, so the pathway view can never omit it; `build` asserts this rather than
+leaving the explorer to handle a case that cannot arise. The block list's default order puts blocks
+that point at a set first, each marked with a dot, ranked by |held-out r| inside both groups.
+
 Every build first re-encodes a few tiles per dictionary and compares them against
 `tile_block_activity`, because the site's evidence and its overlays must come from the same linear
 map. A wrong encoder orientation lands at `max|diff|` near 3 with correlation near 0.1, whereas the
@@ -73,7 +117,7 @@ blue ring at the patch edge. Xenium measures expression
 once per cell-centred 256px patch, so a tile's own vector holds no sub-tile detail; the localization
 instead comes from the shard's `neighbor_idx`/`neighbor_dxdy` arrays, which list neighbouring cell
 measurements with normalized offsets where ±1 spans the tile footprint. Those cells are binned onto
-the same 14×14 grid as the block activations and averaged per patch, so blue (block firing) and green
+the same 14×14 grid as the block norms and averaged per patch, so blue (block firing) and green
 (gene expression) are directly comparable in position. Patches with no measured cell are left
 unmarked on the tile, and the modal's fourth panel separates the three cases explicitly: grey for no
 cell measured, pale for a cell carrying no transcript, green for expression. Values are per-cell
@@ -97,7 +141,7 @@ slide identity: a slide's tiles both group in the block's space and share an exp
 dashed border still marks genes missing from some slide panels.
 
 Blocks are restricted to held-out **supported** pathway associations, ranked by |held-out effect|.
-Tiles are shortlisted by mean block activity, then ranked by peak patch activation so overlays show
+Tiles are shortlisted by mean block norm, then ranked by peak patch norm so overlays show
 localized structure.
 
 The "By pathway score" tab instead ranks tiles by measured pathway expression and holds that order
@@ -125,7 +169,9 @@ transpose here.
 ## Layout
 
 - `build_site_data.py` — builds `data/index.json`, `data/pathways/<hsa>.json`, and `tiles/*.jpg`
+- `build_block_view.py` — inverts those documents into `data/blocks/index.json` for the block-first view
 - `index.html`, `app.js`, `styles.css` — the static viewer, no build step
+- `copy.js` — every explanatory string the viewer shows
 - `serve.sh` — local static server
 
 Per-model sources live in the `MODELS` profiles in `build_site_data.py`; tile images and gene
