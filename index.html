@@ -7,14 +7,25 @@
     <meta name="description" content="What if we made as many cancer drugs next year as we have in the last 10?">
 
     <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Origin Bio">
     <meta property="og:title" content="What if · Origin Bio">
     <meta property="og:description" content="What if we made as many cancer drugs next year as we have in the last 10?">
     <meta property="og:url" content="https://origin.bio/">
-    <meta property="og:image" content="https://origin.bio/assets/thumbnail-og.jpg">
+    <!-- This page's own card. The one the research posts share is the DNA figure from
+         Axis, which says nothing about cancer drugs. Dimensions are declared so a
+         scraper lays out the card before it has fetched the image, and the file is a
+         real JPEG at 1.91:1 — a PNG behind a .jpg name is refused by some of them,
+         and anything squarer gets cropped or letterboxed. -->
+    <meta property="og:image" content="https://origin.bio/assets/og-home.jpg">
+    <meta property="og:image:type" content="image/jpeg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Origin Bio: what if we made as many cancer drugs next year as we have in the last 10?">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="What if · Origin Bio">
     <meta name="twitter:description" content="What if we made as many cancer drugs next year as we have in the last 10?">
-    <meta name="twitter:image" content="https://origin.bio/assets/thumbnail-og.jpg">
+    <meta name="twitter:image" content="https://origin.bio/assets/og-home.jpg">
+    <meta name="twitter:image:alt" content="Origin Bio: what if we made as many cancer drugs next year as we have in the last 10?">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
