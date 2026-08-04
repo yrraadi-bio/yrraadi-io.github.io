@@ -3,12 +3,25 @@
     "name": "origin-site",
     "compatibility_date": "2026-08-03",
 
+    // Kept on deliberately. Declaring the domains below turns this off by default,
+    // which retires the workers.dev address — the one way in that does not depend on
+    // the domain being wired up correctly, and so the one worth having when it isn't.
+    "workers_dev": true,
+
+    // The site answers on the apex and on www. Both are custom domains rather than
+    // routes, so Cloudflare owns the DNS record for each and issues the certificate;
+    // a route would need a record to already exist and point somewhere.
+    "routes": [
+        { "pattern": "origin.bio", "custom_domain": true },
+        { "pattern": "www.origin.bio", "custom_domain": true }
+    ],
+
     // dist/ is built by _dev/publish.sh and holds only what should be public; the
     // repo root is not served directly because .git lives there.
     //
-    // No "main" and no Worker script: every route here is a file on disk. The
-    // Worker script arrives with R2, when the slide tiles under api/ move out of
-    // the repo and have to be fetched from a bucket instead.
+    // No "main" and no Worker script: every URL here is a file on disk. The Worker
+    // script arrives with R2, when the slide tiles under api/ move out of the repo
+    // and have to be fetched from a bucket instead.
     "assets": {
         "directory": "./dist",
         // A multi-page site rather than a single-page app: /blogs/muon/ has to
