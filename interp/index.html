@@ -9,7 +9,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
 <link rel="icon" href="../assets/favicon.png" type="image/png">
-<link rel="stylesheet" href="styles.css" />
+<!-- the stamp is bumped whenever styles.css, copy.js or app.js changes, so a browser cannot run one
+     version of the viewer against another -->
+<link rel="stylesheet" href="styles.css?v=20260804g" />
 </head>
 <body>
 
@@ -31,26 +33,26 @@
   <aside id="pathwaySidebar" class="sidebar">
     <div class="browse-wrap">
       <div class="tabs browse-tabs" id="browseTabs">
-        <button data-browse="pathway" class="active">Gene sets</button>
-        <button data-browse="block">Blocks</button>
+        <button data-browse="block" class="active">Features</button>
+        <button data-browse="pathway">Gene sets</button>
       </div>
     </div>
     <div id="collectionWrap" class="collection-wrap">
-      <select id="collectionSelect" class="collection-select" aria-label="Gene set collection"></select>
-          <select id="blockSort" class="collection-select hidden" aria-label="Order of the block list">
-            <option value="valid" selected>blocks with a set first</option>
+      <select id="collectionSelect" class="collection-select hidden" aria-label="Gene set collection"></select>
+          <select id="blockSort" class="collection-select" aria-label="Order of the feature list">
+            <option value="valid" selected>features with a set first</option>
             <option value="effect">strongest held-out r</option>
             <option value="layer">encoder layer order</option>
           </select>
     </div>
     <div class="search-wrap">
-      <button id="sidebarToggle" class="btn-sidebar" aria-controls="pathwaySidebar" aria-expanded="true" title="Hide pathway list">
+      <button id="sidebarToggle" class="btn-sidebar" aria-controls="pathwaySidebar" aria-expanded="true" title="Hide the list">
         <span id="sidebarToggleGlyph" class="sidebar-toggle-glyph" aria-hidden="true">‹</span>
       </button>
-      <input id="search" type="search" placeholder="Search pathway name or id…" autocomplete="off" />
+      <input id="search" type="search" placeholder="Search feature number or gene set…" autocomplete="off" />
     </div>
     <div id="pathwayList" class="pathway-list"></div>
-    <div id="sidebarResize" class="sidebar-resize" role="separator" aria-orientation="vertical" title="Drag to resize the pathway list, double-click to reset"></div>
+    <div id="sidebarResize" class="sidebar-resize" role="separator" aria-orientation="vertical" title="Drag to resize the list, double-click to reset"></div>
   </aside>
 
   <section class="content">
@@ -64,7 +66,7 @@
           <div class="pathway-title-row">
             <h2 id="pathwayName"></h2>
             <span id="basicCorrelation" class="basic-correlation hidden" aria-live="polite">
-              <span class="correlation-label">raw pathway × selected block</span>
+              <span class="correlation-label">raw pathway × selected feature</span>
               <strong id="basicCorrelationValue"></strong>
             </span>
           </div>
@@ -78,8 +80,8 @@
               <span class="info-mark" aria-hidden="true">i</span>
               <span class="info-panel" role="tooltip">
                 <span><strong>Pathway score:</strong> mean training-standardized log1p-CPM expression of the pathway's genes measured on a tile, positive above the training average and negative below.</span>
-                <span><strong>Block norm:</strong> L2 norm of the 16-dimensional coordinate a block assigns to a patch, zero wherever the block is not among that patch's active blocks; a tile's figure is the log1p of that norm averaged over its 196 patches.</span>
-                <span><strong>Raw r:</strong> Pearson correlation between that score and the selected block's tile norm across training tiles. Held-out refers to the 12 unseen slides and their tiles.</span>
+                <span><strong>Feature norm:</strong> L2 norm of the 16-dimensional coordinate a feature assigns to a patch, zero wherever the feature is not among that patch's active features; a tile's figure is the log1p of that norm averaged over its 196 patches.</span>
+                <span><strong>Raw r:</strong> Pearson correlation between that score and the selected feature's tile norm across training tiles. Held-out refers to the 12 unseen slides and their tiles.</span>
               </span>
             </span>
           </p>
@@ -87,42 +89,48 @@
       </div>
 
       <div id="blocksSection">
-        <h3 class="section-title">Top activating blocks
+        <h3 class="section-title">Top activating features
           <span class="info" tabindex="0" role="button" aria-label="How to read these numbers">
             <span class="info-mark" aria-hidden="true">i</span>
             <span class="info-panel" id="blockInfo" role="tooltip"></span>
           </span>
+          <button id="blockMore" class="dull-toggle hidden" type="button" aria-pressed="false"></button>
+          <button id="blockDull" class="dull-toggle hidden" type="button" aria-pressed="false"></button>
         </h3>
         <div id="blockList" class="block-list"></div>
       </div>
 
       <div id="setsSection" class="hidden">
-        <h3 class="section-title">Strongest gene sets this block carries
+        <h3 class="section-title">Strongest gene sets this feature carries
           <span class="info" tabindex="0" role="button" aria-label="How to read these numbers">
             <span class="info-mark" aria-hidden="true">i</span>
             <span class="info-panel" id="setInfo" role="tooltip"></span>
           </span>
+          <button id="setMore" class="dull-toggle hidden" type="button" aria-pressed="false"></button>
+          <button id="setDull" class="dull-toggle hidden" type="button" aria-pressed="false"></button>
         </h3>
         <div id="setList" class="block-list"></div>
       </div>
 
-      <h3 class="section-title">Genes clustered in this block
+      <div id="geneSection">
+      <h3 class="section-title">Genes clustered in this feature
         <span class="info" tabindex="0" role="button" aria-label="How these genes are ranked">
           <span class="info-mark" aria-hidden="true">i</span>
           <span class="info-panel" role="tooltip">
-            <span>Clustering is Moran's I of the gene over the selected block's manifold, high when tiles that agree on the gene sit together. Cards are ranked by it, and the arrow gives the sign of the gene's correlation with the block norm.</span>
+            <span>Clustering is Moran's I of the gene over the selected feature's manifold, high when tiles that agree on the gene sit together. Cards are ranked by it, and the arrow gives the sign of the gene's correlation with the feature norm.</span>
           </span>
         </span>
       </h3>
       <div id="geneList" class="gene-list"></div>
+      </div>
 
       <div class="manifold-head">
-        <h3 class="section-title">Block manifold</h3>
+        <h3 class="section-title">Feature manifold</h3>
         <div class="controls">
           <div class="tabs" id="manifoldTabs">
             <button data-view="pathway" class="active">Pathway score</button>
             <button data-view="gene" id="manifoldGeneTab" class="hidden">Gene expression</button>
-            <button data-view="cross">Cross-block map</button>
+            <button data-view="cross">Cross-feature map</button>
           </div>
           <label class="ctl" id="scopeControl">tiles
             <select id="manifoldScope">
@@ -133,7 +141,7 @@
           </label>
           <label class="ctl hidden" id="crossControl">colour
             <select id="crossColour">
-              <option value="dominant" selected>dominant pathway</option>
+              <option value="strongest" selected>strongest pathway</option>
               <option value="coordinate">pathway effect</option>
               <option value="gene">selected gene effect</option>
               <option value="layer">encoder layer</option>
@@ -149,14 +157,14 @@
 
       <div class="manifold-recipe">
         <div id="recipeTile">
-          <p><strong>What this is.</strong> One point per tile the selected block fires on, placed by the coordinates that
-            block assigns the tile and reduced to three dimensions by UMAP, so the layout belongs to that block alone.</p>
+          <p><strong>What this is.</strong> One point per tile the selected feature fires on, placed by the coordinates
+            that feature assigns the tile and reduced to three dimensions by UMAP, so the layout belongs to it alone.</p>
           <p><strong>The axes.</strong> UMAP 1, 2 and 3 carry no units, so only proximity is meaningful; both plots hold the
             same positions and rotate independently, the left recoloured by the tabs and the right showing tissue of origin.</p>
         </div>
         <div id="recipeCross" class="hidden">
-          <p><strong>What this is.</strong> One point per block rather than per tile, placed by how strongly the block tracks
-            each of the 1,656 measured genes and reduced to three dimensions by UMAP.</p>
+          <p><strong>What this is.</strong> One point per feature rather than per tile, placed by how strongly the feature
+            tracks each of the 1,656 measured genes and reduced to three dimensions by UMAP.</p>
           <p><strong>The axes.</strong> The genes are compressed away, so a gene or pathway appears as colour rather than as a
             direction and only proximity is meaningful.</p>
         </div>
@@ -166,7 +174,7 @@
         <h3 class="section-title">Top tiles</h3>
         <div class="controls">
           <div class="tabs" id="modeTabs">
-            <button data-mode="block" class="active">By block norm</button>
+            <button data-mode="block" class="active">By feature norm</button>
             <button data-mode="score">By pathway score</button>
           </div>
           <label class="ctl">highlight
@@ -189,7 +197,7 @@
         </div>
       </div>
       <div class="scalebar">
-        <span class="scale-title">block norm per patch</span>
+        <span class="scale-title">feature norm per patch</span>
         <span id="scaleMin" class="tick"></span>
         <span class="ramp"></span>
         <span id="scaleMax" class="tick"></span>
@@ -221,7 +229,7 @@
   </nav>
   <p class="footer-line">Origin Bio &middot; mapping cancer biology in real tumors</p>
   <p class="footer-line footer-line--src">
-    Block-sparse features over Prov-GigaPath, 16 dimensions per block &middot; 46 training slides, 12 held out for every association shown
+    Block-sparse features over Prov-GigaPath, 16 dimensions per feature &middot; 46 training slides, 12 held out for every association shown
   </p>
 </footer>
 
@@ -241,7 +249,7 @@
 </div>
 
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
-<script src="copy.js"></script>
-<script src="app.js"></script>
+<script src="copy.js?v=20260804g"></script>
+<script src="app.js?v=20260804g"></script>
 </body>
 </html>

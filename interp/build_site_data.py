@@ -3,6 +3,7 @@
 import argparse
 import json
 import os
+from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 
@@ -10,6 +11,8 @@ import h5py
 import numpy as np
 import pandas as pd
 import torch
+
+import dominance
 
 BLOCKS_PER_DICTIONARY = 512
 TOKENS_PER_TILE = 196
@@ -322,7 +325,52 @@ def load_pathway_names(root, suffix=""):
     return {key: sentence_case(value["name"].replace(suffix, "") if suffix else value["name"]) for key, value in sets.items()}
 
 
-def select_pathways(root, n_pathways, n_blocks):
+def collection_roots(profile):
+
+    """Find every gene-set collection scored against the same encoder run as this build.
+
+    Args:
+        profile (dict): Model profile being built.
+
+    Returns:
+        list: (collection name, analysis root Path) pairs
+    """
+
+    return sorted((collection_profile(Path(entry["root"]), entry)["name"], Path(entry["root"]))
+                  for entry in MODELS.values() if entry["run_root"] == profile["run_root"])
+
+
+def required_blocks(profile, collection, data_root):
+
+    """Map each set this collection owns to the blocks that must carry a card for it.
+
+    The block-first view cards a block's strongest sets whether or not either side ranks into its own
+    cut, and a card whose document holds no card back is one the reader cannot open, so those pairs
+    are exported here. Blocks with no tile manifold never appear in that view and are left out.
+
+    Args:
+        profile (dict): Model profile being built.
+        collection (str): Collection name this bundle holds.
+        data_root (Path): Site ``data/`` directory, holding the exported tile manifolds.
+
+    Returns:
+        dict: pathway id -> set of block global indices that must card that pathway
+    """
+
+    index = json.loads((data_root / "manifold" / "block_manifolds_index.json").read_text())
+    blocks = {entry["block_global_index"] for entry in index["blocks"]}
+
+    pairs = dominance.carded(dominance.supported_effects(collection_roots(profile)), blocks)
+    wanted = defaultdict(set)
+
+    for (key, pathway), indices in pairs.items():
+        if key == collection:
+            wanted[pathway].update(indices)
+
+    return wanted
+
+
+def select_pathways(root, n_pathways, n_blocks, required):
 
     """Choose the best-evidenced pathways and their strongest held-out-supported blocks.
 
@@ -330,6 +378,7 @@ def select_pathways(root, n_pathways, n_blocks):
         root (Path): Gene/pathway analysis output root.
         n_pathways (int): Number of pathways to include.
         n_blocks (int): Number of blocks to keep per pathway.
+        required (dict): pathway id -> block global indices that must be kept whatever their rank.
 
     Returns:
         tuple: (ordered list of pathway ids, dict pathway id -> block rows DataFrame,
@@ -344,12 +393,13 @@ def select_pathways(root, n_pathways, n_blocks):
     supported["abs_heldout"] = supported["heldout_effect"].abs()
 
     counts = supported.groupby("pathway_id").size().sort_values(ascending=False)
-    ordered = counts.head(n_pathways).index.tolist()
+    ordered = counts.head(n_pathways).index.tolist() + sorted(set(required) - set(counts.head(n_pathways).index))
 
     per_pathway = {}
     for pathway in ordered:
-        rows = supported[supported["pathway_id"] == pathway].sort_values("abs_heldout", ascending=False).head(n_blocks)
-        per_pathway[pathway] = rows.reset_index(drop=True)
+        rows = supported[supported["pathway_id"] == pathway].sort_values("abs_heldout", ascending=False)
+        kept = pd.concat([rows.head(n_blocks), rows[rows["block_global_index"].isin(required[pathway])]])
+        per_pathway[pathway] = kept[~kept.index.duplicated()].sort_values("abs_heldout", ascending=False).reset_index(drop=True)
 
     return ordered, per_pathway, counts
 
@@ -1254,8 +1304,11 @@ def main():
     print(f"gene-set collection: {sets['label']} ({sets['name']})", flush=True)
     names = load_pathway_names(root, sets["name_suffix"])
 
-    ordered, per_pathway, counts = select_pathways(root, args.pathways, args.blocks)
-    print(f"selected {len(ordered)} pathways with held-out support", flush=True)
+    required = required_blocks(profile, sets["name"], out_dir / "data")
+    ordered, per_pathway, counts = select_pathways(root, args.pathways, args.blocks, required)
+    carded = sum(len(rows) for rows in per_pathway.values())
+    print(f"selected {len(ordered)} pathways with held-out support, {carded} block cards, of which"
+          f" {sum(len(blocks) for blocks in required.values())} are pairs the feature view cards", flush=True)
 
     tile_scores = load_pathway_tile_scores(root, ordered)
 

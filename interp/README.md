@@ -16,6 +16,11 @@ The two families differ in dictionary layout, activation sharding, checkpoint fo
 identity, all of which are described by the `MODELS` profiles in `build_site_data.py`. Both share
 `tile_id` as the tile key: Origin sets it to the sequence id, GigaPath to `SLIDE:source_row`.
 
+One naming note: the site calls a block a **feature**, while the analysis outputs, the JSON keys and
+the code keep `block` (`block_global_index`, `data/blocks/`, `blockLabel`). Only the prose in
+`copy.js` and `index.html` was renamed, so the two vocabularies meet at the rendering boundary and
+nowhere else.
+
 ## Quick start
 
 This directory is the published site, served at `/interp/` on GitHub Pages. Locally:
@@ -35,7 +40,12 @@ export OMP_NUM_THREADS=16
 python interp/build_site_data.py --model gigapath --pathways 400 --blocks 6 --tiles 6
 ```
 
-`--pathways` caps at however many pathways have held-out support, 286 for either model.
+`--pathways` caps at however many pathways have held-out support, 286 for either model, and
+`--blocks` caps the block cards each pathway keeps. Both are floors rather than exact counts: the
+build also exports every (set, feature) pair the feature axis cards, which is why the KEGG bundle
+holds 183 pathways and 1,922 block cards at `--pathways 60 --blocks 5`. Those pairs come from
+`dominance.carded`, so both builds cut the same list and no card on the site is dead: a card whose
+document holds no card back could be clicked and would open some other feature's evidence.
 
 The explorer reads the same evidence along either axis, and the block-first axis inverts what the
 pathway documents already hold:
@@ -44,42 +54,82 @@ pathway documents already hold:
 python interp/build_block_view.py
 ```
 
-That writes `data/blocks/index.json`: every block whose best association clears `MIN_EFFECT` in
-held-out |r|, its strongest eight gene sets, and the genes it clusters pooled over those sets. Both
-cuts are constants at the top of the script, and they exist because the tail of blocks near |r| 0
-is not worth scrolling and a few blocks carry dozens of sets. Run it after
-`build_site_data.py`, since it reads that output rather than the analysis. A block's top tiles are
-identical in every set that lists it, which is why the block view can reuse a pathway document for
-its tiles instead of storing its own copy.
+That writes `data/blocks/index.json`: every block with an association clearing `MIN_EFFECT` in
+held-out |r|, its strongest `SETS_PER_BLOCK` such gene sets, and the genes it clusters pooled over
+them. The explorer opens on this axis, and every card it lists can be selected, because
+`build_site_data.py` exports the same pairs. The floor is a constant at the top of `dominance.py` and it exists because the tail of
+blocks near |r| 0 is not worth scrolling. It applies to the cards as well as to the blocks:
+`supported` only asks whether an effect is distinguishable from zero over
+the 12 held-out patients, which an |r| of 0.075 on 3,310 tiles can pass with a bootstrap interval of
+[0.014, 0.145] and a ΔR² of 0.002, so a block that clears the floor once would otherwise still show
+sets that carry nothing. Blocks with no exported tile manifold are dropped too, since a block firing
+on a couple of dozen of the 16,000 tiles has nothing to browse and an effect measured over that
+handful is not worth listing. Run it after `build_site_data.py`, since it reads that output for its
+cards and the analysis roots named in it for the rest. A block's top tiles are identical in every set
+that lists it, which is why the block view can reuse a pathway document for its tiles instead of
+storing its own copy.
 
 The documents hold supported associations only, so the block view shows what reproduced and nothing
 else. Held-out r is averaged over 12 patients while training r is pooled over 46 slides, so the
 held-out figure is the noisier of the two and requiring it to hold selects its upper tail; a card's
 held-out r therefore reads high relative to its training r by construction.
 
-The same script also decides which cards keep their colour, since a block that tracks a dozen sets
-equally well has said nothing about any of them. A block points at one set when its strongest
-|held-out r| beats the mean of that block's other effects above `MIN_EFFECT` by a further
-`MIN_EFFECT`. Only held-out r enters the rule, and it is measured over every association the block
-reproduces, read from `pathway_transfer_heldout.parquet` rather than from the documents: the site
-exports 110 of the 335 sets that reproduce something, so a rule read off the documents would only
-ever nominate a block for a set it already ranked into, and it did. Under the documents alone, 96
-blocks looked like they pointed at a set, and for 61 of them the set was not the block's strongest
-reproduced association.
+## Which cards keep their colour
 
-The winner is credited only where it has a card on that block, because a set with no card has no
-tiles, genes or colouring to stand on, and crediting the runner-up instead would name a set the
-evidence did not pick. Of the 1,967 blocks that reproduce anything, 264 single out a set and 21 do so
-onto a set this build exported. That is the cost of the export cap rather than of the rule, and
-raising `--pathways` and `--blocks` is what moves the other 243.
+A block that tracks a dozen sets equally well has said nothing about any of them, so the site greys
+every association except the one a block's evidence singles out. `dominance.py` holds that rule and
+both build scripts read it: a block points at one set when its strongest |held-out r| beats the mean
+of that block's other effects above `MIN_EFFECT` by a further `MIN_EFFECT`. Only held-out r enters
+it, and it is measured over every association the block reproduces, read from
+`pathway_transfer_heldout.parquet` rather than from the documents, pooled across the collections
+scored against the same encoder run. A rule read off the documents would only ever nominate a block
+for a set it already ranked into, and it did: under the documents alone, 96 blocks looked like they
+pointed at a set, and for 61 of them the set was not the block's strongest reproduced association.
 
-The result is written to `data/blocks/dominance.json` as `block_global_index -> {slug, pathway_id}`,
-1.4 KB, which the explorer loads up front and greys from along either axis: in the block view every
-set but the winner is greyed, and in the pathway view every block that does not point at the set on
-screen is greyed. Crediting only drawable winners also means a credited block always has a card in
-its own pathway's document, so the pathway view can never omit it; `build` asserts this rather than
-leaving the explorer to handle a case that cannot arise. The block list's default order puts blocks
-that point at a set first, each marked with a dot, ranked by |held-out r| inside both groups.
+The rule then decides part of what gets exported, because a winning set with no card on its block
+has no tiles, genes or colouring to stand on, and crediting the runner-up instead would name a set
+the evidence did not pick. `build_site_data.py` therefore exports every winning set as a document and
+forces its winning blocks into that document's cards whatever their rank, on top of the
+`--pathways` and `--blocks` cuts. For KEGG that is 65 extra sets and 214 forced cards; for Hallmark,
+14 sets and 50 cards. Before this the export cap decided the answer instead of the evidence: 264
+blocks single out a set and only 21 of them landed on a set the build had exported.
+
+Of the 1,967 blocks that reproduce anything, 264 single out a set and 256 are credited, the other 8
+being blocks with no tile manifold that the block list drops anyway. The result is written to
+`data/blocks/dominance.json` as `block_global_index -> {slug, pathway_id}`, 14 KB, which the explorer
+loads up front and greys from along either axis: in the block view every set but the winner is
+greyed, and in the pathway view every block that does not point at the set on screen is greyed. The
+block list's default order puts blocks that point at a set first, each marked with a dot, ranked by
+|held-out r| inside both groups.
+
+The feature axis reads its cards from `pathway_transfer_heldout.parquet` rather than from the
+exported documents. A card list read off the documents showed features a single weak set and then
+greyed it for losing to sets the reader could not see: feature #0-150 carded bile acid metabolism at
+0.103 alone, greyed, with the six stronger sets that outvoted it nowhere on the page. The 380 listed
+features reproduce 7,003 associations above the floor; the strongest `SETS_PER_BLOCK` of each are
+carded, 1,798 cards in all, and the greying rule still weighs the rest. `dominance.carded` names
+those pairs and `build_site_data.py` exports every one of them, so all 1,798 can be selected, greyed
+or not, and `audit_site.py` reports the count that cannot. Both builds sort at full precision, since
+two effects that round to the same displayed r would otherwise swap places at the cut and card a set
+the bundle never exported. `data/blocks/index.json` is 1.4 MB, 140 KB over the wire.
+
+A set can reproduce inside a feature without any of its genes being measured there, so 25 features
+have no gene chips and the gene section hides itself rather than leaving an empty heading.
+
+Two cuts fold the cards away rather than drawing them, each with a pill beside the heading that
+counts what it holds back and reveals it on click. A greyed card is evidence the site is not asking
+anyone to read, so both sections open on the cards the rule kept; and a set carried by dozens of
+features is a wall rather than a finding, so the coloured cards past `CARD_LIMIT` wait behind the
+second pill, primary immunodeficiency opening on 8 of its 43. The answers are remembered in
+`localStorage` under `interp.showDull` and `interp.showAllCards`, and each drives both sections. The
+card the page is currently built around is always drawn, greyed or cut, since the genes, the manifold
+and the tiles below follow it; without that exception a feature that singles out nothing would open
+on an empty grid. The bars are scaled over every card rather than the drawn ones, so revealing the
+hidden cards cannot restretch the visible.
+
+The cross-block map's "strongest pathway" colouring is a different quantity and says so: it is each
+block's largest reproduced effect with no margin required, so a block coloured there can still be
+grey on every card.
 
 Every build first re-encodes a few tiles per dictionary and compares them against
 `tile_block_activity`, because the site's evidence and its overlays must come from the same linear
@@ -170,9 +220,22 @@ transpose here.
 
 - `build_site_data.py` — builds `data/index.json`, `data/pathways/<hsa>.json`, and `tiles/*.jpg`
 - `build_block_view.py` — inverts those documents into `data/blocks/index.json` for the block-first view
+- `dominance.py` — the floor, the card cut and the set each block points at, shared by both build scripts
+- `audit_site.py` — checks that everything the viewer can navigate to exists and agrees
 - `index.html`, `app.js`, `styles.css` — the static viewer, no build step
 - `copy.js` — every explanatory string the viewer shows
 - `serve.sh` — local static server
+
+Run `python interp/audit_site.py` after any rebuild. It walks every listed feature and every exported
+set and reports anything the viewer could reach and not find: a feature with no tile manifold or no
+selectable set, a card whose document is missing or holds no card back, a gene pointing at a set that
+is not on screen, a set credited by the greying rule but not carded, a pathway with no colouring.
+
+`index.html` loads the three local assets with a `?v=` stamp; bump it whenever one of them changes,
+or a browser will keep running the version it cached and can pair old code with new data. The data
+documents are rebuilt in place under stable names, so `loadJson` fetches them with `cache: no-cache`
+and lets the server revalidate: without it a browser can pair a fresh `blocks/index.json` with a
+months-old manifold index and report manifolds as missing that are sitting on disk.
 
 Per-model sources live in the `MODELS` profiles in `build_site_data.py`; tile images and gene
 localization come from `silico-folder/data/spatial_shards_hest_v1/xenium` for both.

@@ -9,14 +9,16 @@ const state = {
   gene: null,
   collections: [],
   slug: null,
-  browse: "pathway",
+  browse: "block",
   blocks: null,
   dominance: {},
   blockPick: null,
   blockSort: "valid",
+  showDull: false,
+  showAllCards: false,
   manifold: null,
   manifoldView: "pathway",
-  crossColour: "dominant",
+  crossColour: "strongest",
   manifoldCameras: {},
   blockManifold: null,
   tilePathway: null,
@@ -42,6 +44,14 @@ function bindTabs(strip, key, choose) {
   tabs(strip).forEach((button) => button.addEventListener("click", () => choose(button.dataset[key])));
 }
 
+// the greyed cards and the tail of the coloured ones stay folded away until asked for, and both
+// answers are remembered between visits
+const DULL_KEY = "interp.showDull";
+const CARDS_KEY = "interp.showAllCards";
+
+// how many coloured cards a section opens with, past which a set that many features carry becomes a wall
+const CARD_LIMIT = 8;
+
 const SIDEBAR_KEY = "interp.sidebarWidth";
 const SIDEBAR_DEFAULT = 288;
 const SIDEBAR_MIN = 200;
@@ -61,7 +71,9 @@ function loadJson(url) {
   const target = bust(url);
   if (jsonCache.has(target)) return jsonCache.get(target);
 
-  const promise = fetch(target).then((response) => {
+  // the bundle is rebuilt in place under stable names, so every document is revalidated against the
+  // server rather than read from the browser cache, which would otherwise mix an old index with new data
+  const promise = fetch(target, { cache: "no-cache" }).then((response) => {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return response.json();
   });
@@ -311,7 +323,7 @@ function pathwayRows() {
     mark: "",
     name: pathway.name,
     sub: pathway.pathway_id,
-    count: `${pathway.n_supported_blocks} blk`,
+    count: `${pathway.n_supported_blocks} ft`,
     active: state.pathway === index,
     select: () => selectPathway(index),
   }));
@@ -397,11 +409,11 @@ async function showPathway(index, blockOf) {
 async function selectBlock(globalIndex) {
   state.blockPick = globalIndex;
 
-  const block = blockEntry(globalIndex);
+  const sets = selectableSets(globalIndex);
   const current = state.pathway === null ? null : state.bundle.pathways[state.pathway].pathway_id;
 
   // a block usually carries the set already on screen, and keeping it makes the two views comparable
-  await showAssociation(block.pathways.find((entry) => entry.pathway_id === current) || block.pathways[0]);
+  await showAssociation(sets.find((entry) => entry.pathway_id === current) || sets[0]);
 }
 
 // one (block, set) pair, whichever collection the set belongs to
@@ -418,6 +430,11 @@ async function showAssociation(entry) {
 
 function blockEntry(globalIndex) {
   return state.blocks.blocks.find((block) => block.block_global_index === globalIndex);
+}
+
+// a block lists every set it reproduces, but only the ones the bundle exported can be opened
+function selectableSets(globalIndex) {
+  return blockEntry(globalIndex).pathways.filter((entry) => entry.drawable);
 }
 
 function renderHeader(entry) {
@@ -468,7 +485,7 @@ async function pickGene(gene) {
     state.gene = gene.symbol;
     state.manifoldView = "gene";
 
-    await showAssociation(blockEntry(state.blockPick).pathways.find((entry) => entry.pathway_id === gene.pathway_id));
+    await showAssociation(selectableSets(state.blockPick).find((entry) => entry.pathway_id === gene.pathway_id));
     return;
   }
 
@@ -487,6 +504,10 @@ function renderGenes() {
   const holder = el("geneList");
   const genes = geneCards();
   holder.innerHTML = "";
+
+  // a set can reproduce in a block without any of its genes being measured there, and an empty
+  // heading reads as a broken page rather than as an absence
+  el("geneSection").classList.toggle("hidden", genes.length === 0);
 
   const strongest = Math.max(...genes.map((gene) => gene.clustering));
   const sets = state.browse === "block" ? blockEntry(state.blockPick).pathways : [];
@@ -550,16 +571,29 @@ function effectRows(entry) {
     </table>`;
 }
 
-// one list of cards ranked by |held-out r|, with the bar drawn against the strongest of them
-function fillCards(holder, entries, describe) {
+// one list of cards ranked by |held-out r|, with the bar drawn against the strongest of them.
+// the bar scales over every card rather than the drawn ones, so hiding cards cannot silently
+// restretch the ones that stay. two cuts run over the list: the greyed cards wait behind their
+// toggle, and the coloured ones past CARD_LIMIT wait behind theirs
+function fillCards(holder, buttons, entries, describe) {
   const strongest = Math.max(...entries.map((entry) => Math.abs(entry.heldout_effect)), 0);
+  const rows = entries.map((entry, index) => [entry, describe(entry, index)]);
+
+  const rank = new Map();
+  rows.filter(([, shown]) => shown.picked).forEach(([entry], index) => rank.set(entry, index));
+
+  const limit = state.showAllCards ? Infinity : CARD_LIMIT;
+  const drawn = rows.filter(([entry, shown]) => (shown.active
+    || (shown.picked ? rank.get(entry) < limit : state.showDull)));
+
   holder.innerHTML = "";
 
-  entries.forEach((entry, index) => {
-    const shown = describe(entry, index);
+  drawn.forEach(([entry, shown]) => {
     const card = document.createElement("div");
-    card.className = `block-card${shown.extra}${shown.active ? " active" : ""}`;
-    if (shown.title) card.title = shown.title;
+    card.className = `block-card${shown.extra}${dulled(shown.picked)}${shown.active ? " active" : ""}`
+      + (shown.select ? "" : " inert");
+    card.title = `${shown.title ? `${shown.title} · ` : ""}${COPY.blocks.mark(shown.picked)}`
+      + (shown.select ? "" : ` · ${COPY.blocks.inert}`);
     card.innerHTML = `
       <div class="bhead">
         <span class="bid">${shown.head}</span>
@@ -567,9 +601,32 @@ function fillCards(holder, entries, describe) {
       </div>
       ${effectRows(entry)}
       <div class="bar"><span style="width:${strongest > 0 ? (Math.abs(entry.heldout_effect) / strongest) * 100 : 0}%"></span></div>`;
-    card.addEventListener("click", shown.select);
+    if (shown.select) card.addEventListener("click", shown.select);
     holder.appendChild(card);
   });
+
+  markToggle(buttons.dull, rows.filter(([, shown]) => !shown.picked && !shown.active).length,
+             state.showDull, COPY.blocks.dullToggle, COPY.blocks.dullTitle);
+  markToggle(buttons.more, Math.max(0, rank.size - CARD_LIMIT),
+             state.showAllCards, COPY.blocks.moreToggle, COPY.blocks.moreTitle);
+}
+
+// a cut is counted whether it is in force or not, so its control reads the same either way
+function markToggle(id, hidden, open, label, title) {
+  const button = el(id);
+
+  button.classList.toggle("hidden", hidden === 0);
+  button.textContent = label(open, hidden);
+  button.title = title;
+  button.setAttribute("aria-pressed", String(open));
+}
+
+// each cut is remembered, since a reader who opened one is usually reading the next feature the same way
+function toggleCut(field, key) {
+  state[field] = !state[field];
+  localStorage.setItem(key, String(state[field]));
+
+  renderCards();
 }
 
 // a block is valid when the held-out evidence singles out one of its sets
@@ -595,35 +652,29 @@ function renderSets() {
   const current = state.bundle.pathways[state.pathway].pathway_id;
   renderBasicCorrelation();
 
-  fillCards(el("setList"), block.pathways, (entry) => {
-    const picked = isDominant(block.block_global_index, entry.slug, entry.pathway_id);
-
-    return {
-      extra: ` set-card${dulled(picked)}`,
-      active: entry.pathway_id === current,
-      title: `${COPY.byBlock.setTitle(entry)} · ${COPY.blocks.mark(picked)}`,
-      head: entry.name,
-      tag: entry.collection_label,
-      select: () => showAssociation(entry),
-    };
-  });
+  fillCards(el("setList"), { dull: "setDull", more: "setMore" }, block.pathways, (entry) => ({
+    picked: isDominant(block.block_global_index, entry.slug, entry.pathway_id),
+    extra: " set-card",
+    active: entry.drawable && entry.pathway_id === current,
+    title: COPY.byBlock.setTitle(entry),
+    head: entry.name,
+    tag: entry.collection_label,
+    select: entry.drawable ? () => showAssociation(entry) : null,
+  }));
 }
 
 function renderBlocks() {
   renderBasicCorrelation();
 
-  fillCards(el("blockList"), state.detail.blocks, (block, index) => {
-    const picked = isDominant(block.block_global_index, state.slug, state.detail.pathway_id);
-
-    return {
-      extra: dulled(picked),
-      active: state.blockIndex === index,
-      title: COPY.blocks.mark(picked),
-      head: `#${blockNumber(block.layer, block.block)}`,
-      tag: "",
-      select: () => pickBlockCard(index),
-    };
-  });
+  fillCards(el("blockList"), { dull: "blockDull", more: "blockMore" }, state.detail.blocks, (block, index) => ({
+    picked: isDominant(block.block_global_index, state.slug, state.detail.pathway_id),
+    extra: "",
+    active: state.blockIndex === index,
+    title: "",
+    head: `#${blockNumber(block.layer, block.block)}`,
+    tag: "",
+    select: () => pickBlockCard(index),
+  }));
 }
 
 async function pickBlockCard(index) {
@@ -986,10 +1037,10 @@ function blockHover(indices) {
 
   return indices.map((i) => {
     const code = state.manifold.labels.code[i];
-    const dominant = code >= 0 ? legend[code].name
-      : code === -2 ? COPY.hover.dominantOther : COPY.hover.dominantNone;
+    const strongest = code >= 0 ? legend[code].name
+      : code === -2 ? COPY.hover.strongestOther : COPY.hover.strongestNone;
 
-    return COPY.hover.block(blockNumber(blocks.layer[i], blocks.block[i]), dominant);
+    return COPY.hover.block(blockNumber(blocks.layer[i], blocks.block[i]), strongest);
   });
 }
 
@@ -1023,11 +1074,11 @@ function selectedLabel() {
   const at = selectedRow();
   if (at < 0) return null;
 
-  return `block #${blockNumber(state.manifold.blocks.layer[at], state.manifold.blocks.block[at])}`;
+  return `feature #${blockNumber(state.manifold.blocks.layer[at], state.manifold.blocks.block[at])}`;
 }
 
 function blockLabel(block) {
-  return `block #${blockNumber(block.layer, block.block)}`;
+  return `feature #${blockNumber(block.layer, block.block)}`;
 }
 
 // the card's own name, needed to explain the rare block that transfers but is not in the embedding
@@ -1056,7 +1107,7 @@ function highlightTraces() {
   },
   markers("halo", spot, null, { size: 26, color: HIGHLIGHT, opacity: 0.18, line: { width: 0 } },
          { hoverinfo: "skip", showlegend: false }),
-  markers(`selected block: ${label}`, spot, [label],
+  markers(`selected feature: ${label}`, spot, [label],
          { size: 13, color: "rgba(0,0,0,0)", line: { color: HIGHLIGHT, width: 3.5 }, symbol: "circle" },
          { mode: "markers+text", textposition: "top center",
            textfont: { size: 12, color: HIGHLIGHT, family: "Inter, system-ui, sans-serif" },
@@ -1092,14 +1143,14 @@ function continuousTrace(rows, values, title, scale) {
   }, { showlegend: false })];
 }
 
-function dominantTraces(rows) {
+function strongestTraces(rows) {
   const blocks = state.manifold.blocks;
   const labels = state.manifold.labels;
   const traces = [];
 
   const background = rows.filter((index) => labels.code[index] < 0);
   if (background.length) {
-    traces.push(markers(`no dominant pathway (${background.length})`, xyz(blocks, background),
+    traces.push(markers(`no reproduced pathway (${background.length})`, xyz(blocks, background),
                        blockHover(background), { size: 2.0, color: MISSING_COLOUR, opacity: 0.5 }));
   }
 
@@ -1302,11 +1353,11 @@ async function renderCrossBlockMap() {
     subtitle = COPY.cross.pathway.subtitle(pathway.supported_blocks.length.toLocaleString());
     note.textContent = COPY.cross.pathway.note;
   } else {
-    traces = dominantTraces(rows);
-    title = COPY.cross.dominant.title(collection);
-    subtitle = COPY.cross.dominant.subtitle(state.manifold.labels.legend.length, state.manifold.labels.n_other);
+    traces = strongestTraces(rows);
+    title = COPY.cross.strongest.title(collection);
+    subtitle = COPY.cross.strongest.subtitle(state.manifold.labels.legend.length, state.manifold.labels.n_other);
     legend = "gutter";
-    note.textContent = COPY.cross.dominant.note;
+    note.textContent = COPY.cross.strongest.note;
   }
 
   note.innerHTML = COPY.cross.prefix + note.innerHTML;
@@ -1416,9 +1467,9 @@ function renderGallery() {
     const card = document.createElement("div");
     card.className = "tile-card";
     const score = tileScore(tile);
-    const silent = tile.n_firing === 0 ? '<div class="row silent">this block is silent here</div>' : "";
+    const silent = tile.n_firing === 0 ? '<div class="row silent">this feature is silent here</div>' : "";
     const coverage = state.mode === "score"
-      ? `<div class="row"><span>blocks firing here</span><b>${tile.n_blocks_firing}/${pathway.blocks.length}</b></div>`
+      ? `<div class="row"><span>features firing here</span><b>${tile.n_blocks_firing}/${pathway.blocks.length}</b></div>`
       : "";
 
     const genes = geneStats(tile);
@@ -1584,7 +1635,7 @@ async function selectBrowse(browse) {
   el("collectionSelect").classList.toggle("hidden", browse === "block");
   el("blockSort").classList.toggle("hidden", browse !== "block");
   el("search").placeholder = browse === "block"
-    ? "Search block number or gene set…" : "Search pathway name or id…";
+    ? "Search feature number or gene set…" : "Search pathway name or id…";
 
   if (browse === "block" && !state.blocks) await loadBlockIndex();
 
@@ -1633,7 +1684,7 @@ function toggleSidebar() {
   const visible = !collapsed;
 
   button.setAttribute("aria-expanded", String(visible));
-  button.title = visible ? "Hide pathway list" : "Show pathway list";
+  button.title = visible ? "Hide the list" : "Show the list";
   el("sidebarToggleGlyph").textContent = visible ? "‹" : "›";
 
   resizeManifold();
@@ -1707,6 +1758,8 @@ function bindControls() {
   el("collectionSelect").addEventListener("change", (event) => selectCollection(event.target.value));
   el("sidebarToggle").addEventListener("click", toggleSidebar);
   el("reload").addEventListener("click", reloadAssets);
+  ["blockDull", "setDull"].forEach((id) => el(id).addEventListener("click", () => toggleCut("showDull", DULL_KEY)));
+  ["blockMore", "setMore"].forEach((id) => el(id).addEventListener("click", () => toggleCut("showAllCards", CARDS_KEY)));
   bindSidebarResize();
 
   bindTabs("browseTabs", "browse", selectBrowse);
@@ -1764,17 +1817,22 @@ function bindControls() {
 }
 
 async function init() {
+  state.showDull = localStorage.getItem(DULL_KEY) === "true";
+  state.showAllCards = localStorage.getItem(CARDS_KEY) === "true";
+
   const manifest = await loadJson("data/collections.json");
   state.collections = manifest.collections;
   state.slug = state.collections[0].slug;
 
   state.bundle = await loadJson(`data/${state.slug}/index.json`);
-  await Promise.all([loadManifold(), loadDominance()]);
+  await Promise.all([loadManifold(), loadDominance(), loadBlockIndex()]);
 
   renderCollectionPicker();
   renderSidebar("");
   bindControls();
-  if (state.bundle.pathways.length) selectPathway(0);
+
+  // the site opens on the feature axis, which is the one that names what a feature carries
+  await selectBlock(state.blocks.blocks[0].block_global_index);
 }
 
 init();

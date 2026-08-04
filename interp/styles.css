@@ -563,6 +563,26 @@ a { color: inherit; text-decoration: none; }
 /* the label is set in tracked uppercase, which the marker and its panel must not inherit */
 .section-title .info { text-transform: none; letter-spacing: normal; }
 
+/* the greyed cards are folded away by default, so their count sits beside the heading as the way back */
+.dull-toggle {
+  margin-left: 8px;
+  padding: 3px 10px;
+  color: var(--ink-faint);
+  font-family: inherit;
+  font-size: 9.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  background: transparent;
+  border: 1px solid var(--rail);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 200ms ease, border-color 200ms ease, background 200ms ease;
+}
+
+.dull-toggle:hover { color: var(--ink); border-color: var(--accent-line); background: var(--accent-soft); }
+
+.dull-toggle[aria-pressed="true"] { color: var(--ink-dim); border-color: var(--rail-strong); }
+
 /* genes */
 
 .gene-list { display: flex; flex-wrap: wrap; gap: 9px; margin-bottom: 30px; }
@@ -671,6 +691,13 @@ a { color: inherit; text-decoration: none; }
 .block-card.dull { filter: grayscale(1); opacity: 0.5; }
 
 .block-card.dull:hover, .block-card.dull.active { opacity: 0.82; }
+
+/* a set listed for its weight alone has nothing to open, so the card does not offer to be opened */
+.block-card.inert { cursor: default; border-style: dashed; }
+
+.block-card.inert:hover { transform: none; box-shadow: none; border-color: var(--panel-line); }
+
+.block-card.inert:hover::before { transform: scaleX(0); }
 
 .block-card table { width: 100%; margin-top: 9px; border-collapse: collapse; font-size: 11px; }
 
