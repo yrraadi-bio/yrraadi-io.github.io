@@ -319,11 +319,7 @@ body {
                 background-color 0.55s ease,
                 border-color 0.55s ease,
                 box-shadow 0.55s ease,
-                padding 0.55s cubic-bezier(0.22, 1, 0.36, 1),
-                /* only ever changes on a phone, where the bar rests below the wordmark
-                   and rises to the top once it is floating; it settles back rather than
-                   dropping the moment the page reaches the top */
-                top 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+                padding 0.55s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* the halo the bar floats in */
@@ -2099,49 +2095,27 @@ body {
 
 @media (max-width: 860px) {
     .dock {
-        /* Below the wordmark rather than beside it. The two sit on one line on a wider
-           screen; here they cannot, and the bar taking the top for itself left the mark
-           stranded in the middle of the opening with a band of navy over its head. */
-        top: 76px;
-        padding: 5px 5px 5px 16px;
+        --dock-gap: 13px;
+        padding: 5px 5px 5px 12px;
     }
+    /* The mark rides in the bar at this width instead of standing in the opening's
+       corner, so it is here whether the bar is floating or not — the collapse exists
+       to hand it back to a hero wordmark that a phone no longer has. */
+    .dock__home,
+    .dock.is-afloat .dock__home {
+        width: 26px;
+        margin-right: 0;
+        opacity: 1;
+        visibility: visible;
+    }
+    .dock__home img { width: 26px; }
+    /* nothing left in the opening's corners, and the question follows the bar */
+    .corners { display: none; }
     /* Set with the button they stand beside, so the bar reads as one row and all three
        fit across a phone. Nowrap because a flex item will shrink under its own text
        before the bar admits it is too wide, and Data engine broke over two lines while
        the bar looked like it fitted. */
     .dock__links a { font-size: 0.64rem; letter-spacing: 0.1em; white-space: nowrap; }
-    .dock.is-afloat {
-        /* Once it has left the opening behind there is no wordmark above it to make
-           room for — it carries its own — so it takes the top back. */
-        top: 14px;
-    }
-    /* The mark stays collapsed here, floating or not. Four things do not fit across a
-       phone: with it the returning bar came to 399px on a 390px screen and hung off
-       both edges. The two links and the button are what the bar is for, so the way
-       home goes rather than one of them. The negative margin comes back with it, or
-       the gap it was cancelling is left behind as a hole at the head of the bar. */
-    .dock.is-afloat .dock__home {
-        width: 0;
-        margin-right: calc(-1 * var(--dock-gap));
-        opacity: 0;
-        visibility: hidden;
-    }
-    /* The wordmark is held out to the left corner at a wider width; here it falls back
-       into the flow at the top of the opening, and the opening centres its children,
-       so it needs the full width to have a left corner to sit in. */
-    .corners {
-        display: flex;
-        align-items: center;
-        width: 100%;
-        /* the lane the fixed bar hangs in, since it is out of the flow and the
-           question would otherwise be set underneath it */
-        margin-bottom: 68px;
-    }
-    .brand {
-        position: static;
-        min-height: 0;
-    }
-    .brand img { width: 96px; }
     /* the one thing on the page a visitor is meant to press, so it keeps a
        thumb's worth of height even where everything beside it is cut down */
     .access {
@@ -2150,9 +2124,9 @@ body {
         font-size: 0.64rem;
         letter-spacing: 0.1em;
     }
-    /* The wordmark is the first thing on the page now, set where it sits on a wider
-       screen. The 11vh here was clearance for a pill that no longer starts above it. */
-    .opening { padding: 22px 5vw 8vh; }
+    /* clearance for the fixed bar, which is out of the flow and would otherwise have
+       the question set underneath it */
+    .opening { padding: 78px 5vw 8vh; }
     /* the longest question runs to three lines at this measure, and the window
        must not move when it is the one being typed */
     .question { min-height: 3.48em; }
@@ -2341,15 +2315,20 @@ body {
     .verdict__lead { font-size: clamp(1.6rem, 10.4vw, 2.35rem); }
     .captions { left: 6vw; right: 6vw; }
     .verdict__copy { left: 6vw; right: 6vw; }
-    /* Two links and a button is the whole bar, and none of them can be dropped, so
-       every measure across it comes in a little. At 320px it was running edge to
-       edge with no navy either side of it, which reads as the page overflowing. */
+    /* The mark, two links and a button is the whole bar, and none of the four can be
+       dropped — the mark is the way back to the top and the only one of them the
+       opening no longer carries anywhere else — so every measure across it comes in
+       a little instead. At 320px it was running edge to edge with no navy either
+       side of it, which reads as the page overflowing. */
     .dock {
-        --dock-gap: 12px;
-        padding-left: 12px;
+        --dock-gap: 10px;
+        padding-left: 11px;
     }
-    .dock__links a { font-size: 0.58rem; letter-spacing: 0.06em; }
-    .access { padding: 0 13px; }
+    .dock__home,
+    .dock.is-afloat .dock__home,
+    .dock__home img { width: 18px; }
+    .dock__links a { font-size: 0.55rem; letter-spacing: 0.05em; }
+    .access { padding: 0 11px; }
 }
 
 /* ---------- Short viewports ----------

@@ -40,7 +40,13 @@
 
     <header class="dock">
         <a class="dock__home" href="#workspace" aria-label="Back to the top">
-            <img src="assets/logo-full.png" alt="Origin Bio">
+            <!-- The mark alone on a phone. The bar carries two links and the button
+                 there as well, and the lockup is 2.4 times as wide as it is tall,
+                 which is width the words beside it need more. -->
+            <picture>
+                <source media="(max-width: 860px)" srcset="assets/logo.png">
+                <img src="assets/logo-full.png" alt="Origin Bio">
+            </picture>
         </a>
 
         <nav class="dock__links">
@@ -446,8 +452,8 @@
                         </span>
                     </div>
                     <p class="case__mark">PD-L1 expression</p>
-                    <p class="case__grp">Previously treated NSCLC<span class="case__basis">Objective response &middot; <a class="case__src" href="https://doi.org/10.1016/S0140-6736(16)32517-X" target="_blank" rel="noopener noreferrer">OAK</a></span></p>
-                    <p class="case__rate" style="--r: 0.14">14<span>%</span></p>
+                    <p class="case__grp">Previously treated NSCLC<span class="case__basis">Objective response &middot; <a class="case__src" href="https://pmc.ncbi.nlm.nih.gov/articles/PMC7978274/pdf/jitc-2020-001865.pdf" target="_blank" rel="noopener noreferrer">TAIL</a></span></p>
+                    <p class="case__rate" style="--r: 0.11">11<span>%</span></p>
                     <p class="case__num">$4.3<span>B</span></p>
                 </li>
 
