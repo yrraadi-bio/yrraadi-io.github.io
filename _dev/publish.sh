@@ -24,6 +24,7 @@ mkdir -p "$OUT"
 # Hardlinks, so a 276 MB site costs no second copy on disk.
 rsync -a --link-dest="$PWD" \
     --exclude='/.git' \
+    --exclude='/.github' \
     --exclude='/.gitignore' \
     --exclude='/_dev' \
     --exclude='/dist' \
@@ -42,11 +43,30 @@ rsync -a --link-dest="$PWD" \
     --exclude='/yc_backed.png' \
     ./ "$OUT/"
 
-echo "dist/ built: $(find "$OUT" -type f | wc -l) files, $(du -sh --apparent-size "$OUT" | cut -f1)"
+FILES=$(find "$OUT" -type f | wc -l)
+
+echo "dist/ built: $FILES files, $(du -sh --apparent-size "$OUT" | cut -f1)"
+
+# Cloudflare takes 20,000 assets per deployment and refuses the upload past that,
+# far from anything that would point at the cause. Nearly all of the count is slide
+# tiles under api/, roughly 9,000 to a slide, so the way this gets tripped is
+# publishing another one — hence the number rather than the upload error.
+CEILING=20000
+NEAR=19000
+
+if [ "$FILES" -ge "$CEILING" ]; then
+    echo "ERROR: $FILES files, at or over Cloudflare's $CEILING limit. The deploy would be" >&2
+    echo "       rejected. Move the api/ tiles to R2 before publishing another slide." >&2
+    exit 1
+fi
+
+if [ "$FILES" -gt "$NEAR" ]; then
+    echo "WARNING: $FILES files, $((CEILING - FILES)) short of Cloudflare's $CEILING limit." >&2
+fi
 
 # Anything that should not have shipped is a bug in the excludes above, so say so
 # here rather than after it is public.
-for path in .git .gitignore _dev .wrangler node_modules CNAME .nojekyll wrangler.jsonc package.json package-lock.json; do
+for path in .git .github .gitignore _dev .wrangler node_modules CNAME .nojekyll wrangler.jsonc package.json package-lock.json; do
     if [ -e "$OUT/$path" ]; then
         echo "ERROR: $path reached dist/" >&2
         exit 1

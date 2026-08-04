@@ -3,6 +3,7 @@
     "private": true,
     "description": "The origin.bio site, deployed to Cloudflare as a Workers static-assets project.",
     "scripts": {
+        "preview": "python3 _dev/_serve.py 8810 .",
         "build": "bash _dev/publish.sh",
         "check": "bash _dev/publish.sh && wrangler deploy --dry-run",
         "deploy": "bash _dev/publish.sh && wrangler deploy"

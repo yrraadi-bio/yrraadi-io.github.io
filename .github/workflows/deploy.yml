@@ -1,0 +1,95 @@
+# The site goes live from here, not from anyone's laptop.
+#
+# Merging to main publishes to origin.bio. A pull request gets the same build and
+# the same checks, minus the upload, so a change that would be rejected is caught
+# in review rather than at deploy time.
+#
+# Needs two repository secrets, under Settings -> Secrets and variables -> Actions:
+#   CLOUDFLARE_API_TOKEN   scoped to Workers Scripts:Edit and Workers Routes:Edit
+#   CLOUDFLARE_ACCOUNT_ID  the account origin-site lives in
+# The repo is public, so neither can be committed to the tree.
+
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# One deploy at a time, and never cancel one midway: a half-finished asset upload
+# is a half-published site.
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # Runs for every pull request and needs no secrets, so it also covers branches
+  # pushed by someone without deploy access. Builds dist/, checks nothing private
+  # leaked into it, checks the file count against Cloudflare's ceiling, and has
+  # Wrangler read the result without uploading it.
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build and validate the publish directory
+        run: npm run check
+
+  deploy:
+    # Only from main, and only after the same checks have passed
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    needs: check
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Wrangler's own message for a missing token does not mention the secret, so
+      # the likeliest first failure is named plainly here instead.
+      - name: Confirm the Cloudflare credentials are present
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          missing=
+          [ -n "$CLOUDFLARE_API_TOKEN" ] || missing="$missing CLOUDFLARE_API_TOKEN"
+          [ -n "$CLOUDFLARE_ACCOUNT_ID" ] || missing="$missing CLOUDFLARE_ACCOUNT_ID"
+          if [ -n "$missing" ]; then
+              echo "Missing repository secret(s):$missing" >&2
+              echo "Add them under Settings -> Secrets and variables -> Actions." >&2
+              exit 1
+          fi
+          echo "Both secrets are set."
+
+      - name: Publish to Cloudflare
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npm run deploy
+
+      # A deploy that uploads but does not serve is the failure worth catching here,
+      # so the live page and the workspace bundle it names are both fetched back.
+      - name: Check the site answers
+        run: |
+          set -euo pipefail
+          sleep 20
+          for url in https://origin.bio/ https://origin.bio/platform/ https://origin.bio/api/runs; do
+              code=$(curl -s -o /dev/null -w '%{http_code}' --retry 4 --retry-delay 8 --retry-all-errors "$url")
+              echo "  $code  $url"
+              [ "$code" = "200" ] || { echo "ERROR: $url returned $code" >&2; exit 1; }
+          done
