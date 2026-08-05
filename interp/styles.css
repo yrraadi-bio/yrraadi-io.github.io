@@ -564,8 +564,8 @@ a { color: inherit; text-decoration: none; }
 .section-title .info { text-transform: none; letter-spacing: normal; }
 
 /* the greyed cards are folded away by default, so their count sits beside the heading as the way back */
-.dull-toggle {
-  margin-left: 12px;
+.card-toggle {
+  margin-left: 8px;
   padding: 3px 10px;
   color: var(--ink-faint);
   font-family: inherit;
@@ -579,9 +579,9 @@ a { color: inherit; text-decoration: none; }
   transition: color 200ms ease, border-color 200ms ease, background 200ms ease;
 }
 
-.dull-toggle:hover { color: var(--ink); border-color: var(--accent-line); background: var(--accent-soft); }
+.card-toggle:hover { color: var(--ink); border-color: var(--accent-line); background: var(--accent-soft); }
 
-.dull-toggle[aria-pressed="true"] { color: var(--ink-dim); border-color: var(--rail-strong); }
+.card-toggle[aria-pressed="true"] { color: var(--ink-dim); border-color: var(--rail-strong); }
 
 /* genes */
 

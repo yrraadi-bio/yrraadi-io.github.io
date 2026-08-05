@@ -14,7 +14,7 @@ const state = {
   dominance: {},
   blockPick: null,
   blockSort: "valid",
-  showAllCards: false,
+  showAllCards: true,
   manifold: null,
   manifoldView: "pathway",
   crossColour: "strongest",
@@ -43,10 +43,10 @@ function bindTabs(strip, key, choose) {
   tabs(strip).forEach((button) => button.addEventListener("click", () => choose(button.dataset[key])));
 }
 
-// the cards the cut leaves out stay folded away until asked for, and the answer is remembered between visits
+// the cards the rule kept can be folded down to the strongest few, and the answer is remembered
 const CARDS_KEY = "interp.showAllCards";
 
-// how far down the ranking a list is drawn before it needs a reason, which is a card the rule kept
+// how many cards are drawn whatever their colour, alongside every card the rule kept
 const CARD_LIMIT = 8;
 
 const SIDEBAR_KEY = "interp.sidebarWidth";
@@ -572,18 +572,15 @@ function effectRows(entry) {
     </table>`;
 }
 
-// one list of cards ranked by |held-out r| and one cut across it: the strongest CARD_LIMIT, every
-// card the rule kept in colour however far down it sits, and the card the page is built around. what
-// that leaves out is greyed by construction, and it waits behind the one control. a list with nothing
-// in colour opens on its selected card alone, since there is no finding to lead with.
-// the bar scales over every card rather than the drawn ones, so hiding cards cannot restretch the rest
+// the cards ranked by |held-out r|, of which the page draws the strongest CARD_LIMIT and every card
+// the rule kept, in that order and skipping the rest. the bar scales over every card rather than the
+// drawn ones, so a skipped card cannot silently restretch the ones that stay
 function fillCards(holder, button, entries, describe) {
   const strongest = Math.max(...entries.map((entry) => Math.abs(entry.heldout_effect)), 0);
   const rows = entries.map((entry, index) => [entry, describe(entry, index)]);
-  const lit = rows.some(([, shown]) => shown.picked);
 
-  const kept = rows.filter(([, shown], rank) => shown.active || shown.picked || (lit && rank < CARD_LIMIT));
-  const drawn = state.showAllCards ? rows : kept;
+  const drawn = rows.filter(([, shown], index) => index < CARD_LIMIT || shown.active
+    || (state.showAllCards && shown.picked));
 
   holder.innerHTML = "";
 
@@ -604,21 +601,22 @@ function fillCards(holder, button, entries, describe) {
     holder.appendChild(card);
   });
 
-  markToggle(button, rows.length - kept.length);
+  markToggle(button, rows.filter(([, shown], index) => index >= CARD_LIMIT && shown.picked).length);
 }
 
-// the cut is counted whether it is in force or not, so the control reads the same either way
-function markToggle(id, hidden) {
+// the cards past the strongest few are counted whether they are drawn or not, so the control reads
+// the same either way
+function markToggle(id, extra) {
   const button = el(id);
 
-  button.classList.toggle("hidden", hidden === 0);
-  button.textContent = COPY.blocks.moreToggle(state.showAllCards, hidden);
+  button.classList.toggle("hidden", extra === 0);
+  button.textContent = COPY.blocks.moreToggle(state.showAllCards, extra);
   button.title = COPY.blocks.moreTitle;
   button.setAttribute("aria-pressed", String(state.showAllCards));
 }
 
-// the answer is remembered, since a reader who opened one list is usually reading the next the same way
-function toggleCut() {
+// the answer is remembered, since a reader who collapsed one list usually wants the next collapsed too
+function toggleCards() {
   state.showAllCards = !state.showAllCards;
   localStorage.setItem(CARDS_KEY, String(state.showAllCards));
 
@@ -1754,7 +1752,7 @@ function bindControls() {
   el("collectionSelect").addEventListener("change", (event) => selectCollection(event.target.value));
   el("sidebarToggle").addEventListener("click", toggleSidebar);
   el("reload").addEventListener("click", reloadAssets);
-  ["blockMore", "setMore"].forEach((id) => el(id).addEventListener("click", toggleCut));
+  ["blockMore", "setMore"].forEach((id) => el(id).addEventListener("click", toggleCards));
   bindSidebarResize();
 
   bindTabs("browseTabs", "browse", selectBrowse);
@@ -1812,7 +1810,7 @@ function bindControls() {
 }
 
 async function init() {
-  state.showAllCards = localStorage.getItem(CARDS_KEY) === "true";
+  state.showAllCards = localStorage.getItem(CARDS_KEY) !== "false";
 
   const manifest = await loadJson("data/collections.json");
   state.collections = manifest.collections;

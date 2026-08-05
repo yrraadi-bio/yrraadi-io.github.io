@@ -51,7 +51,8 @@ const COPY = {
       Cards are ranked by |held-out r| and cut at the strongest ${index.sets_per_block}, which leaves
       ${index.n_cards.toLocaleString()} of the ${index.n_carried.toLocaleString()} associations these features
       reproduce; the greying rule still weighs all of them. Every card here is exported in full, so any of them
-      can be selected, greyed or not.</span>
+      can be selected, greyed or not. The page draws the strongest few of them and every card the rule kept,
+      skipping the rest.</span>
       <span><strong>held-out r:</strong> ${FEATURE_HELDOUT_R}</span>
       <span><strong>training r:</strong> ${FEATURE_TRAIN_R}</span>
       <span><strong>&Delta;R&sup2; held-out:</strong> ${FEATURE_DELTA_R2}</span>
@@ -88,10 +89,9 @@ const COPY = {
       : "greyed: this is not the set this feature's held-out evidence points at"),
     inert: "listed for weight only: this build did not export the set in full, so it has no tiles, genes or"
       + " colouring to open",
-    moreToggle: (shown, count) => `${shown ? "hide" : "show"} ${count} greyed`,
-    moreTitle: "The list is drawn down to the strongest few and then to every card the rule kept in colour, however"
-      + " far down it sits. What that leaves out is greyed, and it waits here. The selected card is always drawn,"
-      + " since the genes, the manifold and the tiles below follow it.",
+    moreToggle: (shown, count) => `${shown ? "hide" : "show"} ${count} more`,
+    moreTitle: "The strongest cards are always drawn, alongside every card the rule kept wherever it ranks. This"
+      + " control folds the kept cards ranked below the strongest away, leaving the top of the list alone.",
     panel: (dominance) => `<span><strong>held-out r:</strong> ${FEATURE_HELDOUT_R}</span>
       <span><strong>training r:</strong> ${FEATURE_TRAIN_R}</span>
       <span><strong>&Delta;R&sup2; held-out:</strong> ${FEATURE_DELTA_R2}</span>
