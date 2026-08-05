@@ -43,10 +43,10 @@ function bindTabs(strip, key, choose) {
   tabs(strip).forEach((button) => button.addEventListener("click", () => choose(button.dataset[key])));
 }
 
-// the list can be folded to the strongest cards the rule kept, and the answer is remembered
+// the list can be folded down to the strongest cards the rule kept, and the answer is remembered
 const CARDS_KEY = "interp.foldCards";
 
-// how many of the cards the rule kept a folded list holds
+// how many of the cards the rule kept a folded list draws
 const CARD_LIMIT = 8;
 
 const SIDEBAR_KEY = "interp.sidebarWidth";
@@ -572,9 +572,9 @@ function effectRows(entry) {
     </table>`;
 }
 
-// the cards ranked by |held-out r|. folded, the list holds the strongest CARD_LIMIT cards the rule
-// kept and the card the page is built around, and nothing else; opened, it holds every card. the bar
-// scales over every card rather than the drawn ones, so a hidden card cannot restretch the visible
+// the cards ranked by |held-out r|. folded, the page draws the strongest CARD_LIMIT cards the rule
+// kept and the one it is built around, skipping the rest; unfolded it draws every card. the bar
+// scales over every card rather than the drawn ones, so a skipped card cannot restretch the rest
 function fillCards(holder, button, entries, describe) {
   const strongest = Math.max(...entries.map((entry) => Math.abs(entry.heldout_effect)), 0);
   const rows = entries.map((entry, index) => [entry, describe(entry, index)]);
@@ -607,7 +607,7 @@ function fillCards(holder, button, entries, describe) {
   markToggle(button, rows.length - rows.filter(kept).length);
 }
 
-// the folded cards are counted whether the list is folded or not, so the control reads the same either way
+// the folded cards are counted whether they are drawn or not, so the control reads the same either way
 function markToggle(id, folded) {
   const button = el(id);
 
@@ -617,7 +617,7 @@ function markToggle(id, folded) {
   button.setAttribute("aria-pressed", String(state.foldCards));
 }
 
-// the answer is remembered, since a reader who opened one list usually wants the next opened too
+// the answer is remembered, since a reader who opened one list usually wants the next one open too
 function toggleCards() {
   state.foldCards = !state.foldCards;
   localStorage.setItem(CARDS_KEY, String(state.foldCards));
