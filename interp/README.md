@@ -116,15 +116,15 @@ the bundle never exported. `data/blocks/index.json` is 1.4 MB, 140 KB over the w
 A set can reproduce inside a feature without any of its genes being measured there, so 25 features
 have no gene chips and the gene section hides itself rather than leaving an empty heading.
 
-A set carried by dozens of features is a wall rather than a finding, so both card sections fold: they
-draw the strongest `CARD_LIMIT` cards the greying rule kept and the card the page is built around,
-in rank order, skipping everything else. Primary immunodeficiency folds its 109 cards to 8 and
-allograft rejection its 89 to 7, the 6 the rule kept plus the greyed card it opens on. One pill
-beside the heading counts what is folded away and draws every card when clicked, greyed ones
-included, and the answer is remembered in `localStorage` under `interp.foldCards`. The card the page
-is built around is always drawn, since the genes, the manifold and the tiles below follow it; a
-feature that singles out nothing would otherwise fold to an empty grid. The bars are scaled over
-every card rather than the drawn ones, so a folded card cannot restretch the visible.
+A greyed card is evidence the rule did not single out, so neither section ever lists one: they draw
+the cards the rule kept and the card the page is built around, whatever its colour, and nothing else.
+Primary immunodeficiency lists 43 of its 109 cards and allograft rejection 7 of its 89, the 6 it kept
+plus the greyed card it opens on. A set carried by dozens of features is still a wall, so one pill
+beside the heading folds the kept cards to the strongest `CARD_LIMIT`, and the answer is remembered
+in `localStorage` under `interp.foldCards`. The card the page is built around is always drawn, since
+the genes, the manifold and the tiles below follow it; a feature that singles out nothing would
+otherwise open on an empty grid, and it lists that one card alone. The bars are scaled over every
+card rather than the drawn ones, so a dropped card cannot restretch the visible.
 
 The cross-block map's "strongest pathway" colouring is a different quantity and says so: it is each
 block's largest reproduced effect with no margin required, so a block coloured there can still be

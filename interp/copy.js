@@ -51,8 +51,8 @@ const COPY = {
       Cards are ranked by |held-out r| and cut at the strongest ${index.sets_per_block}, which leaves
       ${index.n_cards.toLocaleString()} of the ${index.n_carried.toLocaleString()} associations these features
       reproduce; the greying rule still weighs all of them. Every card here is exported in full, so any of them
-      can be selected, greyed or not. The list folds to the strongest cards the rule kept, and opens on the
-      control beside the heading.</span>
+      can be selected, greyed or not. The list holds the cards the rule kept and the one selected, and the
+      control beside the heading decides how many of the kept ones follow.</span>
       <span><strong>held-out r:</strong> ${FEATURE_HELDOUT_R}</span>
       <span><strong>training r:</strong> ${FEATURE_TRAIN_R}</span>
       <span><strong>&Delta;R&sup2; held-out:</strong> ${FEATURE_DELTA_R2}</span>
@@ -90,8 +90,9 @@ const COPY = {
     inert: "listed for weight only: this build did not export the set in full, so it has no tiles, genes or"
       + " colouring to open",
     foldToggle: (folded, count) => `${folded ? "show" : "hide"} ${count} more`,
-    foldTitle: "Folded, the list holds the strongest cards the held-out evidence singled out, and the card the page"
-      + " is built around whether it was singled out or not. Opening it draws every card, greyed ones included.",
+    foldTitle: "The list holds the cards the held-out evidence singled out, and the card the page is built around"
+      + " whether it was singled out or not. This control decides how many of them follow, the strongest few or"
+      + " all of them.",
     panel: (dominance) => `<span><strong>held-out r:</strong> ${FEATURE_HELDOUT_R}</span>
       <span><strong>training r:</strong> ${FEATURE_TRAIN_R}</span>
       <span><strong>&Delta;R&sup2; held-out:</strong> ${FEATURE_DELTA_R2}</span>

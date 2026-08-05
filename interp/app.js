@@ -572,9 +572,11 @@ function effectRows(entry) {
     </table>`;
 }
 
-// the cards ranked by |held-out r|. folded, the page draws the strongest CARD_LIMIT cards the rule
-// kept and the one it is built around, skipping the rest; unfolded it draws every card. the bar
-// scales over every card rather than the drawn ones, so a skipped card cannot restretch the rest
+// the cards ranked by |held-out r|, of which the page never draws a greyed one it is not built
+// around: the rule did not single those out, so they are evidence the page is not asking anyone to
+// read. the switch decides how many of the kept cards follow, the strongest CARD_LIMIT or all of
+// them. the bar scales over every card rather than the drawn ones, so a dropped card cannot
+// restretch the rest
 function fillCards(holder, button, entries, describe) {
   const strongest = Math.max(...entries.map((entry) => Math.abs(entry.heldout_effect)), 0);
   const rows = entries.map((entry, index) => [entry, describe(entry, index)]);
@@ -582,8 +584,8 @@ function fillCards(holder, button, entries, describe) {
   const rank = new Map();
   rows.filter(([, shown]) => shown.picked).forEach(([entry], index) => rank.set(entry, index));
 
-  const kept = ([entry, shown]) => shown.active || (shown.picked && rank.get(entry) < CARD_LIMIT);
-  const drawn = state.foldCards ? rows.filter(kept) : rows;
+  const limit = state.foldCards ? CARD_LIMIT : Infinity;
+  const drawn = rows.filter(([entry, shown]) => shown.active || (shown.picked && rank.get(entry) < limit));
 
   holder.innerHTML = "";
 
@@ -604,7 +606,7 @@ function fillCards(holder, button, entries, describe) {
     holder.appendChild(card);
   });
 
-  markToggle(button, rows.length - rows.filter(kept).length);
+  markToggle(button, Math.max(0, rank.size - CARD_LIMIT));
 }
 
 // the folded cards are counted whether they are drawn or not, so the control reads the same either way
