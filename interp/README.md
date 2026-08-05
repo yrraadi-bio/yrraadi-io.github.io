@@ -184,8 +184,9 @@ analysis could not use it: panel entries a slide never measured, QC-failed tiles
 
 Ranking this way rather than by abundance means a gene needs enough signal inside the block to be
 scored at all, so genes below the detection floors are dropped instead of ranked last. Each chip
-also carries the arrow direction, whether the gene rises or falls with the block's activation, and
-its tooltip carries the slide-centred variant of the score. That variant removes each slide's own
+carries both numbers, `I` the clustering it is ranked by and `r` its correlation with the block's
+activation, since a gene can cluster tightly and still barely track how hard the block fires. Its
+tooltip carries the slide-centred variant of the clustering score. That variant removes each slide's own
 mean first and is much smaller than the raw score, which says most of the apparent clustering is
 slide identity: a slide's tiles both group in the block's space and share an expression level. A
 dashed border still marks genes missing from some slide panels.

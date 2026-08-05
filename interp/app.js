@@ -292,8 +292,8 @@ const BLOCK_ORDER = {
 };
 
 // a correlation is read by its sign as much as by its size, so the sign is always printed
-function signed(value) {
-  return `${value >= 0 ? "+" : "−"}${Math.abs(value).toFixed(3)}`;
+function signed(value, digits = 3) {
+  return `${value >= 0 ? "+" : "−"}${Math.abs(value).toFixed(digits)}`;
 }
 
 // the block list is searched by its own number, its dictionary, and the sets it carries
@@ -519,7 +519,11 @@ function renderGenes() {
     chip.className = `gene-chip${gene.train_slides < 46 ? " partial" : ""}${state.gene === gene.symbol ? " active" : ""}`;
     chip.title = COPY.genes.chipTitle(gene, blockLabel(block)) + (source ? COPY.genes.viaSet(source.name) : "");
     chip.innerHTML = `
-      <div class="grow"><span class="sym">${gene.symbol}</span><span class="lvl">${gene.clustering.toFixed(2)} ${gene.activation_r >= 0 ? "↑" : "↓"}</span></div>
+      <div class="sym">${gene.symbol}</div>
+      <div class="grow">
+        <span class="lvl" title="${COPY.genes.clusteringLabel}">I ${gene.clustering.toFixed(2)}</span>
+        <span class="lvl" title="${COPY.genes.activationLabel}">r ${signed(gene.activation_r, 2)}</span>
+      </div>
       <div class="meter"><span style="width:${strongest > 0 ? (gene.clustering / strongest) * 100 : 0}%"></span></div>`;
     chip.addEventListener("click", () => pickGene(gene));
     holder.appendChild(chip);

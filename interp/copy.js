@@ -73,6 +73,10 @@ const COPY = {
       + ` ${gene.train_slides}/46 training and ${gene.heldout_slides}/12 held-out slides · click to overlay its per-cell`
       + " expression on the tiles and recolour the manifold by this gene",
     viaSet: (name) => ` · reached through ${name}, the set that scores it here`,
+    clusteringLabel: "I: Moran's I of the gene over this feature's manifold, high when tiles that agree on the gene"
+      + " sit together. The cards are ranked by it.",
+    activationLabel: "r: Pearson correlation between the gene's expression and the feature norm over the same tiles."
+      + " A gene can cluster tightly and still barely track the norm, so the two numbers are read together.",
   },
 
   blocks: {
