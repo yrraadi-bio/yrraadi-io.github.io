@@ -14,7 +14,6 @@ const state = {
   dominance: {},
   blockPick: null,
   blockSort: "valid",
-  showDull: false,
   showAllCards: false,
   manifold: null,
   manifoldView: "pathway",
@@ -44,12 +43,10 @@ function bindTabs(strip, key, choose) {
   tabs(strip).forEach((button) => button.addEventListener("click", () => choose(button.dataset[key])));
 }
 
-// the greyed cards and the tail of the coloured ones stay folded away until asked for, and both
-// answers are remembered between visits
-const DULL_KEY = "interp.showDull";
+// the cards the cut leaves out stay folded away until asked for, and the answer is remembered between visits
 const CARDS_KEY = "interp.showAllCards";
 
-// how many coloured cards a section opens with, past which a set that many features carry becomes a wall
+// how far down the ranking a list is drawn before it needs a reason, which is a card the rule kept
 const CARD_LIMIT = 8;
 
 const SIDEBAR_KEY = "interp.sidebarWidth";
@@ -575,20 +572,18 @@ function effectRows(entry) {
     </table>`;
 }
 
-// one list of cards ranked by |held-out r|, with the bar drawn against the strongest of them.
-// the bar scales over every card rather than the drawn ones, so hiding cards cannot silently
-// restretch the ones that stay. two cuts run over the list: the greyed cards wait behind their
-// toggle, and the coloured ones past CARD_LIMIT wait behind theirs
-function fillCards(holder, buttons, entries, describe) {
+// one list of cards ranked by |held-out r| and one cut across it: the strongest CARD_LIMIT, every
+// card the rule kept in colour however far down it sits, and the card the page is built around. what
+// that leaves out is greyed by construction, and it waits behind the one control. a list with nothing
+// in colour opens on its selected card alone, since there is no finding to lead with.
+// the bar scales over every card rather than the drawn ones, so hiding cards cannot restretch the rest
+function fillCards(holder, button, entries, describe) {
   const strongest = Math.max(...entries.map((entry) => Math.abs(entry.heldout_effect)), 0);
   const rows = entries.map((entry, index) => [entry, describe(entry, index)]);
+  const lit = rows.some(([, shown]) => shown.picked);
 
-  const rank = new Map();
-  rows.filter(([, shown]) => shown.picked).forEach(([entry], index) => rank.set(entry, index));
-
-  const limit = state.showAllCards ? Infinity : CARD_LIMIT;
-  const drawn = rows.filter(([entry, shown]) => (shown.active
-    || (shown.picked ? rank.get(entry) < limit : state.showDull)));
+  const kept = rows.filter(([, shown], rank) => shown.active || shown.picked || (lit && rank < CARD_LIMIT));
+  const drawn = state.showAllCards ? rows : kept;
 
   holder.innerHTML = "";
 
@@ -609,26 +604,23 @@ function fillCards(holder, buttons, entries, describe) {
     holder.appendChild(card);
   });
 
-  markToggle(buttons.dull, rows.filter(([, shown]) => !shown.picked && !shown.active).length,
-             state.showDull, COPY.blocks.dullToggle, COPY.blocks.dullTitle);
-  markToggle(buttons.more, Math.max(0, rank.size - CARD_LIMIT),
-             state.showAllCards, COPY.blocks.moreToggle, COPY.blocks.moreTitle);
+  markToggle(button, rows.length - kept.length);
 }
 
-// a cut is counted whether it is in force or not, so its control reads the same either way
-function markToggle(id, hidden, open, label, title) {
+// the cut is counted whether it is in force or not, so the control reads the same either way
+function markToggle(id, hidden) {
   const button = el(id);
 
   button.classList.toggle("hidden", hidden === 0);
-  button.textContent = label(open, hidden);
-  button.title = title;
-  button.setAttribute("aria-pressed", String(open));
+  button.textContent = COPY.blocks.moreToggle(state.showAllCards, hidden);
+  button.title = COPY.blocks.moreTitle;
+  button.setAttribute("aria-pressed", String(state.showAllCards));
 }
 
-// each cut is remembered, since a reader who opened one is usually reading the next feature the same way
-function toggleCut(field, key) {
-  state[field] = !state[field];
-  localStorage.setItem(key, String(state[field]));
+// the answer is remembered, since a reader who opened one list is usually reading the next the same way
+function toggleCut() {
+  state.showAllCards = !state.showAllCards;
+  localStorage.setItem(CARDS_KEY, String(state.showAllCards));
 
   renderCards();
 }
@@ -656,7 +648,7 @@ function renderSets() {
   const current = state.bundle.pathways[state.pathway].pathway_id;
   renderBasicCorrelation();
 
-  fillCards(el("setList"), { dull: "setDull", more: "setMore" }, block.pathways, (entry) => ({
+  fillCards(el("setList"), "setMore", block.pathways, (entry) => ({
     picked: isDominant(block.block_global_index, entry.slug, entry.pathway_id),
     extra: " set-card",
     active: entry.drawable && entry.pathway_id === current,
@@ -670,7 +662,7 @@ function renderSets() {
 function renderBlocks() {
   renderBasicCorrelation();
 
-  fillCards(el("blockList"), { dull: "blockDull", more: "blockMore" }, state.detail.blocks, (block, index) => ({
+  fillCards(el("blockList"), "blockMore", state.detail.blocks, (block, index) => ({
     picked: isDominant(block.block_global_index, state.slug, state.detail.pathway_id),
     extra: "",
     active: state.blockIndex === index,
@@ -1762,8 +1754,7 @@ function bindControls() {
   el("collectionSelect").addEventListener("change", (event) => selectCollection(event.target.value));
   el("sidebarToggle").addEventListener("click", toggleSidebar);
   el("reload").addEventListener("click", reloadAssets);
-  ["blockDull", "setDull"].forEach((id) => el(id).addEventListener("click", () => toggleCut("showDull", DULL_KEY)));
-  ["blockMore", "setMore"].forEach((id) => el(id).addEventListener("click", () => toggleCut("showAllCards", CARDS_KEY)));
+  ["blockMore", "setMore"].forEach((id) => el(id).addEventListener("click", toggleCut));
   bindSidebarResize();
 
   bindTabs("browseTabs", "browse", selectBrowse);
@@ -1821,7 +1812,6 @@ function bindControls() {
 }
 
 async function init() {
-  state.showDull = localStorage.getItem(DULL_KEY) === "true";
   state.showAllCards = localStorage.getItem(CARDS_KEY) === "true";
 
   const manifest = await loadJson("data/collections.json");

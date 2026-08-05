@@ -88,12 +88,10 @@ const COPY = {
       : "greyed: this is not the set this feature's held-out evidence points at"),
     inert: "listed for weight only: this build did not export the set in full, so it has no tiles, genes or"
       + " colouring to open",
-    dullToggle: (shown, count) => `${shown ? "hide" : "show"} ${count} greyed`,
-    dullTitle: "Cards the held-out evidence did not single out, hidden until asked for. The selected card stays"
-      + " visible either way, since the genes, the manifold and the tiles below follow it.",
-    moreToggle: (shown, count) => `${shown ? "hide" : "show"} ${count} more`,
-    moreTitle: "Cards past the strongest few that kept their colour, hidden until asked for. They are ranked by"
-      + " |held-out r| like the rest, so these are the weaker ones.",
+    moreToggle: (shown, count) => `${shown ? "hide" : "show"} ${count} greyed`,
+    moreTitle: "The list is drawn down to the strongest few and then to every card the rule kept in colour, however"
+      + " far down it sits. What that leaves out is greyed, and it waits here. The selected card is always drawn,"
+      + " since the genes, the manifold and the tiles below follow it.",
     panel: (dominance) => `<span><strong>held-out r:</strong> ${FEATURE_HELDOUT_R}</span>
       <span><strong>training r:</strong> ${FEATURE_TRAIN_R}</span>
       <span><strong>&Delta;R&sup2; held-out:</strong> ${FEATURE_DELTA_R2}</span>

@@ -116,16 +116,17 @@ the bundle never exported. `data/blocks/index.json` is 1.4 MB, 140 KB over the w
 A set can reproduce inside a feature without any of its genes being measured there, so 25 features
 have no gene chips and the gene section hides itself rather than leaving an empty heading.
 
-Two cuts fold the cards away rather than drawing them, each with a pill beside the heading that
-counts what it holds back and reveals it on click. A greyed card is evidence the site is not asking
-anyone to read, so both sections open on the cards the rule kept; and a set carried by dozens of
-features is a wall rather than a finding, so the coloured cards past `CARD_LIMIT` wait behind the
-second pill, primary immunodeficiency opening on 8 of its 43. The answers are remembered in
-`localStorage` under `interp.showDull` and `interp.showAllCards`, and each drives both sections. The
-card the page is currently built around is always drawn, greyed or cut, since the genes, the manifold
-and the tiles below follow it; without that exception a feature that singles out nothing would open
-on an empty grid. The bars are scaled over every card rather than the drawn ones, so revealing the
-hidden cards cannot restretch the visible.
+One cut runs over each card list, with a pill beside the heading counting what it holds back and
+revealing it on click. The list is drawn down to the strongest `CARD_LIMIT` and then to every card
+the greying rule kept, however far down that sits, so primary immunodeficiency opens on all 43
+features that point at it and holds back 66 greyed ones. What the cut leaves out is greyed by
+construction, which is the property two independent cuts lost: capping the coloured cards separately
+drew a greyed card at |r| 0.10 while hiding a coloured one at 0.30, so what was on screen was no
+longer a prefix of the ranking. A list with nothing in colour opens on its selected card alone, since
+there is no finding to lead with and the top of a list of greyed cards is not one. That card is
+always drawn, since the genes, the manifold and the tiles below follow it. The answer is remembered
+in `localStorage` under `interp.showAllCards` and drives both sections. The bars are scaled over
+every card rather than the drawn ones, so revealing the hidden cards cannot restretch the visible.
 
 The cross-block map's "strongest pathway" colouring is a different quantity and says so: it is each
 block's largest reproduced effect with no margin required, so a block coloured there can still be
