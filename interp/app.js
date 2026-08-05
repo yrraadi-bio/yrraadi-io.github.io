@@ -14,7 +14,7 @@ const state = {
   dominance: {},
   blockPick: null,
   blockSort: "valid",
-  showAllCards: true,
+  foldCards: true,
   manifold: null,
   manifoldView: "pathway",
   crossColour: "strongest",
@@ -43,10 +43,10 @@ function bindTabs(strip, key, choose) {
   tabs(strip).forEach((button) => button.addEventListener("click", () => choose(button.dataset[key])));
 }
 
-// the cards the rule kept can be folded down to the strongest few, and the answer is remembered
-const CARDS_KEY = "interp.showAllCards";
+// the list can be folded to the strongest cards the rule kept, and the answer is remembered
+const CARDS_KEY = "interp.foldCards";
 
-// how many cards are drawn whatever their colour, alongside every card the rule kept
+// how many of the cards the rule kept a folded list holds
 const CARD_LIMIT = 8;
 
 const SIDEBAR_KEY = "interp.sidebarWidth";
@@ -572,15 +572,18 @@ function effectRows(entry) {
     </table>`;
 }
 
-// the cards ranked by |held-out r|, of which the page draws the strongest CARD_LIMIT and every card
-// the rule kept, in that order and skipping the rest. the bar scales over every card rather than the
-// drawn ones, so a skipped card cannot silently restretch the ones that stay
+// the cards ranked by |held-out r|. folded, the list holds the strongest CARD_LIMIT cards the rule
+// kept and the card the page is built around, and nothing else; opened, it holds every card. the bar
+// scales over every card rather than the drawn ones, so a hidden card cannot restretch the visible
 function fillCards(holder, button, entries, describe) {
   const strongest = Math.max(...entries.map((entry) => Math.abs(entry.heldout_effect)), 0);
   const rows = entries.map((entry, index) => [entry, describe(entry, index)]);
 
-  const drawn = rows.filter(([, shown], index) => index < CARD_LIMIT || shown.active
-    || (state.showAllCards && shown.picked));
+  const rank = new Map();
+  rows.filter(([, shown]) => shown.picked).forEach(([entry], index) => rank.set(entry, index));
+
+  const kept = ([entry, shown]) => shown.active || (shown.picked && rank.get(entry) < CARD_LIMIT);
+  const drawn = state.foldCards ? rows.filter(kept) : rows;
 
   holder.innerHTML = "";
 
@@ -601,24 +604,23 @@ function fillCards(holder, button, entries, describe) {
     holder.appendChild(card);
   });
 
-  markToggle(button, rows.filter(([, shown], index) => index >= CARD_LIMIT && shown.picked).length);
+  markToggle(button, rows.length - rows.filter(kept).length);
 }
 
-// the cards past the strongest few are counted whether they are drawn or not, so the control reads
-// the same either way
-function markToggle(id, extra) {
+// the folded cards are counted whether the list is folded or not, so the control reads the same either way
+function markToggle(id, folded) {
   const button = el(id);
 
-  button.classList.toggle("hidden", extra === 0);
-  button.textContent = COPY.blocks.moreToggle(state.showAllCards, extra);
-  button.title = COPY.blocks.moreTitle;
-  button.setAttribute("aria-pressed", String(state.showAllCards));
+  button.classList.toggle("hidden", folded === 0);
+  button.textContent = COPY.blocks.foldToggle(state.foldCards, folded);
+  button.title = COPY.blocks.foldTitle;
+  button.setAttribute("aria-pressed", String(state.foldCards));
 }
 
-// the answer is remembered, since a reader who collapsed one list usually wants the next collapsed too
+// the answer is remembered, since a reader who opened one list usually wants the next opened too
 function toggleCards() {
-  state.showAllCards = !state.showAllCards;
-  localStorage.setItem(CARDS_KEY, String(state.showAllCards));
+  state.foldCards = !state.foldCards;
+  localStorage.setItem(CARDS_KEY, String(state.foldCards));
 
   renderCards();
 }
@@ -1810,7 +1812,7 @@ function bindControls() {
 }
 
 async function init() {
-  state.showAllCards = localStorage.getItem(CARDS_KEY) !== "false";
+  state.foldCards = localStorage.getItem(CARDS_KEY) !== "false";
 
   const manifest = await loadJson("data/collections.json");
   state.collections = manifest.collections;
