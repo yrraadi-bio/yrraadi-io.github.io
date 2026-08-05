@@ -59,19 +59,17 @@ def collection_sources(out_root, collections):
     return sources
 
 
-def reproduced_sets(effects, sources, cards):
+def reproduced_sets(effects, sources):
 
     """List every set each block reproduces above the floor, drawn from the analysis not the bundle.
 
     The bundle exports a fraction of the sets that reproduce, so a card list read off it would show a
     block a single weak set and then grey it for losing to sets the reader cannot see. The evidence the
-    greying rule weighs is listed instead, and a set the bundle never exported is listed without being
-    selectable, since it has no tiles, genes or colouring behind it.
+    greying rule weighs is listed instead, and the cut to what the bundle exported is made afterwards.
 
     Args:
         effects (pd.DataFrame): Supported rows carrying train_effect and delta_r2.
         sources (dict): slug -> {label, root, names} from :func:`collection_sources`.
-        cards (dict): block global index -> {(slug, pathway_id): block card}.
 
     Returns:
         dict: block global index -> association entries ranked by |held-out r|
@@ -79,17 +77,10 @@ def reproduced_sets(effects, sources, cards):
 
     associations = defaultdict(list)
 
-    # ranked at full precision, since the bundle cut its cards the same way and two effects that round
-    # to the same displayed r would otherwise swap places and card a set the bundle never exported
-    strong = effects[effects["heldout_effect"].abs() > MIN_EFFECT]
-    strong = strong.assign(magnitude=strong["heldout_effect"].abs()).sort_values("magnitude", ascending=False)
-
-    for row in strong.itertuples(index=False):
+    for row in dominance.ranked(effects).itertuples(index=False):
         source = sources[row.key]
-        block = int(row.block_global_index)
-        carded = block in cards and (row.key, row.pathway_id) in cards[block]
 
-        entry = {
+        associations[int(row.block_global_index)].append({
             "slug": row.key,
             "collection_label": source["label"],
             "pathway_id": row.pathway_id,
@@ -97,18 +88,12 @@ def reproduced_sets(effects, sources, cards):
             "train_effect": round(float(row.train_effect), 4),
             "heldout_effect": round(float(row.heldout_effect), 4),
             "delta_r2": round(float(row.delta_r2), 5),
-        }
-
-        if carded:
-            card = cards[block][(row.key, row.pathway_id)]
-            entry.update(basic_r=card["basic_r"], n_scored_genes=card["n_scored_genes"], drawable=True)
-
-        associations[block].append(entry)
+        })
 
     return associations
 
 
-def dominant_sets(effects, drawable, shown):
+def dominant_sets(effects, carded, shown):
 
     """Read the set each block points at and keep the ones the site can actually show.
 
@@ -120,7 +105,7 @@ def dominant_sets(effects, drawable, shown):
 
     Args:
         effects (pd.DataFrame): Supported rows from :func:`dominance.supported_effects`.
-        drawable (dict): (slug, pathway_id) -> block global indices carded for that set.
+        carded (dict): (slug, pathway_id) -> block global indices carded for that set.
         shown (set): Block global indices the block list holds.
 
     Returns:
@@ -130,7 +115,7 @@ def dominant_sets(effects, drawable, shown):
     picks = dominance.winners(effects)
 
     kept = {str(global_index): {"slug": slug, "pathway_id": pathway} for global_index, (slug, pathway) in picks.items()
-            if global_index in drawable[(slug, pathway)] and global_index in shown}
+            if global_index in carded[(slug, pathway)] and global_index in shown}
 
     counts = {"n_blocks_scored": int(effects["block_global_index"].nunique()), "n_margin": len(picks),
               "n_unlisted": len(picks) - len(kept)}
@@ -138,17 +123,17 @@ def dominant_sets(effects, drawable, shown):
     return kept, counts
 
 
-def block_genes(kept, cards):
+def block_genes(shown, cards):
 
     """Collect a block's genes across the sets its cards show.
 
     Clustering is a property of the block's own tile geometry rather than of the pathway, so the same
     gene carries the same numbers wherever it appears and the first copy is kept. Each gene records the
     set that holds its per-tile values, which is what the tile overlays need, so pooling is restricted
-    to the sets the bundle exported and the reader can therefore select.
+    to the sets the block cards and the reader can therefore select.
 
     Args:
-        kept (list): Selectable association entries of the block.
+        shown (list): The block's carded association entries.
         cards (dict): (slug, pathway_id) -> block card for that pathway.
 
     Returns:
@@ -157,7 +142,7 @@ def block_genes(kept, cards):
 
     seen = {}
 
-    for entry in kept:
+    for entry in shown:
         for gene in cards[(entry["slug"], entry["pathway_id"])]["genes"]:
             if gene["symbol"] in seen:
                 continue
@@ -184,36 +169,36 @@ def build(out_root):
     tiles_of = {entry["block_global_index"]: entry["n_tiles"] for entry in manifolds["blocks"]}
 
     cards = {}
-    drawable = defaultdict(set)
+    carded = defaultdict(set)
 
     for slug, label, document in documents:
         for block in document["blocks"]:
             cards.setdefault(block["block_global_index"], {})[(slug, document["pathway_id"])] = block
-            drawable[(slug, document["pathway_id"])].add(block["block_global_index"])
+            carded[(slug, document["pathway_id"])].add(block["block_global_index"])
 
     sources = collection_sources(out_root, collections)
     effects = dominance.supported_effects([(slug, source["root"]) for slug, source in sources.items()],
                                           extra=("train_effect", "delta_r2"))
 
-    associations = reproduced_sets(effects, sources, cards)
+    associations = reproduced_sets(effects, sources)
     blocks = []
 
     for global_index, pathways in associations.items():
-        selectable = [entry for entry in pathways if "drawable" in entry]
 
-        # a block firing on a couple of dozen tiles has no manifold and so nothing to browse, and one
-        # whose every set went unexported has no tiles, genes or colouring to open on
-        if global_index not in tiles_of or not selectable:
+        # a block firing on a couple of dozen tiles has no manifold and so nothing to browse
+        if global_index not in tiles_of:
             continue
 
         # the same cut the bundle build exported cards for, while the greying rule still weighs every
-        # set above the floor. the strongest exported set is kept whatever it ranks, so a bundle built
-        # without these pairs still leaves the page something to open on
+        # set above the floor. indexing the cards rather than testing them is deliberate: a missing
+        # pair means the two builds ranked the same effects differently, which is a build to redo
         shown = pathways[:SETS_PER_BLOCK]
-        if selectable[0] not in shown:
-            shown = sorted(shown + [selectable[0]], key=lambda entry: -abs(entry["heldout_effect"]))
-
         by_pathway = cards[global_index]
+
+        for entry in shown:
+            card = by_pathway[(entry["slug"], entry["pathway_id"])]
+            entry.update(basic_r=card["basic_r"], n_scored_genes=card["n_scored_genes"])
+
         first = next(iter(by_pathway.values()))
         counts = defaultdict(int)
         for entry in pathways:
@@ -230,24 +215,22 @@ def build(out_root):
             "best_effect": pathways[0]["heldout_effect"],
             "n_sets": len(pathways),
             "n_cards": len(shown),
-            "n_drawable": sum("drawable" in entry for entry in shown),
             "n_pathways": dict(counts),
             "pathways": shown,
-            "genes": block_genes([entry for entry in shown if "drawable" in entry], by_pathway),
+            "genes": block_genes(shown, by_pathway),
         })
 
     # strongest features first, which is the order the list is meant to be scrolled in
     blocks.sort(key=lambda block: -abs(block["best_effect"]))
 
     listed = {block["block_global_index"] for block in blocks}
-    picks, outcomes = dominant_sets(effects, drawable, listed)
+    picks, outcomes = dominant_sets(effects, carded, listed)
 
     index = {
         "built": datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
         "n_blocks": len(blocks),
         "n_carried": sum(block["n_sets"] for block in blocks),
         "n_cards": sum(block["n_cards"] for block in blocks),
-        "n_shown": sum(block["n_drawable"] for block in blocks),
         "min_effect": MIN_EFFECT,
         "sets_per_block": SETS_PER_BLOCK,
         "n_dominant": len(picks),
@@ -281,7 +264,7 @@ def main():
     size = (Path(args.out) / "data" / "blocks" / "index.json").stat().st_size
 
     print(f"{index['n_blocks']} blocks, {index['n_cards']} cards over {index['n_carried']} reproduced"
-          f" associations, {index['n_shown']} of the cards selectable, {size / 1024:.0f} KB")
+          f" associations, {size / 1024:.0f} KB")
     print(f"{picked['n_margin']} of {picked['n_blocks_scored']} scored blocks single out a set,"
           f" {picked['n_dominant']} of them blocks this site lists")
 

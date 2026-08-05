@@ -33,6 +33,8 @@
   --font-display: "Instrument Serif", Georgia, serif;
   --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --dock-clear: 104px;
+  /* inline chevron for every select, which keeps the controls self-contained with no image request */
+  --chevron: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.6 4.4L6 7.8l3.4-3.4' fill='none' stroke='%23a8bdd8' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
 * { box-sizing: border-box; }
@@ -277,7 +279,7 @@ a { color: inherit; text-decoration: none; }
   font-size: 12.5px;
   color: var(--ink);
   background-color: rgba(11, 24, 44, 0.9);
-  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.6 4.4L6 7.8l3.4-3.4' fill='none' stroke='%23a8bdd8' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-image: var(--chevron);
   background-repeat: no-repeat;
   background-position: right 12px center;
   background-size: 12px;
@@ -692,13 +694,6 @@ a { color: inherit; text-decoration: none; }
 
 .block-card.dull:hover, .block-card.dull.active { opacity: 0.82; }
 
-/* a set listed for its weight alone has nothing to open, so the card does not offer to be opened */
-.block-card.inert { cursor: default; border-style: dashed; }
-
-.block-card.inert:hover { transform: none; box-shadow: none; border-color: var(--panel-line); }
-
-.block-card.inert:hover::before { transform: scaleX(0); }
-
 .block-card table { width: 100%; margin-top: 9px; border-collapse: collapse; font-size: 11px; }
 
 .block-card td { padding: 1.5px 0; color: var(--ink-faint); }
@@ -807,8 +802,7 @@ a { color: inherit; text-decoration: none; }
   text-transform: none;
   color: var(--ink);
   background-color: rgba(11, 24, 44, 0.9);
-  /* inline chevron keeps the control self-contained with no image request */
-  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.6 4.4L6 7.8l3.4-3.4' fill='none' stroke='%23a8bdd8' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-image: var(--chevron);
   background-repeat: no-repeat;
   background-position: right 10px center;
   background-size: 12px;

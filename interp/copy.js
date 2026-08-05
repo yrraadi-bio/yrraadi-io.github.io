@@ -28,6 +28,12 @@ const FEATURE_DOMINANCE = "A feature points at a set only when its strongest |he
 const FEATURE_UNLISTED = "A feature is credited with the set it points at only where the site lists the feature at"
   + " all, and one firing on too few tiles to draw a manifold is left out.";
 
+// the two cuts every card list is drawn through, so both views describe them the same way
+const FEATURE_CUTS = (limit) => `Cards are ranked by |held-out r|. The list always holds the strongest ${limit}`
+  + ` together with every card in colour wherever it ranks, so it can skip over cards. The control beside the`
+  + ` heading holds back the greys and cuts the coloured cards to their own strongest ${limit}. The card the page`
+  + ` is built around is drawn either way.`;
+
 const COPY = {
   sidebarEmpty: "No pathway matches that search.",
   loading: "loading…",
@@ -51,18 +57,15 @@ const COPY = {
       Cards are ranked by |held-out r| and cut at the strongest ${index.sets_per_block}, which leaves
       ${index.n_cards.toLocaleString()} of the ${index.n_carried.toLocaleString()} associations these features
       reproduce; the greying rule still weighs all of them. Every card here is exported in full, so any of them
-      can be selected, greyed or not. The list holds the cards the rule kept and the one selected, and the
-      control beside the heading decides how many of the kept ones follow.</span>
+      can be selected, greyed or not, and the control beside the heading holds back the greys.</span>
       <span><strong>held-out r:</strong> ${FEATURE_HELDOUT_R}</span>
       <span><strong>training r:</strong> ${FEATURE_TRAIN_R}</span>
       <span><strong>&Delta;R&sup2; held-out:</strong> ${FEATURE_DELTA_R2}</span>
       <span>${FEATURE_RULE}</span>
       <span><strong>Greyed cards:</strong> ${FEATURE_DOMINANCE}</span>`,
     setTitle: (entry) => `${entry.collection_label} · ${entry.name} (${entry.pathway_id})`
-      + (entry.drawable
-        ? ` · ${entry.n_scored_genes} of its genes scored inside this feature · select it to colour the genes, the`
-          + " manifold and the tiles by this set"
-        : ""),
+      + ` · ${entry.n_scored_genes} of its genes scored inside this feature · select it to colour the genes, the`
+      + " manifold and the tiles by this set",
   },
 
   genes: {
@@ -87,16 +90,12 @@ const COPY = {
     mark: (picked) => (picked
       ? "in colour: this feature's held-out evidence points at this set"
       : "greyed: this is not the set this feature's held-out evidence points at"),
-    inert: "listed for weight only: this build did not export the set in full, so it has no tiles, genes or"
-      + " colouring to open",
     foldToggle: (folded, count) => `${folded ? "show" : "hide"} ${count} more`,
-    foldTitle: "The list holds the cards the held-out evidence singled out, and the card the page is built around"
-      + " whether it was singled out or not. This control decides how many of them follow, the strongest few or"
-      + " all of them.",
+    foldTitle: FEATURE_CUTS,
     panel: (dominance) => `<span><strong>held-out r:</strong> ${FEATURE_HELDOUT_R}</span>
       <span><strong>training r:</strong> ${FEATURE_TRAIN_R}</span>
       <span><strong>&Delta;R&sup2; held-out:</strong> ${FEATURE_DELTA_R2}</span>
-      <span>${FEATURE_RULE}</span>
+      <span>${FEATURE_RULE} ${FEATURE_CUTS(CARD_LIMIT)}</span>
       <span><strong>Greyed cards:</strong> ${FEATURE_DOMINANCE} A set with no card in colour here is one no feature
       resolves on its own.</span>
       <span>${FEATURE_UNLISTED} ${dominance.n_margin.toLocaleString()} of the

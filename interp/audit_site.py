@@ -45,12 +45,10 @@ def check_blocks(data, problems):
         elif not (data / "manifold" / "block_manifolds" / f"{manifolds[global_index]['key']}.json").is_file():
             problems.append(f"{label}: manifold indexed but its file is missing")
 
-        selectable = [entry for entry in block["pathways"] if "drawable" in entry]
+        if not block["pathways"]:
+            problems.append(f"{label}: no set carded, the page cannot open")
 
-        if not selectable:
-            problems.append(f"{label}: no selectable set, the page cannot open")
-
-        for entry in selectable:
+        for entry in block["pathways"]:
             key = (entry["slug"], entry["pathway_id"])
             if key not in documents:
                 path = data / entry["slug"] / "pathways" / f"{entry['pathway_id']}.json"
@@ -59,12 +57,12 @@ def check_blocks(data, problems):
             document = documents[key]
 
             if document is None:
-                problems.append(f"{label}: {entry['pathway_id']} marked selectable but its document is missing")
+                problems.append(f"{label}: carded {entry['pathway_id']} has no document")
             elif not any(card["block_global_index"] == global_index for card in document["blocks"]):
-                problems.append(f"{label}: {entry['pathway_id']} marked selectable but carries no card for it")
+                problems.append(f"{label}: {entry['pathway_id']} is carded but its document holds no card for it")
 
         # a gene chip opens the set that measured it, so that set has to be one of the cards on screen
-        carded = {entry["pathway_id"] for entry in selectable}
+        carded = {entry["pathway_id"] for entry in block["pathways"]}
         for gene in block["genes"]:
             if gene["pathway_id"] not in carded:
                 problems.append(f"{label}: gene {gene['symbol']} points at uncarded {gene['pathway_id']}")
@@ -130,10 +128,9 @@ def main():
 
     index = check_blocks(data, problems)
     pathways = check_pathways(data, problems)
-    inert = index["n_cards"] - index["n_shown"]
 
-    print(f"{index['n_blocks']} features and {pathways} gene set documents checked,"
-          f" {inert} of {index['n_cards']} feature cards cannot be opened")
+    print(f"{index['n_blocks']} features, {index['n_cards']} feature cards and {pathways} gene set"
+          f" documents checked")
 
     for problem in problems[:40]:
         print(f"  {problem}")

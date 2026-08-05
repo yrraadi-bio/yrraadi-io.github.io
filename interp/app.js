@@ -43,10 +43,10 @@ function bindTabs(strip, key, choose) {
   tabs(strip).forEach((button) => button.addEventListener("click", () => choose(button.dataset[key])));
 }
 
-// the list can be folded down to the strongest cards the rule kept, and the answer is remembered
+// the list can be folded down to the cards the rule lit, and the answer is remembered
 const CARDS_KEY = "interp.foldCards";
 
-// how many of the cards the rule kept a folded list draws
+// how many cards either cut draws before it starts skipping them
 const CARD_LIMIT = 8;
 
 const SIDEBAR_KEY = "interp.sidebarWidth";
@@ -406,7 +406,7 @@ async function showPathway(index, blockOf) {
 async function selectBlock(globalIndex) {
   state.blockPick = globalIndex;
 
-  const sets = selectableSets(globalIndex);
+  const sets = blockEntry(globalIndex).pathways;
   const current = state.pathway === null ? null : state.bundle.pathways[state.pathway].pathway_id;
 
   // a block usually carries the set already on screen, and keeping it makes the two views comparable
@@ -427,11 +427,6 @@ async function showAssociation(entry) {
 
 function blockEntry(globalIndex) {
   return state.blocks.blocks.find((block) => block.block_global_index === globalIndex);
-}
-
-// a block lists every set it reproduces, but only the ones the bundle exported can be opened
-function selectableSets(globalIndex) {
-  return blockEntry(globalIndex).pathways.filter((entry) => entry.drawable);
 }
 
 function renderHeader(entry) {
@@ -482,7 +477,7 @@ async function pickGene(gene) {
     state.gene = gene.symbol;
     state.manifoldView = "gene";
 
-    await showAssociation(selectableSets(state.blockPick).find((entry) => entry.pathway_id === gene.pathway_id));
+    await showAssociation(blockEntry(state.blockPick).pathways.find((entry) => entry.pathway_id === gene.pathway_id));
     return;
   }
 
@@ -557,6 +552,7 @@ function renderCards() {
 
   el("blocksSection").classList.toggle("hidden", byBlock);
   el("setsSection").classList.toggle("hidden", !byBlock);
+  renderBasicCorrelation();
 
   if (byBlock) return renderSets();
 
@@ -572,29 +568,33 @@ function effectRows(entry) {
     </table>`;
 }
 
-// the cards ranked by |held-out r|, of which the page never draws a greyed one it is not built
-// around: the rule did not single those out, so they are evidence the page is not asking anyone to
-// read. the switch decides how many of the kept cards follow, the strongest CARD_LIMIT or all of
-// them. the bar scales over every card rather than the drawn ones, so a dropped card cannot
-// restretch the rest
+// The list is cut twice, in rank order both times, so a card can be skipped over. The first cut always
+// holds: the strongest CARD_LIMIT cards together with every card the rule lit, wherever it ranks. The
+// switch makes the second, which drops every grey and keeps the lit cards' own strongest CARD_LIMIT.
+// The card the page is built around survives both, since the page is showing what it holds.
+function cardCuts(rows) {
+  const lit = rows.filter(([, shown]) => shown.picked);
+  const strongestLit = new Set(lit.slice(0, CARD_LIMIT).map(([entry]) => entry));
+
+  const listed = rows.filter(([, shown], index) => shown.active || shown.picked || index < CARD_LIMIT);
+
+  return { listed: listed, folded: listed.filter(([entry, shown]) => shown.active || strongestLit.has(entry)) };
+}
+
+// the bar scales over every card rather than the drawn ones, so a skipped card cannot restretch the rest
 function fillCards(holder, button, entries, describe) {
   const strongest = Math.max(...entries.map((entry) => Math.abs(entry.heldout_effect)), 0);
   const rows = entries.map((entry, index) => [entry, describe(entry, index)]);
-
-  const rank = new Map();
-  rows.filter(([, shown]) => shown.picked).forEach(([entry], index) => rank.set(entry, index));
-
-  const limit = state.foldCards ? CARD_LIMIT : Infinity;
-  const drawn = rows.filter(([entry, shown]) => shown.active || (shown.picked && rank.get(entry) < limit));
+  const { listed, folded } = cardCuts(rows);
 
   holder.innerHTML = "";
 
-  drawn.forEach(([entry, shown]) => {
+  (state.foldCards ? folded : listed).forEach(([entry, shown]) => {
     const card = document.createElement("div");
-    card.className = `block-card${shown.extra}${dulled(shown.picked)}${shown.active ? " active" : ""}`
-      + (shown.select ? "" : " inert");
-    card.title = `${shown.title ? `${shown.title} · ` : ""}${COPY.blocks.mark(shown.picked)}`
-      + (shown.select ? "" : ` · ${COPY.blocks.inert}`);
+
+    // a card the rule did not pick keeps its numbers and loses its colour
+    card.className = `block-card${shown.extra}${shown.picked ? "" : " dull"}${shown.active ? " active" : ""}`;
+    card.title = `${shown.title ? `${shown.title} · ` : ""}${COPY.blocks.mark(shown.picked)}`;
     card.innerHTML = `
       <div class="bhead">
         <span class="bid">${shown.head}</span>
@@ -602,20 +602,20 @@ function fillCards(holder, button, entries, describe) {
       </div>
       ${effectRows(entry)}
       <div class="bar"><span style="width:${strongest > 0 ? (Math.abs(entry.heldout_effect) / strongest) * 100 : 0}%"></span></div>`;
-    if (shown.select) card.addEventListener("click", shown.select);
+    card.addEventListener("click", shown.select);
     holder.appendChild(card);
   });
 
-  markToggle(button, Math.max(0, rank.size - CARD_LIMIT));
+  markToggle(button, listed.length - folded.length);
 }
 
-// the folded cards are counted whether they are drawn or not, so the control reads the same either way
-function markToggle(id, folded) {
+// the count the switch is holding back, which reads the same whichever way it is set
+function markToggle(id, hidden) {
   const button = el(id);
 
-  button.classList.toggle("hidden", folded === 0);
-  button.textContent = COPY.blocks.foldToggle(state.foldCards, folded);
-  button.title = COPY.blocks.foldTitle;
+  button.classList.toggle("hidden", hidden === 0);
+  button.textContent = COPY.blocks.foldToggle(state.foldCards, hidden);
+  button.title = COPY.blocks.foldTitle(CARD_LIMIT);
   button.setAttribute("aria-pressed", String(state.foldCards));
 }
 
@@ -639,31 +639,23 @@ function isDominant(globalIndex, slug, pathwayId) {
   return Boolean(pick) && pick.slug === slug && pick.pathway_id === pathwayId;
 }
 
-// a card the rule did not pick keeps its numbers and loses its colour
-function dulled(picked) {
-  return picked ? "" : " dull";
-}
-
 // every gene set the selected block carries, as the transpose of the block cards
 function renderSets() {
   const block = blockEntry(state.blockPick);
   const current = state.bundle.pathways[state.pathway].pathway_id;
-  renderBasicCorrelation();
 
   fillCards(el("setList"), "setMore", block.pathways, (entry) => ({
     picked: isDominant(block.block_global_index, entry.slug, entry.pathway_id),
     extra: " set-card",
-    active: entry.drawable && entry.pathway_id === current,
+    active: entry.pathway_id === current,
     title: COPY.byBlock.setTitle(entry),
     head: entry.name,
     tag: entry.collection_label,
-    select: entry.drawable ? () => showAssociation(entry) : null,
+    select: () => showAssociation(entry),
   }));
 }
 
 function renderBlocks() {
-  renderBasicCorrelation();
-
   fillCards(el("blockList"), "blockMore", state.detail.blocks, (block, index) => ({
     picked: isDominant(block.block_global_index, state.slug, state.detail.pathway_id),
     extra: "",
@@ -681,7 +673,7 @@ async function pickBlockCard(index) {
   // the cards rank genes inside this block, so a gene the new block cannot score is dropped
   keepGeneIfScored();
 
-  renderBlocks();
+  renderCards();
   renderGenes();
   renderGallery();
 
@@ -887,8 +879,13 @@ function scaleFrom(stops) {
 // navy, where that would make the strongest tiles the ones that vanish, so the same greens run the other
 // way and the darkest stop is lifted clear of the ground.
 const EXPRESSION_SCALE = scaleFrom([[27, 94, 66], ...GENE_STOPS.slice(0, 4).reverse()]);
-// muted slate, so tiles carrying no value stay quiet against the ground rather than lighting up
-const MISSING_COLOUR = "#5B708C";
+
+// Every manifold trace is drawn fully opaque. A marker opacity below 1 puts the trace in Plotly's
+// transparent pass, which write-masks the depth buffer: points then paint in array and trace order and
+// never occlude each other, so a far tile drawn late covers a near one and the cloud loses its depth.
+// A point carrying no value is quietened with this dim slate, which is what the translucent grey it
+// replaces resolved to over the cube.
+const MISSING_COLOUR = "#324259";
 const TISSUE_COLOURS = {
   Bowel: "#E0A061",
   Breast: "#EF8FA8",
@@ -965,7 +962,7 @@ function tileValueTraces(positions, values, title, scale, missingLabel) {
 
   if (missing.length) {
     traces.push(markers(`${missingLabel} (${missing.length.toLocaleString()})`, xyz(payload, missing),
-                       tileHover(missing), { size: 2.2, color: MISSING_COLOUR, opacity: 0.5 }));
+                       tileHover(missing), { size: 2.2, color: MISSING_COLOUR }));
   }
 
   traces.push(markers(title, xyz(payload, known), tileHover(known), {
@@ -974,7 +971,6 @@ function tileValueTraces(positions, values, title, scale, missingLabel) {
     colorscale: scale,
     cmin: low,
     cmax: high,
-    opacity: 0.9,
     colorbar: colourbar(title),
   }, { showlegend: false }));
 
@@ -996,7 +992,7 @@ function tissueTraces(positions) {
     const colour = TISSUE_COLOURS[tissue] || MANIFOLD_PALETTE[position % MANIFOLD_PALETTE.length];
 
     return markers(`${tissue} (${rows.length.toLocaleString()})`, xyz(payload, rows), tileHover(rows),
-                  { size: 3.0, color: colour, opacity: tissue === "Unknown" ? 0.55 : 0.9 });
+                  { size: 3.0, color: colour });
   });
 }
 
@@ -1047,19 +1043,12 @@ function manifoldRows() {
   return state.manifold.blocks.block_global_index.map((value, index) => index);
 }
 
-function selectedGlobalIndex() {
-  if (!state.detail || !state.detail.blocks.length) return null;
-  const block = state.detail.blocks[state.blockIndex];
-
-  return block ? block.block_global_index : null;
-}
-
 // the row of the block selected in the cards above, searched over every block rather than the drawn subset
 function selectedRow() {
-  const target = selectedGlobalIndex();
-  if (target === null || !state.manifold) return -1;
+  const block = state.detail && state.detail.blocks[state.blockIndex];
+  if (!block || !state.manifold) return -1;
 
-  return state.manifold.blocks.block_global_index.indexOf(target);
+  return state.manifold.blocks.block_global_index.indexOf(block.block_global_index);
 }
 
 // a block is named by the encoder layer it was fit on and its index inside that dictionary,
@@ -1086,7 +1075,8 @@ function selectedCardLabel() {
   return block ? blockLabel(block) : null;
 }
 
-// a haloed, labelled, floor-tethered marker, because a thin ring is unfindable among 3,354 points
+// a haloed, labelled, floor-tethered marker, because a thin ring is unfindable among 3,354 points.
+// its halo is the one translucent trace drawn here, so what it rings stays visible through it
 function highlightTraces() {
   const blocks = state.manifold.blocks;
   const at = selectedRow();
@@ -1136,7 +1126,6 @@ function continuousTrace(rows, values, title, scale) {
     reversescale: Boolean(!scale),
     cmin: -bound,
     cmax: bound,
-    opacity: 0.88,
     colorbar: colourbar(title),
   }, { showlegend: false })];
 }
@@ -1149,7 +1138,7 @@ function strongestTraces(rows) {
   const background = rows.filter((index) => labels.code[index] < 0);
   if (background.length) {
     traces.push(markers(`no reproduced pathway (${background.length})`, xyz(blocks, background),
-                       blockHover(background), { size: 2.0, color: MISSING_COLOUR, opacity: 0.5 }));
+                       blockHover(background), { size: 2.0, color: MISSING_COLOUR }));
   }
 
   labels.legend.forEach((entry, code) => {
@@ -1157,7 +1146,7 @@ function strongestTraces(rows) {
     if (!rowsFor.length) return;
 
     traces.push(markers(`${shorten(entry.name, 34)} (${rowsFor.length})`, xyz(blocks, rowsFor), blockHover(rowsFor),
-                       { size: 3.4, color: MANIFOLD_PALETTE[code % MANIFOLD_PALETTE.length], opacity: 0.92 }));
+                       { size: 3.4, color: MANIFOLD_PALETTE[code % MANIFOLD_PALETTE.length] }));
   });
 
   return traces;
@@ -1173,7 +1162,6 @@ function dictionaryTrace(rows) {
     colorscale: "Viridis",
     cmin: Math.min(...layers),
     cmax: Math.max(...layers),
-    opacity: 0.88,
     colorbar: colourbar("encoder layer"),
   }, { showlegend: false })];
 }

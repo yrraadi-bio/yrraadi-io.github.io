@@ -109,22 +109,25 @@ greyed it for losing to sets the reader could not see: feature #0-150 carded bil
 features reproduce 7,003 associations above the floor; the strongest `SETS_PER_BLOCK` of each are
 carded, 1,798 cards in all, and the greying rule still weighs the rest. `dominance.carded` names
 those pairs and `build_site_data.py` exports every one of them, so all 1,798 can be selected, greyed
-or not, and `audit_site.py` reports the count that cannot. Both builds sort at full precision, since
-two effects that round to the same displayed r would otherwise swap places at the cut and card a set
-the bundle never exported. `data/blocks/index.json` is 1.4 MB, 140 KB over the wire.
+or not. Both builds cut from `dominance.ranked`, a stable sort at full precision, since two effects
+that round to the same displayed r would otherwise swap places at the cut and card a set the bundle
+never exported; the block build indexes the exported cards rather than testing for them, so a
+disagreement fails the build instead of reaching the page. `data/blocks/index.json` is 1.4 MB, 140 KB
+over the wire.
 
 A set can reproduce inside a feature without any of its genes being measured there, so 25 features
 have no gene chips and the gene section hides itself rather than leaving an empty heading.
 
-A greyed card is evidence the rule did not single out, so neither section ever lists one: they draw
-the cards the rule kept and the card the page is built around, whatever its colour, and nothing else.
-Primary immunodeficiency lists 43 of its 109 cards and allograft rejection 7 of its 89, the 6 it kept
-plus the greyed card it opens on. A set carried by dozens of features is still a wall, so one pill
-beside the heading folds the kept cards to the strongest `CARD_LIMIT`, and the answer is remembered
-in `localStorage` under `interp.foldCards`. The card the page is built around is always drawn, since
-the genes, the manifold and the tiles below follow it; a feature that singles out nothing would
-otherwise open on an empty grid, and it lists that one card alone. The bars are scaled over every
-card rather than the drawn ones, so a dropped card cannot restretch the visible.
+Both sections draw their cards through `cardCuts`, two cuts made in rank order so the list skips over
+cards rather than reordering them. The first always holds: the strongest `CARD_LIMIT` cards together
+with every card the rule lit, wherever it ranks, which leaves 1,647 of the 2,468 cards the 233 sets
+carry. The pill beside the heading makes the second, dropping the greys and cutting the lit cards to
+their own strongest `CARD_LIMIT`, which leaves 178; the answer is remembered in `localStorage` under
+`interp.foldCards`. Primary immunodeficiency draws 43 of its 109 cards and then 8, allograft rejection
+14 of 89 and then 6. The card the page is built around survives both cuts, since the genes, the
+manifold and the tiles below follow it: 157 of the 233 sets and 124 of the 380 features have no lit
+card at all, and with the pill on they show that one card alone. The bars are scaled over every card
+rather than the drawn ones, so a skipped card cannot restretch the visible.
 
 The cross-block map's "strongest pathway" colouring is a different quantity and says so: it is each
 block's largest reproduced effect with no margin required, so a block coloured there can still be
@@ -190,6 +193,16 @@ mean first and is much smaller than the raw score, which says most of the appare
 slide identity: a slide's tiles both group in the block's space and share an expression level. A
 dashed border still marks genes missing from some slide panels.
 
+Every 3D trace is drawn fully opaque. A `marker.opacity` below 1 moves a scatter3d trace into
+Plotly's transparent pass, which renders with the depth buffer write-masked off, so points paint in
+array and trace order and never occlude each other: a far tile drawn late covers a near one, and in
+the tissue plot the visible area of each colour tracked its legend position rather than its depth,
+with Pancreas at 257 tiles covering 955 pixels against Breast's 477 over 1,523 tiles. Opaque, those
+become 227 and 2,237. Nothing keeps both transparency and depth here, since the renderer has no
+order-independent blending, so points carrying no value are quietened with a dim slate instead of
+with alpha. Only the marked feature's halo stays translucent, because it is an annotation that has to
+show what it rings.
+
 Blocks are restricted to held-out **supported** pathway associations, ranked by |held-out effect|.
 Tiles are shortlisted by mean block norm, then ranked by peak patch norm so overlays show
 localized structure.
@@ -228,8 +241,8 @@ transpose here.
 
 Run `python interp/audit_site.py` after any rebuild. It walks every listed feature and every exported
 set and reports anything the viewer could reach and not find: a feature with no tile manifold or no
-selectable set, a card whose document is missing or holds no card back, a gene pointing at a set that
-is not on screen, a set credited by the greying rule but not carded, a pathway with no colouring.
+card, a card whose document is missing or holds no card back, a gene pointing at a set that is not on
+screen, a set credited by the greying rule but not carded, a pathway with no colouring.
 
 `index.html` loads the three local assets with a `?v=` stamp; bump it whenever one of them changes,
 or a browser will keep running the version it cached and can pair old code with new data. The data

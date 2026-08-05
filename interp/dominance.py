@@ -37,6 +37,26 @@ def supported_effects(roots, extra=()):
     return pd.concat(frames, ignore_index=True)
 
 
+def ranked(effects):
+
+    """Order the associations worth carding, strongest held-out effect first.
+
+    Both builds cut a block's cards from this order, so there has to be one order rather than two: a
+    stable sort keeps two effects that agree to the last digit in the order they were read, which is
+    what makes the cut reproducible between them.
+
+    Args:
+        effects (pd.DataFrame): Supported rows from :func:`supported_effects`.
+
+    Returns:
+        pd.DataFrame: The rows above ``MIN_EFFECT``, largest |held-out r| first.
+    """
+
+    strong = effects[effects["heldout_effect"].abs() > MIN_EFFECT]
+
+    return strong.assign(magnitude=strong["heldout_effect"].abs()).sort_values("magnitude", ascending=False, kind="stable")
+
+
 def carded(effects, blocks):
 
     """Name every (set, block) pair the block-first view will show a card for.
@@ -52,13 +72,11 @@ def carded(effects, blocks):
         dict: (key, pathway_id) -> set of block global indices carding that set
     """
 
-    strong = effects[effects["heldout_effect"].abs() > MIN_EFFECT]
-    strong = strong[strong["block_global_index"].isin(blocks)]
-    ranked = strong.assign(magnitude=strong["heldout_effect"].abs()).sort_values("magnitude", ascending=False)
-
+    rows = ranked(effects)
+    rows = rows[rows["block_global_index"].isin(blocks)]
     pairs = {}
 
-    for global_index, group in ranked.groupby("block_global_index", sort=False):
+    for global_index, group in rows.groupby("block_global_index", sort=False):
         for row in group.head(SETS_PER_BLOCK).itertuples(index=False):
             pairs.setdefault((row.key, row.pathway_id), set()).add(int(global_index))
 
