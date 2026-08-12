@@ -1,7 +1,11 @@
 blogs/muon/latex.zip
-__pycache__/
-*/.DS_Store
-blogs/.DS_Store
-blogs/muon/latex/.DS_Store
-blogs/muon/.DS_Store
-blogs/.DS_Store
+**/__pycache__/
+*.py[cod]
+.DS_Store
+
+/interp/.build/
+/interp/dist/
+/interp/**/*.partial
+/interp/**/*.tmp
+/interp/**/*.bak
+/interp/**/*.orig

@@ -9,9 +9,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
 <link rel="icon" href="../assets/favicon.png" type="image/png">
-<!-- the stamp is bumped whenever styles.css, copy.js or app.js changes, so a browser cannot run one
-     version of the viewer against another -->
-<link rel="stylesheet" href="styles.css?v=20260805b" />
+<!-- the stamp is bumped whenever styles.css or the runtime modules change -->
+<link rel="stylesheet" href="styles.css?v=20260811c" />
 </head>
 <body>
 
@@ -75,6 +74,10 @@
               <a id="keggLink" target="_blank" rel="noopener"><span id="pathwayId"></span></a>
               <span class="dot">·</span>
             </span>
+            <span id="groupLead" class="hidden">
+              <span id="pathwayGroup"></span>
+              <span class="dot">·</span>
+            </span>
             <span id="supportedCount"></span>
             <span class="info" tabindex="0" role="button" aria-label="How to read these numbers">
               <span class="info-mark" aria-hidden="true">i</span>
@@ -82,6 +85,7 @@
                 <span><strong>Pathway score:</strong> mean training-standardized log1p-CPM expression of the pathway's genes measured on a tile, positive above the training average and negative below.</span>
                 <span><strong>Feature norm:</strong> L2 norm of the 16-dimensional coordinate a feature assigns to a patch, zero wherever the feature is not among that patch's active features; a tile's figure is the log1p of that norm averaged over its 196 patches.</span>
                 <span><strong>Raw r:</strong> Pearson correlation between that score and the selected feature's tile norm across training tiles. Held-out refers to the 12 unseen slides and their tiles.</span>
+                <span><strong>KEGG Category A:</strong> the top-level category KEGG files this map under in its BRITE hierarchy. The six categories cover the 183 KEGG sets here. MSigDB Hallmark sets sit outside this hierarchy and remain labelled as Hallmark sets.</span>
               </span>
             </span>
           </p>
@@ -111,11 +115,11 @@
       </div>
 
       <div id="geneSection">
-      <h3 class="section-title">Genes clustered in this feature
+      <h3 class="section-title"><span id="geneSectionTitle">Genes clustered in this feature</span>
         <span class="info" tabindex="0" role="button" aria-label="How these genes are ranked">
           <span class="info-mark" aria-hidden="true">i</span>
           <span class="info-panel" role="tooltip">
-            <span>Each chip carries two numbers over the tiles where the gene is measured. I is Moran's I of the gene over the selected feature's manifold, high when tiles that agree on the gene sit together, and the cards are ranked by it. r is the gene's correlation with the feature norm, so a gene can cluster tightly and still barely track how hard the feature fires.</span>
+            <span id="geneInfoText">Each chip carries two numbers over the tiles where the gene is measured. I is Moran's I of the gene over the selected feature's manifold, high when tiles that agree on the gene sit together, and the cards are ranked by it. r is the gene's correlation with the feature norm, so a gene can cluster tightly and still barely track how hard the feature fires.</span>
           </span>
         </span>
       </h3>
@@ -246,8 +250,7 @@
   </div>
 </div>
 
-<script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
-<script src="copy.js?v=20260805b"></script>
-<script src="app.js?v=20260805b"></script>
+<script src="https://cdn.plot.ly/plotly-gl3d-2.35.2.min.js" charset="utf-8"></script>
+<script type="module" src="runtime/app.js?v=20260811c"></script>
 </body>
 </html>

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-4DGX45FJCJ"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-4DGX45FJCJ');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A guide to the Pathway Explorer &mdash; Origin Bio</title>
+    <meta name="description" content="How we test what a vision model's features track in tumor tissue, and how to read the explorer that holds the results." />
+    <meta property="og:title" content="A guide to the Pathway Explorer" />
+    <meta property="og:description" content="How we test what a vision model's features track in tumor tissue, and how to read the explorer that holds the results." />
+    <meta property="og:url" content="https://origin.bio/blogs/pathway-explorer/" />
+    <meta name="twitter:card" content="summary" />
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="icon" href="/assets/favicon.png" type="image/png">
+</head>
+
+<body class="blog-page blog-with-sidebar">
+    <div class="reading-progress-bar"></div>
+    <div class="dna-background">
+        <div class="dna-strand"></div>
+        <div class="dna-strand"></div>
+        <div class="dna-strand"></div>
+    </div>
+
+    <header>
+        <a href="/" class="logo-link">
+            <img src="/assets/Origin%20logo+text%20(blue%20on%20transparent).png" alt="Origin Logo" class="header-logo">
+        </a>
+    </header>
+
+    <main>
+        <section class="blog-hero">
+            <div class="blog-content">
+
+                <nav class="blog-toc" aria-label="Table of contents">
+                    <div class="blog-toc-header">
+                        <span class="blog-toc-title">Contents</span>
+                        <button class="blog-toc-toggle" aria-label="Toggle sidebar" title="Toggle sidebar">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="11 17 6 12 11 7"></polyline>
+                                <polyline points="18 17 13 12 18 7"></polyline>
+                            </svg>
+                        </button>
+                    </div>
+                    <ul>
+                        <li><a href="#page-title">Title</a></li>
+                        <li><a href="#sec-setup">What a feature is</a></li>
+                        <li><a href="#sec-evidence">What earns a card</a></li>
+                        <li><a href="#sec-null">When the genes are scrambled</a></li>
+                        <li><a href="#sec-colour">Why some cards are grey</a></li>
+                        <li><a href="#sec-use">How to read the page</a></li>
+                        <li><a href="#sec-limits">What it does not say</a></li>
+                        <li><a href="#sec-explore">Explore</a></li>
+                    </ul>
+                </nav>
+
+                <button class="blog-toc-open" aria-label="Open sidebar" title="Open sidebar">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="13 7 18 12 13 17"></polyline>
+                        <polyline points="6 7 11 12 6 17"></polyline>
+                    </svg>
+                </button>
+
+                <article class="blog-article">
+
+                    <h2 id="page-title">A guide to the Pathway Explorer</h2>
+                    <p class="blog-date">August 5, 2026 &middot; Viraj Doshi
+                        <span class="author-socials">
+                            <a href="https://x.com/viraj9451" target="_blank" class="author-social-link" aria-label="Twitter">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                                </svg>
+                            </a>
+                            <a href="https://linkedin.com/in/viraj-doshi-2b96a125b/" target="_blank" class="author-social-link" aria-label="LinkedIn">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+                                </svg>
+                            </a>
+                        </span>
+                    </p>
+
+                    <section class="blog-takeaways" aria-label="Key takeaways">
+                        <h3>What the explorer holds</h3>
+                        <ul>
+                            <li><strong>380 features</strong> from block-sparse dictionaries fit on a frozen Prov-GigaPath ViT-G, each a 16 dimensional direction that fires on regions of an H&amp;E slide.</li>
+                            <li><strong>233 gene sets</strong> from KEGG and MSigDB Hallmark, scored on the same tissue from paired Xenium measurements.</li>
+                            <li><strong>7,003 associations</strong> that reproduce on 12 slides the dictionaries never saw, each with a held-out correlation and an out-of-sample R&sup2;.</li>
+                            <li><strong>A scrambling control</strong> that erases all but two of the site's 1,798 cards, which is what the thresholds rest on.</li>
+                            <li><strong>Browse it at <a href="/interp/">origin.bio/interp</a></strong></li>
+                        </ul>
+                    </section>
+
+                    <p>A vision model trained on H&amp;E has no notion of a gene. It learns whatever the pixels support, and the honest question is not whether its features are interpretable in principle but which of them, if any, track something a biologist already has a name for. The explorer is our answer written out in full: every feature we fit, every gene set it appears to carry, and the held-out evidence for and against each pairing.</p>
+
+                    <h3 id="sec-setup">What a feature is</h3>
+
+                    <p>We freeze a Prov-GigaPath encoder and fit a block-sparse dictionary on one of its layers. A feature is one block of that dictionary: a 16 dimensional subspace rather than a single direction, active on an image patch only if it survives a gate that keeps the strongest few. Its strength on a patch is the length of the coordinate it assigns there, and its strength on a tile is that patch map averaged.</p>
+
+                    <p>Every tile also carries measured expression across a 1,656 gene panel, and a gene set's score on a tile is the mean standardized expression of the set's genes there. The site is the join of those two quantities, how hard a feature fired and how highly a set was expressed, over 16,000 tiles from 58 slides: 46 used for fitting and 12 sealed. The slides are mostly lung and breast, which is worth remembering when a feature looks specific.</p>
+
+                    <h3 id="sec-evidence">What earns a card</h3>
+
+                    <p>A correlation between firing and expression is easy to manufacture. Darker tissue holds more cells, more cells give more transcripts, and a feature that has learned nothing beyond stain intensity will still track almost every gene set on the panel. Every effect on the site is therefore a <em>partial</em> correlation, with mean color, hematoxylin and eosin proxies, tissue occupancy, cell count and library size removed from both sides.</p>
+
+                    <p>Each card carries three numbers:</p>
+
+                    <ul>
+                        <li><strong>training r</strong>, the partial correlation fit across the 46 training slides.</li>
+                        <li><strong>held-out r</strong>, the same quantity on the 12 unseen slides, averaged over patients, with the covariate coefficients carried over from training rather than refit.</li>
+                        <li><strong>&Delta;R&sup2; held-out</strong>, how much of the set's variance the feature explains beyond the covariates alone.</li>
+                    </ul>
+
+                    <p>A pairing earns a card only when the held-out effect agrees in sign with the training effect, its patient-level bootstrap interval excludes zero, &Delta;R&sup2; is positive, and the held-out correlation clears 0.10 in absolute value. That last floor matters more than it looks: an effect can be distinguishable from zero across twelve patients and still be far too small to read off a slide.</p>
+
+                    <p>One asymmetry is worth stating plainly, because you will notice it. Held-out r usually reads higher than training r on these cards. That is not the model improving on unseen tissue. Held-out r is the noisier of the two statistics, and requiring it to hold selects its upper tail. Treat the training figure as the effect size and the held-out figure as the evidence that the effect exists at all.</p>
+
+                    <h3 id="sec-null">When the genes are scrambled</h3>
+
+                    <p>Thresholds are only as good as what they reject, and with thousands of features against hundreds of gene sets a permissive test will hand back a full page of findings from nothing at all. So we ran the entire held-out stage a second time against data we had deliberately broken.</p>
+
+                    <p>The control shuffles the gene labels. For each of the 3,310 held-out tiles independently, we permute the whole 1,656 gene axis, so the tile keeps its exact counts, its library size and its number of detected genes, and only the question of which gene those counts belong to is destroyed. Nothing else moves: training tissue is untouched, the features and their activations are reused unchanged, and the same candidate pairings go through the same covariates and the same statistics. Permuting each tile separately matters, because relabeling every tile the same way would merely rename the pathways and leave the structure standing.</p>
+
+                    <p>Almost nothing survives. Across the 137,512 feature and KEGG pairings tested, the share that reproduces falls from 23.4% to 4.4%; at the gene level, over 436,081 pairings, from 11.2% to 3.9%. Fewer than 7% of the associations that reproduced on real tissue do so on scrambled tissue, which is roughly what the support test's own error rate should look like.</p>
+
+                    <p>The sharper number is what happens to the site itself. Of the 1,433 KEGG cards the explorer shows, 88 keep any support after scrambling and <strong>not one clears the 0.10 floor a card needs</strong>. The largest scrambled effect on any of them is 0.083 against a median real effect of 0.163, and 97% fall below 0.05. Across all 1,798 cards on the site, two survive at full strength, both Hallmark sets. Whatever these cards are, they are not the threshold talking to itself.</p>
+
+                    <p>A second null runs earlier, before held-out tissue is ever touched: expression is rotated within each slide along a space-filling curve, a hundred times over, and a pairing has to beat those draws to become a candidate at all. That one keeps the spatial structure of expression intact and only breaks its alignment with the features, so it screens out effects that any smoothly varying quantity would have produced.</p>
+
+                    <h3 id="sec-colour">Why some cards are grey</h3>
+
+                    <p>A feature that tracks a dozen gene sets equally well has told you nothing about any of them. Immune sets in particular overlap heavily, so a feature firing on lymphocytes will light up allograft rejection, T cell receptor signaling and primary immunodeficiency all at once. Rather than pretend the first one is the answer, the site greys the whole feature unless something stands clear.</p>
+
+                    <p>The test is arithmetic. Inside a feature, take the mean of its other held-out effects above the floor, add another 0.10, and keep in color every set above that margin. On feature #38-101 the margin lands at 0.267, so RNA degradation at 0.434 stays lit and hedgehog signaling at 0.252 goes grey despite reproducing cleanly. Roughly two thirds of the listed features single out at least one set this way. Grey means the evidence did not separate that set from the feature's own competition, not that the effect is absent.</p>
+
+                    <h3 id="sec-use">How to read the page</h3>
+
+                    <p>The explorer opens on <strong>Features</strong>, and the same evidence reads from either side. Browse by feature to ask what a direction in the model has picked up, or switch to <strong>Gene sets</strong> to ask which features carry a pathway you care about. Selecting a card drives everything below it.</p>
+
+                    <ul>
+                        <li><strong>Genes clustered in this feature.</strong> Each chip carries <em>I</em>, the Moran's I of that gene over the feature's own tile manifold, and <em>r</em>, its correlation with how hard the feature fires. A gene can cluster tightly and still barely track firing strength, which is why both are shown. Clicking a chip recolors the manifold by that gene.</li>
+                        <li><strong>Feature manifold.</strong> One point per tile the feature fires on, laid out by the coordinates that feature assigns and reduced to three dimensions by UMAP, so the layout belongs to that feature alone. Both plots hold identical positions and rotate independently: the left recolors by pathway score, gene or firing strength, the right shows tissue of origin, so you can see at a glance whether a pathway effect is really a tissue effect.</li>
+                        <li><strong>Cross-feature map.</strong> One point per feature rather than per tile, placed by how strongly each feature tracks every measured gene. Neighbors here are features with similar gene signatures, across layers.</li>
+                        <li><strong>Top tiles.</strong> The H&amp;E itself, with the feature's patch map overlaid. The overlay is the real gated encoding rather than an approximation, resolved per patch, so you can see whether a feature fires on a diffuse region or on a sharp structure.</li>
+                    </ul>
+
+                    <h3 id="sec-limits">What it does not say</h3>
+
+                    <p>Everything here is correlational. A feature that tracks a pathway has not been shown to encode it, and the covariates we remove are the obvious confounders rather than all of them; tissue composition in particular still travels with both sides. The clustering scores are inflated by slide identity, since a slide's tiles both group together in a feature's space and share an expression level, and each chip carries the slide-centered variant that removes it. Expression is coarse enough to read closer to detection than to level. And the card cut is a display decision: a feature shows its strongest few sets, while the margin rule weighs all of them.</p>
+
+                    <p>What we can say is narrower and, we think, more useful: these particular directions in a pathology foundation model move with these particular gene programs on tissue the dictionaries never saw, by this much, after the easy explanations are removed and the scrambled version of the same test comes back all but empty.</p>
+
+                    <h3 id="sec-explore">Explore the features at <a href="/interp/">origin.bio/interp</a>.</h3>
+
+                </article>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        (function () {
+            var body = document.body;
+            var closeBtn = document.querySelector('.blog-toc-toggle');
+            var openBtn = document.querySelector('.blog-toc-open');
+            if (!closeBtn || !openBtn) return;
+            function collapse() { body.classList.add('sidebar-collapsed'); }
+            function expand() { body.classList.remove('sidebar-collapsed'); }
+            closeBtn.addEventListener('click', collapse);
+            openBtn.addEventListener('click', expand);
+        })();
+    </script>
+    <script>
+        (function () {
+            var bar = document.querySelector('.reading-progress-bar');
+            var target = document.getElementById('sec-explore');
+            if (!bar || !target) return;
+            function update() {
+                var targetTop = target.getBoundingClientRect().top + window.pageYOffset;
+                var progress = Math.min(1, Math.max(0, window.pageYOffset / (targetTop - window.innerHeight * 0.5)));
+                bar.style.transform = 'scaleX(' + progress + ')';
+            }
+            window.addEventListener('scroll', update, { passive: true });
+            update();
+        })();
+    </script>
+</body>
+
+</html>

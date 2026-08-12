@@ -152,10 +152,13 @@ a { color: inherit; text-decoration: none; }
 .dock-name em { font-style: italic; color: var(--accent); }
 
 /* a ring rather than a fill, so the bar reads as one piece of glass with a button drawn on it */
-.btn-reload {
+.btn-reload, .btn-sidebar, .info-mark {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+.btn-reload {
   flex: none;
   width: 34px;
   height: 34px;
@@ -271,22 +274,25 @@ a { color: inherit; text-decoration: none; }
 
 .collection-wrap { padding: 2px 12px 8px; }
 
-.collection-select {
-  width: 100%;
+.collection-select, .ctl select {
   appearance: none;
   -webkit-appearance: none;
   font: inherit;
-  font-size: 12.5px;
   color: var(--ink);
   background-color: rgba(11, 24, 44, 0.9);
   background-image: var(--chevron);
   background-repeat: no-repeat;
-  background-position: right 12px center;
   background-size: 12px;
-  border: 1px solid var(--accent-line);
   border-radius: 999px;
-  padding: 8px 32px 8px 14px;
   cursor: pointer;
+}
+
+.collection-select {
+  width: 100%;
+  font-size: 12.5px;
+  background-position: right 12px center;
+  border: 1px solid var(--accent-line);
+  padding: 8px 32px 8px 14px;
   transition: border-color 200ms ease, background-color 200ms ease, box-shadow 200ms ease;
 }
 
@@ -299,9 +305,6 @@ a { color: inherit; text-decoration: none; }
 .search-wrap { display: flex; align-items: center; gap: 8px; padding: 4px 12px 10px; }
 
 .btn-sidebar {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   flex: none;
   width: 32px;
   height: 32px;
@@ -501,9 +504,6 @@ a { color: inherit; text-decoration: none; }
 .info { position: relative; display: inline-block; margin-left: 8px; vertical-align: baseline; }
 
 .info-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   width: 16px;
   height: 16px;
   color: var(--ink-faint);
@@ -589,14 +589,17 @@ a { color: inherit; text-decoration: none; }
 
 .gene-list { display: flex; flex-wrap: wrap; gap: 9px; margin-bottom: 30px; }
 
-/* fixed width keeps every meter bar the same length, so they read against each other */
-.gene-chip {
+.gene-chip, .block-card, .tile-card {
   background: var(--panel);
   border: 1px solid var(--panel-line);
+  cursor: pointer;
+}
+
+/* fixed width keeps every meter bar the same length, so they read against each other */
+.gene-chip {
   border-radius: 12px;
   padding: 8px 11px 9px;
   width: 134px;
-  cursor: pointer;
   transition: border-color 250ms ease, background 250ms ease, transform 350ms var(--ease), box-shadow 300ms ease;
 }
 
@@ -617,9 +620,11 @@ a { color: inherit; text-decoration: none; }
 
 .gene-chip .lvl { font-size: 10.5px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
 
-.gene-chip .meter { height: 3px; border-radius: 999px; background: var(--rail); margin-top: 7px; overflow: hidden; }
+.gene-chip .meter, .bar { border-radius: 999px; background: var(--rail); overflow: hidden; }
 
-.gene-chip .meter span { display: block; height: 100%; background: var(--accent); }
+.gene-chip .meter { height: 3px; margin-top: 7px; }
+
+.gene-chip .meter span, .bar span { display: block; height: 100%; background: var(--accent); }
 
 .gene-chip.partial { border-style: dashed; }
 
@@ -630,11 +635,8 @@ a { color: inherit; text-decoration: none; }
 .block-card {
   position: relative;
   overflow: hidden;
-  background: var(--panel);
-  border: 1px solid var(--panel-line);
   border-radius: 14px;
   padding: 13px 15px 14px;
-  cursor: pointer;
   min-width: 186px;
   transition: border-color 300ms ease, background 300ms ease, transform 400ms var(--ease), box-shadow 350ms ease;
 }
@@ -677,14 +679,17 @@ a { color: inherit; text-decoration: none; }
 .set-card .tag {
   flex: none;
   margin-top: 1px;
+  max-width: 132px;
   padding: 1px 7px;
   border: 1px solid var(--rail);
   border-radius: 999px;
   font-size: 9.5px;
+  line-height: 1.25;
   letter-spacing: 0.08em;
+  text-align: center;
   text-transform: uppercase;
   color: var(--ink-faint);
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .set-card.active .tag { color: var(--accent); border-color: var(--accent-line); }
@@ -700,13 +705,13 @@ a { color: inherit; text-decoration: none; }
 
 .block-card td.val { text-align: right; color: var(--ink); font-variant-numeric: tabular-nums; }
 
-.bar { height: 4px; border-radius: 999px; background: var(--rail); margin-top: 9px; overflow: hidden; }
-
-.bar span { display: block; height: 100%; background: var(--accent); }
+.bar { height: 4px; margin-top: 9px; }
 
 /* 3D block manifold */
 
-.manifold-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; flex-wrap: wrap; margin-top: 30px; }
+.manifold-head, .gallery-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; flex-wrap: wrap; }
+
+.manifold-head { margin-top: 30px; }
 
 .manifold-frame {
   display: grid;
@@ -767,8 +772,6 @@ a { color: inherit; text-decoration: none; }
 
 /* gallery */
 
-.gallery-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; flex-wrap: wrap; }
-
 .controls { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; flex-wrap: wrap; }
 
 /* the theme states a choice as a row of rings rather than a segmented box */
@@ -794,22 +797,12 @@ a { color: inherit; text-decoration: none; }
 .ctl { font-size: 10px; color: var(--ink-faint); display: flex; align-items: center; gap: 8px; text-transform: uppercase; letter-spacing: 0.18em; }
 
 .ctl select {
-  appearance: none;
-  -webkit-appearance: none;
-  font: inherit;
   font-size: 12px;
   letter-spacing: normal;
   text-transform: none;
-  color: var(--ink);
-  background-color: rgba(11, 24, 44, 0.9);
-  background-image: var(--chevron);
-  background-repeat: no-repeat;
   background-position: right 10px center;
-  background-size: 12px;
   border: 1px solid var(--rail);
-  border-radius: 999px;
   padding: 7px 29px 7px 13px;
-  cursor: pointer;
   transition: border-color 200ms ease, box-shadow 200ms ease;
 }
 
@@ -867,11 +860,8 @@ a { color: inherit; text-decoration: none; }
 .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 16px; }
 
 .tile-card {
-  background: var(--panel);
-  border: 1px solid var(--panel-line);
   border-radius: 14px;
   overflow: hidden;
-  cursor: pointer;
   transition: border-color 300ms ease, transform 400ms var(--ease), box-shadow 350ms ease;
 }
 
