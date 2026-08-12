@@ -207,11 +207,14 @@ a { color: inherit; text-decoration: none; }
 /* layout */
 
 .layout {
+  --sidebar-top: var(--dock-clear);
   display: grid;
   grid-template-columns: var(--sidebar-width, 288px) 1fr;
   align-items: start;
   padding-top: var(--dock-clear);
 }
+
+.layout.dock-gone { --sidebar-top: 8px; }
 
 .layout.sidebar-collapsed { grid-template-columns: auto 1fr; }
 
@@ -222,11 +225,12 @@ a { color: inherit; text-decoration: none; }
 
 /* the list is a column of the page rather than a panel bolted to its side, so it carries no rule or fill */
 .sidebar {
-  height: calc(100vh - var(--dock-clear));
+  height: calc(100vh - var(--sidebar-top));
   position: sticky;
-  top: var(--dock-clear);
+  top: var(--sidebar-top);
   display: flex;
   flex-direction: column;
+  transition: top 600ms var(--ease), height 600ms var(--ease);
 }
 
 /* drag the sidebar's right edge to set its width */

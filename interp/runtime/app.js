@@ -978,6 +978,7 @@ function bindSidebarResize() {
 
 function bindDockLift() {
   const dock = document.querySelector(".dock");
+  const layout = document.querySelector(".layout");
   let last = window.scrollY;
 
   const update = () => {
@@ -987,6 +988,7 @@ function bindDockLift() {
     dock.classList.toggle("lifted", at > 6);
     if (Math.abs(moved) > 6) dock.classList.toggle("gone", moved > 0 && at > 140);
     if (at <= 140) dock.classList.remove("gone");
+    layout.classList.toggle("dock-gone", dock.classList.contains("gone"));
 
     last = at;
   };
