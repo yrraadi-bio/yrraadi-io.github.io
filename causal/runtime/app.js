@@ -564,11 +564,11 @@ function drawGeneHeat(canvas, tile, geneMax) {
     (value) => (value > 0 ? rgb(geneRamp(0.25 + 0.75 * Math.min(1, value / scale))) : "#f8fbf9"));
 }
 
-// The edit only reaches a tile the feature fires on, so the gene ranking runs over those.
+// The gallery is read for the selected gene, so a tile carrying none of it has nothing to show.
 function activeTiles() {
-  const tiles = state.featureDoc.tiles.slice().sort((a, b) => tileExpression(b) - tileExpression(a));
+  const carrying = state.featureDoc.tiles.filter((tile) => tileExpression(tile) > 0);
 
-  return tiles.slice(0, GALLERY_LIMIT);
+  return carrying.sort((a, b) => tileExpression(b) - tileExpression(a)).slice(0, GALLERY_LIMIT);
 }
 
 function tileScore(tile) {
@@ -618,7 +618,8 @@ function renderGallery() {
   gallery.innerHTML = "";
 
   if (!tiles.length) {
-    gallery.innerHTML = `<p class="gallery-note">${COPY.gallery.empty}</p>`;
+    el("galleryNote").innerHTML = "";
+    gallery.innerHTML = `<p class="gallery-note">${COPY.gallery.empty(state.gene)}</p>`;
     return;
   }
 
@@ -629,9 +630,7 @@ function renderGallery() {
   renderScaleBar(tiles);
   renderGeneScale(geneMax);
 
-  const expressing = tiles.filter((tile) => tileExpression(tile) > 0).length;
-
-  el("galleryNote").innerHTML = COPY.gallery.basis(tiles.length, state.featureDoc.tiles.length, state.gene, expressing)
+  el("galleryNote").innerHTML = COPY.gallery.basis(tiles.length, state.featureDoc.n_tiles, state.gene)
     + COPY.gallery.provenance(scanSlide, onSlide, tiles.length);
 
   tiles.forEach((tile) => {

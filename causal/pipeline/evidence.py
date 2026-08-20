@@ -106,6 +106,31 @@ def carded(rows):
     return pairs
 
 
+def showcased(rows, lead, limit):
+
+    """Name the genes each feature's gallery can be ordered by.
+
+    A feature exports cards for its strongest ``limit`` admitted genes, and every feature also
+    carries its lead gene so the ones admitting nothing still colour their tiles.
+
+    Args:
+        rows (pandas.DataFrame): Admitted rows from ``ranked``.
+        lead (dict): Block global index to its strongest-scoring gene from ``leaders``.
+        limit (int): Cards exported per feature.
+
+    Returns:
+        dict: Block global index to the gene symbols its gallery can show.
+    """
+
+    genes = {index: [gene] for index, gene in lead.items()}
+
+    for index, group in rows.groupby("block_global_index", sort=False):
+        showing = genes[int(index)]
+        showing.extend(row.gene for row in group.head(limit).itertuples(index=False) if row.gene not in showing)
+
+    return genes
+
+
 def winners(rows):
 
     """Pick the genes that stand clear of each feature's evidence tail.

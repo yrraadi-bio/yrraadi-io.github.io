@@ -58,10 +58,11 @@ def manifolds(interp_root, features, destination):
 
 def tiles(interp_root, payload, destination):
 
-    """Copy every tile image the shared payload references, rebuilt losslessly.
+    """Rebuild every tile image the shared payload references, losslessly.
 
     Optimisation rewrites Huffman tables and rescans the file progressively without touching a
-    DCT coefficient, so every decoded pixel is unchanged.
+    DCT coefficient, so every decoded pixel is unchanged. Tiles the pathway explorer published
+    are taken from there; the rest were already laid down by the encoding stage.
 
     Args:
         interp_root (Path): Root of the pathway explorer holding the published tiles.
@@ -69,7 +70,7 @@ def tiles(interp_root, payload, destination):
         destination (Path): Causal ``tiles`` directory.
 
     Returns:
-        tuple: Number of images copied, their size in bytes, and their original size in bytes.
+        tuple: Number of images written, their size in bytes, and their original size in bytes.
     """
 
     destination.mkdir(parents=True, exist_ok=True)
@@ -77,7 +78,8 @@ def tiles(interp_root, payload, destination):
     written = original = 0
 
     for name in sorted(names):
-        source = (interp_root / "tiles" / name).read_bytes()
+        published = interp_root / "tiles" / name
+        source = (published if published.is_file() else destination / name).read_bytes()
         optimised = mozjpeg_lossless_optimization.optimize(source)
         write_atomic(destination / name, optimised)
         written += len(optimised)

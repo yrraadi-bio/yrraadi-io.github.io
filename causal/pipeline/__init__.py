@@ -3,13 +3,14 @@
 import argparse
 from pathlib import Path
 
-from pipeline import assets, clustering, documents, expression, manifold, shared
-from pipeline.config import DEFAULT_INTERP, DEFAULT_OUT, DEFAULT_RANKINGS, DEFAULT_SOURCE
-from pipeline.evidence import leaders, load_rankings, ranked
+from pipeline import assets, clustering, documents, encode, expression, manifold, shared
+from pipeline.config import (DEFAULT_INTERP, DEFAULT_OUT, DEFAULT_RANKINGS, DEFAULT_RUN, DEFAULT_SOURCE,
+                             DEFAULT_XENIUM)
+from pipeline.evidence import leaders, load_rankings, ranked, showcased as showcase
 from pipeline.site import manifold_features, published_features
 
 
-def build(rankings_path, interp_root, source_root, out_root):
+def build(rankings_path, interp_root, source_root, run_root, xenium_root, out_root):
 
     """Build every causal document, index, and colouring.
 
@@ -17,6 +18,8 @@ def build(rankings_path, interp_root, source_root, out_root):
         rankings_path (Path): Per-gene ranking parquet from the causal block scan.
         interp_root (Path): Root of the pathway explorer site.
         source_root (Path): Gene/pathway analysis root holding the per-tile counts.
+        run_root (Path): BSF run root holding the activation cache and encoders.
+        xenium_root (Path): Directory of Xenium slide shards holding tile images and transcripts.
         out_root (Path): Causal site root receiving ``data``.
 
     Returns:
@@ -32,16 +35,24 @@ def build(rankings_path, interp_root, source_root, out_root):
     print(f"{len(scoped):,} gene-feature pairs over {scoped['gene'].nunique()} genes and {len(features)} features")
 
     scan_slide = scoped["slide"].iloc[0]
-    payload, tiles = shared.build(interp_root, set(features), set(scoped["gene"].unique()), scan_slide)
+    admitted = ranked(scoped)
+    lead = leaders(scoped)
+    selectable = sorted(set(admitted["gene"].unique()) | set(lead.values()))
+    axis = expression.gene_axis(source_root)
+    counts, measured, slides = expression.tile_counts(source_root)
+
+    showcased = showcase(admitted, lead, documents.EXPORT_PER_TARGET)
+    encoded, written = encode.build(interp_root, run_root, xenium_root, features, showcased, counts, axis,
+                                    out_root / "tiles")
+    print(f"{written:,} tiles encoded past the published pool, filling every carded gene's gallery")
+
+    payload, tiles = shared.build(interp_root, set(features), set(scoped["gene"].unique()), scan_slide,
+                                  showcased, counts, axis, encoded)
     shared_name = shared.write(data_root, payload)
     size = (data_root / shared_name).stat().st_size
     on_slide = sum(1 for tile in payload["tiles"] if tile["slide_id"] == scan_slide)
     print(f"shared payload: {len(payload['tiles']):,} tiles ({on_slide} from {scan_slide}),"
           f" {len(payload['activations']):,} activations, {size / 1024 / 1024:.1f} MB gzipped")
-
-    selectable = sorted(set(ranked(scoped)["gene"].unique()) | set(leaders(scoped).values()))
-    axis = expression.gene_axis(source_root)
-    counts, measured, slides = expression.tile_counts(source_root)
 
     written = expression.build(counts, measured, slides, axis, selectable, data_root / "manifold" / "tile_genes")
     print(f"{written} per-tile expression maps, one for every selectable gene")
@@ -79,6 +90,8 @@ def parser():
     root.add_argument("--rankings", default=DEFAULT_RANKINGS, help="per-gene causal ranking parquet")
     root.add_argument("--interp", default=DEFAULT_INTERP, help="pathway explorer root supplying the feature set")
     root.add_argument("--source", default=DEFAULT_SOURCE, help="analysis root supplying per-tile gene counts")
+    root.add_argument("--run", default=DEFAULT_RUN, help="BSF run root supplying activations and encoders")
+    root.add_argument("--xenium", default=DEFAULT_XENIUM, help="Xenium shard root supplying tile images")
     root.add_argument("--out", default=DEFAULT_OUT, help="causal site root holding data/")
 
     return root
@@ -96,6 +109,6 @@ def main(argv=None):
     """
 
     args = parser().parse_args(argv)
-    build(Path(args.rankings), Path(args.interp), Path(args.source), Path(args.out))
+    build(Path(args.rankings), Path(args.interp), Path(args.source), Path(args.run), Path(args.xenium), Path(args.out))
 
 __all__ = ["main"]

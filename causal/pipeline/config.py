@@ -13,10 +13,13 @@ GIGAPATH_LAYERS = (0, 1, 13, 18, 23, 29, 38, 39)
 
 MIN_EFFECT = 0.01
 CARDS_PER_TARGET = 8
+GENE_TILES = 4
 
 DEFAULT_RANKINGS = "/home/viraj/origin-2.0/bsf/out/gene_causal_all_strict_ckpt4/discovery_report/per_gene_rankings.parquet"
 DEFAULT_INTERP = "/home/viraj/yrraadi-io.github.io/interp"
 DEFAULT_SOURCE = "/home/viraj/origin-2.0/runs_bsf/prov_gigapath/xenium_16k_gs16_topk96/gene_pathway_feature_extraction"
+DEFAULT_RUN = "/home/viraj/origin-2.0/runs_bsf/prov_gigapath/xenium_16k_gs16_topk96"
+DEFAULT_XENIUM = "/home/viraj/silico-folder/data/spatial_shards_hest_v1/xenium"
 DEFAULT_OUT = "/home/viraj/yrraadi-io.github.io/causal"
 
 TILE_ROOT = "tiles"

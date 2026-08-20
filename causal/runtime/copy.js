@@ -136,11 +136,12 @@ export const COPY = {
   },
 
   gallery: {
-    empty: "No tiles available for this view.",
-    basis: (shown, pool, gene, expressing) =>
-      `The ${shown} highest-<b>${gene}</b> tiles among the ${pool} this feature fires hardest on, ${expressing} of`
-      + ` them carrying any ${gene} at all. The edit only reaches a tile the feature fires on, so this is as close`
-      + ` as the atlas gets to the high tiles the swap was applied to.`,
+    empty: (gene) => `No tile this feature fires on carries any <b>${gene}</b>, so there is nothing to show here.`
+      + ` The edit still lowered the prediction, but it did so across tiles where the transcript was never detected.`,
+    basis: (shown, pool, gene) =>
+      `The ${shown} tiles carrying the most <b>${gene}</b> of the ${pool.toLocaleString()} this feature fires on. The`
+      + ` edit only reaches a tile the feature fires on, so this is as close as the atlas gets to the high tiles the`
+      + ` swap was applied to; tiles reading no ${gene} at all are left out.`,
     provenance: (slide, onSlide, shown) => ` ${onSlide === 0
       ? `None come from ${slide}, the single slide every causal number on this page was measured on.`
       : `${onSlide} of ${shown} come from ${slide}, the single slide every causal number on this page was measured`

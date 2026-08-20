@@ -22,7 +22,7 @@ export const state = {
 
 export const CARDS_KEY = "causal.foldCards";
 export const CARD_LIMIT = 8;
-export const GALLERY_LIMIT = 12;
+export const GALLERY_LIMIT = 8;
 export const SIDEBAR_KEY = "causal.sidebarWidth";
 export const SIDEBAR_DEFAULT = 288;
 export const SIDEBAR_MIN = 200;

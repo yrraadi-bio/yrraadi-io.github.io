@@ -6,14 +6,13 @@ import json
 from collections import defaultdict
 from pathlib import Path
 
-from pipeline.config import TILE_ROOT, compact_json, load_json
+import numpy as np
+
+from pipeline.config import GENE_TILES, TILE_ROOT, compact_json, load_json
 
 SHARED_SCHEMA = 1
 TILE_FIELDS = ("sequence_id", "slide_id", "source_h5_row", "tissue", "split", "gene_patch", "gene_cells")
 ACTIVATION_FIELDS = ("activity", "patches", "max_patch", "mean_patch", "n_firing", "peak_to_mean")
-
-TILES_PER_FEATURE = 24
-SCAN_SLIDE_QUOTA = 12
 
 
 def source_payloads(interp_root):
@@ -82,38 +81,95 @@ def candidates(interp_root, features):
     return pooled
 
 
-def gallery(pooled, scan_slide):
+def expressed(rows, tile_row, symbols, counts, axis, scan_slide):
 
-    """Cap each feature's gallery, holding room for the slide the edits were scored on.
+    """Pick the pooled tiles each showcased gene is most expressed on.
+
+    Each gene reserves its strongest tiles overall and again among the scored slide alone, so a
+    gallery keeps a foothold on the slide every causal number was measured on.
+
+    Args:
+        rows (list): One feature's ``(tile, activation)`` pairs.
+        tile_row (dict): Sequence identifier to global tile row.
+        symbols (list): Gene symbols the feature's gallery can be ordered by.
+        counts (numpy.ndarray): Per-tile transcript counts [n_tiles, n_genes].
+        axis (dict): Gene symbol to axis column index.
+        scan_slide (str): Slide every causal number is measured on.
+
+    Returns:
+        set: Indices into ``rows`` that carry one of the genes.
+    """
+
+    # shape: [n_pooled]
+    pooled = np.array([tile_row[tile["sequence_id"]] for tile, _ in rows])
+    # shape: [n_pooled]
+    scored = np.array([tile["slide_id"] == scan_slide for tile, _ in rows])
+    picked = set()
+
+    for symbol in symbols:
+        # shape: [n_pooled]
+        column = counts[pooled, axis[symbol]]
+        carrying = np.nonzero(column > 0)[0]
+        on_slide = carrying[scored[carrying]]
+
+        picked.update(int(at) for at in carrying[np.argsort(-column[carrying])][:GENE_TILES])
+        picked.update(int(at) for at in on_slide[np.argsort(-column[on_slide])][:GENE_TILES])
+
+    return picked
+
+
+def gallery(pooled, scan_slide, showcased, tile_row, counts, axis):
+
+    """Keep the tiles each feature's gallery can actually show.
+
+    The gallery is read for one gene at a time and never shows a tile carrying none of it, so
+    ranking by feature activity only ships tiles that can never be drawn; every kept tile is one
+    a showcased gene is expressed on.
 
     Args:
         pooled (dict): Block global index to its ``(tile, activation)`` pairs.
         scan_slide (str): Slide every causal number is measured on.
+        showcased (dict): Block global index to the gene symbols its gallery can show.
+        tile_row (dict): Sequence identifier to global tile row.
+        counts (numpy.ndarray): Per-tile transcript counts [n_tiles, n_genes].
+        axis (dict): Gene symbol to axis column index.
 
     Returns:
-        dict: Block global index to capped pairs in descending activation order.
+        dict: Block global index to kept pairs in descending activation order.
     """
 
     capped = {}
 
     for feature, rows in pooled.items():
-        order = sorted(range(len(rows)), key=lambda at: -rows[at][1]["activity"])
-        reserved = [at for at in order if rows[at][0]["slide_id"] == scan_slide][:SCAN_SLIDE_QUOTA]
-        held = set(reserved)
-        keep = list(reserved)
-
-        for at in order:
-            if len(keep) >= TILES_PER_FEATURE:
-                break
-            if at not in held:
-                keep.append(at)
-
+        keep = expressed(rows, tile_row, showcased[feature], counts, axis, scan_slide)
         capped[feature] = [rows[at] for at in sorted(keep, key=lambda at: -rows[at][1]["activity"])]
 
     return capped
 
 
-def build(interp_root, features, genes, scan_slide):
+def pool(interp_root, features, encoded):
+
+    """Pool the published tiles with the ones encoded to carry the carded genes.
+
+    Args:
+        interp_root (Path): Root of the pathway explorer site.
+        features (set): Block global indices the site publishes.
+        encoded (dict): Block global index to freshly encoded ``(tile, activation)`` pairs.
+
+    Returns:
+        dict: Block global index to every candidate ``(tile, activation)`` pair.
+    """
+
+    pooled = candidates(interp_root, features)
+
+    for feature, pairs in encoded.items():
+        seen = {tile["sequence_id"] for tile, _ in pooled[feature]}
+        pooled[feature].extend((tile, source) for tile, source in pairs if tile["sequence_id"] not in seen)
+
+    return pooled
+
+
+def build(interp_root, features, genes, scan_slide, showcased, counts, axis, encoded):
 
     """Collect the tiles and activations the causal explorer needs.
 
@@ -122,6 +178,10 @@ def build(interp_root, features, genes, scan_slide):
         features (set): Block global indices the site publishes.
         genes (set): Gene symbols the causal scan ranks.
         scan_slide (str): Slide every causal number is measured on.
+        showcased (dict): Block global index to the gene symbols its gallery can show.
+        counts (numpy.ndarray): Per-tile transcript counts [n_tiles, n_genes].
+        axis (dict): Gene symbol to axis column index.
+        encoded (dict): Block global index to freshly encoded ``(tile, activation)`` pairs.
 
     Returns:
         tuple: Shared payload and block global index to ordered tile references.
@@ -132,7 +192,7 @@ def build(interp_root, features, genes, scan_slide):
     activations = []
     references = {}
 
-    for feature, pairs in gallery(candidates(interp_root, features), scan_slide).items():
+    for feature, pairs in gallery(pool(interp_root, features, encoded), scan_slide, showcased, rows, counts, axis).items():
         picked = []
 
         for origin, source in pairs:
