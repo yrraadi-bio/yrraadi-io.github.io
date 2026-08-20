@@ -9,3 +9,10 @@ blogs/muon/latex.zip
 /interp/**/*.tmp
 /interp/**/*.bak
 /interp/**/*.orig
+
+/causal/.build/
+/causal/dist/
+/causal/**/*.partial
+/causal/**/*.tmp
+/causal/**/*.bak
+/causal/**/*.orig

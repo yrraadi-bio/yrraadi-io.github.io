@@ -1,0 +1,5 @@
+numpy>=2.0
+pandas>=2.0
+pyarrow>=15.0
+scipy>=1.11
+mozjpeg-lossless-optimization>=1.3
