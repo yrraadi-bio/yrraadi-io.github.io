@@ -19,13 +19,22 @@
 \usepackage[colorlinks=true,allcolors=blue!55!black]{hyperref}
 \definecolor{originblue}{HTML}{123E6D}
 
-\graphicspath{{figures/}}
+\graphicspath{{used_pngs/}}
 \captionsetup{font=small,labelfont=bf,skip=7pt}
 \linespread{1.06}
 \setlength{\parindent}{1.4em}
 \setlength{\parskip}{0.70em plus 0.1em minus 0.1em}
 \setlength{\textfloatsep}{15pt plus 3pt minus 2pt}
 \setlength{\intextsep}{13pt plus 2pt minus 2pt}
+
+% Let floats fill pages rather than leaving a gap when a figure jumps.
+\renewcommand{\topfraction}{0.92}
+\renewcommand{\bottomfraction}{0.85}
+\renewcommand{\textfraction}{0.06}
+\renewcommand{\floatpagefraction}{0.80}
+\setcounter{topnumber}{4}
+\setcounter{bottomnumber}{3}
+\setcounter{totalnumber}{6}
 
 \begin{document}
 
@@ -67,13 +76,17 @@ patch and uses that inferred layout to assign per-cell gene expression, with no
 external cell segmentation or transcriptomic coordinates. Trained only on the
 HEST-1k Xenium corpus across breast, lung, bowel, and skin, Astra recovers
 structured, spatially coherent expression on held-out patients and on an
-out-of-distribution 10x breast-cancer cohort. We then show that Astra's
+out-of-distribution 10x breast-cancer cohort. On pathologist-annotated TCGA
+breast regions the same frozen model recovers tumor, lymphocyte, and stromal
+composition (per-slide correlation 0.855, 0.826, and 0.657), improving on every
+score reported by a breast-specific spatial-expression model evaluated on the
+same regions and folds. We then show that Astra's
 H\&E-derived expression carries clinical signal without task-specific
 fine-tuning of the image-to-expression model: it predicts trastuzumab response
-in HER2-positive breast cancer from intratumoral expression dispersion (AUROC
-0.713), stratifies overall survival in ER-positive TCGA-BRCA (log-rank
-$p=0.007$ between predicted risk quartiles), and pre-screens for microsatellite
-instability in colorectal cancer (AUROC 0.705). Together, these results show
+in HER2-positive breast cancer from tile-level predicted expression (AUROC
+0.716), stratifies overall survival in ER-positive TCGA-BRCA (log-rank
+$p=0.001$ between predicted risk quartiles), and pre-screens for microsatellite
+instability in colorectal cancer (AUROC 0.741). Together, these results show
 that histology-derived single-cell expression can support a variety of clinical
 applications, such as treatment-response prediction, prognosis, and molecular
 biomarker screening.\par}
@@ -85,10 +98,12 @@ biomarker screening.\par}
 \hfill
 \begin{minipage}[b]{0.25\linewidth}
   \raggedleft
-  \includegraphics[width=0.82in]{../assets/Origin logo+text (blue on transparent).png}
+  \includegraphics[width=0.82in]{origin_logo.png}
 \end{minipage}
 \endgroup
 \end{tcolorbox}
+
+{\parskip=0pt\small\tableofcontents}
 
 \section{Introduction}
 
@@ -118,9 +133,10 @@ their resolution or inference requirements limit how directly they can be used.
 Spot-level models such as ST-Net, HisToGene, and
 Hist2ST~\cite{stnet,histogene,hist2st} learn from Visium-style targets, so each
 prediction averages over many cells and blurs the cell-to-cell variation that
-defines a niche. Single-cell methods such as GHIST and DeepCell improve
-resolution but still take the cellular layout as an input rather than inferring
-it: GHIST matches separate H\&E and Xenium segmentations, while DeepCell crops
+defines a niche. Single-cell methods such as GHIST and DeepCell, the
+Xenium-resolution variant of DeepSpot, improve resolution but still take the
+cellular layout as an input rather than inferring it: GHIST matches separate
+H\&E and Xenium segmentations, while DeepCell crops
 H\&E around supplied Xenium centroids~\cite{ghist,deepcell}. Either route ties
 training and inference to an external segmentation, and any spatial mismatch
 between the two assays injects label noise or discards usable training signal
@@ -131,14 +147,18 @@ defined by their centroids, while, in parallel, a density head learns where
 those centroids fall inside each patch. At inference, the density head proposes the layout from
 H\&E alone and expression is queried at the inferred positions, without external
 segmentation or cross-assay matching. We first test whether this H\&E-only pipeline recovers spatially
-coherent expression across tissues. We then hold Astra frozen and test three
+coherent expression across tissues, and whether the same predictions reproduce
+the tumor, immune, and stromal composition that pathologists annotate on slides
+from a cohort the model never saw. We then hold Astra frozen and test three
 clinical applications in cohorts without measured spatial transcriptomics:
 trastuzumab response prediction in HER2-positive breast cancer, survival
 stratification in ER-positive breast cancer, and MSI-H pre-screening in
 colorectal cancer. These tasks test whether the predicted transcriptome provides
 useful clinical signal rather than only reproducing benchmark expression.
 
-\section{Astra recovers spatial expression from histology}
+\section{Model Overview}
+
+\subsection{Astra recovers spatial expression from histology}
 \label{sec:recovery}
 
 We evaluate Astra with patient-level cross-validation on HEST-1k Xenium data
@@ -150,73 +170,57 @@ equivalent to recovering where a gene is high or low on the slide. Genes vary
 widely in how much spatial structure they carry. Diffuse genes are nearly
 random across the tissue and hard to pin to morphology; genes that organize into
 compartments or neighborhoods are the ones Astra recovers
-(Figure~\ref{fig:spearman}). Across the top-50 Moran's I genes the median
-per-gene Spearman is 0.46 in breast, 0.51 in lung, 0.41 in bowel, and 0.53 in
-skin (0.47 pooled), a consistent level of recovery across four unrelated tissue
-types. Ranking each slide's genes by true Moran's I and sweeping how many are
-kept, this recovery is highest for the most organized genes and falls as more
-diffuse genes are added (Figure~\ref{fig:ngenes}), so the top few dozen genes
-per slide carry the strongest predictions.
+(Figure~\ref{fig:spearman}). Across each slide's top-50 Moran's I genes the
+median per-gene Spearman is 0.43 in breast, 0.42 in lung, 0.38 in bowel, and
+0.32 in skin (0.40 pooled), a consistent level of recovery across four unrelated
+tissue types. Sweeping how many of those ranked genes are kept, recovery is
+highest for the most organized genes and falls as more diffuse genes are added
+(Figure~\ref{fig:ngenes}), so the top few dozen genes per slide carry the
+strongest predictions.
 
-\noindent\begin{minipage}{\linewidth}
-  \captionsetup{type=figure}
+\begin{figure}[!htbp]
   \centering
   \begin{subfigure}{0.48\linewidth}
     \centering
-    \includegraphics[width=\linewidth]{spearman_boxplot.pdf}
-    \caption{Top-50 Moran's I genes, per tissue.}
+    \includegraphics[width=\linewidth]{spearman_top50_box.png}
+    \caption{Top 50 genes per slide.}
     \label{fig:spearman}
   \end{subfigure}
   \hfill
   \begin{subfigure}{0.48\linewidth}
     \centering
-    \includegraphics[width=\linewidth]{spearman_vs_ngenes.pdf}
-    \caption{Cumulative-mean Spearman vs.\ number of genes kept.}
+    \includegraphics[width=\linewidth]{spearman_vs_ngenes.png}
+    \caption{Full panel.}
     \label{fig:ngenes}
   \end{subfigure}
-  \caption{Held-out HEST-1k recovery with inferred layouts: top-50 gene
-  Spearman by tissue and cumulative recovery across Moran-ranked genes.}
+  \caption{Held-out HEST-1k recovery with inferred layouts. Every slide ranks its
+  own genes by descending true Moran's I. (a) Distribution of per-gene Spearman
+  over each slide's 50 highest-ranked genes, pooled across the group's slides, so
+  one observation is one gene on one slide and every slide contributes 50 values;
+  boxes give the interquartile range and whiskers the full extent. (b) The same
+  quantity read cumulatively: each line is the mean across slides of the running
+  average over the first $n$ genes, with shaded bands the interquartile range
+  across slides at that gene count. Skin ($n=4$) and bowel ($n=5$) contribute too
+  few slides for their bands to be read as distribution estimates. Slides also
+  carry different panel sizes, so each average in (b) is taken over the slides
+  that still have genes remaining: all 47 contribute through 50 genes, 44 by 100,
+  and 35 by 240, which is what produces the steps in the right-hand tail.}
   \label{fig:heldout}
-\end{minipage}
-
-Because Astra is trained only on HEST-1k, a useful stress test is an
-out-of-distribution cohort with different acquisition and batch characteristics.
-On 10x Genomics' public BreastCancer1 and BreastCancer2 Xenium slides, the
-per-gene Pearson correlation for the top 25 genes by Moran's I has a median
-above 0.80 in both cohorts, with the top 50 genes near 0.74
-(Figure~\ref{fig:pcc}). These medians meet or exceed the values GHIST reports on
-the same two slides (top-20 spatially variable genes ${\approx}0.70$, top-50
-${\approx}0.60$)~\cite{ghist}, and Astra reaches them fully out of distribution,
-having never seen these slides, whereas GHIST is trained on each slide through
-five-fold spatial cross-validation over horizontal bands of the same tissue. The
-comparison is not head-to-head, since the gene rankings differ (Moran's I vs.\
-SPARK-X spatially variable genes) and our correlation is computed over all cells
-on a slide rather than a single held-out band, but it indicates Astra's
-out-of-distribution recovery is competitive with a model fit directly on the
-target slides.
-
-\noindent\begin{minipage}{\linewidth}
-  \captionsetup{skip=3pt}
-  \centering
-  \includegraphics[width=0.50\linewidth]{pcc_boxplot.pdf}
-  \captionof{figure}{Out-of-distribution 10x breast PCC for the top 25 and 50
-  genes ranked by Moran's I.}
-  \label{fig:pcc}
-\end{minipage}
+\end{figure}
 
 Aggregate correlations do not show what the predictions look like in tissue. We
 therefore examine one biologically informative gene from each tissue, always
 showing measured expression beside Astra's prediction.
 
 \smallskip
-\noindent\begin{minipage}{\linewidth}
+\begin{figure}[!htbp]
   \centering
   \includegraphics[width=0.96\linewidth]{marker_panel.png}
-  \captionof{figure}{Measured (left within each panel) and Astra-predicted
+  \caption{Measured (left within each panel) and Astra-predicted
   (right) expression for GATA3 in breast, COL17A1 in skin, FOXJ1 in lung, and
   GREM1 in bowel.}
   \label{fig:marker_panel}
-\end{minipage}
+\end{figure}
 
 These maps test whether Astra places high-expression domains and compartment
 boundaries correctly rather than only matching a slide-level distribution,
@@ -235,6 +239,109 @@ stromal antagonist), not the highest-correlation genes or evidence that they are
 privileged biomarkers; the held-out aggregate analyses
 (Figure~\ref{fig:heldout}) provide the quantitative assessment.
 
+\subsection{Astra recovers pathologist-annotated cell composition}
+\label{sec:panoptils}
+
+The evaluations above compare Astra against measured transcripts. A different
+and stricter question is whether the predicted transcriptome encodes what a
+pathologist actually reads off the slide: how much of a field is tumor, immune
+infiltrate, and stroma. That composition is not an arbitrary target:
+tumor-infiltrating lymphocyte density is prognostic across breast-cancer
+subtypes~\cite{tils_denkert} and has a standardized scoring protocol precisely
+because visual estimation is subjective~\cite{tils_working_group}. Recovering it
+from H\&E-derived expression therefore tests biological fidelity against a
+readout with established clinical meaning. We use
+PanopTILs~\cite{panoptils}, which fuses the BCSS region annotations~\cite{bcss}
+with nucleus-level classifications into 1{,}317 exhaustively annotated
+$1024\times1024$ regions of interest at $0.25\,\mu$m/pixel drawn from 118 TCGA
+breast-cancer slides. Every nucleus in the annotated field carries a manual class
+label, which gives each ROI a ground-truth fraction of tumor/epithelial,
+lymphocytic, and stromal cells. Nothing here is in distribution for Astra: the
+image-to-expression model is trained only on HEST-1k Xenium slides, sees no TCGA
+image, and is never shown a cell-type label.
+
+Astra stays frozen. For each ROI we take the central $512\times512$-pixel crop,
+which at $0.25\,\mu$m/pixel is exactly the $128\,\mu$m field in which PanopTILs
+concentrates its manual nucleus annotations, resample it to the model's working
+resolution, and run the density and expression heads to decode cells and predict
+their expression. Averaging the decoded cells (median 155 per ROI) gives one
+1{,}656-gene profile per ROI. A three-output multilayer perceptron then maps that
+profile to the three fractions (Methods~\ref{met:panoptils}), trained in the
+patient-grouped five-fold split released with
+Path2Space~\cite{path2space} so that no slide is split across folds, with genes
+and hyperparameters selected only inside each training fold. Following the same
+protocol, we score per-slide Pearson correlation between predicted and manual
+fractions and presence/absence AUROC, averaged over the 20 slides carrying at
+least 20 ROIs.
+
+\begin{figure}[!htbp]
+  \centering
+  \includegraphics[width=0.98\linewidth]{panoptils_scatter.png}
+  \caption{Held-out predicted versus manually annotated cell fractions
+  across all 1{,}317 PanopTILs ROIs, with the identity line dashed. Panel titles
+  give the per-slide correlation averaged over the 20 qualifying slides and the
+  correlation pooled over all ROIs.}
+  \label{fig:panoptils_scatter}
+\end{figure}
+
+Predicted fractions track the manual counts closely for tumor and lymphocytes:
+per-slide PCC is 0.855 for tumor/epithelial and
+0.826 for lymphocytic nuclei, with pooled correlations of 0.851 and 0.830 over all
+1{,}317 ROIs (Figure~\ref{fig:panoptils_scatter}). Stroma is harder (per-slide
+PCC 0.657, pooled 0.700) and far more variable between slides, ranging from 0.08
+to 0.92, which is consistent with fibroblasts being the class whose morphology
+and expression overlap most with the surrounding tissue. Treated as a
+presence/absence call rather than a magnitude, the same predictions reach a mean
+per-slide AUROC of 0.915, 0.873, and 0.839 for tumor, lymphocytic, and stromal
+cells (Figure~\ref{fig:panoptils_roc}), so the model reliably answers whether a
+compartment is present in a field even where it misestimates how much of it there
+is.
+
+\begin{figure}[!htbp]
+  \centering
+  \includegraphics[width=0.98\linewidth]{panoptils_roc.png}
+  \caption{Presence/absence ROC curves per cell type. Thin lines are the
+  20 individual slides, the shaded band is $\pm1$ standard deviation, and the
+  heavy line is the mean curve.}
+  \label{fig:panoptils_roc}
+\end{figure}
+
+Because Path2Space reports this exact benchmark, the comparison isolates the
+expression model. The ROIs, the fold assignment, the gene-selection rule, and the
+regressor architecture and hyperparameters are all theirs; only the inferred
+expression fed into the probe differs. On that substitution Astra improves every
+one of the six reported scores (Figure~\ref{fig:panoptils_benchmark}): per-slide
+PCC rises from 0.793 to 0.855 for tumor, 0.789 to 0.826 for lymphocytes, and
+0.592 to 0.657 for stroma, and presence AUROC from 0.876 to 0.915, 0.858 to
+0.873, and 0.836 to 0.839. The margin is widest on the magnitude metric and
+narrowest on stromal detection, where both models are close to the same ceiling.
+The comparison also runs against the grain of the training data: Path2Space is
+trained on breast spatial transcriptomics, whereas Astra is trained across breast,
+lung, bowel, and skin and reaches the TCGA breast cohort as an out-of-cohort
+transfer.
+
+\begin{figure}[!htbp]
+  \captionsetup{skip=3pt}
+  \centering
+  \includegraphics[width=0.90\linewidth]{panoptils_benchmark.png}
+  \caption{Astra against the published Path2Space scores on the same
+  1{,}317 ROIs, the same patient-grouped folds, and the same supervised probe.}
+  \label{fig:panoptils_benchmark}
+\end{figure}
+
+Two limits frame this result. The probe is supervised, so it measures how much
+cell-composition information the predicted transcriptome carries rather than
+zero-shot deconvolution; we also applied reference-based
+deconvolution~\cite{spacet} directly to the same profiles and it performed
+substantially worse than the supervised probe, so we report the supervised route
+throughout. And the labels are annotations of morphology, not an orthogonal
+molecular assay, so agreement here establishes that Astra's expression is
+consistent with expert reading of the tissue rather than independently validated
+against measured cell types. With those caveats, a frozen cross-tissue expression
+model recovers the compartment structure that TILs scoring depends on, on slides
+and a cohort it never saw, and does so more accurately than a breast-specific
+model built for the task.
+
 \section{Architecture and data}
 \label{sec:arch}
 
@@ -245,13 +352,13 @@ the patch (Methods~\ref{met:arch}). From this representation the model branches 
 predicts whether each target gene is non-zero in a given cell, and a density
 head that predicts where cells lie within the patch.
 
-\noindent\begin{minipage}{\linewidth}
+\begin{figure}[!htbp]
   \centering
   \includegraphics[width=0.88\linewidth]{model_arch.png}
-  \captionof{figure}{Astra's shared visual trunk and position-conditioned
+  \caption{Astra's shared visual trunk and position-conditioned
   density, presence, and per-cell expression heads.}
   \label{fig:arch}
-\end{minipage}
+\end{figure}
 
 The HEST-1k Xenium slides do not share a single gene panel: the breast, lung,
 bowel, and skin assays each target a different set of transcripts. We reconcile
@@ -276,31 +383,31 @@ mismatch of methods that detect nuclei on H\&E and then match them to a
 transcriptomics segmentation: Astra has no matching step, because the centroids
 themselves are the queries.
 
-\noindent\begin{minipage}{\linewidth}
+\begin{figure}[!htbp]
   \centering
-  \includegraphics[width=0.46\linewidth]{detection_recall.pdf}
-  \captionof{figure}{Xenium nuclei matched to H\&E detections by tissue; grey,
+  \includegraphics[width=0.46\linewidth]{detection_recall.png}
+  \caption{Xenium nuclei matched to H\&E detections by tissue; grey,
   unmatched.}
   \label{fig:detection}
-\end{minipage}
+\end{figure}
 
 This is a design decision about how training supervision is used, not a
 benchmark against matching-based methods. H\&E detections and Xenium nuclei are
-non-identical object sets: nearest-neighbor matching recovers 68\% of Xenium
-cells in breast, 69\% in lung, 67\% in bowel, and 80\% in skin, leaving
-20--33\% unmatched (Figure~\ref{fig:detection}). Matched-pair supervision must
+non-identical object sets: nearest-neighbor matching recovers 71\% of Xenium
+cells in breast, 72\% in lung, 56\% in bowel, and 70\% in skin, leaving
+28--44\% unmatched (Figure~\ref{fig:detection}). Matched-pair supervision must
 therefore discard or misassign part of the measured transcriptome, whereas Astra
 anchors training queries to measured Xenium centroids and uses every measured
 cell, estimating their positions only at inference.
 
-\noindent\begin{minipage}{\linewidth}
+\begin{figure}[!htbp]
   \captionsetup{skip=3pt}
   \centering
   \includegraphics[width=0.62\linewidth]{density_surface.png}
-  \captionof{figure}{Measured and Astra-decoded density on held-out breast
+  \caption{Measured and Astra-decoded density on held-out breast
   ($104\,\mu$m bins; 324{,}538 vs.\ 316{,}511 cells).}
   \label{fig:density}
-\end{minipage}
+\end{figure}
 
 The density head is what makes inference H\&E-only. During training, cell queries
 are placed at the true centroids while the density head learns the cellular
@@ -323,47 +430,26 @@ them for scoring by greedy nearest-neighbor matching (Methods~\ref{met:recovery}
 distance, each measured cell claims its closest unclaimed predicted cell within a
 distance gate set by the slide's typical cell spacing, giving one-to-one pairs
 (unmatched cells count as misses or false positives), and per-gene Spearman
-correlations are computed over these matched pairs. To isolate the cost of
-inferring rather than measuring the layout, we re-score the held-out slides with
-either measured centroids (\emph{teacher-forced}) or Astra's decoded layout
-(\emph{student}); the gap between the two is small (Figure~\ref{fig:studteach}).
+correlations are computed over these matched pairs. All recovery results in this
+paper are scored in this fully H\&E-only setting, using Astra's decoded layout
+rather than measured centroids.
 
-\noindent\begin{minipage}{\linewidth}
+The detector head addresses a different failure mode. A continuous head
+trained with mean-squared error on $\log(1+x)$ never outputs hard zeros, so
+absent genes emerge as small non-zero values and can fabricate infiltration
+for markers such as PTPRC~\cite{cd45}. A separate head predicts whether each gene is
+non-zero, and gating by that probability restores true absences. One fixed
+threshold, selected on held-out validation slides, is used throughout. The
+detector reaches AUROC 0.97 in lung, 0.94 in breast, 0.83 in bowel, and 0.80
+in skin (pooled 0.94; Figure~\ref{fig:detroc}).
+
+\begin{figure}[!htbp]
   \captionsetup{skip=3pt}
   \centering
-  \includegraphics[width=0.62\linewidth]{student_vs_teacher.pdf}
-  \captionof{figure}{Top-50 gene Spearman with inferred (student) versus
-  measured (teacher-forced) centroids.}
-  \label{fig:studteach}
-\end{minipage}
-
-The student model recovers almost all teacher-forced performance without
-measured centroids or an external cell localizer. Median Spearman is 0.46
-versus 0.47 in breast and 0.53 versus 0.51 in skin, while lung is similarly
-close. Bowel shows the only visible gap. The overlap across tissues indicates
-that layout inference preserves the expression signal in the full H\&E-only
-pipeline.
-
-\noindent\begin{minipage}[t]{0.49\linewidth}
-  \vspace{0pt}
-  The detector head addresses a different failure mode. A continuous head
-  trained with mean-squared error on $\log(1+x)$ never outputs hard zeros, so
-  absent genes emerge as small non-zero values and can fabricate infiltration
-  for markers such as PTPRC~\cite{cd45}. A separate head predicts whether each gene is
-  non-zero, and gating by that probability restores true absences. One fixed
-  threshold, selected on held-out validation slides, is used throughout. The
-  detector reaches AUROC 0.96 in breast and lung, 0.94 in skin, and 0.87 in
-  bowel (pooled 0.94; Figure~\ref{fig:detroc}).
-\end{minipage}
-\hfill
-\begin{minipage}[t]{0.47\linewidth}
-  \vspace{0pt}
-  \captionsetup{skip=3pt}
-  \centering
-  \includegraphics[width=0.98\linewidth]{detector_roc.pdf}
-  \captionof{figure}{Held-out gene-presence detector ROC by tissue.}
+  \includegraphics[width=0.62\linewidth]{detector_roc.png}
+  \caption{Held-out gene-presence detector ROC by tissue.}
   \label{fig:detroc}
-\end{minipage}
+\end{figure}
 
 To sanity-check the training mixture and decide which tissues to keep, we trace
 each held-out query patch back to the training patches that most helped or hurt
@@ -414,7 +500,7 @@ shows the same pattern patch by patch, with each query retrieving same-tissue
 twins as its top proponents while bowel pulls in breast and pancreas stroma
 (Figure~\ref{fig:influence_qual}).
 
-\begin{figure}[tbp]
+\begin{figure}[!htbp]
   \centering
   \includegraphics[width=0.8\linewidth]{influence_tissue_heatmap.png}
   \caption{Where beneficial (bottom-10) influence comes from, row-normalized by
@@ -423,7 +509,7 @@ twins as its top proponents while bowel pulls in breast and pancreas stroma
   \label{fig:influence_heatmap}
 \end{figure}
 
-\begin{figure}[tbp]
+\begin{figure}[!htbp]
   \centering
   \includegraphics[width=0.66\linewidth]{influence_qualitative.png}
   \caption{Held-out query patch (red, leftmost) and its top beneficial proponent
@@ -451,7 +537,7 @@ influence is thus concentrated in a small minority of patches rather than spread
 evenly over the shortlist, which is why the tissue attributions above are read
 from the bottom-$10$ proponents per query.
 
-\begin{figure}[htbp]
+\begin{figure}[!htbp]
   \centering
   \includegraphics[width=0.9\linewidth]{influence_score_geometry.png}
   \caption{Influence score geometry over 1{,}024 held-out queries
@@ -467,7 +553,9 @@ from the bottom-$10$ proponents per query.
   \label{fig:influence_score}
 \end{figure}
 
-\section{Astra predicts trastuzumab response}
+\section{Clinical Applications}
+
+\subsection{Astra predicts trastuzumab response}
 \label{sec:trastuzumab}
 
 Having shown that Astra recovers spatial expression from histology, we now hold
@@ -481,48 +569,48 @@ tumor ROIs (Methods~\ref{met:preproc}) it detects cells and predicts their expre
 stack of up to roughly 512 tiles across the 1{,}656-gene output panel per
 patient.
 
-Rather than averaging expression away, we characterize how each gene varies
-across the tumor. For every gene we compute two dispersion statistics across the
-patient's tiles (Methods~\ref{met:downstream}): the tile-to-tile standard deviation and the gap between the
-90th percentile and the median (a hotspot term). This yields 3{,}312 features
-per patient describing the spatial heterogeneity of the predicted transcriptome,
-without directly including mean expression. In each outer 5-fold split, the 17
-test patients remain untouched. The feature count is chosen by an inner
-stratified 5-fold cross-validation over the 68-patient development set: for each
-candidate count from 1 through 20 we standardize and rank features by response
-correlation on each inner training split, fit an L2-regularized logistic
-regression on the top-ranked features, and score the held-out inner folds; the
-count with the highest pooled inner-fold AUROC is selected. We then refit the
-selected model on all 68 development patients before predicting the 17 test
-patients.
+Rather than pooling every cell into a single slide-level vector, we keep the tile
+structure. Each tile is collapsed to a mean expression profile, and each gene is
+then summarized across the patient's tiles three ways
+(Methods~\ref{met:downstream}): the mean, the median, and the 90th percentile, a
+hotspot term weighting the most strongly expressing tiles. Each summary yields
+1{,}656 features per patient. In each outer 5-fold split, the 17 test patients
+remain untouched. The feature budget is fixed at $K=5$; what the inner stratified
+5-fold cross-validation over the 68-patient development set chooses is which
+summary family to use, by standardizing and ranking genes by response correlation
+on each inner training split, fitting an L2-regularized logistic regression on the
+top five, and scoring the held-out inner folds. We then refit the selected model
+on all 68 development patients before predicting the 17 test patients.
 
-\noindent\begin{minipage}{\linewidth}
-  \captionsetup{type=figure}
+\begin{figure}[!htbp]
   \centering
-  \begin{subfigure}{0.62\linewidth}
+  \begin{subfigure}{0.48\linewidth}
     \centering
-    \includegraphics[width=\linewidth]{her2_roc_pr.pdf}
-    \caption{ROC and precision--recall.}
+    \includegraphics[width=\linewidth]{her2_roc.png}
+    \caption{ROC.}
     \label{fig:her2}
   \end{subfigure}
   \hfill
-  \begin{subfigure}{0.35\linewidth}
+  \begin{subfigure}{0.48\linewidth}
     \centering
-    \includegraphics[width=\linewidth]{her2_violin.pdf}
+    \includegraphics[width=\linewidth]{her2_violin.png}
     \caption{Predicted probability by status.}
     \label{fig:violin}
   \end{subfigure}
-  \caption{Trastuzumab response from Astra-derived dispersion features
-  ($n=85$): ROC/PR (AUROC 0.713; AUPRC 0.669) and out-of-fold probabilities.}
+  \caption{Trastuzumab response from Astra-derived tile-summary features
+  ($n=85$): ROC (AUROC 0.716) and out-of-fold probabilities.}
   \label{fig:her2_panel}
-\end{minipage}
+\end{figure}
 
 Evaluated with repeated stratified 5-fold cross-validation (50 repeats) on
-averaged out-of-fold probabilities, this nested feature-count selection
-reaches AUROC 0.713 (95\% CI 0.60--0.82 by $2000\times$ bootstrap) and AUPRC
-0.669 against a 0.42 prevalence baseline (Figure~\ref{fig:her2}). The inner
-cross-validation selected a median of 8 features. Responders receive a higher median predicted
-probability (${\sim}0.52$) than non-responders (${\sim}0.30$). The difference from prior work
+averaged out-of-fold probabilities, this nested selection
+reaches AUROC 0.716 (95\% CI 0.60--0.83 by $2000\times$ bootstrap) against a 0.42
+response prevalence (Figure~\ref{fig:her2}). The inner
+cross-validation chose the hotspot (P90) summary in 230 of the 250 outer folds,
+the mean in 14 and the median in 6. The out-of-fold probabilities separate the
+two groups: responders receive a median predicted probability of 0.54 (IQR
+0.34--0.70) against 0.23 (IQR 0.18--0.46) for non-responders, with group means of
+0.52 and 0.34 (Figure~\ref{fig:violin}). The difference from prior work
 is one of supervision: on this same cohort, Farahmand et al.\ trained an
 end-to-end Inception-v3 CNN directly on the response label and reported roughly
 0.80 slide-level AUROC~\cite{farahmand_trastuzumab}, whereas Astra's
@@ -530,112 +618,45 @@ image-to-expression model was optimized only to predict expression, without
 task-specific fine-tuning on the response label; only the lightweight linear
 probe is trained on it.
 
-\noindent\begin{minipage}{\linewidth}
+\begin{figure}[!htbp]
   \captionsetup{skip=3pt}
   \centering
-  \includegraphics[width=0.90\linewidth]{her2_top3_features.pdf}
-  \captionof{figure}{Cohort distributions of the three most selected response
-  features; counts denote selection across 250 outer models.}
-  \label{fig:her2_features}
-\end{minipage}
-
-\noindent\begin{minipage}{\linewidth}
-  \captionsetup{skip=3pt}
-  \centering
-  \includegraphics[width=0.72\linewidth]{her2_gene_union.pdf}
-  \captionof{figure}{Top-10 genes by union selection frequency: fraction of the
-  250 outer models selecting either the tile-to-tile standard deviation or the
-  P90$-$P50 hotspot gap of each gene (the two variants are counted once per model).}
+  \includegraphics[width=0.72\linewidth]{her2_gene_union.png}
+  \caption{Top-10 genes by selection frequency: fraction of the 250
+  outer models (5 folds $\times$ 50 repeats) retaining each gene within its
+  five-feature budget.}
   \label{fig:her2_gene_union}
-\end{minipage}
+\end{figure}
 
 Because the classifier is linear and its selection occurs entirely inside the
 training data, we can inspect which features remain stable without using test
-labels. The 90th-percentile-minus-median hotspot gap and tile-to-tile standard
-deviation of SOD2 are selected in 235 (94\%) and 231 (92\%) of the 250 outer
-models, respectively; counting either dispersion variant, SOD2 enters 248 of
-250 models (99\%). The third most frequently selected feature is the
-tile-to-tile standard deviation of PDIA3 (142 models, 57\%;
-Figures~\ref{fig:her2_features}--\ref{fig:her2_gene_union}). SOD2 is the mitochondrial superoxide dismutase
-that buffers oxidative stress. Elevated SOD2 has been associated with tumor
-stage, nodal metastasis, and worse survival in breast cancer, and redox
-regulation has been implicated more broadly in HER2-positive disease and
-treatment response~\cite{sod2_breast_prognosis,her2_redox}. PDIA3
-(ERp57), the third-ranked feature's gene, is an endoplasmic-reticulum disulfide
-oxidoreductase involved in protein folding and redox quality control. Prior
-breast-cancer studies report increased PDIA3 in invasive ductal carcinoma,
-including association with high-grade and node-positive disease, while
-perturbing PDIA3 alters extracellular-matrix, adhesion, and migration programs
-linked to breast-cancer outcomes~\cite{pdia3_breast_aggressiveness,pdia3_breast_outcomes}.
-This makes heterogeneous PDIA3 expression biologically plausible as a regional
-stress or aggressive-tissue marker, but does not establish it as a
-trastuzumab-resistance mechanism.
+labels. Within the five-feature budget a small set of genes recurs: PCNA is
+retained by 217 outer models (87\%), followed by MGST1 (132, 53\%) and CYP2F1
+(125, 50\%), with the remaining genes each entering fewer than a third of models
+(Figure~\ref{fig:her2_gene_union}). The inner loop preferred the P90 summary in
+230 of the 250 models, but we do not read that as evidence that heterogeneity
+carries the signal: across this cohort the three summary families are
+near-duplicates for these genes ($r\ge0.91$), so the preference is marginal.
 
-Beyond these two, the remaining recurrently selected genes
-(Figure~\ref{fig:her2_gene_union}) fall into three tiers of literature support
-(Table~\ref{tab:her2_genes}): three with direct trastuzumab-resistance evidence,
-three with general breast-cancer associations but no trastuzumab-specific role,
-and two lung-lineage markers with no established breast role that most plausibly
-reflect predicted-expression variation the probe latches onto rather than a
-mechanism. This audit supports biological plausibility for the leading genes but
-is not independent validation, so the quantitative cohort test that follows is
-limited to the top two features, SOD2 and PDIA3.
+All three genes are elevated in non-responders, a direction the literature
+supports for one of them. MGST1 is a membrane-bound
+glutathione transferase that conjugates glutathione to electrophiles, reduces
+lipid hydroperoxides, and represses ferroptosis; its overexpression in MCF7
+breast-cancer cells confers resistance to several cytostatic drugs and to
+oxidative stress~\cite{mgst1_ferroptosis}, so enrichment in tumors that fail to
+clear is the expected direction for a detoxification program. PCNA is the
+sliding-clamp processivity factor for DNA polymerase; beyond its role as a
+proliferation marker it marks aggressive tumor features and poor prognosis in
+breast cancer~\cite{pcna_prognosis}, and it is named among the DNA-repair and
+damage-response genes differentially expressed in SKBR3 cells driven to
+trastuzumab resistance~\cite{pcna_trastuzumab_resistance}.
+CYP2F1 is a lung-selective
+cytochrome P450 with no established role in breast tissue~\cite{cyp2f1_lung}, and
+its recurrence most plausibly reflects structure in predicted expression rather
+than a resistance mechanism.
 
-\begin{table}[h]
-  \centering
-  \small
-  \captionsetup{skip=4pt}
-  \caption{Recurrently selected trastuzumab-response genes beyond SOD2 and
-  PDIA3, grouped by strength of literature support.}
-  \label{tab:her2_genes}
-  \begin{tabular}{@{}lll@{}}
-    \toprule
-    Gene & Role & Literature Context \\
-    \midrule
-    \multicolumn{3}{@{}l}{\emph{Direct trastuzumab-resistance evidence}}\\
-    HSPA5 (GRP78) & UPR chaperone & Zhang \& Zhang (2013)~\cite{her2_hspa5}\\
-    CD44 & stem-cell marker & Boulding et al.\ (2015)~\cite{her2_cd44}\\
-    LDHA & glycolytic enzyme & Zhao et al.\ (2011)~\cite{her2_ldha}\\
-    \addlinespace
-    \multicolumn{3}{@{}l}{\emph{General breast-cancer association}}\\
-    PGC & pepsinogen C & Balbin et al.\ (1995)~\cite{her2_pgc}\\
-    FSTL1 & secreted glycoprotein & Chan et al.\ (2018)~\cite{her2_fstl1}\\
-    GREM1 & stromal BMP antagonist & Kobayashi et al.\ (2021)~\cite{grem1_crc}\\
-    \addlinespace
-    \multicolumn{3}{@{}l}{\emph{No established breast role (likely expression proxy)}}\\
-    NAPSA & lung-adenocarcinoma marker & Turner et al.\ (2012)~\cite{her2_napsa}\\
-    SFTPC & surfactant protein C & Turner et al.\ (2012)~\cite{her2_napsa}\\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
-\noindent\begin{minipage}[t]{0.43\linewidth}
-  \vspace{0pt}
-  For both features, the direction is consistent across the cohort: both SOD2
-  dispersion terms are
-  higher in non-responders (standard deviation 0.171 vs.\ 0.129,
-  $p=1.2\times10^{-4}$; hotspot gap 0.312 vs.\ 0.222,
-  $p=2.0\times10^{-4}$), as is PDIA3 standard deviation (0.138 vs.\ 0.122,
-  $p=0.0012$; Figure~\ref{fig:her2_features}). Non-responding tumors therefore
-  carry patchier oxidative- and ER-stress predictions. These statistics retain
-  variation that pseudobulk erases, although their correlation with mean
-  abundance prevents a claim of an independent heterogeneity mechanism.
-  Figure~\ref{fig:her2_spatial} localizes that variation: the SOD2 hotspot gap
-  reflects high-expression tiles against a lower background, whereas PDIA3
-  standard deviation captures broader tile-to-tile variability. These
-  within-group maxima illustrate the phenotype; the cohort evidence is
-  Figure~\ref{fig:her2_features}.
-\end{minipage}
-\hfill
-\begin{minipage}[t]{0.53\linewidth}
-  \vspace{0pt}
-  \captionsetup{skip=3pt}
-  \centering
-  \includegraphics[width=0.98\linewidth]{her2_sod2_pdia3_spatial.pdf}
-  \captionof{figure}{Spatial maxima for SOD2 hotspot gap (top) and PDIA3
-  standard deviation (bottom); squares are $128\,\mu$m H\&E tiles.}
-  \label{fig:her2_spatial}
-\end{minipage}
+The directions above are univariate associations that do not adjust for one
+another.
 
 Response here was predicted without any trastuzumab-specific training of the
 expression model: the same frozen Astra supplies the features and only a small
@@ -648,89 +669,101 @@ predictions become more accurate and every downstream readout built on them
 with no new task-specific labels. The clinical results that follow lean on
 exactly this transfer.
 
-\section{Astra predicts survival risk in luminal breast cancer}
+\subsection{Astra predicts survival risk in luminal breast cancer}
+\label{sec:survival}
 
 Trastuzumab response used Astra's expression to predict a treatment endpoint; we
 next ask whether the same frozen model carries prognostic signal for a different
 clinical outcome and cohort. Overall survival in luminal breast cancer is a
 natural test: molecular expression stratifies risk in ways morphology alone does
 not make obvious~\cite{luminal_markers}, yet measuring it at single-cell spatial
-resolution is rarely feasible at cohort scale. On 771 ER-positive TCGA-BRCA
-patients with matched diagnostic H\&E and overall survival (97 deaths, 674
+resolution is rarely feasible at cohort scale. On 772 ER-positive TCGA-BRCA
+patients with matched diagnostic H\&E and overall survival (97 deaths, 675
 censored; median follow-up ${\sim}865$ days), we retain the 1{,}000 most
 tissue-dense tiles per patient (Methods~\ref{met:preproc}), run frozen Astra to predict a 1{,}656-gene
 profile at each decoded cell, and average those predictions into one
 pseudobulk vector (Methods~\ref{met:downstream}). Repeated 5-fold cross-validation (50 repeats) ranks genes by
 survival association within each training fold and fits a multivariable Cox
-model; the number of genes is itself chosen per fold by an inner 3-fold
-cross-validation over the development patients (median 40 genes), and only
-held-out patients are scored, yielding a pooled concordance index of 0.570.
+model on the top 5 genes, the same fixed budget used for the other two tasks,
+and only
+held-out patients are scored, yielding a pooled concordance index of 0.603
+(95\% CI 0.53--0.67).
 
-\noindent\begin{minipage}{\linewidth}
+\begin{figure}[!htbp]
   \centering
-  \includegraphics[width=0.68\linewidth]{km_survival_quartiles.pdf}
-  \captionof{figure}{ER-positive TCGA-BRCA survival for the top and bottom
+  \includegraphics[width=0.68\linewidth]{km_survival_quartiles.png}
+  \caption{ER-positive TCGA-BRCA survival for the top and bottom
   cross-validated Astra risk quartiles ($n=193$ each; two-sided log-rank
-  $p=0.007$).}
+  $p=0.001$).}
   \label{fig:km_quartiles}
-\end{minipage}
+\end{figure}
 
 The separation is sharpest at the extremes of predicted risk: comparing the top
-and bottom risk quartiles (193 patients each), the high-risk group has twice as
-many deaths as the low-risk group (28 vs.\ 14) and the survival curves diverge
+and bottom risk quartiles (193 patients each), the high-risk group has more than
+twice as many deaths as the low-risk group (28 vs.\ 11) and the survival curves diverge
 early and stay apart (Figure~\ref{fig:km_quartiles}; two-sided log-rank
-$p=0.007$). Splitting the full cohort at the median risk preserves the
-separation across all 771 patients (386 high vs.\ 385 low; 57 vs.\ 40 deaths;
-Figure~\ref{fig:km}; $p=0.031$).
+$p=0.001$). Splitting the full cohort at the median risk preserves the
+separation across all 772 patients (386 high vs.\ 386 low; 57 vs.\ 40 deaths;
+Figure~\ref{fig:km}; $p=0.022$).
 
-\noindent\begin{minipage}{\linewidth}
+\begin{figure}[!htbp]
   \centering
-  \includegraphics[width=0.68\linewidth]{km_survival.pdf}
-  \captionof{figure}{ER-positive TCGA-BRCA survival by cross-validated Astra
-  risk at the median split ($n=386$ high, $385$ low; two-sided log-rank
-  $p=0.031$).}
+  \includegraphics[width=0.68\linewidth]{km_survival.png}
+  \caption{ER-positive TCGA-BRCA survival by cross-validated Astra
+  risk at the median split ($n=386$ high, $386$ low; two-sided log-rank
+  $p=0.022$).}
   \label{fig:km}
-\end{minipage}
+\end{figure}
 
 Because gene selection happens entirely inside the training folds, we can read
 off which genes recur across the 250 outer models without touching held-out
-labels (Figure~\ref{fig:survival_genes}). The most frequently selected genes are
-secretory and stromal (SLPI 86\%, CTSE 78\%, SERPINB2 73\%, PCOLCE2 52\%) mixed
-with a strong adaptive-immune and lymphocyte signature (IGKC 71\%, IGHG1 63\%,
-ICOS 60\%, PDCD1 59\%, TRBC2 57\%, CTLA4 51\%, MARCO 50\%), indicating that
-Astra recovers a coherent immune- and stroma-linked survival signal from H\&E
-alone.
+labels (Figure~\ref{fig:survival_genes}). Because the Cox coefficients are also
+recorded, each recurrent gene carries a direction. Two opposing programs emerge.
+Cytotoxic and humoral immune markers are consistently protective: KLRC1 (NKG2A;
+58\% of folds, mean coefficient $-0.35$), granulysin GNLY ($22\%$, $-0.34$), and
+the immunoglobulin heavy chains IGHG4 ($46\%$, $-0.21$) and IGHGP ($32\%$,
+$-0.26$). Against them, SERPINB3 ($88\%$, $+0.38$) and the myeloid calprotectin
+subunits S100A8 ($58\%$, $+0.25$) and S100A9 ($27\%$, $+0.27$) all carry adverse
+risk. Astra therefore recovers a coherent lymphocyte-versus-myeloid survival axis
+from H\&E alone, with the sign of each gene consistent across folds.
 
-\noindent\begin{minipage}{\linewidth}
+\begin{figure}[!htbp]
   \captionsetup{skip=3pt}
   \centering
-  \includegraphics[width=0.72\linewidth]{survival_gene_selection.pdf}
-  \captionof{figure}{Top-10 genes by cross-validated selection frequency in the
+  \includegraphics[width=0.72\linewidth]{survival_gene_selection.png}
+  \caption{Top-10 genes by cross-validated selection frequency in the
   luminal survival model (fraction of the 250 outer Cox models retaining each
   gene).}
   \label{fig:survival_genes}
-\end{minipage}
+\end{figure}
 
-These recurrent genes have documented breast-cancer associations that match the
-direction Astra finds. The humoral- and lymphocyte-immunity markers are the
-best established: immunoglobulin kappa C (IGKC) is a validated single-gene
-prognostic and predictive marker whose high tumor expression, reflecting
-infiltrating plasma cells, tracks with better survival in breast
-cancer~\cite{surv_igkc}, and dense tumor-infiltrating lymphocytes marked by
-IGHG1, ICOS, PDCD1, TRBC2, and CTLA4 are a recognized favorable-prognosis axis
-in ER-negative and high-grade disease~\cite{surv_tils}. Among the secretory and
-stromal genes, SLPI is a driver of triple-negative breast-cancer metastasis
-whose high expression predicts shorter overall and metastasis-free
-survival~\cite{surv_slpi}; cathepsin E (CTSE) is a Mendelian-randomization-linked
-breast-cancer-risk gene with subtype-dependent prognostic
-value~\cite{surv_ctse}; and SERPINB2 (PAI-2) marks the plasminogen-activator
-axis, where high tumor-cell expression is associated with lymph-node metastasis
-and reduced survival~\cite{surv_serpinb2}. That an unsupervised probe on
-H\&E-predicted expression rediscovers this immune--stroma prognostic program,
-rather than arbitrary genes, supports the biological plausibility of the signal
-while the concordance and log-rank statistics remain the quantitative evidence.
+Both directions match documented breast-cancer associations. Immunoglobulin
+expression reflecting infiltrating plasma cells is a validated favorable
+prognostic marker in breast cancer~\cite{surv_igkc}, which is the direction the
+probe assigns to IGHG4 and IGHGP, and dense tumor-infiltrating lymphocytes are a
+recognized favorable-prognosis axis~\cite{surv_tils}. Granulysin is a cytolytic
+effector released by cytotoxic T and NK cells, and GNLY-positive infiltrate is an
+independent predictor of better disease-free survival in breast
+cancer~\cite{gnly_til}, matching the protective coefficient the probe assigns it.
+On the adverse side, the S100A8/S100A9 heterodimer marks a myeloid inflammatory
+program whose elevated expression in tumor cells and stroma is prognostic of
+poorer breast-cancer outcome~\cite{surv_s100a8,surv_s100a9}.
 
-\section{Astra can help pre-screen for MSI-H}
+SERPINB3, the most frequently selected gene and the one with the largest adverse
+coefficient, carries the direction the literature reports. SERPINB3 (SCCA1) is
+elevated in high-grade, advanced-stage breast carcinoma and marks worse overall
+and recurrence-free survival~\cite{serpinb3_breast}, and in residual tumor after
+anthracycline-based neoadjuvant chemotherapy it is an independent prognostic
+biomarker of poor outcome (HR 2.1, 95\% CI 1.2--3.8)~\cite{serpinb3_neoadj}.
+
+KLRC1 admits no equivalent mechanistic reading. It encodes NKG2A, an inhibitory
+checkpoint receptor whose high expression on NK cells marks exhaustion and immune
+evasion, and which is an antibody target because blocking it restores
+cytotoxicity~\cite{klrc1_nkg2a}. Its protective coefficient is therefore better
+attributed to pseudobulk KLRC1 transcript tracking the abundance of NK and
+cytotoxic T cells than to NKG2A signaling itself.
+
+\subsection{Astra can help pre-screen for MSI-H}
 \label{sec:msi}
 
 Microsatellite instability (MSI-H) is among the most actionable biomarkers in
@@ -748,25 +781,23 @@ the linear probe on top sees the label. We run frozen Astra over TCGA colorectal
 (TCGA-COAD and TCGA-READ; 255 patients, 85 MSI-H), pool predicted per-cell
 expression into one pseudobulk profile per patient, and fit only a linear
 classifier on top under nested cross-validation (Methods~\ref{met:downstream}; repeated stratified 5-fold
-outer CV, 50 repeats), with the number of AUC-ranked genes chosen by an inner
-5-fold loop inside each training split (median 160 genes), scored against the
+outer CV, 50 repeats), keeping the top 5 AUC-ranked genes per training split and
+averaging over the mean and median tile summaries, scored against the
 genomic MANTIS label~\cite{mantis}.
 
-\noindent\begin{minipage}{\linewidth}
+\begin{figure}[!htbp]
   \centering
-  \includegraphics[width=0.92\linewidth]{msi_roc_pr.pdf}
-  \captionof{figure}{MSI-H detection from Astra-predicted pseudobulk expression
-  in TCGA-COAD/READ (AUROC 0.705; AUPRC 0.611).}
+  \includegraphics[width=0.5\linewidth]{msi_roc.png}
+  \caption{MSI-H detection from Astra-predicted pseudobulk expression
+  in TCGA-COAD/READ (AUROC 0.741).}
   \label{fig:msi}
-\end{minipage}
+\end{figure}
 
-The linear probe reaches AUROC 0.705 and AUPRC 0.611 at a cohort prevalence of
-33\% MSI-H (Figure~\ref{fig:msi}), a 1.8$\times$ precision lift over prevalence.
+The linear probe reaches AUROC 0.741 at a cohort prevalence of 33\% MSI-H
+(Figure~\ref{fig:msi}).
 This is competitive with the within-cohort TCGA models trained end-to-end on MSI
 labels (patient-level AUC 0.77--0.84~\cite{kather_msi}; our bootstrap 95\% CI
-reaches 0.78), and below the ${\sim}0.95$ of clinical-grade detectors trained on
-large multi-institutional cohorts with full MSI supervision and external
-validation~\cite{echle_msi}. Astra reaches this without any of that
+reaches 0.81). Astra reaches this without any of that
 task-specific machinery: it sees no MSI label or TCGA slide in training and fits
 only a named-gene linear probe, keeping an interpretability those end-to-end
 detectors lack. As argued for trastuzumab (Section~\ref{sec:trastuzumab}),
@@ -774,50 +805,52 @@ predicted expression is the shared substrate, so gains to the base model from
 aggregated spatial transcriptomics carry over to this task with no new MSI
 supervision.
 
-Because the probe is linear and its genes are named, the prediction traces back
-to features that align with MSI-H biology. Hypermutated, neoantigen-rich MSI-H
-tumors recruit an inflamed immune infiltrate~\cite{msi_immune}, and the most
-recurrently selected genes are exactly that program: myeloid and
-antigen-handling markers (CCL3, SPI1, C5AR1, CPVL, FGR), the
-tryptophan-catabolizing checkpoint gene IDO1, the cross-presenting
-dendritic-cell receptor XCR1, and MHC class II (HLA-DQB2) are each chosen in over
-90\% of outer folds (Figure~\ref{fig:msi_genes}). As a spatial sanity check on the same
-immune-versus-epithelial axis, Figure~\ref{fig:msi_spatial} contrasts the
-cytotoxic-effector gene PRF1 (perforin), dense across MSI-H tumors and largely
-absent from MSS, with the epithelial-identity gene CDX2, whose loss is highly
-specific for mismatch-repair deficiency~\cite{cdx2_msi} and which produces the
-mirror image.
+Because the probe is linear and its genes are named, the prediction can be read
+directly. Hypermutated, neoantigen-rich MSI-H tumors recruit an inflamed immune
+infiltrate~\cite{msi_immune}, and the two most stable features fit that picture.
+COTL1 enters essentially every probe (99\%): it is an actin-binding protein of
+the ADF/cofilin family that is highly expressed in leukocytes and is required at
+the immune synapse, where it protects F-actin from cofilin-mediated
+disassembly and supports lamellipodial protrusion during T-cell
+activation~\cite{cotl1_synapse}. CXCL5 enters 69\% and is a CXCR2-ligand
+neutrophil chemoattractant that is overexpressed in colorectal tumors and
+associated with advanced stage, liver metastasis, and poor
+prognosis~\cite{cxcl5_crc}. Both are immune-compartment genes, which is the axis
+that separates MSI-H from MSS tissue.
 
-\noindent\begin{minipage}{\linewidth}
+Several of the remaining genes have colorectal literature, though none is a
+mismatch-repair marker. NMB (74\%) is elevated in colorectal tumors relative to
+normal mucosa and is an independent predictor of poor survival, acting through
+USP21-stabilized NF-$\kappa$B signaling~\cite{nmb_crc}. MARCKSL1 (64\%) is an
+actin-regulatory protein of innate immune cells that is raised in the circulating
+extracellular vesicles of metastatic colorectal cancer patients and has been
+proposed to separate metastatic from non-metastatic disease~\cite{marcksl1_crc}.
+HIST1H4C (64\%) is a replication-dependent histone transcribed in S phase and so
+reads as a proliferation correlate. These mark tumor aggressiveness and immune
+content rather than mismatch repair.
+
+The remaining features admit no such support. TSC22D1 (52\%) and STRADB (47\%)
+have no established colorectal or mismatch-repair association, and the recurrent
+selection of the melanocytic genes TYR (62\%) and PMEL (11\%) in colorectal
+tissue is more plausibly a panel artifact than a biological finding.
+
+\begin{figure}[!htbp]
   \captionsetup{skip=3pt}
   \centering
-  \includegraphics[width=0.72\linewidth]{msi_gene_selection.pdf}
-  \captionof{figure}{Top-10 genes by cross-validated selection frequency in the
-  MSI-H probe (fraction of the 250 outer models retaining each gene).}
+  \includegraphics[width=0.72\linewidth]{msi_gene_selection.png}
+  \caption{Top-10 genes by cross-validated selection frequency in the
+  MSI-H probe. Each bar is the fraction of the 750 fitted probes (250 outer
+  models $\times$ 3 regularization settings) in the gene's dominant summary
+  family that retain it.}
   \label{fig:msi_genes}
-\end{minipage}
+\end{figure}
 
-\noindent\begin{minipage}[t]{0.56\linewidth}
-  \vspace{0pt}
-  \captionsetup{skip=3pt}
-  \centering
-  \includegraphics[width=\linewidth]{coad_prf1.png}\\[6pt]
-  \includegraphics[width=\linewidth]{coad_cdx2.png}
-  \captionof{figure}{Astra-predicted PRF1 (top) and CDX2 (bottom) across MSI-H
-  (top rows within each panel) and MSS (bottom rows) tumors.}
-  \label{fig:msi_spatial}
-\end{minipage}
-\hfill
-\begin{minipage}[t]{0.4\linewidth}
-  \vspace{0pt}
-  A frozen, cross-domain expression model, without task-specific fine-tuning on
-  MSI, therefore recovers an established clinical biomarker through an
-  interpretable, named-gene route rather than an opaque classifier, and
-  identifies the genes responsible. Two limits apply: these results are
-  cross-validated within TCGA rather than externally validated, and the 33\%
-  MSI-H prevalence here is enriched relative to the roughly 15\% observed
-  clinically, so we present this as evidence rather than a deployable diagnostic.
-\end{minipage}
+A frozen, cross-domain expression model, without task-specific fine-tuning on
+MSI, therefore recovers an established clinical biomarker through an
+interpretable, named-gene route rather than an opaque classifier, and identifies
+the genes responsible. Two limits apply: these results are cross-validated within
+TCGA rather than externally validated, and the 33\% MSI-H prevalence here is
+enriched relative to the roughly 15\% observed clinically.
 
 \section{Discussion}
 
@@ -825,8 +858,9 @@ Astra establishes a general architecture for learning single-cell molecular
 representations from routine histology. By jointly inferring cellular position
 and expression, it removes the requirement for a spatial assay or separately
 matched segmentation at inference. The same frozen representation transfers
-from expression recovery to treatment-response prediction, survival
-stratification, and MSI-H pre-screening. Together, these findings suggest that
+from expression recovery to pathologist-annotated cell composition,
+treatment-response prediction, survival stratification, and MSI-H pre-screening.
+Together, these findings suggest that
 spatial-expression supervision can produce histologic representations with
 clinical utility across treatment response, prognosis, and biomarker screening.
 Prospective, multi-institutional validation is required before deployment.
@@ -1060,7 +1094,7 @@ $P\ge sC$ and the centroid decoder is used otherwise; $P\ll C$ is the signature
 of merged blobs. The ratio $P/C$ is thus an estimate of the fraction of cells
 the map resolves as distinct maxima.
 
-\begin{algorithm}[H]
+\begin{algorithm}[!htbp]
 \caption{Adaptive density decoding for one tile}
 \begin{algorithmic}[1]
 \Require map $\hat D$, floor $\tau=0.005$, window $w=3$, saturation $s=0.8$, iteration cap $8$
@@ -1099,7 +1133,7 @@ greedy nearest-neighbor matching. Let $d_{ij}=\lVert c^{\mathrm{true}}_i-
 c^{\mathrm{pred}}_j\rVert_2$ be pairwise distances and $\tau$ the gate, set to the
 median nearest-neighbor spacing among measured cells. Candidate pairs with
 $d_{ij}\le\tau$ are sorted ascending and consumed greedily, each cell used once:
-\begin{algorithm}[H]
+\begin{algorithm}[!htbp]
 \caption{Greedy one-to-one cell matching}
 \begin{algorithmic}[1]
 \State $\mathcal{C}\gets\{(i,j): d_{ij}\le\tau\}$ sorted by increasing $d_{ij}$
@@ -1157,12 +1191,54 @@ S(n)=\frac{1}{n}\sum_{t=1}^{n}\rho_{\pi(t)} ,
 \]
 averaged across slides within each tissue.
 
+\subsection{Cell-composition deconvolution}
+\label{met:panoptils}
+
+\paragraph{ROI representation.} PanopTILs ROIs are $1024\times1024$ pixels at
+$0.25\,\mu$m/pixel, with manual nucleus labels concentrated in the central
+$128\,\mu$m field. We crop that field ($512\times512$ source pixels), resample it
+to the model's $256\times256$ patch at $0.5\,\mu$m/pixel, and apply the same
+luminosity normalization used for whole slides (Methods~\ref{met:preproc}).
+Frozen Astra decodes cells from the density head and predicts expression at each
+decoded position (Methods~\ref{met:decoding}); the ROI profile
+$x\in\mathbb{R}^{G}$, $G=1{,}656$, is the mean over those cells.
+
+\paragraph{Targets.} Each ROI $i$ carries manual fractions
+$y_i\in[0,1]^3$ over tumor/epithelial, lymphocytic, and stromal nuclei. The three
+entries need not sum to one, since PanopTILs also labels classes outside this set
+(plasma cells, debris, and unlabeled nuclei), and they sum to $0.86$ on average.
+
+\paragraph{Probe.} Within each training split we rank genes by the maximum
+univariate $F$-statistic across the three targets,
+\[
+s_g=\max_{k\in\{1,2,3\}} F\big(x_{\cdot g},\,y_{\cdot k}\big),
+\]
+and keep the top $1{,}000$. Features are min--max scaled to $[0,1]$ on the
+training split and a single multi-output \texttt{MLPRegressor} with one
+$32$-unit ReLU hidden layer predicts all three fractions jointly, fit with Adam
+(learning rate $10^{-3}$, constant schedule, L2 penalty $\alpha=0.8$, up to
+$1{,}000$ iterations, early stopping on a $20\%$ internal validation split with
+patience $50$). These are the released Path2Space settings, adopted unchanged so
+that the benchmark isolates the expression model; hyperparameters are confirmed
+by an inner five-fold grid search inside each training split.
+
+\paragraph{Evaluation.} The five outer folds are Path2Space's released
+patient-grouped assignment, so all ROIs from a slide fall in one fold and every
+ROI is scored by the model that never saw its slide. Out-of-fold predictions are
+pooled, and for each slide $s$ with at least $20$ ROIs we compute, per cell type
+$k$, the Pearson correlation between predicted and manual fractions and the AUROC
+of the predicted fraction against the binary presence indicator
+$\mathbf{1}[y_{ik}>0]$. Both are averaged over the $20$ qualifying slides
+($627$ ROIs); the pooled correlations quoted alongside them use all $1{,}317$
+ROIs.
+
 \subsection{Downstream clinical models}
 \label{met:downstream}
 
 The frozen Astra model is never fine-tuned on any clinical label; only a
 lightweight probe is trained per task. All fitting happens strictly inside each
-cross-validation training split.
+cross-validation training split, and all three tasks keep the same fixed budget
+of $K=5$ ranked features so that they differ in endpoint rather than in capacity.
 
 \paragraph{Patient representations.} For survival and MSI we pseudobulk: with
 per-tile decoded expression $\hat Y^{(t)}\in\mathbb{R}^{n_t\times G}$ over
@@ -1171,17 +1247,23 @@ retained tiles $t=1,\dots,T$, the patient vector averages over \emph{all} cells,
 u=\frac{\sum_{t}\sum_{c=1}^{n_t}\hat Y^{(t)}_{c,:}}{\sum_t n_t}\in\mathbb{R}^{G},
 \qquad G=1{,}656 .
 \]
-For HER2 we keep heterogeneity instead. Each tile is collapsed to its mean
-profile $m^{(t)}=\tfrac{1}{n_t}\sum_c \hat Y^{(t)}_{c,:}$, transformed as
-$\tilde m^{(t)}=\log\!\big(1+\max(m^{(t)},0)\big)$, and each gene $g$ is
-summarized across the $T$ tiles by two dispersion features,
+For HER2 we keep the tile structure instead of pooling across it. Each tile is
+collapsed to its mean profile $m^{(t)}=\tfrac{1}{n_t}\sum_c \hat Y^{(t)}_{c,:}$,
+transformed as $\tilde m^{(t)}=\log\!\big(1+\max(m^{(t)},0)\big)$, and each gene
+$g$ is summarized across the $T$ tiles in one of three ways,
 \[
-\mathrm{STD}_g=\sqrt{\tfrac{1}{T}\textstyle\sum_t(\tilde m^{(t)}_g-\bar{\tilde m}_g)^2},
+\mathrm{MEAN}_g=\tfrac{1}{T}\textstyle\sum_t\tilde m^{(t)}_g,
 \qquad
-\mathrm{GAP}_g=Q_{90}\big(\tilde m^{(\cdot)}_g\big)-Q_{50}\big(\tilde m^{(\cdot)}_g\big),
+\mathrm{MED}_g=Q_{50}\big(\tilde m^{(\cdot)}_g\big),
+\qquad
+\mathrm{P90}_g=Q_{90}\big(\tilde m^{(\cdot)}_g\big),
 \]
-giving a $2G=3{,}312$-dimensional feature vector per patient that excludes mean
-abundance.
+each giving a $G=1{,}656$-dimensional feature vector per patient; only tiles with
+at least $25\%$ ROI overlap contribute. The inner loop selects which family to
+use. Across patients the three are near-duplicates for the recurrently selected
+genes ($r\ge0.91$ between families, and $r\ge0.99$ between mean and median), so
+the family choice is a weak preference rather than evidence that any one of them
+isolates a distinct signal.
 
 \paragraph{Survival (TCGA-BRCA, luminal).} With right-censored overall survival
 $(t_i,\delta_i)$ we fit a Cox proportional-hazards model
@@ -1192,9 +1274,9 @@ the risk sets $R(t_i)=\{j:t_j\ge t_i\}$,
 -\log\!\!\sum_{j\in R(t_i)} e^{\beta^{\top}x_j}\Big].
 \]
 Within each training fold we standardize genes, rank them by univariate
-association (each gene's single-covariate Cox score), and keep the top $K$, with
-$K$ chosen per fold by an inner $3$-fold cross-validation over the development
-patients (median $40$); the multivariable model is then fit on those genes. The
+association (each gene's single-covariate Cox score), and keep the top
+$K=5$, the fixed budget shared by all three downstream tasks; the multivariable
+model is then fit on those genes. The
 risk score for a held-out patient is
 $\hat\beta^{\top}x$; concordance is Harrell's $C$, the fraction of comparable
 patient pairs whose predicted risk orders agree with survival:
@@ -1215,35 +1297,39 @@ L2-regularized logistic regression on standardized features,
 \hat p_i=\sigma(w^{\top}x_i+b),
 \]
 with $y_i\in\{-1,+1\}$. MSI (TCGA-COAD/READ) fits this on the pseudobulk vector
-against the genomic MANTIS label under nested cross-validation: a repeated
-stratified $5$-fold outer loop ($50$ repeats), with the number of AUC-ranked
-genes chosen by an inner $5$-fold loop inside each training split (median $160$
-genes) before refitting on the full development set and scoring the held-out
-fold.
+against the genomic MANTIS label under a repeated stratified $5$-fold outer loop
+($50$ repeats). Within each training split genes are ranked by univariate AUC
+and the top $K=5$ retained; because nothing further is selected, the model is
+averaged rather than chosen, ensembling the two tile summaries (mean and median)
+across three regularization strengths $C\in\{1,10,100\}$ into six members whose
+probabilities are averaged before the held-out fold is scored.
 
-HER2 response adds nested feature-count selection so the dispersion features and
-their number are chosen without touching test patients:
-\begin{algorithm}[H]
-\caption{HER2 response: nested inner-CV feature-count selection (one outer fold)}
+HER2 response is the only task with a quantity left to select. The feature count
+is fixed at $K=5$ as above, but each gene can be summarized across tiles three
+ways (mean, median, or the P90 hotspot), so an inner loop chooses that family
+without touching test patients:
+\begin{algorithm}[!htbp]
+\caption{HER2 response: nested inner-CV summary-family selection (one outer fold)}
 \begin{algorithmic}[1]
 \State split cohort $\to$ $17$ test, $68$ development (stratified by response)
-\For{$K=1,\dots,20$}
+\For{each family $f\in\{\mathrm{mean},\mathrm{median},\mathrm{P90}\}$}
   \For{each inner stratified $5$-fold split of the $68$ development patients}
     \State standardize on the inner-train fold; rank genes by $|\mathrm{corr}(\text{feature},\,y)|$
-    \State fit logistic regression on the top-$K$ features; predict the inner-validation fold
+    \State fit logistic regression on the top-$5$ features of family $f$; predict the inner-validation fold
   \EndFor
-  \State record the pooled inner-fold AUROC for $K$
+  \State record the pooled inner-fold AUROC for $f$
 \EndFor
-\State $K^\star\gets\arg\max_K$ pooled inner-fold AUROC
-\State refit top-$K^\star$ model on all $68$ development patients
+\State $f^\star\gets\arg\max_f$ pooled inner-fold AUROC
+\State refit the top-$5$ model of family $f^\star$ on all $68$ development patients
 \State predict $\hat p$ for the $17$ test patients
 \end{algorithmic}
 \end{algorithm}
 The full procedure runs over $50$ repeats of stratified $5$-fold splits; the
 $250$ outer models yield out-of-fold probabilities that are averaged per patient
 before scoring, and $95\%$ confidence intervals come from $2{,}000$ bootstrap
-resamples of the patients. Feature-selection frequencies (e.g.\ how often each
-dispersion feature enters the top-$K^\star$) are tallied across the $250$ models.
+resamples of the patients. The P90 family was selected in $230$ of the $250$
+outer folds, the mean in $14$, and the median in $6$. Gene-selection frequencies
+(how often each gene enters the top $5$) are tallied across the same $250$ models.
 
 \bibliographystyle{unsrtnat}
 \bibliography{references}
