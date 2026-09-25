@@ -43,9 +43,12 @@ rsync -a --link-dest="$PWD" \
     --exclude='/yc_backed.png' \
     ./ "$OUT/"
 
-FILES=$(find "$OUT" -type f | wc -l)
+FILES=$(find "$OUT" -type f | wc -l | tr -d ' ')
 
-echo "dist/ built: $FILES files, $(du -sh --apparent-size "$OUT" | cut -f1)"
+# GNU du spells apparent size --apparent-size; the BSD du on macOS spells it -A.
+SIZE=$(du -sh --apparent-size "$OUT" 2>/dev/null || du -shA "$OUT")
+
+echo "dist/ built: $FILES files, ${SIZE%%[[:space:]]*}"
 
 # Cloudflare takes 20,000 assets per deployment and refuses the upload past that,
 # far from anything that would point at the cause. Nearly all of the count is slide
